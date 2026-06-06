@@ -107,7 +107,7 @@ export default function ToolsPanel() {
   };
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', padding: '20px', fontFamily: 'system-ui, sans-serif' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '0 20px 20px 20px', fontFamily: 'system-ui, sans-serif' }}>
       
       {/* 1. 汇率换算与 HS Code 检索 */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
