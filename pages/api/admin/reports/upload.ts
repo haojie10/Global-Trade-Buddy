@@ -163,3 +163,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await dbClient.end();
   }
 }
+
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '20mb',
+    },
+  },
+};
