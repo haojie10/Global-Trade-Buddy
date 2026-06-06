@@ -2,7 +2,7 @@ import { GetServerSideProps } from 'next';
 import React, { useState } from 'react';
 import { Client } from 'pg';
 import { getReportDetail } from '../api/user/report-detail';
-import WatermarkContainer from '../../../components/WatermarkContainer';
+import WatermarkContainer from '../../components/WatermarkContainer';
 import Link from 'next/link';
 
 interface RelatedReport {
