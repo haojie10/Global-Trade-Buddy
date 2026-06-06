@@ -202,15 +202,26 @@ export default function ReportDetailPage({ report, related, userId }: ReportDeta
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const { id } = context.params!;
   
-  // 模拟从 cookie / session 获取的当前登录用户 ID，实际应使用 auth session
-  const mockUserId = context.query.userId as string || '13800000002'; // 用 User B 作为测试默认
-
   const dbClient = new Client({
     connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/postgres',
   });
   await dbClient.connect();
 
   try {
+    // 动态获取或创建一个默认测试用户 UUID 作为降级，避免手机号字符串转换 UUID 抛出语法错误
+    let mockUserId = context.query.userId as string;
+    if (!mockUserId) {
+      const userRes = await dbClient.query('SELECT id FROM users ORDER BY created_at ASC LIMIT 1');
+      if (userRes.rows.length > 0) {
+        mockUserId = userRes.rows[0].id;
+      } else {
+        const newUserRes = await dbClient.query(
+          "INSERT INTO users (phone_number, free_quota) VALUES ('13800000000', 3) RETURNING id"
+        );
+        mockUserId = newUserRes.rows[0].id;
+      }
+    }
+
     // 1. 获取报告详情和解锁校验
     const report = await getReportDetail(mockUserId, id as string, dbClient);
 
