@@ -247,6 +247,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       }
     };
   } catch (err) {
+    console.error('SSR 加载报告详情页失败，原因:', err);
     return { notFound: true };
   } finally {
     await dbClient.end();
