@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  supabase-db:
+    image: supabase/postgres:15.1.0.117
+    container_name: globaltradebuddy-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+    volumes:
+      - supabase-db-data:/var/lib/postgresql/data
+
+volumes:
+  supabase-db-data:
