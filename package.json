@@ -5,18 +5,20 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "vitest run"
+    "test": "vitest run --fileParallelism=false"
   },
   "dependencies": {
     "next": "^14.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "force-graph": "^1.43.0",
-    "@supabase/supabase-js": "^2.39.0"
+    "@supabase/supabase-js": "^2.39.0",
+    "pg": "^8.11.0"
   },
   "devDependencies": {
     "typescript": "^5.0.0",
     "vitest": "^1.0.0",
-    "@types/react": "^18.2.0"
+    "@types/react": "^18.2.0",
+    "@types/pg": "^8.11.0"
   }
 }
