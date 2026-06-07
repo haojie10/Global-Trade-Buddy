@@ -33,20 +33,21 @@ export default function ObsidianGraph({ data }: ObsidianGraphProps) {
     import('force-graph').then((ForceGraphModule) => {
       const ForceGraph = ForceGraphModule.default;
       
-      const graph = ForceGraph()(containerRef.current!)
+      const graph = (ForceGraph as any)()(containerRef.current!)
+        .backgroundColor('#f8fafc')
         .graphData({
-          nodes: data.nodes.map(n => ({ id: n.id, ...n })),
+          nodes: data.nodes.map(n => ({ ...n })),
           links: data.links
         })
         .nodeId('id')
         .nodeLabel((node: any) => `${node.title} (${node.market_region})`)
         .nodeColor((node: any) => {
-          // 汽配客户节点渲染为深邃的科技蓝，品类报告渲染为温暖的警告橙
-          return node.category === 'customer' ? '#0071e3' : '#ff9f0a';
+          // 客户节点渲染为商务蓝，品类报告渲染为极光绿
+          return node.category === 'customer' ? '#2563eb' : '#10b981';
         })
         .nodeVal((node: any) => (node.category === 'customer' ? 5 : 4))
         .linkWidth(1.5)
-        .linkColor(() => 'rgba(128, 128, 128, 0.25)')
+        .linkColor(() => 'rgba(37, 99, 235, 0.15)')
         .linkLabel((link: any) => `共同关键词: ${link.relation_key}`)
         .onNodeClick((node: any) => {
           // 点击节点，平滑穿透跳转至报告详情页
@@ -72,15 +73,31 @@ export default function ObsidianGraph({ data }: ObsidianGraphProps) {
   }, [data, router]);
 
   return (
-    <div style={{ width: '100%', height: '100%', background: '#1d1d1f', borderRadius: '16px', overflow: 'hidden', border: '1px solid #424245' }}>
-      <div style={{ padding: '12px 20px', background: '#2d2d2f', borderBottom: '1px solid #424245', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: '0.85rem', color: '#aeaeb2', fontWeight: 500 }}>📂 您的个人外贸知识拓扑网络 (已解锁报告)</span>
-        <div style={{ display: 'flex', gap: '12px', fontSize: '0.75rem' }}>
-          <span style={{ color: '#0071e3' }}>● 客户洞察</span>
-          <span style={{ color: '#ff9f0a' }}>● 品类分析</span>
+    <div style={{
+      width: '100%',
+      height: '100%',
+      background: 'rgba(255, 255, 255, 0.75)',
+      borderRadius: '24px',
+      overflow: 'hidden',
+      border: '1px solid rgba(15, 23, 42, 0.08)',
+      backdropFilter: 'blur(20px)',
+      boxShadow: '0 10px 30px rgba(15, 23, 42, 0.03)'
+    }}>
+      <div style={{
+        padding: '14px 20px',
+        background: 'rgba(15, 23, 42, 0.02)',
+        borderBottom: '1px solid rgba(15, 23, 42, 0.06)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <span style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>📂 您的个人外贸知识拓扑网络 (已解锁报告)</span>
+        <div style={{ display: 'flex', gap: '16px', fontSize: '0.75rem', fontWeight: 600 }}>
+          <span style={{ color: '#2563eb' }}>● 客户洞察</span>
+          <span style={{ color: '#10b981' }}>● 品类分析</span>
         </div>
       </div>
-      <div ref={containerRef} style={{ width: '100%', height: 'calc(100% - 45px)' }} />
+      <div ref={containerRef} style={{ width: '100%', height: 'calc(100% - 49px)', background: '#f8fafc' }} />
     </div>
   );
 }

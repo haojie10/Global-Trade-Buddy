@@ -19,7 +19,7 @@ export function parseMetadata(html: string) {
   
   // 提取 <h1>/<h2> 里的名词
   const headerMatches = html.matchAll(/<h[12]>[^<]*?(A 公司|铝合金轮毂|欧美汽配|刹车片|发动机|螺丝)[^<]*?<\/h[12]>/gi);
-  for (const match of headerMatches) {
+  for (const match of Array.from(headerMatches)) {
     const text = match[0].replace(/<[^>]*>/g, '').trim();
     if (text.includes('A 公司')) entities.push('A 公司');
     if (text.includes('铝合金轮毂')) entities.push('铝合金轮毂');

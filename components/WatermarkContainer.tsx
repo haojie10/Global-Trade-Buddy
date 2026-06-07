@@ -18,9 +18,9 @@ export function generateWatermarkBase64(text: string, date: string): string {
   ctx.clearRect(0, 0, 300, 200);
   
   // 设置透明度和斜度
-  ctx.globalAlpha = 0.08; // 极其淡的半透明，不影响正常阅读
-  ctx.font = '13px system-ui';
-  ctx.fillStyle = '#1d1d1f';
+  ctx.globalAlpha = 0.015; // 浅色明亮背景下调低透明度，以不干扰阅读
+  ctx.font = '12px system-ui';
+  ctx.fillStyle = '#0f172a'; // 深灰色字，适配浅色白底背景
   
   // 旋转
   ctx.translate(150, 100);
