@@ -7,7 +7,7 @@ describe('Database backfill process', () => {
 
   beforeAll(async () => {
     client = new Client({
-      connectionString: 'postgresql://postgres:postgres@localhost:5432/postgres'
+      connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/postgres'
     });
     await client.connect();
 
