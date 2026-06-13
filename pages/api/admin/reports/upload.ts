@@ -159,7 +159,7 @@ export async function extractAndNormalizeEntities(
          RETURNING id`,
         [kw, type]
       );
-      entId = insertRes.rows[0].id;
+      const entId = insertRes.rows[0].id;
       matchedEntities.set(entId, { id: entId, canonical_name: kw });
       extractedNames.add(kw);
     }

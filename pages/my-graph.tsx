@@ -2,10 +2,11 @@ import { GetServerSideProps } from 'next';
 import React, { useState } from 'react';
 import { Client } from 'pg';
 import pool from '../lib/db';
-import { getUserGraph, GraphNode, GraphLink } from './api/user/graph';
-import ObsidianGraph from '../components/ObsidianGraph';
+import { getUserGraph } from './api/user/graph';
+import ObsidianGraph, { Node as ObsidianNode } from '../components/ObsidianGraph';
 import ToolsPanel from '../components/ToolsPanel';
 import Link from 'next/link';
+import { filterGraphData, GraphNode, GraphLink } from '../lib/graph-helpers';
 
 interface MyGraphProps {
   graphData: {
@@ -21,6 +22,13 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota }: 
   const [quota, setQuota] = useState(freeQuota);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // 筛选与画像状态管理
+  const [selectedMarket, setSelectedMarket] = useState('All');
+  const [selectedProduct, setSelectedProduct] = useState('All');
+  const [focusNodeId, setFocusNodeId] = useState<string | null>(null);
+  const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
+  const [activeTab, setActiveTab] = useState<'profile' | 'tools'>('tools');
 
   if (!userId) {
     return (
@@ -117,6 +125,21 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota }: 
 
   const hasData = graphData.nodes && graphData.nodes.length > 0;
 
+  // 动态提取筛选选项
+  const markets = hasData ? ['All', ...Array.from(new Set(graphData.nodes.map(n => n.market_region).filter(Boolean)))] : ['All'];
+  const products = hasData ? ['All', ...Array.from(new Set(graphData.nodes.flatMap(n => n.products || []).filter(Boolean)))] : ['All'];
+
+  // 过滤数据
+  const filteredGraphData = hasData ? filterGraphData(
+    graphData.nodes,
+    graphData.links,
+    selectedMarket,
+    selectedProduct,
+    focusNodeId
+  ) : { nodes: [], links: [] };
+
+  const focusedNode = hasData && focusNodeId ? graphData.nodes.find(n => n.id === focusNodeId) : null;
+
   return (
     <div style={{
       background: '#f8fafc',
@@ -210,8 +233,127 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota }: 
       }}>
         {/* 左栏：图谱面板 */}
         <div style={{ flex: 1, minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {hasData && (
+            <>
+              {/* 顶部筛选栏 */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '16px',
+                padding: '12px 24px',
+                background: 'rgba(255, 255, 255, 0.45)',
+                backdropFilter: 'blur(16px)',
+                borderRadius: '16px',
+                border: '1px solid rgba(15, 23, 42, 0.08)',
+                marginBottom: '16px',
+                boxShadow: '0 4px 20px rgba(15, 23, 42, 0.02)',
+                flexWrap: 'wrap'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 500 }}>🌎 国家/市场</span>
+                    <select
+                      value={selectedMarket}
+                      onChange={(e) => setSelectedMarket(e.target.value)}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '10px',
+                        border: '1px solid rgba(15, 23, 42, 0.12)',
+                        background: 'rgba(255, 255, 255, 0.8)',
+                        fontSize: '0.85rem',
+                        outline: 'none',
+                        cursor: 'pointer',
+                        color: '#0f172a'
+                      }}
+                    >
+                      {markets.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 500 }}>📦 产品品类</span>
+                    <select
+                      value={selectedProduct}
+                      onChange={(e) => setSelectedProduct(e.target.value)}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '10px',
+                        border: '1px solid rgba(15, 23, 42, 0.12)',
+                        background: 'rgba(255, 255, 255, 0.8)',
+                        fontSize: '0.85rem',
+                        outline: 'none',
+                        cursor: 'pointer',
+                        color: '#0f172a'
+                      }}
+                    >
+                      {products.map(p => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setSelectedMarket('All');
+                    setSelectedProduct('All');
+                    setFocusNodeId(null);
+                    setSelectedNode(null);
+                  }}
+                  className="water-drop-btn"
+                  style={{
+                    padding: '6px 18px',
+                    fontSize: '0.8rem',
+                    cursor: 'pointer',
+                    fontWeight: 500
+                  }}
+                >
+                  🔄 重置筛选与聚焦
+                </button>
+              </div>
+
+              {/* 聚焦提醒横幅 */}
+              {focusNodeId && focusedNode && (
+                <div style={{
+                  padding: '10px 20px',
+                  background: 'rgba(37, 99, 235, 0.08)',
+                  border: '1px solid rgba(37, 99, 235, 0.15)',
+                  borderRadius: '12px',
+                  color: '#1d4ed8',
+                  fontSize: '0.85rem',
+                  marginBottom: '16px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <span>📍 正在聚焦报告：<strong>{focusedNode.title}</strong> (只展示其一阶关联节点)</span>
+                  <span
+                    onClick={() => setFocusNodeId(null)}
+                    style={{
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                      textDecoration: 'underline'
+                    }}
+                  >
+                    [清除聚焦]
+                  </span>
+                </div>
+              )}
+            </>
+          )}
+
           {hasData ? (
-            <ObsidianGraph data={graphData} />
+            <div style={{ flex: 1, minHeight: 0 }}>
+              <ObsidianGraph
+                data={filteredGraphData}
+                onNodeSelect={(node) => {
+                  setSelectedNode(node as any);
+                  setActiveTab('profile');
+                }}
+                onNodeDoubleClick={(node) => {
+                  setFocusNodeId(node.id);
+                }}
+              />
+            </div>
           ) : (
             <div style={{
               flex: 1,
@@ -293,28 +435,221 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota }: 
           border: '1px solid rgba(15, 23, 42, 0.08)',
           display: 'flex',
           flexDirection: 'column',
-          overflowY: 'auto',
+          overflow: 'hidden',
           backdropFilter: 'blur(20px)',
           boxShadow: '0 10px 30px rgba(15, 23, 42, 0.03)'
         }}>
+          {/* Tab 头部 */}
           <div style={{
-            padding: '16px 20px',
+            display: 'flex',
             borderBottom: '1px solid rgba(15, 23, 42, 0.06)',
-            background: 'rgba(15, 23, 42, 0.02)'
+            background: 'rgba(15, 23, 42, 0.02)',
+            padding: '4px 8px 0 8px'
           }}>
-            <h3 style={{
-              margin: 0,
-              fontSize: '0.95rem',
-              fontWeight: 500,
-              color: '#0f172a',
-              letterSpacing: '-0.3px'
-            }}>
+            <button
+              onClick={() => setActiveTab('profile')}
+              style={{
+                flex: 1,
+                padding: '12px 8px',
+                background: 'none',
+                border: 'none',
+                borderBottom: activeTab === 'profile' ? '2px solid #2563eb' : '2px solid transparent',
+                color: activeTab === 'profile' ? '#2563eb' : '#475569',
+                fontWeight: activeTab === 'profile' ? 600 : 400,
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              📁 商业画像看板
+            </button>
+            <button
+              onClick={() => setActiveTab('tools')}
+              style={{
+                flex: 1,
+                padding: '12px 8px',
+                background: 'none',
+                border: 'none',
+                borderBottom: activeTab === 'tools' ? '2px solid #2563eb' : '2px solid transparent',
+                color: activeTab === 'tools' ? '#2563eb' : '#475569',
+                fontWeight: activeTab === 'tools' ? 600 : 400,
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
               🛠️ 外贸快捷工具箱
-            </h3>
+            </button>
           </div>
-          <div style={{ flex: 1, padding: '10px 0' }}>
-            <ToolsPanel />
-          </div>
+
+          {/* Tab 内容区 */}
+          {activeTab === 'profile' ? (
+            <div style={{ flex: 1, padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+              {selectedNode ? (
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.65)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '20px',
+                  border: '1px solid rgba(15, 23, 42, 0.06)',
+                  padding: '24px',
+                  boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.04)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px'
+                }}>
+                  <div>
+                    <h4 style={{ margin: '0 0 6px 0', fontSize: '1.1rem', color: '#0f172a', fontWeight: 600, lineHeight: 1.4 }}>
+                      {selectedNode.title}
+                    </h4>
+                    <span style={{ fontSize: '0.8rem', color: '#64748b' }}>报告 ID: {selectedNode.id.substring(0, 8)}...</span>
+                  </div>
+
+                  {/* 国家/市场 */}
+                  <div>
+                    <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>🌍 所涉国家/市场</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {selectedNode.market_region ? (
+                        <span style={{
+                          background: 'rgba(37, 99, 235, 0.08)',
+                          color: '#2563eb',
+                          border: '1px solid rgba(37, 99, 235, 0.15)',
+                          padding: '4px 10px',
+                          borderRadius: '12px',
+                          fontSize: '0.75rem',
+                          fontWeight: 500
+                        }}>
+                          {selectedNode.market_region}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>暂无</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 经营玩家/品牌 */}
+                  <div>
+                    <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>🏢 经营玩家/品牌</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {selectedNode.companies && selectedNode.companies.length > 0 ? (
+                        selectedNode.companies.map((c, i) => (
+                          <span key={i} style={{
+                            background: 'rgba(16, 185, 129, 0.08)',
+                            color: '#10b981',
+                            border: '1px solid rgba(16, 185, 129, 0.15)',
+                            padding: '4px 10px',
+                            borderRadius: '12px',
+                            fontSize: '0.75rem',
+                            fontWeight: 500
+                          }}>
+                            {c}
+                          </span>
+                        ))
+                      ) : (
+                        <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>暂无</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 涉及品类 */}
+                  <div>
+                    <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>📦 涉及品类</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {selectedNode.products && selectedNode.products.length > 0 ? (
+                        selectedNode.products.map((p, i) => (
+                          <span key={i} style={{
+                            background: 'rgba(249, 115, 22, 0.08)',
+                            color: '#ea580c',
+                            border: '1px solid rgba(249, 115, 22, 0.15)',
+                            padding: '4px 10px',
+                            borderRadius: '12px',
+                            fontSize: '0.75rem',
+                            fontWeight: 500
+                          }}>
+                            {p}
+                          </span>
+                        ))
+                      ) : (
+                        <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>暂无</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 覆盖渠道 */}
+                  <div>
+                    <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>🛣️ 覆盖渠道</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {selectedNode.channels && selectedNode.channels.length > 0 ? (
+                        selectedNode.channels.map((ch, i) => (
+                          <span key={i} style={{
+                            background: 'rgba(147, 51, 234, 0.08)',
+                            color: '#9333ea',
+                            border: '1px solid rgba(147, 51, 234, 0.15)',
+                            padding: '4px 10px',
+                            borderRadius: '12px',
+                            fontSize: '0.75rem',
+                            fontWeight: 500
+                          }}>
+                            {ch}
+                          </span>
+                        ))
+                      ) : (
+                        <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>暂无</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 简要概述 */}
+                  <div style={{ borderTop: '1px solid rgba(15, 23, 42, 0.06)', paddingTop: '12px' }}>
+                    <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>📝 报告概述</div>
+                    <p style={{
+                      margin: 0,
+                      fontSize: '0.85rem',
+                      color: '#475569',
+                      lineHeight: 1.6,
+                      whiteSpace: 'pre-line'
+                    }}>
+                      {selectedNode.summary || '暂无概述'}
+                    </p>
+                  </div>
+
+                  <Link
+                    href={`/reports/${selectedNode.id}`}
+                    className="water-drop-btn"
+                    style={{
+                      padding: '10px 0',
+                      fontSize: '0.85rem',
+                      width: '100%',
+                      textDecoration: 'none',
+                      fontWeight: 500,
+                      marginTop: '8px'
+                    }}
+                  >
+                    📖 阅读报告详情
+                  </Link>
+                </div>
+              ) : (
+                <div style={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '40px 20px',
+                  textAlign: 'center',
+                  color: '#64748b'
+                }}>
+                  <span style={{ fontSize: '2.5rem', marginBottom: '16px' }}>💡</span>
+                  <p style={{ margin: 0, fontSize: '0.85rem', lineHeight: 1.6, color: '#64748b' }}>
+                    点击图谱中的任意报告节点，即可在此查看该报告的智能商业画像与核心供需实体线索。
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ flex: 1, padding: '10px 0', overflowY: 'auto' }}>
+              <ToolsPanel />
+            </div>
+          )}
         </div>
 
       </main>
