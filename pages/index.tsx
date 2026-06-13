@@ -1,10 +1,11 @@
 import { GetServerSideProps } from 'next';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Client } from 'pg';
 import pool from '../lib/db';
 import { getUserGraph, GraphNode, GraphLink } from './api/user/graph';
 import ToolsPanel from '../components/ToolsPanel';
 import Link from 'next/link';
+import { detectAndDecodeHtml } from '../lib/encoding';
 
 interface PlatformReport {
   id: string;
@@ -47,6 +48,11 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
   const [rawHtmlContent, setRawHtmlContent] = useState('');
   const [uploadLoading, setUploadLoading] = useState(false);
 
+  // 拖拽及文件状态
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isDragActive, setIsDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
@@ -80,6 +86,31 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
     window.location.reload();
   };
 
+  const handleFileChange = (file: File) => {
+    if (!file) return;
+    if (!file.name.endsWith('.html') && !file.name.endsWith('.htm')) {
+      alert('只支持上传 .html 格式的文件');
+      return;
+    }
+    setSelectedFile(file);
+    
+    // 读取文件内容
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const buffer = e.target?.result as ArrayBuffer;
+      try {
+        const decodedText = detectAndDecodeHtml(buffer);
+        setRawHtmlContent(decodedText);
+      } catch (err) {
+        alert('读取或解析文件失败，请检查编码格式');
+      }
+    };
+    reader.onerror = () => {
+      alert('读取文件出错');
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
   const handleUploadReport = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!rawHtmlContent.trim()) return;
@@ -94,6 +125,8 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
       if (res.ok && data.success) {
         alert('报告上传成功！');
         setRawHtmlContent('');
+        setSelectedFile(null);
+        setIsDragActive(false);
         setShowUploadModal(false);
         window.location.reload();
       } else {
@@ -1022,7 +1055,12 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
             position: 'relative'
           }}>
             <button 
-              onClick={() => setShowUploadModal(false)}
+              onClick={() => {
+                setShowUploadModal(false);
+                setSelectedFile(null);
+                setIsDragActive(false);
+                setRawHtmlContent('');
+              }}
               style={{
                 position: 'absolute',
                 top: '20px',
@@ -1040,31 +1078,135 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
               📤 发布外贸数据报告 (Admin)
             </h2>
             <p style={{ fontSize: '0.8rem', color: '#475569', textAlign: 'center', marginBottom: '24px' }}>
-              粘贴报告的原始 HTML 代码，系统将自动进行脱水处理（自动剥离 Base64 图并上传）。
+              拖拽上传报告的原始 HTML 文件，系统将自动进行脱水处理（自动转码、自动剥离 Base64 图并上传）。
             </p>
             <form onSubmit={handleUploadReport} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <textarea 
-                placeholder="在此粘贴 HTML 代码..."
-                value={rawHtmlContent}
-                onChange={e => setRawHtmlContent(e.target.value)}
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragActive(true);
+                }}
+                onDragLeave={() => setIsDragActive(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDragActive(false);
+                  if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                    handleFileChange(e.dataTransfer.files[0]);
+                  }
+                }}
                 style={{
                   width: '100%',
-                  height: '300px',
-                  background: 'rgba(255, 255, 255, 0.65)',
-                  border: '1px solid rgba(15, 23, 42, 0.08)',
-                  borderRadius: '16px',
-                  padding: '16px',
-                  fontSize: '0.85rem',
-                  fontFamily: 'monospace',
-                  outline: 'none',
-                  resize: 'none'
+                  height: '240px',
+                  background: selectedFile 
+                    ? 'linear-gradient(135deg, rgba(37, 99, 235, 0.03) 0%, rgba(37, 99, 235, 0.08) 100%)' 
+                    : isDragActive 
+                      ? 'linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(37, 99, 235, 0.12) 100%)'
+                      : 'rgba(255, 255, 255, 0.65)',
+                  border: selectedFile 
+                    ? '2px solid #2563eb' 
+                    : isDragActive 
+                      ? '2px dashed #2563eb' 
+                      : '2px dashed rgba(15, 23, 42, 0.15)',
+                  borderRadius: '20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '12px',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                  padding: '20px',
+                  boxShadow: isDragActive ? '0 12px 30px rgba(37, 99, 235, 0.08)' : 'none',
                 }}
-                required
-              />
+                onMouseOver={(e) => {
+                  if (!selectedFile && !isDragActive) {
+                    e.currentTarget.style.borderColor = 'rgba(37, 99, 235, 0.5)';
+                    e.currentTarget.style.boxShadow = '0 8px 20px rgba(15, 23, 42, 0.02)';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (!selectedFile && !isDragActive) {
+                    e.currentTarget.style.borderColor = 'rgba(15, 23, 42, 0.15)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }
+                }}
+              >
+                <input 
+                  type="file" 
+                  ref={fileInputRef}
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      handleFileChange(e.target.files[0]);
+                    }
+                  }}
+                  accept=".html,.htm"
+                  style={{ display: 'none' }}
+                />
+                {selectedFile ? (
+                  <>
+                    <div style={{ fontSize: '3rem' }}>📄</div>
+                    <div style={{ textAlign: 'center' }}>
+                      <p style={{ margin: '0 0 4px 0', fontWeight: 600, fontSize: '0.95rem', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '350px' }}>
+                        {selectedFile.name}
+                      </p>
+                      <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>
+                        文件大小: {(selectedFile.size / 1024).toFixed(1)} KB
+                      </p>
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedFile(null);
+                        setRawHtmlContent('');
+                      }}
+                      style={{
+                        marginTop: '8px',
+                        background: 'rgba(239, 68, 68, 0.08)',
+                        border: '1px solid rgba(239, 68, 68, 0.2)',
+                        color: '#ef4444',
+                        borderRadius: '12px',
+                        padding: '6px 16px',
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                        fontWeight: 500,
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)';
+                      }}
+                    >
+                      ✕ 清除重选
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ 
+                      fontSize: '3rem', 
+                      transform: isDragActive ? 'translateY(-5px)' : 'none',
+                      transition: 'transform 0.2s'
+                    }}>
+                      ☁️
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <p style={{ margin: '0 0 4px 0', fontWeight: 500, color: '#0f172a', fontSize: '0.95rem' }}>
+                        {isDragActive ? '释放以导入此报告' : '将 HTML 报告文件拖到这里'}
+                      </p>
+                      <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>
+                        支持 Drag & Drop，或点击本卡片浏览文件
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
               <button 
                 type="submit" 
                 className="water-drop-btn"
-                disabled={uploadLoading}
+                disabled={uploadLoading || !rawHtmlContent}
                 style={{ padding: '12px', fontSize: '0.95rem', fontWeight: 500, width: '100%' }}
               >
                 {uploadLoading ? '⏳ 正在处理并上传报告...' : '🚀 立即发布报告'}
