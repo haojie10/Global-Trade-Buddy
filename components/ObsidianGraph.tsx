@@ -1,29 +1,46 @@
 import React, { useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 
-interface Node {
+export interface Node {
   id: string;
   title: string;
   category: string;
   market_region: string;
+  summary?: string;
+  companies?: string[];
+  products?: string[];
+  channels?: string[];
 }
 
-interface Link {
-  source: string;
-  target: string;
+export interface Link {
+  source: any;
+  target: any;
   relation_key: string;
+  market_region?: string;
+  relation_type?: string;
 }
 
-interface ObsidianGraphProps {
+export interface ObsidianGraphProps {
   data: {
     nodes: Node[];
     links: Link[];
   };
+  onNodeSelect?: (node: Node) => void;
+  onNodeDoubleClick?: (node: Node) => void;
 }
 
-export default function ObsidianGraph({ data }: ObsidianGraphProps) {
+export default function ObsidianGraph({ data, onNodeSelect, onNodeDoubleClick }: ObsidianGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  const clickTimeoutRef = useRef<any>(null);
+  const lastClickedNodeIdRef = useRef<string | null>(null);
+  const lastClickTimeRef = useRef<number>(0);
+
+  const callbacksRef = useRef({ onNodeSelect, onNodeDoubleClick });
+  useEffect(() => {
+    callbacksRef.current = { onNodeSelect, onNodeDoubleClick };
+  }, [onNodeSelect, onNodeDoubleClick]);
 
   useEffect(() => {
     // 只有在浏览器端才初始化 force-graph，防止 NextJS SSR 报错
@@ -50,8 +67,28 @@ export default function ObsidianGraph({ data }: ObsidianGraphProps) {
         .linkColor(() => 'rgba(37, 99, 235, 0.15)')
         .linkLabel((link: any) => `共同关键词: ${link.relation_key}`)
         .onNodeClick((node: any) => {
-          // 点击节点，平滑穿透跳转至报告详情页
-          router.push(`/reports/${node.id}`);
+          const now = Date.now();
+          if (lastClickedNodeIdRef.current === node.id && now - lastClickTimeRef.current < 300) {
+            if (clickTimeoutRef.current) {
+              clearTimeout(clickTimeoutRef.current);
+              clickTimeoutRef.current = null;
+            }
+            lastClickedNodeIdRef.current = null;
+            lastClickTimeRef.current = 0;
+            callbacksRef.current.onNodeDoubleClick?.(node);
+          } else {
+            if (clickTimeoutRef.current) {
+              clearTimeout(clickTimeoutRef.current);
+            }
+            lastClickedNodeIdRef.current = node.id;
+            lastClickTimeRef.current = now;
+            clickTimeoutRef.current = setTimeout(() => {
+              callbacksRef.current.onNodeSelect?.(node);
+              clickTimeoutRef.current = null;
+              lastClickedNodeIdRef.current = null;
+              lastClickTimeRef.current = 0;
+            }, 300);
+          }
         });
 
       // 调整画布高宽
@@ -67,6 +104,9 @@ export default function ObsidianGraph({ data }: ObsidianGraphProps) {
 
       return () => {
         window.removeEventListener('resize', resizeHandler);
+        if (clickTimeoutRef.current) {
+          clearTimeout(clickTimeoutRef.current);
+        }
         graph._destructor?.(); // 销毁实例，防内存泄漏
       };
     });
