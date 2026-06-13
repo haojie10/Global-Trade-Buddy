@@ -75,30 +75,23 @@ function cleanHtmlBody(rawHtml: string): string {
   // 3. 移除富文本中的所有 <script>
   bodyContent = bodyContent.replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, '');
 
-  // 4. 强制注入浅色商务覆盖样式，防止自带亮白背景和暗字影响阅读，转化为优雅的淡灰白底与 Slate 蓝黑字
+  // 4. 强制注入的基础重置样式（不再强制覆盖前景色和背景色，允许模板原生的暗色主题和卡片显示）
   const lightThemeOverrides = `
     <style>
       .report-content-body {
-        background: transparent !important;
-        color: #1e293b !important;
+        width: 100%;
+        font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       }
-      .report-content-body p, 
-      .report-content-body span, 
-      .report-content-body li, 
-      .report-content-body td, 
-      .report-content-body div {
-        background-color: transparent !important;
-        color: #334155 !important;
+      .report-content-body img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 12px;
+        margin: 16px 0;
       }
-      .report-content-body h1, 
-      .report-content-body h2, 
-      .report-content-body h3, 
-      .report-content-body h4 {
-        color: #0f172a !important;
-        background-color: transparent !important;
-      }
-      .report-content-body a {
-        color: #2563eb !important;
+      .report-content-body table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
       }
     </style>
   `;
@@ -160,7 +153,14 @@ export default function ReportDetailPage({ report, related, userId, userRole }: 
           zIndex: 0
         }} />
 
-        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 20px', position: 'relative', zIndex: 5 }}>
+        <div style={{ 
+          maxWidth: unlocked ? '1400px' : '900px', 
+          margin: '0 auto', 
+          padding: '40px 20px', 
+          position: 'relative', 
+          zIndex: 5,
+          transition: 'max-width 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
+        }}>
           
           {/* 面包屑 */}
           <div style={{ marginBottom: '20px', fontSize: '0.85rem' }}>
@@ -220,12 +220,23 @@ export default function ReportDetailPage({ report, related, userId, userRole }: 
           {/* 内容展示区 */}
           <div style={{ position: 'relative', minHeight: '300px', marginBottom: '50px' }}>
             {unlocked ? (
-              // 已解锁：完整渲染大图脱水后的 HTML
-              <div 
-                className="report-content-body"
-                style={{ fontSize: '1rem', color: '#1e293b', lineHeight: 1.8 }}
-                dangerouslySetInnerHTML={{ __html: cleanHtmlBody(content || '') }} 
-              />
+              // 已解锁：自适应暗绿奢华背景容器，渲染大图脱水后的 HTML
+              <div style={{
+                background: 'linear-gradient(135deg, #090e07 0%, #030502 100%)',
+                borderRadius: '24px',
+                padding: '40px',
+                boxShadow: '0 20px 50px rgba(9, 14, 7, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(143, 168, 116, 0.12)',
+                marginTop: '20px',
+                transition: 'all 0.5s ease',
+                overflow: 'hidden'
+              }}>
+                <div 
+                  className="report-content-body"
+                  style={{ fontSize: '1rem', color: '#f2f5f0', lineHeight: 1.8 }}
+                  dangerouslySetInnerHTML={{ __html: cleanHtmlBody(content || '') }} 
+                />
+              </div>
             ) : (
               // 未解锁：呈现高斯模糊与引导解锁弹窗
               <div>
