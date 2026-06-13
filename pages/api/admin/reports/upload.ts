@@ -49,11 +49,10 @@ export async function runDehydration(html: string, uploadFn: UploadFn) {
   let cleanHtml = html;
   let imageCount = 0;
   
-  // 匹配 data:image/png;base64,xxxxx 等格式的正则
-  const base64Regex = /src="data:image\/([a-zA-Z]*);base64,([^"]*)"/g;
+  // 匹配任何 data:image/([a-zA-Z]*);base64, 格式的正则，兼容 src="...", url('...')
+  const base64Regex = /data:image\/([a-zA-Z]*);base64,([^"'\)]*)/g;
   let match;
   
-  // 使用循环逐一提取并替换
   const replacements: { raw: string; url: string }[] = [];
   
   while ((match = base64Regex.exec(html)) !== null) {
@@ -61,18 +60,16 @@ export async function runDehydration(html: string, uploadFn: UploadFn) {
     const base64Data = match[2];
     const buffer = Buffer.from(base64Data, 'base64');
     
-    // 调用上传函数（可以是 OSS、COS 或是本地模拟）
     const mimeType = `image/${ext}`;
     const url = await uploadFn(buffer, mimeType);
     
     replacements.push({
       raw: match[0],
-      url: `src="${url}"`
+      url: url
     });
     imageCount++;
   }
   
-  // 批量替换 HTML 里的 Base64 内容
   replacements.forEach(rep => {
     cleanHtml = cleanHtml.replace(rep.raw, rep.url);
   });
@@ -97,11 +94,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const dbClient = await pool.connect();
 
   try {
-    // 模拟的 OSS 图片上传，返回本地伪造 URL
+    // 模拟的 OSS 图片上传，在本地开发环境下将图片真实写入 public/uploads，返回 /uploads/ 相对链接
     const mockUpload = async (buffer: Buffer, mime: string) => {
       const ext = mime.split('/')[1] || 'png';
       const fileName = `img_${Date.now()}_${Math.floor(Math.random() * 1000)}.${ext}`;
-      return `https://cdn.globaltradebuddy.com/uploads/${fileName}`;
+      
+      const fs = require('fs');
+      const path = require('path');
+      const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      fs.writeFileSync(path.join(uploadDir, fileName), buffer);
+      
+      return `/uploads/${fileName}`;
     };
 
     // 1. 脱水处理

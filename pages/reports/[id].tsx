@@ -132,6 +132,68 @@ export default function ReportDetailPage({ report, related, userId, userRole }: 
     }
   };
 
+  // 动态解析并执行 HTML 报告中携带的脚本（用于初始化 ECharts 和 Lucide 图标）
+  React.useEffect(() => {
+    if (!unlocked || !content) return;
+
+    // 1. 提取所有的 script 标签
+    const scriptRegex = /<script([^>]*)>([\s\S]*?)<\/script>/gi;
+    const scriptsToLoad: { src: string | null; content: string }[] = [];
+    let match;
+    while ((match = scriptRegex.exec(content)) !== null) {
+      const attrs = match[1];
+      const srcMatch = attrs.match(/src="([^"]*)"/i) || attrs.match(/src=\'([^\']*)\'/i);
+      const src = srcMatch ? srcMatch[1] : null;
+      const inlineCode = match[2];
+      scriptsToLoad.push({ src, content: inlineCode });
+    }
+
+    if (scriptsToLoad.length === 0) return;
+
+    // 2. 按顺序串行加载外部脚本，加载完后再执行内联脚本
+    const loadExternalScripts = async () => {
+      for (const s of scriptsToLoad) {
+        if (s.src) {
+          const srcUrl = s.src;
+          await new Promise((resolve) => {
+            // 避免重复加载
+            if (document.querySelector(`script[src="${srcUrl}"]`)) {
+              resolve(true);
+              return;
+            }
+            const script = document.createElement('script');
+            script.src = srcUrl;
+            script.async = false;
+            script.onload = () => resolve(true);
+            script.onerror = () => resolve(true); // 容错处理，防止加载失败阻塞后续
+            document.head.appendChild(script);
+          });
+        }
+      }
+    };
+
+    const runInlineScripts = () => {
+      // 外部依赖加载完成后，稍等片刻让 DOM 彻底渲染完毕，再初始化图表
+      setTimeout(() => {
+        scriptsToLoad.forEach((s) => {
+          if (!s.src && s.content.trim()) {
+            try {
+              // 构造一个 script 节点来执行代码，利于保留作用域和全局变量访问
+              const script = document.createElement('script');
+              script.text = s.content;
+              document.body.appendChild(script);
+              document.body.removeChild(script);
+            } catch (err) {
+              console.error('执行内联报告脚本出错:', err);
+            }
+          }
+        });
+      }, 150);
+    };
+
+    loadExternalScripts().then(runInlineScripts);
+  }, [unlocked, content]);
+
   return (
     <WatermarkContainer text={userId ? `外贸智友 - 业务员 ID: ${userId.substring(0, 8)}...` : '外贸智友 - 游客浏览模式'}>
       <div style={{
