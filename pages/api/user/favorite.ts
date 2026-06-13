@@ -3,7 +3,7 @@ import { Client } from 'pg';
 import pool from '../../../lib/db';
 
 // 检查是否收藏 (供 API 和单元测试调用)
-export async function checkIsFavorite(userId: string, reportId: string, dbClient: Client): Promise<boolean> {
+export async function checkIsFavorite(userId: string, reportId: string, dbClient: any): Promise<boolean> {
   const res = await dbClient.query(
     'SELECT id FROM favorites WHERE user_id = $1 AND report_id = $2',
     [userId, reportId]
@@ -12,7 +12,7 @@ export async function checkIsFavorite(userId: string, reportId: string, dbClient
 }
 
 // 切换收藏状态 (供 API 和单元测试调用)
-export async function toggleFavorite(userId: string, reportId: string, dbClient: Client) {
+export async function toggleFavorite(userId: string, reportId: string, dbClient: any) {
   const isFav = await checkIsFavorite(userId, reportId, dbClient);
 
   if (isFav) {

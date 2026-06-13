@@ -16,7 +16,7 @@ export interface GraphLink {
 }
 
 // 核心个人图谱关联逻辑（供 API 和单元测试调用）
-export async function getUserGraph(userId: string, dbClient: Client) {
+export async function getUserGraph(userId: string, dbClient: any) {
   // 1. 获取该用户所有已解锁的报告
   const unlockedRes = await dbClient.query(
     `SELECT r.id, r.title, r.category, r.market_region 

@@ -3,7 +3,7 @@ import { Client } from 'pg';
 import pool from '../../../lib/db';
 
 // 执行邀请兑换逻辑 (双向赠送解锁额度，包裹在 SQL 事务中)
-export async function processInvitation(referrerId: string, inviteeId: string, dbClient: Client) {
+export async function processInvitation(referrerId: string, inviteeId: string, dbClient: any) {
   try {
     await dbClient.query('BEGIN');
 

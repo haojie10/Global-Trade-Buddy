@@ -1250,7 +1250,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       }
     }
 
-    let graphData = { nodes: [], links: [] };
+    let graphData: any = { nodes: [], links: [] };
     let allReports: any[] = [];
 
     if (userId) {

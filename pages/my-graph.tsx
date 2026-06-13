@@ -391,7 +391,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       }
     }
 
-    let graphData = { nodes: [], links: [] };
+    let graphData: any = { nodes: [], links: [] };
 
     if (userId) {
       if (userRole === 'admin') {

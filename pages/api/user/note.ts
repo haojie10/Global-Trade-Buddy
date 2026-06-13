@@ -3,7 +3,7 @@ import { Client } from 'pg';
 import pool from '../../../lib/db';
 
 // 保存笔记服务 (供 API 和单元测试调用)
-export async function saveUserNote(userId: string, reportId: string, content: string, dbClient: Client) {
+export async function saveUserNote(userId: string, reportId: string, content: string, dbClient: any) {
   // 检查是否已有笔记
   const checkRes = await dbClient.query(
     'SELECT id FROM notes WHERE user_id = $1 AND report_id = $2',
@@ -28,7 +28,7 @@ export async function saveUserNote(userId: string, reportId: string, content: st
 }
 
 // 读取笔记服务 (供 API 和单元测试调用)
-export async function getUserNote(userId: string, reportId: string, dbClient: Client) {
+export async function getUserNote(userId: string, reportId: string, dbClient: any) {
   const res = await dbClient.query(
     'SELECT id, content, created_at, updated_at FROM notes WHERE user_id = $1 AND report_id = $2',
     [userId, reportId]

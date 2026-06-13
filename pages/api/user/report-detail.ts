@@ -3,7 +3,7 @@ import { Client } from 'pg';
 import pool from '../../../lib/db';
 
 // 核心安全详情读取逻辑（供 API 和单元测试调用）
-export async function getReportDetail(userId: string, reportId: string, dbClient: Client) {
+export async function getReportDetail(userId: string, reportId: string, dbClient: any) {
   // 1. 获取报告元数据与全文
   const reportRes = await dbClient.query(
     'SELECT id, title, category, market_region, summary, content_html FROM reports WHERE id = $1',
