@@ -8,6 +8,18 @@ async function main() {
 
   try {
     console.log('开始恢复种子测试数据...');
+
+    // 安全保护：如果数据库已有报告且未传入 --force，则拒绝清空
+    const reportsCountRes = await dbClient.query('SELECT COUNT(*) FROM reports');
+    const reportsCount = parseInt(reportsCountRes.rows[0].count);
+    if (reportsCount > 0 && !process.argv.includes('--force')) {
+      console.log('⚠️ 警告：检测到数据库中已存在报告数据。为了防止您手动上传的数据丢失，脚本已安全终止。');
+      console.log('💡 如果您确实需要强制重置为初始种子数据，请在命令后附加 --force 参数：');
+      console.log('   node bin/restore-data.js --force');
+      await dbClient.end();
+      return;
+    }
+
     await dbClient.query('BEGIN');
 
     // 1. 清理全部旧数据
