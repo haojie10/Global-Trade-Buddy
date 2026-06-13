@@ -100,15 +100,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const { userId } = req.query;
-  if (!userId) {
+  const { userId, userRole } = req.query;
+  
+  // 如果两个参数都没有，则由于向下兼容，可以抛出错误（除非是 admin 场景）
+  // 为了保持一致的报错，如果缺 userId 且缺 userRole，报 400
+  if (!userId && !userRole) {
     return res.status(400).json({ error: 'Missing userId parameter' });
   }
 
   const dbClient = await pool.connect();
 
   try {
-    const graphData = await getUserGraph(userId as string, dbClient);
+    let resolvedRole = userRole as string;
+    if (!resolvedRole) {
+      if (userId) {
+        const userRes = await dbClient.query(
+          `SELECT role FROM users WHERE id = $1`,
+          [userId]
+        );
+        if (userRes.rows.length > 0) {
+          resolvedRole = userRes.rows[0].role || 'user';
+        } else {
+          resolvedRole = 'user';
+        }
+      } else {
+        resolvedRole = 'user';
+      }
+    }
+
+    const graphData = await getGraphData(userId as string || '', resolvedRole, dbClient);
     return res.status(200).json(graphData);
   } catch (err: any) {
     return res.status(500).json({ error: err.message });

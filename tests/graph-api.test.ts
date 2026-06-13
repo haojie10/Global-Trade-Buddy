@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { Client } from 'pg';
 import { createTestClient } from './helpers/db-test-helper';
-import { getGraphData, getUserGraph } from '../pages/api/user/graph';
+import graphHandler, { getGraphData, getUserGraph } from '../pages/api/user/graph';
 
 describe('Graph Core API - getGraphData & Compatibility', () => {
   let dbClient: Client;
@@ -18,7 +18,7 @@ describe('Graph Core API - getGraphData & Compatibility', () => {
     await dbClient.query('DELETE FROM unlocks');
     await dbClient.query('DELETE FROM relations');
     await dbClient.query('DELETE FROM report_entities');
-    await dbClient.query('DELETE FROM entities');
+    await dbClient.query("DELETE FROM entities WHERE canonical_name IN ('测试公司', '测试产品', '测试渠道')");
     await dbClient.query('DELETE FROM reports');
     await dbClient.query('DELETE FROM users');
 
@@ -126,5 +126,68 @@ describe('Graph Core API - getGraphData & Compatibility', () => {
     const data = await getUserGraph(userIdNormal, dbClient);
     expect(data.nodes.length).toBe(1);
     expect(data.nodes[0].id).toBe(reportIdA);
+  });
+});
+
+describe('Graph API Handler', () => {
+  let dbClient: Client;
+  let userIdNormal: string;
+  let userIdAdmin: string;
+
+  beforeAll(async () => {
+    dbClient = createTestClient();
+    await dbClient.connect();
+    // 获取已存在的测试用户 ID
+    const normalRes = await dbClient.query("SELECT id FROM users WHERE phone_number = '13800000001'");
+    userIdNormal = normalRes.rows[0].id;
+    const adminRes = await dbClient.query("SELECT id FROM users WHERE phone_number = '13800000002'");
+    userIdAdmin = adminRes.rows[0].id;
+  });
+
+  afterAll(async () => {
+    await dbClient.end();
+  });
+
+  function mockReqRes(query: any) {
+    const req = {
+      method: 'GET',
+      query,
+    } as any;
+    let statusVal = 200;
+    let jsonVal: any = null;
+    const res = {
+      status(code: number) {
+        statusVal = code;
+        return this;
+      },
+      json(data: any) {
+        jsonVal = data;
+        return this;
+      },
+    } as any;
+    return { req, res, getStatus: () => statusVal, getJson: () => jsonVal };
+  }
+
+  it('should fallback userRole to query users table if userRole is missing', async () => {
+    const { req, res, getStatus, getJson } = mockReqRes({ userId: userIdAdmin });
+    await graphHandler(req, res);
+    expect(getStatus()).toBe(200);
+    // 因为 userIdAdmin 是 admin 角色，即使没有传 userRole，自动获取后返回 2 个节点
+    expect(getJson().nodes.length).toBe(2);
+  });
+
+  it('should respect explicitly passed userRole query parameter', async () => {
+    // 显式传入 userRole = 'admin' 即使 userId 是普通用户，也返回管理员权限数据
+    const { req, res, getStatus, getJson } = mockReqRes({ userId: userIdNormal, userRole: 'admin' });
+    await graphHandler(req, res);
+    expect(getStatus()).toBe(200);
+    expect(getJson().nodes.length).toBe(2); // 管理员节点数为 2
+  });
+
+  it('should default userRole to user if both missing or role query fails', async () => {
+    const { req, res, getStatus, getJson } = mockReqRes({ userId: '00000000-0000-0000-0000-000000000000' }); // 不存在用户 ID
+    await graphHandler(req, res);
+    expect(getStatus()).toBe(200);
+    expect(getJson().nodes.length).toBe(0); // 默认为 user 角色，且无解锁，返回 0 节点
   });
 });
