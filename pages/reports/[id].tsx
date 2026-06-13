@@ -25,6 +25,7 @@ interface ReportDetailProps {
   };
   related: RelatedReport[];
   userId: string;
+  userRole: string;
 }
 
 if (typeof window !== 'undefined') {
@@ -105,17 +106,21 @@ function cleanHtmlBody(rawHtml: string): string {
   return `${lightThemeOverrides}\n${stylesStr}\n${bodyContent}`;
 }
 
-export default function ReportDetailPage({ report, related, userId }: ReportDetailProps) {
+export default function ReportDetailPage({ report, related, userId, userRole }: ReportDetailProps) {
   const [unlocked, setUnlocked] = useState(report.isUnlocked);
   const [content, setContent] = useState(report.content_html);
 
-  // 挂载原 HTML 模板内联 onclick 所需的 JavaScript 全局函数（React dangerouslySetInnerHTML 默认屏蔽 Script 标签）
+  // 挂载原 HTML 模板内联 onclick 所需 the JavaScript 全局函数（React dangerouslySetInnerHTML 默认屏蔽 Script 标签）
   React.useEffect(() => {
     // 确保在客户端切换路由或刷新时 switchSection 挂载状态正常
   }, []);
 
   // 模拟微信/支付宝扫码解锁功能
   const handleUnlock = async () => {
+    if (!userId) {
+      alert('请先返回主页登录系统，再解锁报告！');
+      return;
+    }
     try {
       const res = await fetch(`/api/user/unlock-action`, {
         method: 'POST',
@@ -135,7 +140,7 @@ export default function ReportDetailPage({ report, related, userId }: ReportDeta
   };
 
   return (
-    <WatermarkContainer text={`外贸智友 - 业务员 ID: ${userId.substring(0, 8)}...`}>
+    <WatermarkContainer text={userId ? `外贸智友 - 业务员 ID: ${userId.substring(0, 8)}...` : '外贸智友 - 游客浏览模式'}>
       <div style={{
         background: '#f8fafc',
         color: '#0f172a',
@@ -262,7 +267,7 @@ export default function ReportDetailPage({ report, related, userId }: ReportDeta
                       width: '100%'
                     }}
                   >
-                    🚀 立即解锁报告 (消耗1次额度)
+                    {userId ? '🚀 立即解锁报告 (消耗1次额度)' : '🔒 请先登录后再解锁'}
                   </button>
                 </div>
               </div>
@@ -354,49 +359,99 @@ export default function ReportDetailPage({ report, related, userId }: ReportDeta
   );
 }
 
+function parseCookies(cookieHeader?: string) {
+  const list: Record<string, string> = {};
+  if (!cookieHeader) return list;
+  cookieHeader.split(';').forEach((cookie) => {
+    const parts = cookie.split('=');
+    list[parts.shift()!.trim()] = decodeURI(parts.join('='));
+  });
+  return list;
+}
+
 // 服务端数据预取 (SSR)
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const { id } = context.params!;
+  const cookies = parseCookies(context.req.headers.cookie);
+  const cookieUserId = cookies.user_id;
   
   const dbClient = await pool.connect();
 
   try {
-    // 动态获取或创建一个默认测试用户 UUID 作为降级，避免手机号字符串转换 UUID 抛出语法错误
-    let mockUserId = context.query.userId as string;
-    if (!mockUserId) {
-      const userRes = await dbClient.query('SELECT id FROM users ORDER BY created_at ASC LIMIT 1');
+    let userId: string | null = null;
+    let userRole = 'guest';
+
+    if (cookieUserId) {
+      const userRes = await dbClient.query('SELECT id, role FROM users WHERE id = $1', [cookieUserId]);
       if (userRes.rows.length > 0) {
-        mockUserId = userRes.rows[0].id;
-      } else {
-        const newUserRes = await dbClient.query(
-          "INSERT INTO users (phone_number, free_quota) VALUES ('13800000000', 3) RETURNING id"
-        );
-        mockUserId = newUserRes.rows[0].id;
+        userId = userRes.rows[0].id;
+        userRole = userRes.rows[0].role;
       }
     }
 
-    // 1. 获取报告详情和解锁校验
-    const report = await getReportDetail(mockUserId, id as string, dbClient);
-
-    // 2. 如果已解锁，获取与之有 relations 关联的其他报告（限制 4 份）
+    let report: any = null;
     let related: RelatedReport[] = [];
-    if (report.isUnlocked) {
-      const relatedRes = await dbClient.query(
-        `SELECT r.id, r.title, r.category, r.market_region 
-         FROM reports r
-         JOIN relations rel ON (r.id = rel.report_id_a AND rel.report_id_b = $1) 
-                            OR (r.id = rel.report_id_b AND rel.report_id_a = $1)
-         LIMIT 4`,
+
+    if (userId) {
+      if (userRole === 'admin') {
+        const reportRes = await dbClient.query(
+          'SELECT id, title, category, market_region, summary, content_html FROM reports WHERE id = $1',
+          [id]
+        );
+        if (reportRes.rows.length === 0) {
+          return { notFound: true };
+        }
+        const rep = reportRes.rows[0];
+        report = {
+          id: rep.id,
+          title: rep.title,
+          category: rep.category,
+          market_region: rep.market_region,
+          summary: rep.summary,
+          isUnlocked: true,
+          content_html: rep.content_html
+        };
+      } else {
+        report = await getReportDetail(userId, id as string, dbClient);
+      }
+
+      if (report.isUnlocked) {
+        const relatedRes = await dbClient.query(
+          `SELECT r.id, r.title, r.category, r.market_region 
+           FROM reports r
+           JOIN relations rel ON (r.id = rel.report_id_a AND rel.report_id_b = $1) 
+                              OR (r.id = rel.report_id_b AND rel.report_id_a = $1)
+           LIMIT 4`,
+          [id]
+        );
+        related = relatedRes.rows;
+      }
+    } else {
+      const reportRes = await dbClient.query(
+        'SELECT id, title, category, market_region, summary FROM reports WHERE id = $1',
         [id]
       );
-      related = relatedRes.rows;
+      if (reportRes.rows.length === 0) {
+        return { notFound: true };
+      }
+      const rep = reportRes.rows[0];
+      report = {
+        id: rep.id,
+        title: rep.title,
+        category: rep.category,
+        market_region: rep.market_region,
+        summary: rep.summary,
+        isUnlocked: false,
+        content_html: null
+      };
     }
 
     return {
       props: {
         report,
         related,
-        userId: mockUserId
+        userId: userId || '',
+        userRole
       }
     };
   } catch (err) {

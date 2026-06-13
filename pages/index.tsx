@@ -22,13 +22,102 @@ interface HomeProps {
   };
   allReports: PlatformReport[];
   userId: string;
+  userRole: string;
   freeQuota: number;
 }
 
-export default function HomePage({ graphData, allReports, userId, freeQuota }: HomeProps) {
+export default function HomePage({ graphData, allReports, userId, userRole, freeQuota }: HomeProps) {
   const [quota, setQuota] = useState(freeQuota);
   const [emailInput, setEmailInput] = useState('');
   const [subscribed, setSubscribed] = useState(false);
+
+  // 登录/注册/退出/上传弹窗状态
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  
+  // 登录/注册表单输入
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [role, setRole] = useState<'user' | 'admin'>('user');
+  const [errorMsg, setErrorMsg] = useState('');
+  
+  // 管理员上传报告弹窗状态
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [rawHtmlContent, setRawHtmlContent] = useState('');
+  const [uploadLoading, setUploadLoading] = useState(false);
+
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+    try {
+      const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/signup';
+      const body = authMode === 'login' 
+        ? { phoneOrEmail: phone || email, password }
+        : { phone, email, password, role };
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        document.cookie = `user_id=${data.user.id}; path=/; max-age=604800`;
+        document.cookie = `user_role=${data.user.role}; path=/; max-age=604800`;
+        window.location.reload();
+      } else {
+        setErrorMsg(data.error || '认证失败，请重试');
+      }
+    } catch (err) {
+      setErrorMsg('连接服务器失败');
+    }
+  };
+
+  const handleLogout = () => {
+    document.cookie = `user_id=; path=/; max-age=0`;
+    document.cookie = `user_role=; path=/; max-age=0`;
+    window.location.reload();
+  };
+
+  const handleUploadReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rawHtmlContent.trim()) return;
+    setUploadLoading(true);
+    try {
+      const res = await fetch('/api/admin/reports/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rawHtml: rawHtmlContent })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert('报告上传成功！');
+        setRawHtmlContent('');
+        setShowUploadModal(false);
+        window.location.reload();
+      } else {
+        alert(data.error || '上传失败');
+      }
+    } catch (err) {
+      alert('上传报告失败，请检查连接');
+    } finally {
+      setUploadLoading(false);
+    }
+  };
+
+  const inputStyle = {
+    background: 'rgba(255, 255, 255, 0.65)',
+    border: '1px solid rgba(15, 23, 42, 0.08)',
+    borderRadius: '12px',
+    padding: '12px 16px',
+    fontSize: '0.85rem',
+    color: '#0f172a',
+    outline: 'none',
+    width: '100%',
+    transition: 'border-color 0.3s ease',
+    boxSizing: 'border-box' as const
+  };
 
   // 滚动进入可视区域动画监听
   useEffect(() => {
@@ -132,17 +221,79 @@ export default function HomePage({ graphData, allReports, userId, freeQuota }: H
             >
               🕸️ 个人知识拓扑网图
             </Link>
-            <span style={{ color: '#475569', fontWeight: 300 }}>🔑 业务员 ID: <code style={{ color: '#2563eb', fontWeight: 400 }}>{userId.substring(0, 8)}...</code></span>
-            <span style={{
-              background: 'rgba(15, 23, 42, 0.03)',
-              border: '1px solid rgba(15, 23, 42, 0.08)',
-              padding: '6px 14px',
-              borderRadius: '20px',
-              color: '#0f172a',
-              fontWeight: 300
-            }}>
-              🔓 剩余额度: <b style={{ color: '#10b981', fontWeight: 500 }}>{quota}</b> 次
-            </span>
+            {userId ? (
+              <>
+                {userRole === 'admin' ? (
+                  <>
+                    <span style={{ color: '#475569', fontWeight: 300 }}>
+                      👑 管理员: <code style={{ color: '#2563eb', fontWeight: 400 }}>{userId.substring(0, 8)}...</code>
+                    </span>
+                    <button 
+                      onClick={() => setShowUploadModal(true)}
+                      className="water-drop-btn"
+                      style={{
+                        fontWeight: 500,
+                        padding: '8px 24px',
+                        fontSize: '0.85rem',
+                        color: '#2563eb',
+                        border: '1px solid rgba(37, 99, 235, 0.3)'
+                      }}
+                    >
+                      📤 上传新报告
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ color: '#475569', fontWeight: 300 }}>
+                      🔑 业务员 ID: <code style={{ color: '#2563eb', fontWeight: 400 }}>{userId.substring(0, 8)}...</code>
+                    </span>
+                    <span style={{
+                      background: 'rgba(15, 23, 42, 0.03)',
+                      border: '1px solid rgba(15, 23, 42, 0.08)',
+                      padding: '6px 14px',
+                      borderRadius: '20px',
+                      color: '#0f172a',
+                      fontWeight: 300
+                    }}>
+                      🔓 剩余额度: <b style={{ color: '#10b981', fontWeight: 500 }}>{quota}</b> 次
+                    </span>
+                  </>
+                )}
+                <button 
+                  onClick={handleLogout}
+                  className="water-drop-btn"
+                  style={{
+                    fontWeight: 500,
+                    padding: '8px 24px',
+                    fontSize: '0.85rem',
+                    color: '#ef4444',
+                    border: '1px solid rgba(239, 68, 68, 0.3)'
+                  }}
+                >
+                  🚪 退出登录
+                </button>
+              </>
+            ) : (
+              <>
+                <span style={{ color: '#64748b' }}>👤 游客模式</span>
+                <button 
+                  onClick={() => {
+                    setAuthMode('login');
+                    setShowAuthModal(true);
+                  }}
+                  className="water-drop-btn"
+                  style={{
+                    fontWeight: 500,
+                    padding: '8px 24px',
+                    fontSize: '0.85rem',
+                    color: '#2563eb',
+                    border: '1px solid rgba(37, 99, 235, 0.3)'
+                  }}
+                >
+                  🔐 登录 / 注册
+                </button>
+              </>
+            )}
           </div>
         </header>
       </div>
@@ -719,57 +870,312 @@ export default function HomePage({ graphData, allReports, userId, freeQuota }: H
           transform: translateY(-1px);
         }
       `}</style>
+      {/* 登录/注册弹窗 */}
+      {showAuthModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.25)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.45)',
+            border: '1px solid rgba(255, 255, 255, 0.75)',
+            borderRadius: '24px',
+            padding: '40px 30px',
+            width: '90%',
+            maxWidth: '420px',
+            boxShadow: '0 20px 40px rgba(15, 23, 42, 0.08), inset 0 8px 16px rgba(255, 255, 255, 0.55)',
+            position: 'relative'
+          }}>
+            <button 
+              onClick={() => setShowAuthModal(false)}
+              style={{
+                position: 'absolute',
+                top: '20px',
+                right: '20px',
+                background: 'none',
+                border: 'none',
+                fontSize: '1.25rem',
+                cursor: 'pointer',
+                color: '#64748b'
+              }}
+            >
+              ✕
+            </button>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 300, marginBottom: '24px', textAlign: 'center', color: '#0f172a' }}>
+              {authMode === 'login' ? '🔐 账号登录' : '📝 新用户注册'}
+            </h2>
+            <form onSubmit={handleAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {authMode === 'signup' ? (
+                <>
+                  <input 
+                    type="text" 
+                    placeholder="📱 手机号 (可选)" 
+                    value={phone}
+                    onChange={e => setPhone(e.target.value)}
+                    style={inputStyle}
+                  />
+                  <input 
+                    type="email" 
+                    placeholder="✉️ 邮箱 (可选)" 
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    style={inputStyle}
+                  />
+                  <div style={{ display: 'flex', gap: '20px', alignItems: 'center', fontSize: '0.85rem', padding: '0 4px' }}>
+                    <span style={{ color: '#475569' }}>选择角色:</span>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                      <input 
+                        type="radio" 
+                        name="role" 
+                        checked={role === 'user'}
+                        onChange={() => setRole('user')}
+                      />
+                      普通用户
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                      <input 
+                        type="radio" 
+                        name="role" 
+                        checked={role === 'admin'}
+                        onChange={() => setRole('admin')}
+                      />
+                      管理员
+                    </label>
+                  </div>
+                </>
+              ) : (
+                <input 
+                  type="text" 
+                  placeholder="📱 手机号 或 ✉️ 邮箱" 
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  style={inputStyle}
+                  required
+                />
+              )}
+              <input 
+                type="password" 
+                placeholder="🔑 密码" 
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                style={inputStyle}
+                required
+              />
+              {errorMsg && (
+                <div style={{ fontSize: '0.8rem', color: '#ef4444', textAlign: 'center' }}>
+                  {errorMsg}
+                </div>
+              )}
+              <button 
+                type="submit" 
+                className="water-drop-btn"
+                style={{ padding: '12px', fontSize: '0.95rem', fontWeight: 500, width: '100%', marginTop: '8px' }}
+              >
+                {authMode === 'login' ? '🚀 登录' : '✨ 注册'}
+              </button>
+            </form>
+            <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '0.85rem', color: '#64748b' }}>
+              {authMode === 'login' ? (
+                <span>还没有账号？ <a href="#" onClick={(e) => { e.preventDefault(); setAuthMode('signup'); setErrorMsg(''); }} style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 500 }}>立即注册</a></span>
+              ) : (
+                <span>已有账号？ <a href="#" onClick={(e) => { e.preventDefault(); setAuthMode('login'); setErrorMsg(''); }} style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 500 }}>去登录</a></span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 管理员上传报告弹窗 */}
+      {showUploadModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.25)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.45)',
+            border: '1px solid rgba(255, 255, 255, 0.75)',
+            borderRadius: '24px',
+            padding: '40px 30px',
+            width: '90%',
+            maxWidth: '650px',
+            boxShadow: '0 20px 40px rgba(15, 23, 42, 0.08), inset 0 8px 16px rgba(255, 255, 255, 0.55)',
+            position: 'relative'
+          }}>
+            <button 
+              onClick={() => setShowUploadModal(false)}
+              style={{
+                position: 'absolute',
+                top: '20px',
+                right: '20px',
+                background: 'none',
+                border: 'none',
+                fontSize: '1.25rem',
+                cursor: 'pointer',
+                color: '#64748b'
+              }}
+            >
+              ✕
+            </button>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 300, marginBottom: '10px', textAlign: 'center', color: '#0f172a' }}>
+              📤 发布外贸数据报告 (Admin)
+            </h2>
+            <p style={{ fontSize: '0.8rem', color: '#475569', textAlign: 'center', marginBottom: '24px' }}>
+              粘贴报告的原始 HTML 代码，系统将自动进行脱水处理（自动剥离 Base64 图并上传）。
+            </p>
+            <form onSubmit={handleUploadReport} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <textarea 
+                placeholder="在此粘贴 HTML 代码..."
+                value={rawHtmlContent}
+                onChange={e => setRawHtmlContent(e.target.value)}
+                style={{
+                  width: '100%',
+                  height: '300px',
+                  background: 'rgba(255, 255, 255, 0.65)',
+                  border: '1px solid rgba(15, 23, 42, 0.08)',
+                  borderRadius: '16px',
+                  padding: '16px',
+                  fontSize: '0.85rem',
+                  fontFamily: 'monospace',
+                  outline: 'none',
+                  resize: 'none'
+                }}
+                required
+              />
+              <button 
+                type="submit" 
+                className="water-drop-btn"
+                disabled={uploadLoading}
+                style={{ padding: '12px', fontSize: '0.95rem', fontWeight: 500, width: '100%' }}
+              >
+                {uploadLoading ? '⏳ 正在处理并上传报告...' : '🚀 立即发布报告'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
+function parseCookies(cookieHeader?: string) {
+  const list: Record<string, string> = {};
+  if (!cookieHeader) return list;
+  cookieHeader.split(';').forEach((cookie) => {
+    const parts = cookie.split('=');
+    list[parts.shift()!.trim()] = decodeURI(parts.join('='));
+  });
+  return list;
+}
+
 // SSR 获取初始解锁图谱数据
 export const getServerSideProps: GetServerSideProps = async (context) => {
+  const cookies = parseCookies(context.req.headers.cookie);
+  const cookieUserId = cookies.user_id;
+  
   const dbClient = await pool.connect();
 
   try {
-    // 默认获取第一个测试用户的 UUID
-    const userRes = await dbClient.query('SELECT id, free_quota FROM users ORDER BY created_at ASC LIMIT 1');
-    
-    // 如果没有用户，先动态创建一个默认测试用户
-    let userId = '';
-    let freeQuota = 3;
-    
-    if (userRes.rows.length === 0) {
-      const newUser = await dbClient.query(
-        "INSERT INTO users (phone_number, free_quota) VALUES ('13800000000', 3) RETURNING id, free_quota"
-      );
-      userId = newUser.rows[0].id;
-      freeQuota = newUser.rows[0].free_quota;
-    } else {
-      userId = userRes.rows[0].id;
-      freeQuota = userRes.rows[0].free_quota;
+    let userId: string | null = null;
+    let userRole = 'guest';
+    let freeQuota = 0;
+
+    if (cookieUserId) {
+      const userRes = await dbClient.query('SELECT id, role, free_quota FROM users WHERE id = $1', [cookieUserId]);
+      if (userRes.rows.length > 0) {
+        userId = userRes.rows[0].id;
+        userRole = userRes.rows[0].role;
+        freeQuota = userRes.rows[0].free_quota;
+      }
     }
 
-    const graphData = await getUserGraph(userId, dbClient);
+    let graphData = { nodes: [], links: [] };
+    let allReports: any[] = [];
 
-    // 查询系统内所有的报告，同时检查当前用户是否已解锁它们
-    const reportsRes = await dbClient.query(`
-      SELECT r.id, r.title, r.category, r.market_region, r.summary,
-             EXISTS(SELECT 1 FROM unlocks u WHERE u.user_id = $1 AND u.report_id = r.id) as is_unlocked
-      FROM reports r
-      ORDER BY r.created_at DESC
-    `, [userId]);
-    
-    const allReports = reportsRes.rows.map(row => ({
-      id: row.id,
-      title: row.title,
-      category: row.category,
-      market_region: row.market_region,
-      summary: row.summary,
-      isUnlocked: row.is_unlocked
-    }));
+    if (userId) {
+      if (userRole === 'admin') {
+        const reportsRes = await dbClient.query(`SELECT id, title, category, market_region, summary FROM reports`);
+        const nodes = reportsRes.rows;
+        const reportIds = nodes.map(n => n.id);
+        
+        let links = [];
+        if (reportIds.length > 0) {
+          const relationsRes = await dbClient.query(
+            `SELECT report_id_a AS source, report_id_b AS target, relation_key 
+             FROM relations 
+             WHERE report_id_a = ANY($1) AND report_id_b = ANY($1)`,
+            [reportIds]
+          );
+          links = relationsRes.rows;
+        }
+        graphData = { nodes, links };
+        
+        allReports = reportsRes.rows.map(row => ({
+          id: row.id,
+          title: row.title,
+          category: row.category,
+          market_region: row.market_region,
+          summary: row.summary,
+          isUnlocked: true
+        }));
+      } else {
+        graphData = await getUserGraph(userId, dbClient);
+        
+        const reportsRes = await dbClient.query(`
+          SELECT r.id, r.title, r.category, r.market_region, r.summary,
+                 EXISTS(SELECT 1 FROM unlocks u WHERE u.user_id = $1 AND u.report_id = r.id) as is_unlocked
+          FROM reports r
+          ORDER BY r.created_at DESC
+        `, [userId]);
+        
+        allReports = reportsRes.rows.map(row => ({
+          id: row.id,
+          title: row.title,
+          category: row.category,
+          market_region: row.market_region,
+          summary: row.summary,
+          isUnlocked: row.is_unlocked
+        }));
+      }
+    } else {
+      const reportsRes = await dbClient.query(`
+        SELECT id, title, category, market_region, summary FROM reports ORDER BY created_at DESC
+      `);
+      allReports = reportsRes.rows.map(row => ({
+        id: row.id,
+        title: row.title,
+        category: row.category,
+        market_region: row.market_region,
+        summary: row.summary,
+        isUnlocked: false
+      }));
+    }
 
     return {
       props: {
         graphData,
         allReports,
-        userId,
+        userId: userId || '',
+        userRole,
         freeQuota
       }
     };
@@ -780,6 +1186,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         graphData: { nodes: [], links: [] },
         allReports: [],
         userId: '',
+        userRole: 'guest',
         freeQuota: 0
       }
     };

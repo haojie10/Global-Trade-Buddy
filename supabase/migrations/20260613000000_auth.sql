@@ -1,0 +1,3 @@
+-- 为 users 表添加密码和角色字段
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(100);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'user';

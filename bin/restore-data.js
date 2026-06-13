@@ -18,12 +18,20 @@ async function main() {
     await dbClient.query('DELETE FROM reports');
     await dbClient.query('DELETE FROM users');
 
-    // 2. 插入测试用户 (固定手机号，如果以前有就重置额度为 3)
+    // 2. 插入测试用户 (管理员 & 普通用户)
+    const adminRes = await dbClient.query(
+      `INSERT INTO users (phone_number, email, password, role, free_quota) 
+       VALUES ('13800000000', 'admin@gtb.com', 'admin123', 'admin', 999) RETURNING id`
+    );
+    const adminId = adminRes.rows[0].id;
+    console.log(`已插入管理员用户，ID: ${adminId}`);
+
     const userRes = await dbClient.query(
-      `INSERT INTO users (phone_number, free_quota) VALUES ('13800000000', 3) RETURNING id`
+      `INSERT INTO users (phone_number, email, password, role, free_quota) 
+       VALUES ('13800000001', 'user@gtb.com', 'user123', 'user', 3) RETURNING id`
     );
     const userId = userRes.rows[0].id;
-    console.log(`已重置主测试用户，ID: ${userId}`);
+    console.log(`已重置普通测试用户，ID: ${userId}`);
 
     // 3. 插入 5 篇测试报告
     const r1 = await dbClient.query(`

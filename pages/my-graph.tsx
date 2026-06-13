@@ -13,13 +13,75 @@ interface MyGraphProps {
     links: GraphLink[];
   };
   userId: string;
+  userRole: string;
   freeQuota: number;
 }
 
-export default function MyGraphPage({ graphData, userId, freeQuota }: MyGraphProps) {
+export default function MyGraphPage({ graphData, userId, userRole, freeQuota }: MyGraphProps) {
   const [quota, setQuota] = useState(freeQuota);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  if (!userId) {
+    return (
+      <div style={{
+        background: '#f8fafc',
+        color: '#0f172a',
+        minHeight: '100vh',
+        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: '20px',
+        textAlign: 'center'
+      }}>
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.45)',
+          backdropFilter: 'blur(16px)',
+          border: '1px solid rgba(15, 23, 42, 0.08)',
+          padding: '40px',
+          borderRadius: '24px',
+          maxWidth: '480px',
+          boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07)'
+        }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 300, marginBottom: '16px' }}>🔒 暂未登录</h2>
+          <p style={{ color: '#475569', fontSize: '0.9rem', marginBottom: '24px', lineHeight: 1.6 }}>
+            游客模式下无法查看个人知识拓扑网图。请返回首页登录或注册账号后体验！
+          </p>
+          <Link href="/" className="water-drop-btn" style={{ padding: '10px 24px', textDecoration: 'none' }}>
+            🏠 返回首页登录
+          </Link>
+        </div>
+        <style jsx global>{`
+          .water-drop-btn {
+            background: rgba(255, 255, 255, 0.45);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.75);
+            border-radius: 30px;
+            color: #0f172a;
+            box-shadow: 
+              0 8px 24px rgba(31, 38, 135, 0.03), 
+              inset 0 4px 10px rgba(255, 255, 255, 0.65), 
+              inset 0 -4px 10px rgba(15, 23, 42, 0.02);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            cursor: pointer;
+            outline: none;
+            display: inline-block;
+            text-align: center;
+          }
+          .water-drop-btn:hover {
+            background: rgba(255, 255, 255, 0.7);
+            box-shadow: 
+              0 12px 30px rgba(31, 38, 135, 0.05), 
+              inset 0 8px 16px rgba(255, 255, 255, 0.8), 
+              inset 0 -6px 16px rgba(15, 23, 42, 0.03);
+            transform: translateY(-1px);
+          }
+        `}</style>
+      </div>
+    );
+  }
 
   const handleInitSeedData = async () => {
     if (loading) return;
@@ -298,34 +360,66 @@ export default function MyGraphPage({ graphData, userId, freeQuota }: MyGraphPro
   );
 }
 
+function parseCookies(cookieHeader?: string) {
+  const list: Record<string, string> = {};
+  if (!cookieHeader) return list;
+  cookieHeader.split(';').forEach((cookie) => {
+    const parts = cookie.split('=');
+    list[parts.shift()!.trim()] = decodeURI(parts.join('='));
+  });
+  return list;
+}
+
 // SSR 加载个人知识图谱数据
 export const getServerSideProps: GetServerSideProps = async (context) => {
+  const cookies = parseCookies(context.req.headers.cookie);
+  const cookieUserId = cookies.user_id;
+  
   const dbClient = await pool.connect();
 
   try {
-    // 默认获取第一个测试用户的 UUID
-    const userRes = await dbClient.query('SELECT id, free_quota FROM users ORDER BY created_at ASC LIMIT 1');
-    
-    let userId = '';
-    let freeQuota = 3;
-    
-    if (userRes.rows.length === 0) {
-      const newUser = await dbClient.query(
-        "INSERT INTO users (phone_number, free_quota) VALUES ('13800000000', 3) RETURNING id, free_quota"
-      );
-      userId = newUser.rows[0].id;
-      freeQuota = newUser.rows[0].free_quota;
-    } else {
-      userId = userRes.rows[0].id;
-      freeQuota = userRes.rows[0].free_quota;
+    let userId: string | null = null;
+    let userRole = 'guest';
+    let freeQuota = 0;
+
+    if (cookieUserId) {
+      const userRes = await dbClient.query('SELECT id, role, free_quota FROM users WHERE id = $1', [cookieUserId]);
+      if (userRes.rows.length > 0) {
+        userId = userRes.rows[0].id;
+        userRole = userRes.rows[0].role;
+        freeQuota = userRes.rows[0].free_quota;
+      }
     }
 
-    const graphData = await getUserGraph(userId, dbClient);
+    let graphData = { nodes: [], links: [] };
+
+    if (userId) {
+      if (userRole === 'admin') {
+        const reportsRes = await dbClient.query(`SELECT id, title, category, market_region FROM reports`);
+        const nodes = reportsRes.rows;
+        const reportIds = nodes.map(n => n.id);
+        
+        let links = [];
+        if (reportIds.length > 0) {
+          const relationsRes = await dbClient.query(
+            `SELECT report_id_a AS source, report_id_b AS target, relation_key 
+             FROM relations 
+             WHERE report_id_a = ANY($1) AND report_id_b = ANY($1)`,
+            [reportIds]
+          );
+          links = relationsRes.rows;
+        }
+        graphData = { nodes, links };
+      } else {
+        graphData = await getUserGraph(userId, dbClient);
+      }
+    }
 
     return {
       props: {
         graphData,
-        userId,
+        userId: userId || '',
+        userRole,
         freeQuota
       }
     };
@@ -335,6 +429,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       props: {
         graphData: { nodes: [], links: [] },
         userId: '',
+        userRole: 'guest',
         freeQuota: 0
       }
     };
