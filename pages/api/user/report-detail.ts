@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { Client } from 'pg';
+import pool from '../../../lib/db';
 
 // 核心安全详情读取逻辑（供 API 和单元测试调用）
 export async function getReportDetail(userId: string, reportId: string, dbClient: Client) {
@@ -46,10 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Missing reportId or userId parameter' });
   }
 
-  const dbClient = new Client({
-    connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/postgres',
-  });
-  await dbClient.connect();
+  const dbClient = await pool.connect();
 
   try {
     const detail = await getReportDetail(userId as string, reportId as string, dbClient);
@@ -57,6 +55,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   } finally {
-    await dbClient.end();
+    dbClient.release();
   }
 }

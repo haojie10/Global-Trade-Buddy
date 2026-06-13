@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { Client } from 'pg';
+import { createTestClient } from './helpers/db-test-helper';
 
 import { saveUserNote, getUserNote } from '../pages/api/user/note';
 import { toggleFavorite, checkIsFavorite } from '../pages/api/user/favorite';
@@ -12,9 +13,7 @@ describe('Extensions Modules API Test', () => {
   let testReportId: string;
 
   beforeAll(async () => {
-    dbClient = new Client({
-      connectionString: 'postgresql://postgres:postgres@localhost:5432/postgres',
-    });
+    dbClient = createTestClient();
     await dbClient.connect();
 
     // 清理数据

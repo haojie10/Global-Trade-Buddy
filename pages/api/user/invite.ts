@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { Client } from 'pg';
+import pool from '../../../lib/db';
 
 // 执行邀请兑换逻辑 (双向赠送解锁额度，包裹在 SQL 事务中)
 export async function processInvitation(referrerId: string, inviteeId: string, dbClient: Client) {
@@ -58,10 +59,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Missing referrerId or inviteeId parameters' });
   }
 
-  const dbClient = new Client({
-    connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/postgres',
-  });
-  await dbClient.connect();
+  const dbClient = await pool.connect();
 
   try {
     const result = await processInvitation(referrerId, inviteeId, dbClient);
@@ -69,6 +67,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch (err: any) {
     return res.status(400).json({ success: false, error: err.message });
   } finally {
-    await dbClient.end();
+    dbClient.release();
   }
 }

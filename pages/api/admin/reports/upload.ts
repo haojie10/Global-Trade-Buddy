@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { Client } from 'pg';
+import pool from '../../../../lib/db';
 
 // 1. 从 HTML 字符串中提取元数据和专有名词（客户名、品类名等）
 export function parseMetadata(html: string) {
@@ -94,10 +94,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Missing rawHtml parameter' });
   }
 
-  const dbClient = new Client({
-    connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/postgres',
-  });
-  await dbClient.connect();
+  const dbClient = await pool.connect();
 
   try {
     // 模拟的 OSS 图片上传，返回本地伪造 URL
@@ -160,7 +157,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await dbClient.query('ROLLBACK');
     return res.status(500).json({ error: err.message });
   } finally {
-    await dbClient.end();
+    dbClient.release();
   }
 }
 

@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { Client } from 'pg';
+import pool from '../../../lib/db';
 
 // 检查是否收藏 (供 API 和单元测试调用)
 export async function checkIsFavorite(userId: string, reportId: string, dbClient: Client): Promise<boolean> {
@@ -41,10 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Missing userId or reportId parameter' });
   }
 
-  const dbClient = new Client({
-    connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/postgres',
-  });
-  await dbClient.connect();
+  const dbClient = await pool.connect();
 
   try {
     const result = await toggleFavorite(userId, reportId, dbClient);
@@ -52,6 +50,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   } finally {
-    await dbClient.end();
+    dbClient.release();
   }
 }

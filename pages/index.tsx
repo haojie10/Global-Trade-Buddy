@@ -1,6 +1,7 @@
 import { GetServerSideProps } from 'next';
 import React, { useState, useEffect } from 'react';
 import { Client } from 'pg';
+import pool from '../lib/db';
 import { getUserGraph, GraphNode, GraphLink } from './api/user/graph';
 import ToolsPanel from '../components/ToolsPanel';
 import Link from 'next/link';
@@ -724,10 +725,7 @@ export default function HomePage({ graphData, allReports, userId, freeQuota }: H
 
 // SSR 获取初始解锁图谱数据
 export const getServerSideProps: GetServerSideProps = async (context) => {
-  const dbClient = new Client({
-    connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/postgres',
-  });
-  await dbClient.connect();
+  const dbClient = await pool.connect();
 
   try {
     // 默认获取第一个测试用户的 UUID
@@ -786,6 +784,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       }
     };
   } finally {
-    await dbClient.end();
+    dbClient.release();
   }
 };

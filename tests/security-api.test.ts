@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { Client } from 'pg';
+import { createTestClient } from './helpers/db-test-helper';
 import http from 'http';
 
 // 模拟的 NextJS 内部 API 逻辑调用，用于测试
@@ -15,9 +16,7 @@ describe('Obsidian Graph & Safety API Test', () => {
   let reportId3: string;
 
   beforeAll(async () => {
-    dbClient = new Client({
-      connectionString: 'postgresql://postgres:postgres@localhost:5432/postgres',
-    });
+    dbClient = createTestClient();
     await dbClient.connect();
 
     // 清理表

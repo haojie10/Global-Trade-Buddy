@@ -1,6 +1,7 @@
 import { GetServerSideProps } from 'next';
 import React, { useState } from 'react';
 import { Client } from 'pg';
+import pool from '../../lib/db';
 import { getReportDetail } from '../api/user/report-detail';
 import WatermarkContainer from '../../components/WatermarkContainer';
 import Link from 'next/link';
@@ -357,10 +358,7 @@ export default function ReportDetailPage({ report, related, userId }: ReportDeta
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const { id } = context.params!;
   
-  const dbClient = new Client({
-    connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/postgres',
-  });
-  await dbClient.connect();
+  const dbClient = await pool.connect();
 
   try {
     // 动态获取或创建一个默认测试用户 UUID 作为降级，避免手机号字符串转换 UUID 抛出语法错误
@@ -405,6 +403,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     console.error('SSR 加载报告详情页失败，原因:', err);
     return { notFound: true };
   } finally {
-    await dbClient.end();
+    dbClient.release();
   }
 };

@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { Client } from 'pg';
+import pool from '../../../lib/db';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -11,10 +12,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Missing userId or reportId' });
   }
 
-  const dbClient = new Client({
-    connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/postgres',
-  });
-  await dbClient.connect();
+  const dbClient = await pool.connect();
 
   try {
     await dbClient.query('BEGIN');
@@ -99,6 +97,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await dbClient.query('ROLLBACK');
     return res.status(500).json({ error: err.message });
   } finally {
-    await dbClient.end();
+    dbClient.release();
   }
 }

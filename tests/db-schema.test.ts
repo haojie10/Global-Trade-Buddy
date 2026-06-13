@@ -1,13 +1,12 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { Client } from 'pg';
+import { createTestClient } from './helpers/db-test-helper';
 
 describe('PostgreSQL Schema Test', () => {
   let client: Client;
 
   beforeAll(async () => {
-    client = new Client({
-      connectionString: 'postgresql://postgres:postgres@localhost:5432/postgres',
-    });
+    client = createTestClient();
     await client.connect();
   });
 
