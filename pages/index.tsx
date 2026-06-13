@@ -1096,6 +1096,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
                   }
                 }}
                 style={{
+                  boxSizing: 'border-box',
                   width: '100%',
                   height: '240px',
                   background: selectedFile 
