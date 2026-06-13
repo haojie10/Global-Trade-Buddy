@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS entities (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     canonical_name VARCHAR(100) UNIQUE NOT NULL,
-    entity_type VARCHAR(50) NOT NULL, -- 'company', 'product', 'channel'
+    entity_type VARCHAR(50) NOT NULL CHECK (entity_type IN ('company', 'product', 'channel')), -- 'company', 'product', 'channel'
     created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS entity_aliases (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+CREATE INDEX IF NOT EXISTS idx_entity_aliases_entity_id ON entity_aliases(entity_id);
+
 -- 创建报告与实体关联表
 CREATE TABLE IF NOT EXISTS report_entities (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -22,6 +24,9 @@ CREATE TABLE IF NOT EXISTS report_entities (
     created_at TIMESTAMP DEFAULT NOW(),
     UNIQUE(report_id, entity_id)
 );
+
+CREATE INDEX IF NOT EXISTS idx_report_entities_entity_id ON report_entities(entity_id);
+
 
 -- 在 relations 关系表中增加属性
 ALTER TABLE relations ADD COLUMN IF NOT EXISTS market_region VARCHAR(50);
