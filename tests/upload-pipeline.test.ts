@@ -122,34 +122,42 @@ describe('Report Upload & Dehydration Pipeline Test', () => {
       },
     } as any;
 
-    // 4. 调用 API 处理器
-    await uploadHandler(req, res);
+    let newReportId: any;
+    try {
+      // 4. 调用 API 处理器
+      await uploadHandler(req, res);
 
-    expect(statusVal).toBe(200);
-    const newReportId = jsonVal.reportId;
-    expect(newReportId).toBeDefined();
+      expect(statusVal).toBe(200);
+      newReportId = jsonVal.reportId;
+      expect(newReportId).toBeDefined();
 
-    // 5. 验证是否提取并归一化为 "A 公司" 实体，以及 report_entities 中的关联
-    const reportEntitiesRes = await dbClient.query(
-      `SELECT * FROM report_entities WHERE report_id = $1 AND entity_id = $2`,
-      [newReportId, aCompanyId]
-    );
-    expect(reportEntitiesRes.rows.length).toBe(1);
+      // 5. 验证是否提取并归一化为 "A 公司" 实体，以及 report_entities 中的关联
+      const reportEntitiesRes = await dbClient.query(
+        `SELECT * FROM report_entities WHERE report_id = $1 AND entity_id = $2`,
+        [newReportId, aCompanyId]
+      );
+      expect(reportEntitiesRes.rows.length).toBe(1);
 
-    // 6. 验证关系建边
-    const relationsRes = await dbClient.query(
-      `SELECT * FROM relations WHERE report_id_a = $1 AND report_id_b = $2`,
-      [newReportId, existingReportId]
-    );
-    expect(relationsRes.rows.length).toBe(1);
-    const relation = relationsRes.rows[0];
-    expect(relation.relation_key).toBe('A 公司');
-    expect(relation.market_region).toBe('北美');
-    expect(relation.relation_type).toBe('produces');
-
-    // 7. 清理测试产生的特定报告，不影响其他数据
-    await dbClient.query(`DELETE FROM relations WHERE report_id_a = $1 OR report_id_b = $1`, [newReportId]);
-    await dbClient.query(`DELETE FROM report_entities WHERE report_id = $1 OR report_id = $2`, [newReportId, existingReportId]);
-    await dbClient.query(`DELETE FROM reports WHERE id = $1 OR id = $2`, [newReportId, existingReportId]);
+      // 6. 验证关系建边
+      const relationsRes = await dbClient.query(
+        `SELECT * FROM relations WHERE report_id_a = $1 AND report_id_b = $2`,
+        [newReportId, existingReportId]
+      );
+      expect(relationsRes.rows.length).toBe(1);
+      const relation = relationsRes.rows[0];
+      expect(relation.relation_key).toBe('A 公司');
+      expect(relation.market_region).toBe('北美');
+      expect(relation.relation_type).toBe('produces');
+    } finally {
+      // 7. 清理测试产生的特定报告，不影响其他数据
+      if (newReportId) {
+        await dbClient.query(`DELETE FROM relations WHERE report_id_a = $1 OR report_id_b = $1`, [newReportId]);
+        await dbClient.query(`DELETE FROM report_entities WHERE report_id = $1 OR report_id = $2`, [newReportId, existingReportId]);
+        await dbClient.query(`DELETE FROM reports WHERE id = $1 OR id = $2`, [newReportId, existingReportId]);
+      } else {
+        await dbClient.query(`DELETE FROM report_entities WHERE report_id = $1`, [existingReportId]);
+        await dbClient.query(`DELETE FROM reports WHERE id = $1`, [existingReportId]);
+      }
+    }
   });
 });

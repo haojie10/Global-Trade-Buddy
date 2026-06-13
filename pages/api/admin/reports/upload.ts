@@ -151,20 +151,15 @@ export async function extractAndNormalizeEntities(
 
   for (const kw of commonKeywords) {
     if (searchContent.includes(kw) && !extractedNames.has(kw)) {
-      // 查找或创建
-      let entRes = await dbClient.query('SELECT id FROM entities WHERE canonical_name = $1', [kw]);
-      let entId;
-      if (entRes.rows.length > 0) {
-        entId = entRes.rows[0].id;
-      } else {
-        const type = keywordTypeMap[kw] || 'product';
-        const insertRes = await dbClient.query(
-          'INSERT INTO entities (canonical_name, entity_type) VALUES ($1, $2) RETURNING id',
-          [kw, type]
-        );
-        insertRes.rows[0];
-        entId = insertRes.rows[0].id;
-      }
+      const type = keywordTypeMap[kw] || 'product';
+      const insertRes = await dbClient.query(
+        `INSERT INTO entities (canonical_name, entity_type) 
+         VALUES ($1, $2) 
+         ON CONFLICT (canonical_name) DO UPDATE SET entity_type = EXCLUDED.entity_type
+         RETURNING id`,
+        [kw, type]
+      );
+      entId = insertRes.rows[0].id;
       matchedEntities.set(entId, { id: entId, canonical_name: kw });
       extractedNames.add(kw);
     }
