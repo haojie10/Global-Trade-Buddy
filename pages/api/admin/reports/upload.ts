@@ -80,7 +80,109 @@ export async function runDehydration(html: string, uploadFn: UploadFn) {
   };
 }
 
-// 3. API 处理主函数
+// 3. 提取并归一化实体
+export async function extractAndNormalizeEntities(
+  html: string,
+  title: string,
+  dbClient: any
+): Promise<{ id: string; canonical_name: string }[]> {
+  // 1. 从 entities 和 entity_aliases 表读取所有已知的实体名和别名
+  const entitiesRes = await dbClient.query(`
+    SELECT e.id, e.canonical_name, e.entity_type, ea.alias_name
+    FROM entities e
+    LEFT JOIN entity_aliases ea ON e.id = ea.entity_id
+  `);
+
+  const entityMap = new Map<string, { id: string; canonical_name: string; entity_type: string; matches: Set<string> }>();
+  for (const row of entitiesRes.rows) {
+    let ent = entityMap.get(row.id);
+    if (!ent) {
+      ent = {
+        id: row.id,
+        canonical_name: row.canonical_name,
+        entity_type: row.entity_type,
+        matches: new Set<string>()
+      };
+      ent.matches.add(row.canonical_name);
+      entityMap.set(row.id, ent);
+    }
+    if (row.alias_name) {
+      ent.matches.add(row.alias_name);
+    }
+  }
+
+  const matchedEntities = new Map<string, { id: string; canonical_name: string }>();
+  const searchContent = title + ' ' + html;
+
+  // 2. 检索已知实体和别名
+  for (const ent of entityMap.values()) {
+    for (const matchStr of ent.matches) {
+      if (searchContent.includes(matchStr)) {
+        matchedEntities.set(ent.id, { id: ent.id, canonical_name: ent.canonical_name });
+        break;
+      }
+    }
+  }
+
+  // 3. 正文匹配兜底逻辑：继续在标题和正文里检索常见关键词，如果 HTML 包含它们且它们不在已提取列表中，将其作为实体提取。
+  const commonKeywords = ['A 公司', '铝合金轮毂', '刹车片', '欧美汽配', '汇率风险', '运费波动'];
+  const blacklist = ['公司', '工厂', '超市', '产品', '客户', '供应商', '采购商', '贸易'];
+  const keywordTypeMap: Record<string, string> = {
+    'A 公司': 'company',
+    'B 公司': 'company',
+    '丰田汽车': 'company',
+    '铝合金轮毂': 'product',
+    '刹车片': 'product',
+    '紧固件': 'product',
+    '发光壁挂绿植环': 'product',
+    '中东非公路工程车桥': 'product',
+    '运费波动': 'product',
+    '欧美汽配': 'product',
+    '汇率风险': 'product',
+    '配件超市': 'channel',
+    '一级供应链': 'channel'
+  };
+
+  // 获取已提取实体 canonical_name 集合，用于判断是否已匹配
+  const extractedNames = new Set<string>();
+  for (const ent of matchedEntities.values()) {
+    extractedNames.add(ent.canonical_name);
+  }
+
+  for (const kw of commonKeywords) {
+    if (searchContent.includes(kw) && !extractedNames.has(kw)) {
+      // 查找或创建
+      let entRes = await dbClient.query('SELECT id FROM entities WHERE canonical_name = $1', [kw]);
+      let entId;
+      if (entRes.rows.length > 0) {
+        entId = entRes.rows[0].id;
+      } else {
+        const type = keywordTypeMap[kw] || 'product';
+        const insertRes = await dbClient.query(
+          'INSERT INTO entities (canonical_name, entity_type) VALUES ($1, $2) RETURNING id',
+          [kw, type]
+        );
+        insertRes.rows[0];
+        entId = insertRes.rows[0].id;
+      }
+      matchedEntities.set(entId, { id: entId, canonical_name: kw });
+      extractedNames.add(kw);
+    }
+  }
+
+  // 4. 过滤黑名单词：任何提取出来的实体如果存在于 ['公司', '工厂', '超市', '产品', '客户', '供应商', '采购商', '贸易'] 中，必须被完全丢弃。
+  const result: { id: string; canonical_name: string }[] = [];
+  for (const ent of matchedEntities.values()) {
+    if (blacklist.includes(ent.canonical_name)) {
+      continue;
+    }
+    result.push(ent);
+  }
+
+  return result;
+}
+
+// 4. API 处理主函数
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
@@ -118,7 +220,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     await dbClient.query('BEGIN');
 
-    // 3. 写入报告表
+    // 3. 提取并归一化实体
+    const resolvedEntities = await extractAndNormalizeEntities(rawHtml, meta.title, dbClient);
+
+    // 4. 写入报告表
     const insertReportRes = await dbClient.query(
       `INSERT INTO reports (title, category, market_region, summary, content_html) 
        VALUES ($1, $2, $3, $4, $5) 
@@ -127,27 +232,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
     const newReportId = insertReportRes.rows[0].id;
 
-    // 4. 自动建立关系图谱 (Relations)
-    // 查找其他已经包含这组实体的历史报告
-    if (meta.entities.length > 0) {
-      // 在 reports 表中查找标题或内容里包含同类关键词的报告，建立连接
-      const relatedReportsRes = await dbClient.query(
-        `SELECT id, title FROM reports WHERE id != $1`,
-        [newReportId]
+    // 5. 写入 report_entities 表
+    for (const ent of resolvedEntities) {
+      await dbClient.query(
+        `INSERT INTO report_entities (report_id, entity_id) 
+         VALUES ($1, $2) 
+         ON CONFLICT (report_id, entity_id) DO NOTHING`,
+        [newReportId, ent.id]
       );
-      
-      for (const relReport of relatedReportsRes.rows) {
-        // 简易检查是否有重合的实体
-        for (const ent of meta.entities) {
-          // 如果对方报告中包含该实体，且没建立过连接，则在 relations 表中建边
-          if (relReport.title.includes(ent)) {
-            await dbClient.query(
-              `INSERT INTO relations (report_id_a, report_id_b, relation_key) 
-               VALUES ($1, $2, $3)`,
-              [newReportId, relReport.id, ent]
-            );
-          }
-        }
+    }
+
+    // 6. 在 relations 表中建边并携带 market_region 属性
+    if (resolvedEntities.length > 0) {
+      const entityIds = resolvedEntities.map(e => e.id);
+      const sharedReportsRes = await dbClient.query(
+        `SELECT DISTINCT re.report_id, e.canonical_name
+         FROM report_entities re
+         JOIN entities e ON re.entity_id = e.id
+         WHERE re.entity_id = ANY($1) AND re.report_id != $2`,
+        [entityIds, newReportId]
+      );
+
+      for (const row of sharedReportsRes.rows) {
+        await dbClient.query(
+          `INSERT INTO relations (report_id_a, report_id_b, relation_key, market_region, relation_type) 
+           VALUES ($1, $2, $3, $4, $5)`,
+          [newReportId, row.report_id, row.canonical_name, meta.market_region, 'produces']
+        );
       }
     }
 
