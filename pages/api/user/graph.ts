@@ -7,47 +7,92 @@ export interface GraphNode {
   title: string;
   category: string;
   market_region: string;
+  summary: string;
+  companies: string[];
+  products: string[];
+  channels: string[];
 }
 
 export interface GraphLink {
   source: string;
   target: string;
   relation_key: string;
+  market_region: string;
+  relation_type: string;
 }
 
-// 核心个人图谱关联逻辑（供 API 和单元测试调用）
-export async function getUserGraph(userId: string, dbClient: any) {
-  // 1. 获取该用户所有已解锁的报告
-  const unlockedRes = await dbClient.query(
-    `SELECT r.id, r.title, r.category, r.market_region 
-     FROM reports r
-     JOIN unlocks u ON r.id = u.report_id
-     WHERE u.user_id = $1`,
-    [userId]
-  );
+export async function getGraphData(userId: string, userRole: string, dbClient: any) {
+  let nodes: any[] = [];
+  if (userRole === 'admin') {
+    const res = await dbClient.query(
+      `SELECT id, title, category, market_region, summary FROM reports`
+    );
+    nodes = res.rows;
+  } else {
+    const res = await dbClient.query(
+      `SELECT r.id, r.title, r.category, r.market_region, r.summary 
+       FROM reports r
+       JOIN unlocks u ON r.id = u.report_id
+       WHERE u.user_id = $1`,
+      [userId]
+    );
+    nodes = res.rows;
+  }
 
-  const nodes: GraphNode[] = unlockedRes.rows;
-  const unlockedIds = nodes.map(n => n.id);
-
-  if (unlockedIds.length === 0) {
+  if (nodes.length === 0) {
     return { nodes: [], links: [] };
   }
 
-  // 2. 查询这些解锁报告之间存在的网状关系连线
-  // 仅当连线的起点和终点报告都在用户的已解锁列表内时，该连线才属于该用户的个人图谱（安全原则）
-  const relationsRes = await dbClient.query(
-    `SELECT report_id_a AS source, report_id_b AS target, relation_key 
-     FROM relations 
-     WHERE report_id_a = ANY($1) AND report_id_b = ANY($1)`,
-    [unlockedIds]
+  const reportIds = nodes.map(n => n.id);
+
+  // 查询实体
+  const entitiesRes = await dbClient.query(
+    `SELECT re.report_id, e.canonical_name, e.entity_type
+     FROM report_entities re
+     JOIN entities e ON re.entity_id = e.id
+     WHERE re.report_id = ANY($1)`,
+    [reportIds]
   );
 
-  const links: GraphLink[] = relationsRes.rows;
+  // 查询连线关系
+  const relationsRes = await dbClient.query(
+    `SELECT report_id_a AS source, report_id_b AS target, relation_key, market_region, relation_type 
+     FROM relations 
+     WHERE report_id_a = ANY($1) AND report_id_b = ANY($1)`,
+    [reportIds]
+  );
+
+  // 初始化节点的归一化实体数组
+  const nodeMap = new Map<string, any>();
+  for (const node of nodes) {
+    node.companies = [];
+    node.products = [];
+    node.channels = [];
+    nodeMap.set(node.id, node);
+  }
+
+  // 分类拼装实体
+  for (const entityRow of entitiesRes.rows) {
+    const node = nodeMap.get(entityRow.report_id);
+    if (node) {
+      if (entityRow.entity_type === 'company') {
+        node.companies.push(entityRow.canonical_name);
+      } else if (entityRow.entity_type === 'product') {
+        node.products.push(entityRow.canonical_name);
+      } else if (entityRow.entity_type === 'channel') {
+        node.channels.push(entityRow.canonical_name);
+      }
+    }
+  }
 
   return {
     nodes,
-    links,
+    links: relationsRes.rows,
   };
+}
+
+export async function getUserGraph(userId: string, dbClient: any) {
+  return getGraphData(userId, 'user', dbClient);
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
