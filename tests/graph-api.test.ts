@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { Client } from 'pg';
-import { createTestClient } from './helpers/db-test-helper';
+import { createTestClient, cleanDatabase, createTestUser, createTestReport, mockReqRes } from './helpers/db-test-helper';
 import graphHandler, { getGraphData, getUserGraph } from '../pages/api/user/graph';
 
 describe('Graph Core API - getGraphData & Compatibility', () => {
@@ -15,38 +15,40 @@ describe('Graph Core API - getGraphData & Compatibility', () => {
     await dbClient.connect();
 
     // 清理相关表
-    await dbClient.query('DELETE FROM unlocks');
-    await dbClient.query('DELETE FROM relations');
-    await dbClient.query('DELETE FROM report_entities');
-    await dbClient.query("DELETE FROM entities WHERE canonical_name IN ('测试公司', '测试产品', '测试渠道')");
-    await dbClient.query('DELETE FROM reports');
-    await dbClient.query('DELETE FROM users');
+    await cleanDatabase(dbClient);
 
     // 1. 创建测试用户
-    const normalRes = await dbClient.query(
-      `INSERT INTO users (phone_number, role) VALUES ('13800000001', 'user') RETURNING id`
-    );
-    userIdNormal = normalRes.rows[0].id;
+    const normalRes = await createTestUser(dbClient, {
+      phoneNumber: '13800000001',
+      role: 'user',
+    });
+    userIdNormal = normalRes.id;
 
-    const adminRes = await dbClient.query(
-      `INSERT INTO users (phone_number, role) VALUES ('13800000002', 'admin') RETURNING id`
-    );
-    userIdAdmin = adminRes.rows[0].id;
+    const adminRes = await createTestUser(dbClient, {
+      phoneNumber: '13800000002',
+      role: 'admin',
+    });
+    userIdAdmin = adminRes.id;
 
     // 2. 创建测试报告
-    const repA = await dbClient.query(
-      `INSERT INTO reports (title, category, market_region, summary, content_html) 
-       VALUES ('A公司铝合金轮毂报告', 'customer', '欧美', 'A公司摘要', '全文A') 
-       RETURNING id`
-    );
-    reportIdA = repA.rows[0].id;
+    const repA = await createTestReport(dbClient, {
+      title: 'A公司铝合金轮毂报告',
+      category: 'customer',
+      marketRegion: '欧美',
+      summary: 'A公司摘要',
+      contentHtml: '全文A',
+    });
+    reportIdA = repA.id;
 
-    const repB = await dbClient.query(
-      `INSERT INTO reports (title, category, market_region, summary, content_html) 
-       VALUES ('刹车片市场品类洞察', 'product', '中东', '刹车片摘要', '全文B') 
-       RETURNING id`
-    );
-    reportIdB = repB.rows[0].id;
+    const repB = await createTestReport(dbClient, {
+      title: '刹车片市场品类洞察',
+      category: 'product',
+      marketRegion: '中东',
+      summary: '刹车片摘要',
+      contentHtml: '全文B',
+    });
+    reportIdB = repB.id;
+
 
     // 3. 关联关系，增加 market_region 和 relation_type
     await dbClient.query(
@@ -147,31 +149,11 @@ describe('Graph API Handler', () => {
     await dbClient.end();
   });
 
-  function mockReqRes(session: { userId: string; role: string } | null) {
-    const req = {
-      method: 'GET',
-      query: {},
-      cookies: session
-        ? { gtb_session: Buffer.from(JSON.stringify(session)).toString('base64') }
-        : {},
-    } as any;
-    let statusVal = 200;
-    let jsonVal: any = null;
-    const res = {
-      status(code: number) {
-        statusVal = code;
-        return this;
-      },
-      json(data: any) {
-        jsonVal = data;
-        return this;
-      },
-    } as any;
-    return { req, res, getStatus: () => statusVal, getJson: () => jsonVal };
-  }
-
   it('should return full graph for admin user authenticated via Cookie', async () => {
-    const { req, res, getStatus, getJson } = mockReqRes({ userId: userIdAdmin, role: 'admin' });
+    const { req, res, getStatus, getJson } = mockReqRes({
+      method: 'GET',
+      session: { userId: userIdAdmin, role: 'admin' },
+    });
     await graphHandler(req, res);
     expect(getStatus()).toBe(200);
     // admin 角色应能看到所有报告节点
@@ -180,7 +162,10 @@ describe('Graph API Handler', () => {
   });
 
   it('should return only unlocked reports for normal user authenticated via Cookie', async () => {
-    const { req, res, getStatus, getJson } = mockReqRes({ userId: userIdNormal, role: 'user' });
+    const { req, res, getStatus, getJson } = mockReqRes({
+      method: 'GET',
+      session: { userId: userIdNormal, role: 'user' },
+    });
     await graphHandler(req, res);
     expect(getStatus()).toBe(200);
     const reports = getJson().nodes.filter((n: any) => n.node_type === 'report');
@@ -188,7 +173,7 @@ describe('Graph API Handler', () => {
   });
 
   it('should return 401 when no session Cookie is provided', async () => {
-    const { req, res, getStatus } = mockReqRes(null);
+    const { req, res, getStatus } = mockReqRes({ method: 'GET' });
     await graphHandler(req, res);
     expect(getStatus()).toBe(401);
   });
