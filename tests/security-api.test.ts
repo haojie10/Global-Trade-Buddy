@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { Client } from 'pg';
-import { createTestClient } from './helpers/db-test-helper';
+import { createTestClient, cleanDatabase, createTestUser, createTestReport } from './helpers/db-test-helper';
 import http from 'http';
 
 // 模拟的 NextJS 内部 API 逻辑调用，用于测试
@@ -20,45 +20,49 @@ describe('Obsidian Graph & Safety API Test', () => {
     await dbClient.connect();
 
     // 清理表
-    await dbClient.query('DELETE FROM notes');
-    await dbClient.query('DELETE FROM favorites');
-    await dbClient.query('DELETE FROM unlocks');
-    await dbClient.query('DELETE FROM relations');
-    await dbClient.query('DELETE FROM reports');
-    await dbClient.query('DELETE FROM users');
+    await cleanDatabase(dbClient);
 
     // 1. 创建测试用户
-    const userARes = await dbClient.query(
-      `INSERT INTO users (phone_number, free_quota) VALUES ('13800000001', 0) RETURNING id`
-    );
-    userIdA = userARes.rows[0].id;
+    const userARes = await createTestUser(dbClient, {
+      phoneNumber: '13800000001',
+      freeQuota: 0,
+    });
+    userIdA = userARes.id;
 
-    const userBRes = await dbClient.query(
-      `INSERT INTO users (phone_number, free_quota) VALUES ('13800000002', 3) RETURNING id`
-    );
-    userIdB = userBRes.rows[0].id;
+    const userBRes = await createTestUser(dbClient, {
+      phoneNumber: '13800000002',
+      freeQuota: 3,
+    });
+    userIdB = userBRes.id;
 
     // 2. 创建测试报告
-    const rep1 = await dbClient.query(
-      `INSERT INTO reports (title, category, market_region, summary, content_html) 
-       VALUES ('A公司铝合金轮毂报告', 'customer', '欧美', 'A公司摘要', 'A公司机密全文') 
-       RETURNING id`
-    );
-    reportId1 = rep1.rows[0].id;
+    const rep1 = await createTestReport(dbClient, {
+      title: 'A公司铝合金轮毂报告',
+      category: 'customer',
+      marketRegion: '欧美',
+      summary: 'A公司摘要',
+      contentHtml: 'A公司机密全文',
+    });
+    reportId1 = rep1.id;
 
-    const rep2 = await dbClient.query(
-      `INSERT INTO reports (title, category, market_region, summary, content_html) 
-       VALUES ('B公司铝合金轮毂报告', 'customer', '中东', 'B公司摘要', 'B公司机密全文') 
-       RETURNING id`
-    );
-    reportId2 = rep2.rows[0].id;
+    const rep2 = await createTestReport(dbClient, {
+      title: 'B公司铝合金轮毂报告',
+      category: 'customer',
+      marketRegion: '中东',
+      summary: 'B公司摘要',
+      contentHtml: 'B公司机密全文',
+    });
+    reportId2 = rep2.id;
 
-    const rep3 = await dbClient.query(
-      `INSERT INTO reports (title, category, market_region, summary, content_html) 
-       VALUES ('刹车片市场品类洞察', 'product', '全球', '刹车片摘要', '刹车片机密全文') 
-       RETURNING id`
-    );
-    reportId3 = rep3.rows[0].id;
+    const rep3 = await createTestReport(dbClient, {
+      title: '刹车片市场品类洞察',
+      category: 'product',
+      marketRegion: '全球',
+      summary: '刹车片摘要',
+      contentHtml: '刹车片机密全文',
+    });
+    reportId3 = rep3.id;
+
 
     // 3. 建立报告关联 (Report 1 <-> Report 2 共有轮毂关键词)
     await dbClient.query(
