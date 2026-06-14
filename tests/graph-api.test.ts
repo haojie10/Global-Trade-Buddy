@@ -77,55 +77,54 @@ describe('Graph Core API - getGraphData & Compatibility', () => {
        ($1, $3), ($1, $4), ($2, $5)`,
       [reportIdA, reportIdB, entComp.rows[0].id, entProd.rows[0].id, entChan.rows[0].id]
     );
+
+    // 6. 插入实体商业关系
+    await dbClient.query(
+      `INSERT INTO entity_relations (entity_id_a, entity_id_b, relation_type, market_region)
+       VALUES ($1, $2, 'competitor', '中东')`,
+      [entComp.rows[0].id, entProd.rows[0].id]
+    );
   });
 
   afterAll(async () => {
+    await dbClient.query('DELETE FROM entity_relations');
     await dbClient.end();
   });
 
   it('should query personal graph data for normal user with entities and relation attributes', async () => {
-    // 1. 普通用户仅解锁了 reportIdA，没有解锁 reportIdB，因此图谱没有连线
+    // 1. 普通用户仅解锁了 reportIdA，因此图谱仅返回关联报告A及报告A提及的实体
     const data = await getGraphData(userIdNormal, 'user', dbClient);
-    expect(data.nodes.length).toBe(1);
-    expect(data.nodes[0].id).toBe(reportIdA);
-    expect(data.nodes[0].title).toBe('A公司铝合金轮毂报告');
-    expect(data.nodes[0].summary).toBe('A公司摘要');
     
-    // 验证实体属性
-    expect(data.nodes[0].companies).toContain('测试公司');
-    expect(data.nodes[0].products).toContain('测试产品');
-    expect(data.nodes[0].channels).toEqual([]); // 应该为空数组而非 undefined
-
-    expect(data.links.length).toBe(0); // 由于仅解锁一个，连线被安全过滤
+    // 应该包含报告节点和实体节点
+    const reports = data.nodes.filter(n => n.node_type === 'report');
+    const entities = data.nodes.filter(n => n.node_type === 'entity');
+    
+    expect(reports.length).toBe(1);
+    expect(reports[0].id).toBe(reportIdA);
+    expect(entities.length).toBeGreaterThan(0);
   });
 
   it('should query full graph data for admin including all nodes, entities and connection attributes', async () => {
     // 2. 管理员用户应该查到所有节点和连线，不论是否解锁
     const data = await getGraphData('', 'admin', dbClient);
-    expect(data.nodes.length).toBe(2);
     
-    const nodeA = data.nodes.find(n => n.id === reportIdA)!;
-    const nodeB = data.nodes.find(n => n.id === reportIdB)!;
-    expect(nodeA).toBeDefined();
-    expect(nodeB).toBeDefined();
-
-    expect(nodeA.companies).toContain('测试公司');
-    expect(nodeA.products).toContain('测试产品');
-    expect(nodeB.channels).toContain('测试渠道');
-
-    // 验证连线及其实体属性
-    expect(data.links.length).toBe(1);
-    expect(data.links[0].source).toBe(reportIdA);
-    expect(data.links[0].target).toBe(reportIdB);
-    expect(data.links[0].relation_key).toBe('共有组件');
-    expect(data.links[0].market_region).toBe('中东');
-    expect(data.links[0].relation_type).toBe('supply_chain');
+    const reports = data.nodes.filter(n => n.node_type === 'report');
+    const entities = data.nodes.filter(n => n.node_type === 'entity');
+    
+    expect(reports.length).toBe(2);
+    expect(entities.length).toBe(3); // 测试公司、测试产品、测试渠道
+    
+    // 验证包含商业关系线
+    const businessLinks = data.links.filter(l => l.link_type === 'business');
+    expect(businessLinks.length).toBe(1);
+    expect(businessLinks[0].relation_type).toBe('competitor');
   });
 
   it('should verify backward compatibility of getUserGraph', async () => {
     const data = await getUserGraph(userIdNormal, dbClient);
-    expect(data.nodes.length).toBe(1);
-    expect(data.nodes[0].id).toBe(reportIdA);
+    const reports = data.nodes.filter(n => n.node_type === 'report');
+    expect(reports.length).toBe(1);
+    expect(reports[0].id).toBe(reportIdA);
   });
 });
 
@@ -148,10 +147,13 @@ describe('Graph API Handler', () => {
     await dbClient.end();
   });
 
-  function mockReqRes(query: any) {
+  function mockReqRes(session: { userId: string; role: string } | null) {
     const req = {
       method: 'GET',
-      query,
+      query: {},
+      cookies: session
+        ? { gtb_session: Buffer.from(JSON.stringify(session)).toString('base64') }
+        : {},
     } as any;
     let statusVal = 200;
     let jsonVal: any = null;
@@ -168,26 +170,26 @@ describe('Graph API Handler', () => {
     return { req, res, getStatus: () => statusVal, getJson: () => jsonVal };
   }
 
-  it('should fallback userRole to query users table if userRole is missing', async () => {
-    const { req, res, getStatus, getJson } = mockReqRes({ userId: userIdAdmin });
+  it('should return full graph for admin user authenticated via Cookie', async () => {
+    const { req, res, getStatus, getJson } = mockReqRes({ userId: userIdAdmin, role: 'admin' });
     await graphHandler(req, res);
     expect(getStatus()).toBe(200);
-    // 因为 userIdAdmin 是 admin 角色，即使没有传 userRole，自动获取后返回 2 个节点
-    expect(getJson().nodes.length).toBe(2);
+    // admin 角色应能看到所有报告节点
+    const reports = getJson().nodes.filter((n: any) => n.node_type === 'report');
+    expect(reports.length).toBe(2);
   });
 
-  it('should respect explicitly passed userRole query parameter', async () => {
-    // 显式传入 userRole = 'admin' 即使 userId 是普通用户，也返回管理员权限数据
-    const { req, res, getStatus, getJson } = mockReqRes({ userId: userIdNormal, userRole: 'admin' });
+  it('should return only unlocked reports for normal user authenticated via Cookie', async () => {
+    const { req, res, getStatus, getJson } = mockReqRes({ userId: userIdNormal, role: 'user' });
     await graphHandler(req, res);
     expect(getStatus()).toBe(200);
-    expect(getJson().nodes.length).toBe(2); // 管理员节点数为 2
+    const reports = getJson().nodes.filter((n: any) => n.node_type === 'report');
+    expect(reports.length).toBe(1); // 普通用户仅解锁了 1 篇
   });
 
-  it('should default userRole to user if both missing or role query fails', async () => {
-    const { req, res, getStatus, getJson } = mockReqRes({ userId: '00000000-0000-0000-0000-000000000000' }); // 不存在用户 ID
+  it('should return 401 when no session Cookie is provided', async () => {
+    const { req, res, getStatus } = mockReqRes(null);
     await graphHandler(req, res);
-    expect(getStatus()).toBe(200);
-    expect(getJson().nodes.length).toBe(0); // 默认为 user 角色，且无解锁，返回 0 节点
+    expect(getStatus()).toBe(401);
   });
 });

@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { Client } from 'pg';
 import pool from '../../../lib/db';
+import { getSession } from '../../../lib/auth';
 
 export interface GraphNode {
   id: string;
@@ -45,49 +45,86 @@ export async function getGraphData(userId: string, userRole: string, dbClient: a
 
   const reportIds = nodes.map(n => n.id);
 
-  // 查询实体
+  // 查询实体（包含实体ID）
   const entitiesRes = await dbClient.query(
-    `SELECT re.report_id, e.canonical_name, e.entity_type
+    `SELECT re.report_id, e.id AS entity_id, e.canonical_name, e.entity_type
      FROM report_entities re
      JOIN entities e ON re.entity_id = e.id
      WHERE re.report_id = ANY($1)`,
     [reportIds]
   );
 
-  // 查询连线关系
-  const relationsRes = await dbClient.query(
-    `SELECT report_id_a AS source, report_id_b AS target, relation_key, market_region, relation_type 
-     FROM relations 
-     WHERE report_id_a = ANY($1) AND report_id_b = ANY($1)`,
-    [reportIds]
-  );
+  // 1. 初始化报告节点，并标记 node_type
+  const reportNodes = nodes.map(node => ({
+    ...node,
+    node_type: 'report',
+    companies: [],
+    products: [],
+    channels: []
+  }));
 
-  // 初始化节点的归一化实体数组
-  const nodeMap = new Map<string, any>();
-  for (const node of nodes) {
-    node.companies = [];
-    node.products = [];
-    node.channels = [];
-    nodeMap.set(node.id, node);
+  const reportMap = new Map<string, any>();
+  for (const node of reportNodes) {
+    reportMap.set(node.id, node);
   }
 
-  // 分类拼装实体
-  for (const entityRow of entitiesRes.rows) {
-    const node = nodeMap.get(entityRow.report_id);
-    if (node) {
-      if (entityRow.entity_type === 'company') {
-        node.companies.push(entityRow.canonical_name);
-      } else if (entityRow.entity_type === 'product') {
-        node.products.push(entityRow.canonical_name);
-      } else if (entityRow.entity_type === 'channel') {
-        node.channels.push(entityRow.canonical_name);
-      }
+  // 2. 收集并去重被提及的实体节点，同时为报告节点拼装向下兼容的分类数组
+  const entityNodeMap = new Map<string, any>();
+  const mentionLinks: any[] = [];
+
+  for (const row of entitiesRes.rows) {
+    // 填充报告的归一化数组（保持向后兼容）
+    const repNode = reportMap.get(row.report_id);
+    if (repNode) {
+      if (row.entity_type === 'company') repNode.companies.push(row.canonical_name);
+      else if (row.entity_type === 'product') repNode.products.push(row.canonical_name);
+      else if (row.entity_type === 'channel') repNode.channels.push(row.canonical_name);
     }
+
+    // 建立实体节点
+    if (!entityNodeMap.has(row.entity_id)) {
+      entityNodeMap.set(row.entity_id, {
+        id: row.entity_id,
+        title: row.canonical_name,
+        entity_type: row.entity_type,
+        node_type: 'entity'
+      });
+    }
+
+    // 建立 报告 ↔ 实体的提及线 (mention)
+    mentionLinks.push({
+      source: row.report_id,
+      target: row.entity_id,
+      link_type: 'mention',
+      relation_key: '提及'
+    });
+  }
+
+  const entityNodes = Array.from(entityNodeMap.values());
+  const entityIds = Array.from(entityNodeMap.keys());
+
+  // 3. 查询当前图中已出场实体之间的商业关系 (competitor, supplier 等)
+  let businessLinks: any[] = [];
+  if (entityIds.length > 0) {
+    const bizRes = await dbClient.query(
+      `SELECT entity_id_a AS source, entity_id_b AS target, relation_type, market_region 
+       FROM entity_relations 
+       WHERE entity_id_a = ANY($1) AND entity_id_b = ANY($1)`,
+      [entityIds]
+    );
+    businessLinks = bizRes.rows.map(r => ({
+      source: r.source,
+      target: r.target,
+      link_type: 'business',
+      relation_type: r.relation_type,
+      market_region: r.market_region,
+      relation_key: r.relation_type === 'competitor' ? '竞争对手' : r.relation_type === 'supplier' ? '供应商' : '合作'
+    }));
   }
 
   return {
-    nodes,
-    links: relationsRes.rows,
+    nodes: [...reportNodes, ...entityNodes],
+    links: [...mentionLinks, ...businessLinks]
   };
 }
 
@@ -100,35 +137,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const { userId, userRole } = req.query;
-  
-  // 如果两个参数都没有，则由于向下兼容，可以抛出错误（除非是 admin 场景）
-  // 为了保持一致的报错，如果缺 userId 且缺 userRole，报 400
-  if (!userId && !userRole) {
-    return res.status(400).json({ error: 'Missing userId parameter' });
+  // 从 httpOnly Cookie 中读取会话，防止任何人通过 query 参数伪造角色
+  const session = getSession(req);
+  if (!session) {
+    return res.status(401).json({ error: '未登录，请先登录后访问' });
   }
+
+  const { userId, role: resolvedRole } = session;
 
   const dbClient = await pool.connect();
 
   try {
-    let resolvedRole = userRole as string;
-    if (!resolvedRole) {
-      if (userId) {
-        const userRes = await dbClient.query(
-          `SELECT role FROM users WHERE id = $1`,
-          [userId]
-        );
-        if (userRes.rows.length > 0) {
-          resolvedRole = userRes.rows[0].role || 'user';
-        } else {
-          resolvedRole = 'user';
-        }
-      } else {
-        resolvedRole = 'user';
-      }
-    }
-
-    const graphData = await getGraphData(userId as string || '', resolvedRole, dbClient);
+    const graphData = await getGraphData(userId, resolvedRole, dbClient);
     return res.status(200).json(graphData);
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
