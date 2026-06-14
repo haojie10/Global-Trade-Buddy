@@ -167,6 +167,11 @@ export default function ObsidianGraph({ data, onNodeSelect, onNodeDoubleClick }:
         .linkDirectionalParticleWidth(1.5)
         .linkDirectionalParticleSpeed(0.005)
         .onNodeHover((node: any) => {
+          // 卫语句：如果悬停的节点没有变化，直接返回，防抖避让以提升性能并防止递归
+          const prevId = hoverNodeRef.current ? hoverNodeRef.current.id : null;
+          const nextId = node ? node.id : null;
+          if (prevId === nextId) return;
+
           const hlNodes = new Set<string>();
           const hlLinks = new Set<any>();
           if (node) {
@@ -188,11 +193,13 @@ export default function ObsidianGraph({ data, onNodeSelect, onNodeDoubleClick }:
           highlightNodesRef.current = hlNodes;
           highlightLinksRef.current = hlLinks;
           
-          // 仅触发 Canvas 局部重绘刷新（通过重启一帧动画申请）
-          if (typeof graph.pauseAnimation === 'function') {
-            graph.pauseAnimation();
-            graph.resumeAnimation();
-          }
+          // 异步调用以切断同步递归堆栈，防止 RangeError 溢出
+          setTimeout(() => {
+            if (typeof graph.pauseAnimation === 'function') {
+              graph.pauseAnimation();
+              graph.resumeAnimation();
+            }
+          }, 0);
         })
         .onNodeClick((node: any) => {
           const now = Date.now();
