@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { Client } from 'pg';
-import { createTestClient } from './helpers/db-test-helper';
+import { createTestClient, cleanDatabase, createTestUser, createTestReport } from './helpers/db-test-helper';
 
 import { saveUserNote, getUserNote } from '../pages/api/user/note';
 import { toggleFavorite, checkIsFavorite } from '../pages/api/user/favorite';
@@ -17,30 +17,28 @@ describe('Extensions Modules API Test', () => {
     await dbClient.connect();
 
     // 清理数据
-    await dbClient.query('DELETE FROM notes');
-    await dbClient.query('DELETE FROM favorites');
-    await dbClient.query('DELETE FROM unlocks');
-    await dbClient.query('DELETE FROM relations');
-    await dbClient.query('DELETE FROM reports');
-    await dbClient.query('DELETE FROM users');
+    await cleanDatabase(dbClient);
 
     // 1. 插入邀请人
-    const refRes = await dbClient.query(
-      `INSERT INTO users (phone_number, free_quota) VALUES ('13899990001', 3) RETURNING id`
-    );
-    referrerUserId = refRes.rows[0].id;
+    const refRes = await createTestUser(dbClient, {
+      phoneNumber: '13899990001',
+      freeQuota: 3,
+    });
+    referrerUserId = refRes.id;
 
     // 2. 插入测试用户
-    const userRes = await dbClient.query(
-      `INSERT INTO users (phone_number, free_quota) VALUES ('13899990002', 3) RETURNING id`
-    );
-    testUserId = userRes.rows[0].id;
+    const userRes = await createTestUser(dbClient, {
+      phoneNumber: '13899990002',
+      freeQuota: 3,
+    });
+    testUserId = userRes.id;
 
     // 3. 插入测试报告
-    const repRes = await dbClient.query(
-      `INSERT INTO reports (title, category) VALUES ('笔记与收藏测试报告', 'customer') RETURNING id`
-    );
-    testReportId = repRes.rows[0].id;
+    const repRes = await createTestReport(dbClient, {
+      title: '笔记与收藏测试报告',
+      category: 'customer',
+    });
+    testReportId = repRes.id;
   });
 
   afterAll(async () => {
