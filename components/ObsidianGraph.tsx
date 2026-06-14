@@ -37,11 +37,13 @@ export default function ObsidianGraph({ data, onNodeSelect, onNodeDoubleClick }:
   const lastClickedNodeIdRef = useRef<string | null>(null);
   const lastClickTimeRef = useRef<number>(0);
 
-  // 新增状态管理：折叠展开和 Hover 高亮
+  // 新增状态管理：折叠展开
   const [expandedNodeIds, setExpandedNodeIds] = React.useState<Set<string>>(new Set());
-  const [hoverNode, setHoverNode] = React.useState<any>(null);
-  const [highlightNodes, setHighlightNodes] = React.useState<Set<string>>(new Set());
-  const [highlightLinks, setHighlightLinks] = React.useState<Set<any>>(new Set());
+
+  // 使用 Ref 存储高亮状态，悬悬停时仅触发 Canvas 重绘，不重启物理引力引擎
+  const hoverNodeRef = useRef<any>(null);
+  const highlightNodesRef = useRef<Set<string>>(new Set());
+  const highlightLinksRef = useRef<Set<any>>(new Set());
 
   const callbacksRef = useRef({ onNodeSelect, onNodeDoubleClick });
   useEffect(() => {
@@ -99,9 +101,9 @@ export default function ObsidianGraph({ data, onNodeSelect, onNodeDoubleClick }:
           const fontSize = 11 / globalScale;
           ctx.font = `${fontSize}px Sans-Serif`;
           
-          // 计算透明度，实现 Hover 高亮聚焦
+          // 从 Ref 读取高亮参数
           let opacity = 1;
-          if (hoverNode && !highlightNodes.has(node.id)) {
+          if (hoverNodeRef.current && !highlightNodesRef.current.has(node.id)) {
             opacity = 0.12;
           }
 
@@ -127,18 +129,18 @@ export default function ObsidianGraph({ data, onNodeSelect, onNodeDoubleClick }:
           ctx.fillStyle = 'rgba(71, 85, 105, ' + (opacity * 0.95) + ')'; // slate-600
 
           // 只在局部放大到一定程度或高亮时才绘制长报告的文字标签以防止凌乱，实体节点文字始终绘制
-          if (node.node_type === 'entity' || globalScale > 1.2 || (hoverNode && highlightNodes.has(node.id))) {
+          if (node.node_type === 'entity' || globalScale > 1.2 || (hoverNodeRef.current && highlightNodesRef.current.has(node.id))) {
             const displayLabel = label.length > 10 ? label.slice(0, 10) + '...' : label;
             ctx.fillText(displayLabel, node.x, node.y + size + fontSize * 0.85);
           }
         })
         .linkWidth((link: any) => {
-          if (hoverNode && !highlightLinks.has(link)) return 0.5;
+          if (hoverNodeRef.current && !highlightLinksRef.current.has(link)) return 0.5;
           return link.link_type === 'business' ? 2.5 : 1;
         })
         .linkColor((link: any) => {
           let opacity = 1;
-          if (hoverNode && !highlightLinks.has(link)) {
+          if (hoverNodeRef.current && !highlightLinksRef.current.has(link)) {
             return 'rgba(200, 200, 200, 0.03)';
           }
 
@@ -181,9 +183,13 @@ export default function ObsidianGraph({ data, onNodeSelect, onNodeDoubleClick }:
               }
             });
           }
-          setHoverNode(node);
-          setHighlightNodes(hlNodes);
-          setHighlightLinks(hlLinks);
+          // 更新 Ref，不重启实例
+          hoverNodeRef.current = node;
+          highlightNodesRef.current = hlNodes;
+          highlightLinksRef.current = hlLinks;
+          
+          // 仅触发 Canvas 重绘刷新
+          graph.refresh();
         })
         .onNodeClick((node: any) => {
           const now = Date.now();
@@ -240,7 +246,7 @@ export default function ObsidianGraph({ data, onNodeSelect, onNodeDoubleClick }:
         graph._destructor?.(); // 销毁实例，防内存泄漏
       };
     });
-  }, [visibleNodes, visibleLinks, router, hoverNode, highlightNodes, highlightLinks]);
+  }, [visibleNodes, visibleLinks, router]);
 
   return (
     <div style={{
