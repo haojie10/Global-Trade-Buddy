@@ -1,7 +1,7 @@
 import { GetServerSideProps } from 'next';
 import React, { useState } from 'react';
-import { Client } from 'pg';
 import pool from '../lib/db';
+import { parseCookies } from '../lib/cookies';
 import { getUserGraph, getGraphData } from './api/user/graph';
 import ObsidianGraph, { Node as ObsidianNode } from '../components/ObsidianGraph';
 import ToolsPanel from '../components/ToolsPanel';
@@ -73,33 +73,6 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota }: 
             🏠 返回首页登录
           </Link>
         </div>
-        <style jsx global>{`
-          .water-drop-btn {
-            background: rgba(255, 255, 255, 0.45);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.75);
-            border-radius: 30px;
-            color: #0f172a;
-            box-shadow: 
-              0 8px 24px rgba(31, 38, 135, 0.03), 
-              inset 0 4px 10px rgba(255, 255, 255, 0.65), 
-              inset 0 -4px 10px rgba(15, 23, 42, 0.02);
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            cursor: pointer;
-            outline: none;
-            display: inline-block;
-            text-align: center;
-          }
-          .water-drop-btn:hover {
-            background: rgba(255, 255, 255, 0.7);
-            box-shadow: 
-              0 12px 30px rgba(31, 38, 135, 0.05), 
-              inset 0 8px 16px rgba(255, 255, 255, 0.8), 
-              inset 0 -6px 16px rgba(15, 23, 42, 0.03);
-            transform: translateY(-1px);
-          }
-        `}</style>
       </div>
     );
   }
@@ -1135,55 +1108,8 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota }: 
 
       </main>
 
-      {/* 简单的关键帧动画定义 */}
-      <style jsx global>{`
-        .floating-planet {
-          animation: float 4s infinite ease-in-out;
-        }
-        @keyframes float {
-          0% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-10px) rotate(5deg); }
-          100% { transform: translateY(0px) rotate(0deg); }
-        }
-
-        .water-drop-btn {
-          background: rgba(255, 255, 255, 0.45);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          border: 1px solid rgba(255, 255, 255, 0.75);
-          border-radius: 30px;
-          color: #0f172a;
-          box-shadow: 
-            0 8px 24px rgba(31, 38, 135, 0.03), 
-            inset 0 4px 10px rgba(255, 255, 255, 0.65), 
-            inset 0 -4px 10px rgba(15, 23, 42, 0.02);
-          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-          cursor: pointer;
-          outline: none;
-          display: inline-block;
-          text-align: center;
-        }
-        .water-drop-btn:hover {
-          background: rgba(255, 255, 255, 0.7);
-          box-shadow: 
-            0 12px 30px rgba(31, 38, 135, 0.05), 
-            inset 0 8px 16px rgba(255, 255, 255, 0.8), 
-            inset 0 -6px 16px rgba(15, 23, 42, 0.03);
-          transform: translateY(-1px);
-        }
-      `}</style>
     </div>
   );
-}
-
-function parseCookies(cookieHeader?: string) {
-  const list: Record<string, string> = {};
-  if (!cookieHeader) return list;
-  cookieHeader.split(';').forEach((cookie) => {
-    const parts = cookie.split('=');
-    list[parts.shift()!.trim()] = decodeURI(parts.join('='));
-  });
-  return list;
 }
 
 // SSR 加载个人知识图谱数据

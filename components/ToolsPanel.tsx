@@ -384,7 +384,6 @@ export default function ToolsPanel({ layout = 'column' }: { layout?: 'row' | 'co
                 margin: '0 auto 12px auto'
               }} />
               <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 300 }}>AI 抠图渲染中...</span>
-              <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
             </div>
           ) : processedUrl ? (
             <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
@@ -410,31 +409,6 @@ export default function ToolsPanel({ layout = 'column' }: { layout?: 'row' | 'co
         </div>
       </div>
 
-      <style jsx>{`
-        .water-drop-btn {
-          background: rgba(255, 255, 255, 0.45);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          border: 1px solid rgba(255, 255, 255, 0.65);
-          border-radius: 30px;
-          color: #0f172a;
-          box-shadow: 
-            0 8px 24px rgba(31, 38, 135, 0.03), 
-            inset 0 4px 10px rgba(255, 255, 255, 0.65), 
-            inset 0 -4px 10px rgba(15, 23, 42, 0.02);
-          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-          cursor: pointer;
-          outline: none;
-        }
-        .water-drop-btn:hover {
-          background: rgba(255, 255, 255, 0.7);
-          box-shadow: 
-            0 12px 30px rgba(31, 38, 135, 0.05), 
-            inset 0 8px 16px rgba(255, 255, 255, 0.8), 
-            inset 0 -6px 16px rgba(15, 23, 42, 0.03);
-          transform: translateY(-1px);
-        }
-      `}</style>
     </div>
   );
 }

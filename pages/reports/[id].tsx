@@ -1,7 +1,7 @@
 import { GetServerSideProps } from 'next';
 import React, { useState } from 'react';
-import { Client } from 'pg';
 import pool from '../../lib/db';
+import { parseCookies } from '../../lib/cookies';
 import { getReportDetail } from '../api/user/report-detail';
 import WatermarkContainer from '../../components/WatermarkContainer';
 import Link from 'next/link';
@@ -400,46 +400,10 @@ export default function ReportDetailPage({ report, related, userId, userRole }: 
           )}
 
         </div>
-        <style jsx global>{`
-          .water-drop-btn {
-            background: rgba(255, 255, 255, 0.45);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.75);
-            border-radius: 30px;
-            color: #0f172a;
-            box-shadow: 
-              0 8px 24px rgba(31, 38, 135, 0.03), 
-              inset 0 4px 10px rgba(255, 255, 255, 0.65), 
-              inset 0 -4px 10px rgba(15, 23, 42, 0.02);
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            cursor: pointer;
-            outline: none;
-            display: inline-block;
-            text-align: center;
-          }
-          .water-drop-btn:hover {
-            background: rgba(255, 255, 255, 0.7);
-            box-shadow: 
-              0 12px 30px rgba(31, 38, 135, 0.05), 
-              inset 0 8px 16px rgba(255, 255, 255, 0.8), 
-              inset 0 -6px 16px rgba(15, 23, 42, 0.03);
-            transform: translateY(-1px);
-          }
-        `}</style>
+
       </div>
     </WatermarkContainer>
   );
-}
-
-function parseCookies(cookieHeader?: string) {
-  const list: Record<string, string> = {};
-  if (!cookieHeader) return list;
-  cookieHeader.split(';').forEach((cookie) => {
-    const parts = cookie.split('=');
-    list[parts.shift()!.trim()] = decodeURI(parts.join('='));
-  });
-  return list;
 }
 
 // 服务端数据预取 (SSR)

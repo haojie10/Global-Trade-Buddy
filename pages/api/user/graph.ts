@@ -112,7 +112,7 @@ export async function getGraphData(userId: string, userRole: string, dbClient: a
        WHERE entity_id_a = ANY($1) AND entity_id_b = ANY($1)`,
       [entityIds]
     );
-    businessLinks = bizRes.rows.map(r => ({
+    businessLinks = bizRes.rows.map((r: any) => ({
       source: r.source,
       target: r.target,
       link_type: 'business',

@@ -136,7 +136,7 @@ export async function extractAndNormalizeEntities(
       const companyTags = manualTags.companies.map((c: string) => c.trim()).filter(Boolean);
       if (companyTags.length > 0) {
         const primaryTag = companyTags[0];
-        let primaryEntityId: string | null = null;
+        let primaryEntityId = '';
         let primaryCanonicalName = primaryTag;
 
         // 检查是否已有同名实体或已有的别称

@@ -7,6 +7,8 @@ export interface GraphNode {
   companies?: string[];
   products?: string[];
   channels?: string[];
+  node_type?: string;
+  entity_type?: string;
 }
 
 export interface GraphLink {
