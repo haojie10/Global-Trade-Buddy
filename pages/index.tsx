@@ -1,20 +1,12 @@
 import { GetServerSideProps } from 'next';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import pool from '../lib/db';
 import { parseCookies } from '../lib/cookies';
 import { getUserGraph, GraphNode, GraphLink } from './api/user/graph';
 import ToolsPanel from '../components/ToolsPanel';
 import Link from 'next/link';
-import { detectAndDecodeHtml } from '../lib/encoding';
-
-interface PlatformReport {
-  id: string;
-  title: string;
-  category: string;
-  market_region: string;
-  summary: string;
-  isUnlocked: boolean;
-}
+import AdminPanel from '../components/AdminPanel';
+import ReportList, { PlatformReport } from '../components/ReportList';
 
 interface HomeProps {
   graphData: {
@@ -29,6 +21,7 @@ interface HomeProps {
 
 export default function HomePage({ graphData, allReports, userId, userRole, freeQuota }: HomeProps) {
   const [quota, setQuota] = useState(freeQuota);
+  const [reports, setReports] = useState(allReports);
   const [emailInput, setEmailInput] = useState('');
   const [subscribed, setSubscribed] = useState(false);
 
@@ -45,17 +38,19 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
   
   // 管理员上传报告弹窗状态
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [rawHtmlContent, setRawHtmlContent] = useState('');
-  const [uploadLoading, setUploadLoading] = useState(false);
-  const [manualCompanies, setManualCompanies] = useState<string[]>(['']);
-  const [manualProducts, setManualProducts] = useState<string[]>(['']);
-  const [manualRegions, setManualRegions] = useState<string[]>(['']);
-  const [manualChannels, setManualChannels] = useState<string[]>(['']);
 
-  // 拖拽及文件状态
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isDragActive, setIsDragActive] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const inputStyle = {
+    background: 'rgba(255, 255, 255, 0.65)',
+    border: '1px solid rgba(15, 23, 42, 0.08)',
+    borderRadius: '12px',
+    padding: '12px 16px',
+    fontSize: '0.85rem',
+    color: '#0f172a',
+    outline: 'none',
+    width: '100%',
+    transition: 'border-color 0.3s ease',
+    boxSizing: 'border-box' as const
+  };
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,84 +85,6 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
     window.location.reload();
   };
 
-  const handleFileChange = (file: File) => {
-    if (!file) return;
-    if (!file.name.endsWith('.html') && !file.name.endsWith('.htm')) {
-      alert('只支持上传 .html 格式的文件');
-      return;
-    }
-    setSelectedFile(file);
-    
-    // 读取文件内容
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const buffer = e.target?.result as ArrayBuffer;
-      try {
-        const decodedText = detectAndDecodeHtml(buffer);
-        setRawHtmlContent(decodedText);
-      } catch (err) {
-        alert('读取或解析文件失败，请检查编码格式');
-      }
-    };
-    reader.onerror = () => {
-      alert('读取文件出错');
-    };
-    reader.readAsArrayBuffer(file);
-  };
-
-  const handleUploadReport = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!rawHtmlContent.trim()) return;
-    setUploadLoading(true);
-    try {
-      const res = await fetch('/api/admin/reports/upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          rawHtml: rawHtmlContent,
-          manualTags: {
-            companies: manualCompanies.map(c => c.trim()).filter(Boolean),
-            products: manualProducts.map(p => p.trim()).filter(Boolean),
-            regions: manualRegions.map(r => r.trim()).filter(Boolean),
-            channels: manualChannels.map(c => c.trim()).filter(Boolean)
-          }
-        })
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        alert('报告上传成功！');
-        setRawHtmlContent('');
-        setSelectedFile(null);
-        setIsDragActive(false);
-        setManualCompanies(['']);
-        setManualProducts(['']);
-        setManualRegions(['']);
-        setManualChannels(['']);
-        setShowUploadModal(false);
-        window.location.reload();
-      } else {
-        alert(data.error || '上传失败');
-      }
-    } catch (err) {
-      alert('上传报告失败，请检查连接');
-    } finally {
-      setUploadLoading(false);
-    }
-  };
-
-  const inputStyle = {
-    background: 'rgba(255, 255, 255, 0.65)',
-    border: '1px solid rgba(15, 23, 42, 0.08)',
-    borderRadius: '12px',
-    padding: '12px 16px',
-    fontSize: '0.85rem',
-    color: '#0f172a',
-    outline: 'none',
-    width: '100%',
-    transition: 'border-color 0.3s ease',
-    boxSizing: 'border-box' as const
-  };
-
   // 滚动进入可视区域动画监听
   useEffect(() => {
     const observerOptions = {
@@ -190,7 +107,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
     return () => {
       targets.forEach((target) => observer.unobserve(target));
     };
-  }, [allReports]);
+  }, [reports]);
 
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
@@ -208,94 +125,6 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
     }
   };
 
-  const renderTagListInput = (
-    title: string,
-    tags: string[],
-    setTags: React.Dispatch<React.SetStateAction<string[]>>,
-    placeholder: string
-  ) => {
-    const handleAdd = () => setTags([...tags, '']);
-    const handleRemove = (index: number) => {
-      const newTags = tags.filter((_, i) => i !== index);
-      setTags(newTags.length === 0 ? [''] : newTags);
-    };
-    const handleChange = (index: number, val: string) => {
-      const newTags = [...tags];
-      newTags[index] = val;
-      setTags(newTags);
-    };
-
-    return (
-      <div style={{
-        background: 'rgba(255, 255, 255, 0.4)',
-        border: '1px solid rgba(15, 23, 42, 0.08)',
-        borderRadius: '16px',
-        padding: '14px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '8px'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-          <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#0f172a' }}>{title}</span>
-          <button
-            type="button"
-            onClick={handleAdd}
-            style={{
-              background: '#2563eb',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '50%',
-              width: '20px',
-              height: '20px',
-              fontSize: '0.9rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              fontWeight: 700,
-              boxShadow: '0 2px 6px rgba(37, 99, 235, 0.2)'
-            }}
-          >
-            +
-          </button>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '110px', overflowY: 'auto', paddingRight: '4px' }}>
-          {tags.map((tag, idx) => (
-            <div key={idx} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-              <input
-                type="text"
-                value={tag}
-                placeholder={placeholder}
-                onChange={(e) => handleChange(idx, e.target.value)}
-                style={{
-                  ...inputStyle,
-                  padding: '6px 10px',
-                  borderRadius: '8px',
-                  fontSize: '0.8rem',
-                }}
-              />
-              {tags.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => handleRemove(idx)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#ef4444',
-                    fontSize: '1rem',
-                    cursor: 'pointer',
-                    padding: '0 4px',
-                  }}
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div style={{
@@ -578,120 +407,21 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
                 Discover, Unlock & Connect.
               </h2>
               <p style={{ fontSize: '1.05rem', color: '#475569', margin: 0, fontWeight: 300 }}>
-                探索大厅发布了 <b style={{ color: '#0f172a', fontWeight: 500 }}>{allReports.length}</b> 份最具潜力的跨国采购品类与买家画像报告。
+                探索大厅发布了 <b style={{ color: '#0f172a', fontWeight: 500 }}>{reports.length}</b> 份最具潜力的跨国采购品类与买家画像报告。
               </p>
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '24px' }}>
-            {allReports.length > 0 ? (
-              allReports.map((report) => (
-                <Link 
-                  href={`/reports/${report.id}`} 
-                  key={report.id} 
-                  style={{ textDecoration: 'none' }}
-                >
-                  <div style={{
-                    border: '1px solid rgba(15, 23, 42, 0.08)',
-                    borderRadius: '24px',
-                    padding: '28px',
-                    background: 'rgba(255, 255, 255, 0.75)',
-                    backdropFilter: 'blur(20px)',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    height: '260px',
-                    boxShadow: '0 8px 30px rgba(15, 23, 42, 0.03)'
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.borderColor = 'rgba(37, 99, 235, 0.4)';
-                    e.currentTarget.style.transform = 'translateY(-6px)';
-                    e.currentTarget.style.boxShadow = '0 20px 40px rgba(37, 99, 235, 0.08)';
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.95)';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.borderColor = 'rgba(15, 23, 42, 0.08)';
-                    e.currentTarget.style.transform = 'none';
-                    e.currentTarget.style.boxShadow = '0 8px 30px rgba(15, 23, 42, 0.03)';
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.75)';
-                  }}
-                  >
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                        <span style={{
-                          fontSize: '0.75rem',
-                          fontWeight: 500,
-                          color: report.category === 'customer' ? '#2563eb' : '#b45309',
-                          background: report.category === 'customer' ? 'rgba(37, 99, 235, 0.06)' : 'rgba(217, 119, 6, 0.06)',
-                          padding: '5px 12px',
-                          borderRadius: '8px'
-                        }}>
-                          {report.category === 'customer' ? '👥 客户洞察' : '📈 品类分析'}
-                        </span>
-                        <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 500 }}>
-                          🎯 {report.market_region}
-                        </span>
-                      </div>
-                      <h4 style={{
-                        margin: '0 0 10px 0',
-                        fontSize: '1.05rem',
-                        color: '#0f172a',
-                        fontWeight: 500,
-                        lineHeight: 1.4,
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden'
-                      }}>
-                        {report.title}
-                      </h4>
-                      <p style={{
-                        margin: 0,
-                        fontSize: '0.85rem',
-                        color: '#475569',
-                        lineHeight: 1.5,
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                        fontWeight: 300
-                      }}>
-                        {report.summary}
-                      </p>
-                    </div>
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginTop: '16px',
-                      borderTop: '1px solid rgba(15, 23, 42, 0.06)',
-                      paddingTop: '16px'
-                    }}>
-                      <span style={{
-                        fontSize: '0.75rem',
-                        fontWeight: 500,
-                        padding: '4px 10px',
-                        borderRadius: '8px',
-                        background: report.isUnlocked ? 'rgba(16, 185, 129, 0.08)' : 'rgba(217, 119, 6, 0.08)',
-                        color: report.isUnlocked ? '#059669' : '#b45309'
-                      }}>
-                        {report.isUnlocked ? '✅ 已解锁' : '🔒 未解锁'}
-                      </span>
-                      <span style={{ fontSize: '0.8rem', color: '#2563eb', fontWeight: 500 }}>
-                        立即预览与解锁 →
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              ))
-            ) : (
-              <div style={{ gridColumn: '1 / -1', padding: '80px 40px', textAlign: 'center', color: '#64748b', fontWeight: 300 }}>
-                📭 平台目前尚未发布任何报告。
-              </div>
-            )}
-          </div>
+          <ReportList
+            reports={reports}
+            userId={userId}
+            userRole={userRole}
+            quota={quota}
+            onUnlockSuccess={(newQuota, unlockedReportId) => {
+              setQuota(newQuota);
+              setReports(prev => prev.map(r => r.id === unlockedReportId ? { ...r, isUnlocked: true } : r));
+            }}
+          />
         </section>
 
         {/* 模块四：安全保障与个人拓扑 */}
@@ -1033,215 +763,11 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
         </div>
       )}
 
-      {/* 管理员上传报告弹窗 */}
-      {showUploadModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(15, 23, 42, 0.25)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.45)',
-            border: '1px solid rgba(255, 255, 255, 0.75)',
-            borderRadius: '24px',
-            padding: '30px',
-            width: '95%',
-            maxWidth: '850px',
-            maxHeight: '95vh',
-            overflowY: 'auto',
-            boxShadow: '0 20px 40px rgba(15, 23, 42, 0.08), inset 0 8px 16px rgba(255, 255, 255, 0.55)',
-            position: 'relative'
-          }}>
-            <button 
-              onClick={() => {
-                setShowUploadModal(false);
-                setSelectedFile(null);
-                setIsDragActive(false);
-                setRawHtmlContent('');
-                setManualCompanies(['']);
-                setManualProducts(['']);
-                setManualRegions(['']);
-                setManualChannels(['']);
-              }}
-              style={{
-                position: 'absolute',
-                top: '20px',
-                right: '20px',
-                background: 'none',
-                border: 'none',
-                fontSize: '1.25rem',
-                cursor: 'pointer',
-                color: '#64748b'
-              }}
-            >
-              ✕
-            </button>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 300, marginBottom: '10px', textAlign: 'center', color: '#0f172a' }}>
-              📤 发布外贸数据报告 (Admin)
-            </h2>
-            <p style={{ fontSize: '0.8rem', color: '#475569', textAlign: 'center', marginBottom: '24px' }}>
-              拖拽上传报告的原始 HTML 文件，系统将自动进行脱水处理（自动转码、自动剥离 Base64 图并上传）。
-            </p>
-            <form onSubmit={handleUploadReport} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div 
-                onClick={() => fileInputRef.current?.click()}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setIsDragActive(true);
-                }}
-                onDragLeave={() => setIsDragActive(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setIsDragActive(false);
-                  if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                    handleFileChange(e.dataTransfer.files[0]);
-                  }
-                }}
-                style={{
-                  boxSizing: 'border-box',
-                  width: '100%',
-                  height: '240px',
-                  background: selectedFile 
-                    ? 'linear-gradient(135deg, rgba(37, 99, 235, 0.03) 0%, rgba(37, 99, 235, 0.08) 100%)' 
-                    : isDragActive 
-                      ? 'linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(37, 99, 235, 0.12) 100%)'
-                      : 'rgba(255, 255, 255, 0.65)',
-                  border: selectedFile 
-                    ? '2px solid #2563eb' 
-                    : isDragActive 
-                      ? '2px dashed #2563eb' 
-                      : '2px dashed rgba(15, 23, 42, 0.15)',
-                  borderRadius: '20px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '12px',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                  padding: '20px',
-                  boxShadow: isDragActive ? '0 12px 30px rgba(37, 99, 235, 0.08)' : 'none',
-                }}
-                onMouseOver={(e) => {
-                  if (!selectedFile && !isDragActive) {
-                    e.currentTarget.style.borderColor = 'rgba(37, 99, 235, 0.5)';
-                    e.currentTarget.style.boxShadow = '0 8px 20px rgba(15, 23, 42, 0.02)';
-                  }
-                }}
-                onMouseOut={(e) => {
-                  if (!selectedFile && !isDragActive) {
-                    e.currentTarget.style.borderColor = 'rgba(15, 23, 42, 0.15)';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }
-                }}
-              >
-                <input 
-                  type="file" 
-                  ref={fileInputRef}
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      handleFileChange(e.target.files[0]);
-                    }
-                  }}
-                  accept=".html,.htm"
-                  style={{ display: 'none' }}
-                />
-                {selectedFile ? (
-                  <>
-                    <div style={{ fontSize: '3rem' }}>📄</div>
-                    <div style={{ textAlign: 'center' }}>
-                      <p style={{ margin: '0 0 4px 0', fontWeight: 600, fontSize: '0.95rem', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '350px' }}>
-                        {selectedFile.name}
-                      </p>
-                      <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>
-                        文件大小: {(selectedFile.size / 1024).toFixed(1)} KB
-                      </p>
-                    </div>
-                    <button 
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedFile(null);
-                        setRawHtmlContent('');
-                      }}
-                      style={{
-                        marginTop: '8px',
-                        background: 'rgba(239, 68, 68, 0.08)',
-                        border: '1px solid rgba(239, 68, 68, 0.2)',
-                        color: '#ef4444',
-                        borderRadius: '12px',
-                        padding: '6px 16px',
-                        fontSize: '0.8rem',
-                        cursor: 'pointer',
-                        fontWeight: 500,
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)';
-                      }}
-                    >
-                      ✕ 清除重选
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <div style={{ 
-                      fontSize: '3rem', 
-                      transform: isDragActive ? 'translateY(-5px)' : 'none',
-                      transition: 'transform 0.2s'
-                    }}>
-                      ☁️
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                      <p style={{ margin: '0 0 4px 0', fontWeight: 500, color: '#0f172a', fontSize: '0.95rem' }}>
-                        {isDragActive ? '释放以导入此报告' : '将 HTML 报告文件拖到这里'}
-                      </p>
-                      <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>
-                        支持 Drag & Drop，或点击本卡片浏览文件
-                      </p>
-                    </div>
-                  </>
-                )}
-              </div>
-              
-              {/* 手动标注核心关键词区域 */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
-                gap: '12px',
-                marginTop: '4px',
-                marginBottom: '8px'
-              }}>
-                {renderTagListInput('🏢 公司名称 (Company)', manualCompanies, setManualCompanies, '例如: 特斯拉, 丰田汽车')}
-                {renderTagListInput('📦 产品名称 (Product)', manualProducts, setManualProducts, '例如: 锂电池, 刹车片')}
-                {renderTagListInput('🌍 市场地区 (Region)', manualRegions, setManualRegions, '例如: 北美, 欧盟')}
-                {renderTagListInput('🤝 渠道类型 (Channel)', manualChannels, setManualChannels, '例如: 一级供应链')}
-              </div>
-
-              <button 
-                type="submit" 
-                className="water-drop-btn"
-                disabled={uploadLoading || !rawHtmlContent}
-                style={{ padding: '12px', fontSize: '0.95rem', fontWeight: 500, width: '100%' }}
-              >
-                {uploadLoading ? '⏳ 正在处理并上传报告...' : '🚀 立即发布报告'}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+      <AdminPanel 
+        isOpen={showUploadModal} 
+        onClose={() => setShowUploadModal(false)} 
+        onUploadSuccess={() => window.location.reload()} 
+      />
     </div>
   );
 }
