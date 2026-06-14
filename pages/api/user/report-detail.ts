@@ -1,5 +1,4 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { Client } from 'pg';
 import pool from '../../../lib/db';
 
 // 核心安全详情读取逻辑（供 API 和单元测试调用）

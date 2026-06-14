@@ -35,6 +35,10 @@ describe('Auth API Handlers Test', () => {
         jsonVal = data;
         return this;
       },
+      // 支持 signup/login 设置 httpOnly Cookie
+      setHeader(_name: string, _value: string) {
+        return this;
+      },
     } as any;
     return { req, res, getStatus: () => statusVal, getJson: () => jsonVal };
   }

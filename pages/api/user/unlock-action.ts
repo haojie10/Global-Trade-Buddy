@@ -1,5 +1,4 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { Client } from 'pg';
 import pool from '../../../lib/db';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {

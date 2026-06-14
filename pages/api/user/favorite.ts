@@ -1,5 +1,4 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { Client } from 'pg';
 import pool from '../../../lib/db';
 
 // 检查是否收藏 (供 API 和单元测试调用)

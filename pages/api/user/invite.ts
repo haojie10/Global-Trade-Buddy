@@ -1,5 +1,4 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { Client } from 'pg';
 import pool from '../../../lib/db';
 
 // 执行邀请兑换逻辑 (双向赠送解锁额度，包裹在 SQL 事务中)
