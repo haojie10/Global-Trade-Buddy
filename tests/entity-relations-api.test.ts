@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { Client } from 'pg';
-import { createTestClient } from './helpers/db-test-helper';
+import { createTestClient, cleanDatabase, mockReqRes } from './helpers/db-test-helper';
 import relationHandler from '../pages/api/admin/entities/relation';
 import uploadHandler from '../pages/api/admin/reports/upload';
 
@@ -14,8 +14,7 @@ describe('Entity Relations and Automated Inference API', () => {
     await dbClient.connect();
 
     // 清理可能遗留的测试数据
-    await dbClient.query("DELETE FROM entity_relations WHERE entity_id_a IN (SELECT id FROM entities WHERE canonical_name IN ('测试公司A', '测试公司B'))");
-    await dbClient.query("DELETE FROM entities WHERE canonical_name IN ('测试公司A', '测试公司B', '测试玩具品类')");
+    await cleanDatabase(dbClient);
 
     // 1. 创建测试实体
     const resA = await dbClient.query("INSERT INTO entities (canonical_name, entity_type) VALUES ('测试公司A', 'company') RETURNING id");
@@ -26,39 +25,18 @@ describe('Entity Relations and Automated Inference API', () => {
   });
 
   afterAll(async () => {
-    // 彻底清理测试数据
-    await dbClient.query("DELETE FROM entity_relations WHERE entity_id_a IN ($1, $2) OR entity_id_b IN ($1, $2)", [entAId, entBId]);
-    await dbClient.query("DELETE FROM report_entities WHERE entity_id IN ($1, $2)", [entAId, entBId]);
-    await dbClient.query("DELETE FROM entities WHERE canonical_name IN ('测试公司A', '测试公司B', '测试玩具品类')");
     await dbClient.end();
   });
 
-  function mockReqRes(body: any) {
-    const req = {
-      method: 'POST',
-      body,
-    } as any;
-    let statusVal = 200;
-    let jsonVal: any = null;
-    const res = {
-      status(code: number) {
-        statusVal = code;
-        return this;
-      },
-      json(data: any) {
-        jsonVal = data;
-        return this;
-      },
-    } as any;
-    return { req, res, getStatus: () => statusVal, getJson: () => jsonVal };
-  }
 
   it('should insert a supplier relation between entity A and B manually', async () => {
     const { req, res, getStatus, getJson } = mockReqRes({
-      entityIdA: entAId,
-      entityIdB: entBId,
-      relationType: 'supplier',
-      marketRegion: '俄罗斯',
+      body: {
+        entityIdA: entAId,
+        entityIdB: entBId,
+        relationType: 'supplier',
+        marketRegion: '俄罗斯',
+      }
     });
 
     await relationHandler(req, res);
@@ -75,12 +53,14 @@ describe('Entity Relations and Automated Inference API', () => {
   it('should auto-infer competitor relation when uploading a report with 1 product and 2 companies', async () => {
     // 模拟上传
     const { req, res, getStatus } = mockReqRes({
-      rawHtml: '<html><head><title>自动推理报告</title></head><body>测试内容</body></html>',
-      manualTags: {
-        companies: ['测试公司A', '测试公司B'],
-        products: ['测试玩具品类'],
-        regions: ['俄罗斯'],
-      },
+      body: {
+        rawHtml: '<html><head><title>自动推理报告</title></head><body>测试内容</body></html>',
+        manualTags: {
+          companies: ['测试公司A', '测试公司B'],
+          products: ['测试玩具品类'],
+          regions: ['俄罗斯'],
+        },
+      }
     });
 
     await uploadHandler(req, res);

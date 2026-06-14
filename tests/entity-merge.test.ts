@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { Client } from 'pg';
-import { createTestClient } from './helpers/db-test-helper';
+import { createTestClient, cleanDatabase, createTestReport, mockReqRes } from './helpers/db-test-helper';
 import mergeHandler from '../pages/api/admin/entities/merge';
 
 describe('Entity Merge API', () => {
@@ -14,9 +14,7 @@ describe('Entity Merge API', () => {
     await dbClient.connect();
 
     // 清理可能遗留的测试数据
-    await dbClient.query("DELETE FROM entity_aliases WHERE alias_name = '儿童世界测试别名'");
-    await dbClient.query("DELETE FROM report_entities WHERE entity_id IN (SELECT id FROM entities WHERE canonical_name IN ('Detsky Mir 测试主实体', '儿童世界测试别名'))");
-    await dbClient.query("DELETE FROM entities WHERE canonical_name IN ('Detsky Mir 测试主实体', '儿童世界测试别名')");
+    await cleanDatabase(dbClient);
 
     // 1. 创建主公司
     const mainRes = await dbClient.query(
@@ -31,10 +29,11 @@ describe('Entity Merge API', () => {
     entAliasId = aliasRes.rows[0].id;
 
     // 3. 创建测试报告并关联到被合并公司
-    const repRes = await dbClient.query(
-      "INSERT INTO reports (title, category) VALUES ('俄罗斯玩具市场分析测试报告', 'product') RETURNING id"
-    );
-    reportId = repRes.rows[0].id;
+    const repRes = await createTestReport(dbClient, {
+      title: '俄罗斯玩具市场分析测试报告',
+      category: 'product',
+    });
+    reportId = repRes.id;
 
     await dbClient.query(
       "INSERT INTO report_entities (report_id, entity_id) VALUES ($1, $2)",
@@ -43,39 +42,17 @@ describe('Entity Merge API', () => {
   });
 
   afterAll(async () => {
-    // 彻底清理测试数据
-    await dbClient.query("DELETE FROM entity_aliases WHERE alias_name = '儿童世界测试别名'");
-    await dbClient.query("DELETE FROM report_entities WHERE report_id = $1", [reportId]);
-    await dbClient.query("DELETE FROM reports WHERE id = $1", [reportId]);
-    await dbClient.query("DELETE FROM entities WHERE id IN ($1, $2)", [entMainId, entAliasId]);
     await dbClient.end();
   });
 
-  function mockReqRes(body: any) {
-    const req = {
-      method: 'POST',
-      body,
-    } as any;
-    let statusVal = 200;
-    let jsonVal: any = null;
-    const res = {
-      status(code: number) {
-        statusVal = code;
-        return this;
-      },
-      json(data: any) {
-        jsonVal = data;
-        return this;
-      },
-    } as any;
-    return { req, res, getStatus: () => statusVal, getJson: () => jsonVal };
-  }
 
   it('should merge alias entity into main entity successfully', async () => {
     const { req, res, getStatus, getJson } = mockReqRes({
-      sourceEntityId: entAliasId,
-      targetEntityId: entMainId,
-      aliasName: '儿童世界测试别名',
+      body: {
+        sourceEntityId: entAliasId,
+        targetEntityId: entMainId,
+        aliasName: '儿童世界测试别名',
+      }
     });
 
     await mergeHandler(req, res);

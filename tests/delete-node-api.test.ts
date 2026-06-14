@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { Client } from 'pg';
-import { createTestClient } from './helpers/db-test-helper';
+import { createTestClient, cleanDatabase, createTestUser, createTestReport, mockReqRes } from './helpers/db-test-helper';
 import deleteHandler from '../pages/api/admin/delete-node';
 
 describe('Admin Node Deletion API (Reports and Entities)', () => {
@@ -11,21 +11,24 @@ describe('Admin Node Deletion API (Reports and Entities)', () => {
   beforeAll(async () => {
     dbClient = createTestClient();
     await dbClient.connect();
+    await cleanDatabase(dbClient);
 
     // 0. 插入测试管理员账户以符合外键约束
-    await dbClient.query(
-      `INSERT INTO users (id, phone_number, email, role) 
-       VALUES ('10000000-0000-0000-0000-000000000000', '13800000000', 'admin@gtb.com', 'admin')
-       ON CONFLICT (id) DO NOTHING`
-    );
+    await createTestUser(dbClient, {
+      id: '10000000-0000-0000-0000-000000000000',
+      phoneNumber: '13800000000',
+      email: 'admin@gtb.com',
+      role: 'admin',
+    });
 
     // 1. 创建测试报告和关联的 unlocks 记录以测试级联删除
-    const repRes = await dbClient.query(
-      `INSERT INTO reports (title, category, market_region, summary) 
-       VALUES ('要被删除的报告', 'customer', '欧盟', '描述') 
-       RETURNING id`
-    );
-    testReportId = repRes.rows[0].id;
+    const repRes = await createTestReport(dbClient, {
+      title: '要被删除的报告',
+      category: 'customer',
+      marketRegion: '欧盟',
+      summary: '描述',
+    });
+    testReportId = repRes.id;
 
     await dbClient.query(
       `INSERT INTO unlocks (user_id, report_id) 
@@ -49,45 +52,16 @@ describe('Admin Node Deletion API (Reports and Entities)', () => {
   });
 
   afterAll(async () => {
-    // 兜底清理
-    if (testReportId) {
-      await dbClient.query("DELETE FROM reports WHERE id = $1", [testReportId]);
-    }
-    if (testEntityId) {
-      await dbClient.query("DELETE FROM entities WHERE id = $1", [testEntityId]);
-    }
-    await dbClient.query("DELETE FROM users WHERE id = '10000000-0000-0000-0000-000000000000'");
     await dbClient.end();
   });
 
-  function mockReqRes(body: any, role = 'admin', isLoggedIn = true) {
-    const req = {
-      method: 'POST',
-      body,
-      cookies: isLoggedIn ? {
-        gtb_session: Buffer.from(JSON.stringify({ userId: '10000000-0000-0000-0000-000000000000', role })).toString('base64'),
-      } : {},
-    } as any;
-    let statusVal = 200;
-    let jsonVal: any = null;
-    const res = {
-      status(code: number) {
-        statusVal = code;
-        return this;
-      },
-      json(data: any) {
-        jsonVal = data;
-        return this;
-      },
-    } as any;
-    return { req, res, getStatus: () => statusVal, getJson: () => jsonVal };
-  }
-
   it('should reject unauthorized request without login', async () => {
     const { req, res, getStatus } = mockReqRes({
-      id: testReportId,
-      nodeType: 'report',
-    }, 'admin', false);
+      body: {
+        id: testReportId,
+        nodeType: 'report',
+      }
+    });
 
     await deleteHandler(req, res);
     expect(getStatus()).toBe(401);
@@ -95,9 +69,12 @@ describe('Admin Node Deletion API (Reports and Entities)', () => {
 
   it('should reject request from normal user (not admin)', async () => {
     const { req, res, getStatus } = mockReqRes({
-      id: testReportId,
-      nodeType: 'report',
-    }, 'user', true);
+      body: {
+        id: testReportId,
+        nodeType: 'report',
+      },
+      session: { userId: '10000000-0000-0000-0000-000000000000', role: 'user' }
+    });
 
     await deleteHandler(req, res);
     expect(getStatus()).toBe(403);
@@ -105,9 +82,12 @@ describe('Admin Node Deletion API (Reports and Entities)', () => {
 
   it('should successfully delete a report node and cascade delete locks', async () => {
     const { req, res, getStatus, getJson } = mockReqRes({
-      id: testReportId,
-      nodeType: 'report',
-    }, 'admin', true);
+      body: {
+        id: testReportId,
+        nodeType: 'report',
+      },
+      session: { userId: '10000000-0000-0000-0000-000000000000', role: 'admin' }
+    });
 
     await deleteHandler(req, res);
     expect(getStatus()).toBe(200);
@@ -126,9 +106,12 @@ describe('Admin Node Deletion API (Reports and Entities)', () => {
 
   it('should successfully delete an entity node and cascade delete aliases', async () => {
     const { req, res, getStatus, getJson } = mockReqRes({
-      id: testEntityId,
-      nodeType: 'entity',
-    }, 'admin', true);
+      body: {
+        id: testEntityId,
+        nodeType: 'entity',
+      },
+      session: { userId: '10000000-0000-0000-0000-000000000000', role: 'admin' }
+    });
 
     await deleteHandler(req, res);
     expect(getStatus()).toBe(200);
