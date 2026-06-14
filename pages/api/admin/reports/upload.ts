@@ -310,6 +310,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       );
     }
 
+    // 5.5 自动关系推理逻辑 (1个产品，多个公司 -> 两两建立 competitor 关系)
+    if (manualTags?.products && manualTags?.companies) {
+      const companyNames = manualTags.companies.map((c: string) => c.trim()).filter(Boolean);
+      const productNames = manualTags.products.map((p: string) => p.trim()).filter(Boolean);
+      
+      if (companyNames.length > 1 && productNames.length === 1) {
+        const compRes = await dbClient.query(
+          `SELECT id FROM entities WHERE canonical_name = ANY($1) AND entity_type = 'company'`,
+          [companyNames]
+        );
+        const compIds = compRes.rows.map((r: any) => r.id);
+        
+        for (let i = 0; i < compIds.length; i++) {
+          for (let j = i + 1; j < compIds.length; j++) {
+            await dbClient.query(
+              `INSERT INTO entity_relations (entity_id_a, entity_id_b, relation_type, market_region)
+               VALUES ($1, $2, 'competitor', $3)
+               ON CONFLICT (entity_id_a, entity_id_b, relation_type, market_region) DO NOTHING`,
+              [compIds[i], compIds[j], finalMarketRegion || null]
+            );
+          }
+        }
+      }
+    }
+
     // 6. 在 relations 表中建边并携带 market_region 属性
     if (resolvedEntities.length > 0) {
       const entityIds = resolvedEntities.map(e => e.id);
