@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { runDehydration, parseMetadata } from '../pages/api/admin/reports/upload';
 import uploadHandler from '../pages/api/admin/reports/upload';
 import { Client } from 'pg';
-import { createTestClient } from './helpers/db-test-helper';
+import { createTestClient, cleanDatabase } from './helpers/db-test-helper';
 
 describe('Report Upload & Dehydration Pipeline Test', () => {
   let dbClient: Client;
@@ -11,8 +11,7 @@ describe('Report Upload & Dehydration Pipeline Test', () => {
     dbClient = createTestClient();
     await dbClient.connect();
     // 清空数据，便于测试
-    await dbClient.query('DELETE FROM relations');
-    await dbClient.query('DELETE FROM reports');
+    await cleanDatabase(dbClient);
   });
 
   afterAll(async () => {
