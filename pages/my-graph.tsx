@@ -2,7 +2,7 @@ import { GetServerSideProps } from 'next';
 import React, { useState } from 'react';
 import { Client } from 'pg';
 import pool from '../lib/db';
-import { getUserGraph } from './api/user/graph';
+import { getUserGraph, getGraphData } from './api/user/graph';
 import ObsidianGraph, { Node as ObsidianNode } from '../components/ObsidianGraph';
 import ToolsPanel from '../components/ToolsPanel';
 import Link from 'next/link';
@@ -29,6 +29,19 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota }: 
   const [focusNodeId, setFocusNodeId] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [activeTab, setActiveTab] = useState<'profile' | 'tools'>('tools');
+
+  // 新增：实体详情、关系输入状态及图谱动态数据源
+  const [currentGraphData, setCurrentGraphData] = useState(graphData);
+  const [entityDetail, setEntityDetail] = useState<any>(null);
+  const [newAlias, setNewAlias] = useState('');
+  const [newCompetitor, setNewCompetitor] = useState('');
+  const [newSupplier, setNewSupplier] = useState('');
+  const [marketRegion, setMarketRegion] = useState('');
+
+  // 报告关联实体表单输入状态
+  const [newReportCompany, setNewReportCompany] = useState('');
+  const [newReportProduct, setNewReportProduct] = useState('');
+  const [newReportChannel, setNewReportChannel] = useState('');
 
   if (!userId) {
     return (
@@ -123,22 +136,170 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota }: 
     }
   };
 
-  const hasData = graphData.nodes && graphData.nodes.length > 0;
+  // 1. 动态刷新图谱核心数据
+  const refreshGraphData = async () => {
+    try {
+      const res = await fetch('/api/user/graph');
+      if (res.ok) {
+        const data = await res.json();
+        setCurrentGraphData(data);
+      }
+    } catch (err) {
+      console.error('刷新图谱失败', err);
+    }
+  };
+
+  // 2. 动态拉取公司/实体详细别名及关系
+  const fetchEntityDetail = async (entityId: string) => {
+    try {
+      const res = await fetch(`/api/user/entities/detail?id=${entityId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setEntityDetail(data);
+      }
+    } catch (err) {
+      console.error('获取实体详情失败', err);
+    }
+  };
+
+  // 监听选中节点变化，动态加载详情
+  React.useEffect(() => {
+    if (selectedNode && selectedNode.node_type === 'entity') {
+      fetchEntityDetail(selectedNode.id);
+    } else {
+      setEntityDetail(null);
+    }
+  }, [selectedNode]);
+
+  // 3. 处理添加/合并别名
+  const handleMergeAlias = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAlias.trim() || !selectedNode) return;
+    try {
+      const res = await fetch('/api/admin/entities/merge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetEntityId: selectedNode.id,
+          aliasName: newAlias.trim()
+        })
+      });
+      if (res.ok) {
+        alert('别名合并成功！');
+        setNewAlias('');
+        await fetchEntityDetail(selectedNode.id);
+        await refreshGraphData();
+      } else {
+        const data = await res.json();
+        alert(data.error || '合并失败');
+      }
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  // 4. 处理添加关系（竞争对手、合作伙伴）
+  const handleAddRelation = async (e: React.FormEvent, relationType: 'competitor' | 'supplier') => {
+    e.preventDefault();
+    const relatedName = relationType === 'competitor' ? newCompetitor : newSupplier;
+    if (!relatedName.trim() || !selectedNode) return;
+
+    try {
+      const res = await fetch('/api/admin/entities/relation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          entityIdA: selectedNode.id,
+          relatedEntityName: relatedName.trim(),
+          relationType,
+          marketRegion: marketRegion.trim() || null
+        })
+      });
+      if (res.ok) {
+        alert('关系添加成功！');
+        if (relationType === 'competitor') setNewCompetitor('');
+        else setNewSupplier('');
+        setMarketRegion('');
+        await fetchEntityDetail(selectedNode.id);
+        await refreshGraphData();
+      } else {
+        const data = await res.json();
+        alert(data.error || '添加关系失败');
+      }
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  // 5. 处理报告打标（关联品牌、品类和渠道）
+  const handleTagReport = async (e: React.FormEvent, entityType: 'company' | 'product' | 'channel') => {
+    e.preventDefault();
+    if (!selectedNode) return;
+
+    let entityName = '';
+    if (entityType === 'company') entityName = newReportCompany;
+    else if (entityType === 'product') entityName = newReportProduct;
+    else if (entityType === 'channel') entityName = newReportChannel;
+
+    if (!entityName.trim()) return;
+
+    try {
+      const res = await fetch('/api/admin/reports/tag', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reportId: selectedNode.id,
+          entityName: entityName.trim(),
+          entityType
+        })
+      });
+
+      if (res.ok) {
+        alert('关联实体成功！');
+        if (entityType === 'company') setNewReportCompany('');
+        else if (entityType === 'product') setNewReportProduct('');
+        else if (entityType === 'channel') setNewReportChannel('');
+
+        await refreshGraphData();
+        
+        // 动态更新 selectedNode state，让右侧详情列表立刻呈现已绑定的实体
+        setSelectedNode((prev: any) => {
+          if (!prev) return null;
+          const next = { ...prev };
+          if (entityType === 'company') {
+            next.companies = [...(prev.companies || []), entityName.trim()];
+          } else if (entityType === 'product') {
+            next.products = [...(prev.products || []), entityName.trim()];
+          } else if (entityType === 'channel') {
+            next.channels = [...(prev.channels || []), entityName.trim()];
+          }
+          return next;
+        });
+      } else {
+        const data = await res.json();
+        alert(data.error || '关联失败');
+      }
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const hasData = currentGraphData.nodes && currentGraphData.nodes.length > 0;
 
   // 动态提取筛选选项
-  const markets = hasData ? ['All', ...Array.from(new Set(graphData.nodes.map(n => n.market_region).filter(Boolean)))] : ['All'];
-  const products = hasData ? ['All', ...Array.from(new Set(graphData.nodes.flatMap(n => n.products || []).filter(Boolean)))] : ['All'];
+  const markets = hasData ? ['All', ...Array.from(new Set(currentGraphData.nodes.map(n => n.market_region).filter(Boolean)))] : ['All'];
+  const products = hasData ? ['All', ...Array.from(new Set(currentGraphData.nodes.flatMap(n => n.products || []).filter(Boolean)))] : ['All'];
 
   // 过滤数据
   const filteredGraphData = hasData ? filterGraphData(
-    graphData.nodes,
-    graphData.links,
+    currentGraphData.nodes,
+    currentGraphData.links,
     selectedMarket,
     selectedProduct,
     focusNodeId
   ) : { nodes: [], links: [] };
 
-  const focusedNode = hasData && focusNodeId ? graphData.nodes.find(n => n.id === focusNodeId) : null;
+  const focusedNode = hasData && focusNodeId ? currentGraphData.nodes.find(n => n.id === focusNodeId) : null;
 
   return (
     <div style={{
@@ -486,147 +647,384 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota }: 
           {activeTab === 'profile' ? (
             <div style={{ flex: 1, padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
               {selectedNode ? (
-                <div style={{
-                  background: 'rgba(255, 255, 255, 0.65)',
-                  backdropFilter: 'blur(10px)',
-                  borderRadius: '20px',
-                  border: '1px solid rgba(15, 23, 42, 0.06)',
-                  padding: '24px',
-                  boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.04)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '16px'
-                }}>
-                  <div>
-                    <h4 style={{ margin: '0 0 6px 0', fontSize: '1.1rem', color: '#0f172a', fontWeight: 600, lineHeight: 1.4 }}>
-                      {selectedNode.title}
-                    </h4>
-                    <span style={{ fontSize: '0.8rem', color: '#64748b' }}>报告 ID: {selectedNode.id.substring(0, 8)}...</span>
-                  </div>
+                selectedNode.node_type === 'entity' && selectedNode.entity_type === 'company' ? (
+                  /* 🏢 公司/渠道 商业画像面板 */
+                  <div style={{
+                    background: 'rgba(255, 255, 255, 0.65)',
+                    backdropFilter: 'blur(10px)',
+                    borderRadius: '20px',
+                    border: '1px solid rgba(15, 23, 42, 0.06)',
+                    padding: '24px',
+                    boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.04)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '20px'
+                  }}>
+                    <div>
+                      <div style={{ fontSize: '0.75rem', color: '#3b82f6', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>🏢 商业实体画像</div>
+                      <h4 style={{ margin: '4px 0 0 0', fontSize: '1.25rem', color: '#0f172a', fontWeight: 700 }}>
+                        {selectedNode.title}
+                      </h4>
+                    </div>
 
-                  {/* 国家/市场 */}
-                  <div>
-                    <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>🌍 所涉国家/市场</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                      {selectedNode.market_region ? (
-                        <span style={{
-                          background: 'rgba(37, 99, 235, 0.08)',
-                          color: '#2563eb',
-                          border: '1px solid rgba(37, 99, 235, 0.15)',
-                          padding: '4px 10px',
-                          borderRadius: '12px',
-                          fontSize: '0.75rem',
-                          fontWeight: 500
-                        }}>
-                          {selectedNode.market_region}
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>暂无</span>
-                      )}
+                    {/* 1. 同义别称 (Aliases) */}
+                    <div style={{ borderTop: '1px solid rgba(15, 23, 42, 0.06)', paddingTop: '14px' }}>
+                      <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600, marginBottom: '8px' }}>🏷️ 同义别称 (别名)</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+                        {entityDetail?.aliases && entityDetail.aliases.length > 0 ? (
+                          entityDetail.aliases.map((a: string, i: number) => (
+                            <span key={i} style={{
+                              background: 'rgba(148, 163, 184, 0.08)',
+                              color: '#64748b',
+                              border: '1px solid rgba(148, 163, 184, 0.15)',
+                              padding: '4px 10px',
+                              borderRadius: '12px',
+                              fontSize: '0.75rem',
+                              fontWeight: 500
+                            }}>
+                              {a}
+                            </span>
+                          ))
+                        ) : (
+                          <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic' }}>暂无其他别名</span>
+                        )}
+                      </div>
+                      <form onSubmit={handleMergeAlias} style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                          type="text"
+                          placeholder="输入新别称，如：儿童世界"
+                          value={newAlias}
+                          onChange={(e) => setNewAlias(e.target.value)}
+                          style={{
+                            flex: 1,
+                            padding: '6px 12px',
+                            fontSize: '0.8rem',
+                            border: '1px solid rgba(15, 23, 42, 0.1)',
+                            borderRadius: '8px',
+                            outline: 'none',
+                            background: 'rgba(255,255,255,0.8)'
+                          }}
+                        />
+                        <button type="submit" className="water-drop-btn" style={{ padding: '6px 12px', fontSize: '0.75rem', fontWeight: 600 }}>绑定别名</button>
+                      </form>
+                    </div>
+
+                    {/* 2. ⚡ 竞争对手 */}
+                    <div style={{ borderTop: '1px solid rgba(15, 23, 42, 0.06)', paddingTop: '14px' }}>
+                      <div style={{ fontSize: '0.8rem', color: '#ef4444', fontWeight: 600, marginBottom: '8px' }}>⚡ 竞争对手关系网</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+                        {entityDetail?.competitors && entityDetail.competitors.length > 0 ? (
+                          entityDetail.competitors.map((c: any, i: number) => (
+                            <span key={i} style={{
+                              background: 'rgba(239, 68, 68, 0.06)',
+                              color: '#ef4444',
+                              border: '1px solid rgba(239, 68, 68, 0.15)',
+                              padding: '4px 10px',
+                              borderRadius: '12px',
+                              fontSize: '0.75rem',
+                              fontWeight: 500
+                            }}>
+                              {c.name} {c.market ? `(${c.market})` : ''}
+                            </span>
+                          ))
+                        ) : (
+                          <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic' }}>暂无竞争对手记录</span>
+                        )}
+                      </div>
+                      <form onSubmit={(e) => handleAddRelation(e, 'competitor')} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <input
+                            type="text"
+                            placeholder="输入竞争对手，如：Wildberries"
+                            value={newCompetitor}
+                            onChange={(e) => setNewCompetitor(e.target.value)}
+                            style={{
+                              flex: 1,
+                              padding: '6px 12px',
+                              fontSize: '0.8rem',
+                              border: '1px solid rgba(15, 23, 42, 0.1)',
+                              borderRadius: '8px',
+                              outline: 'none',
+                              background: 'rgba(255,255,255,0.8)'
+                            }}
+                          />
+                          <input
+                            type="text"
+                            placeholder="地区 (可选)"
+                            value={marketRegion}
+                            onChange={(e) => setMarketRegion(e.target.value)}
+                            style={{
+                              width: '100px',
+                              padding: '6px 12px',
+                              fontSize: '0.8rem',
+                              border: '1px solid rgba(15, 23, 42, 0.1)',
+                              borderRadius: '8px',
+                              outline: 'none',
+                              background: 'rgba(255,255,255,0.8)'
+                            }}
+                          />
+                        </div>
+                        <button type="submit" className="water-drop-btn" style={{ padding: '6px 12px', fontSize: '0.75rem', fontWeight: 600, background: '#ef4444', border: '1px solid #ef4444', color: '#fff', alignSelf: 'flex-end' }}>添加竞争对手</button>
+                      </form>
+                    </div>
+
+                    {/* 3. 🤝 供应商与合作伙伴 */}
+                    <div style={{ borderTop: '1px solid rgba(15, 23, 42, 0.06)', paddingTop: '14px' }}>
+                      <div style={{ fontSize: '0.8rem', color: '#2563eb', fontWeight: 600, marginBottom: '8px' }}>🤝 合作商与供应商</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+                        {entityDetail?.suppliers && entityDetail.suppliers.length > 0 ? (
+                          entityDetail.suppliers.map((s: any, i: number) => (
+                            <span key={i} style={{
+                              background: 'rgba(37, 99, 235, 0.06)',
+                              color: '#2563eb',
+                              border: '1px solid rgba(37, 99, 235, 0.15)',
+                              padding: '4px 10px',
+                              borderRadius: '12px',
+                              fontSize: '0.75rem',
+                              fontWeight: 500
+                            }}>
+                              {s.name} {s.market ? `(${s.market})` : ''}
+                            </span>
+                          ))
+                        ) : (
+                          <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic' }}>暂无合作伙伴记录</span>
+                        )}
+                      </div>
+                      <form onSubmit={(e) => handleAddRelation(e, 'supplier')} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <input
+                            type="text"
+                            placeholder="输入供应商，如：A公司"
+                            value={newSupplier}
+                            onChange={(e) => setNewSupplier(e.target.value)}
+                            style={{
+                              flex: 1,
+                              padding: '6px 12px',
+                              fontSize: '0.8rem',
+                              border: '1px solid rgba(15, 23, 42, 0.1)',
+                              borderRadius: '8px',
+                              outline: 'none',
+                              background: 'rgba(255,255,255,0.8)'
+                            }}
+                          />
+                          <input
+                            type="text"
+                            placeholder="地区 (可选)"
+                            value={marketRegion}
+                            onChange={(e) => setMarketRegion(e.target.value)}
+                            style={{
+                              width: '100px',
+                              padding: '6px 12px',
+                              fontSize: '0.8rem',
+                              border: '1px solid rgba(15, 23, 42, 0.1)',
+                              borderRadius: '8px',
+                              outline: 'none',
+                              background: 'rgba(255,255,255,0.8)'
+                            }}
+                          />
+                        </div>
+                        <button type="submit" className="water-drop-btn" style={{ padding: '6px 12px', fontSize: '0.75rem', fontWeight: 600, alignSelf: 'flex-end' }}>添加合作伙伴</button>
+                      </form>
                     </div>
                   </div>
+                ) : (
+                  /* 📄 报告 详情面板（原逻辑） */
+                  <div style={{
+                    background: 'rgba(255, 255, 255, 0.65)',
+                    backdropFilter: 'blur(10px)',
+                    borderRadius: '20px',
+                    border: '1px solid rgba(15, 23, 42, 0.06)',
+                    padding: '24px',
+                    boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.04)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '16px'
+                  }}>
+                    <div>
+                      <h4 style={{ margin: '0 0 6px 0', fontSize: '1.1rem', color: '#0f172a', fontWeight: 600, lineHeight: 1.4 }}>
+                        {selectedNode.title}
+                      </h4>
+                      <span style={{ fontSize: '0.8rem', color: '#64748b' }}>报告 ID: {selectedNode.id.substring(0, 8)}...</span>
+                    </div>
 
-                  {/* 经营玩家/品牌 */}
-                  <div>
-                    <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>🏢 经营玩家/品牌</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                      {selectedNode.companies && selectedNode.companies.length > 0 ? (
-                        selectedNode.companies.map((c, i) => (
-                          <span key={i} style={{
-                            background: 'rgba(16, 185, 129, 0.08)',
-                            color: '#10b981',
-                            border: '1px solid rgba(16, 185, 129, 0.15)',
+                    {/* 国家/市场 */}
+                    <div>
+                      <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>🌍 所涉国家/市场</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {selectedNode.market_region ? (
+                          <span style={{
+                            background: 'rgba(37, 99, 235, 0.08)',
+                            color: '#2563eb',
+                            border: '1px solid rgba(37, 99, 235, 0.15)',
                             padding: '4px 10px',
                             borderRadius: '12px',
                             fontSize: '0.75rem',
                             fontWeight: 500
                           }}>
-                            {c}
+                            {selectedNode.market_region}
                           </span>
-                        ))
-                      ) : (
-                        <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>暂无</span>
-                      )}
+                        ) : (
+                          <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>暂无</span>
+                        )}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* 涉及品类 */}
-                  <div>
-                    <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>📦 涉及品类</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                      {selectedNode.products && selectedNode.products.length > 0 ? (
-                        selectedNode.products.map((p, i) => (
-                          <span key={i} style={{
-                            background: 'rgba(249, 115, 22, 0.08)',
-                            color: '#ea580c',
-                            border: '1px solid rgba(249, 115, 22, 0.15)',
-                            padding: '4px 10px',
-                            borderRadius: '12px',
-                            fontSize: '0.75rem',
-                            fontWeight: 500
-                          }}>
-                            {p}
-                          </span>
-                        ))
-                      ) : (
-                        <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>暂无</span>
-                      )}
+                    {/* 经营玩家/品牌 */}
+                    <div>
+                      <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>🏢 经营玩家/品牌</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
+                        {selectedNode.companies && selectedNode.companies.length > 0 ? (
+                          selectedNode.companies.map((c, i) => (
+                            <span key={i} style={{
+                              background: 'rgba(16, 185, 129, 0.08)',
+                              color: '#10b981',
+                              border: '1px solid rgba(16, 185, 129, 0.15)',
+                              padding: '4px 10px',
+                              borderRadius: '12px',
+                              fontSize: '0.75rem',
+                              fontWeight: 500
+                            }}>
+                              {c}
+                            </span>
+                          ))
+                        ) : (
+                          <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>暂无</span>
+                        )}
+                      </div>
+                      <form onSubmit={(e) => handleTagReport(e, 'company')} style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                          type="text"
+                          placeholder="关联新品牌，如：Wildberries"
+                          value={newReportCompany}
+                          onChange={(e) => setNewReportCompany(e.target.value)}
+                          style={{
+                            flex: 1,
+                            padding: '6px 12px',
+                            fontSize: '0.8rem',
+                            border: '1px solid rgba(15, 23, 42, 0.1)',
+                            borderRadius: '8px',
+                            outline: 'none',
+                            background: 'rgba(255,255,255,0.8)'
+                          }}
+                        />
+                        <button type="submit" className="water-drop-btn" style={{ padding: '6px 12px', fontSize: '0.75rem', fontWeight: 600 }}>关联</button>
+                      </form>
                     </div>
-                  </div>
 
-                  {/* 覆盖渠道 */}
-                  <div>
-                    <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>🛣️ 覆盖渠道</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                      {selectedNode.channels && selectedNode.channels.length > 0 ? (
-                        selectedNode.channels.map((ch, i) => (
-                          <span key={i} style={{
-                            background: 'rgba(147, 51, 234, 0.08)',
-                            color: '#9333ea',
-                            border: '1px solid rgba(147, 51, 234, 0.15)',
-                            padding: '4px 10px',
-                            borderRadius: '12px',
-                            fontSize: '0.75rem',
-                            fontWeight: 500
-                          }}>
-                            {ch}
-                          </span>
-                        ))
-                      ) : (
-                        <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>暂无</span>
-                      )}
+                    {/* 涉及品类 */}
+                    <div>
+                      <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>📦 涉及品类</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
+                        {selectedNode.products && selectedNode.products.length > 0 ? (
+                          selectedNode.products.map((p, i) => (
+                            <span key={i} style={{
+                              background: 'rgba(249, 115, 22, 0.08)',
+                              color: '#ea580c',
+                              border: '1px solid rgba(249, 115, 22, 0.15)',
+                              padding: '4px 10px',
+                              borderRadius: '12px',
+                              fontSize: '0.75rem',
+                              fontWeight: 500
+                            }}>
+                              {p}
+                            </span>
+                          ))
+                        ) : (
+                          <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>暂无</span>
+                        )}
+                      </div>
+                      <form onSubmit={(e) => handleTagReport(e, 'product')} style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                          type="text"
+                          placeholder="关联新品类，如：刹车片"
+                          value={newReportProduct}
+                          onChange={(e) => setNewReportProduct(e.target.value)}
+                          style={{
+                            flex: 1,
+                            padding: '6px 12px',
+                            fontSize: '0.8rem',
+                            border: '1px solid rgba(15, 23, 42, 0.1)',
+                            borderRadius: '8px',
+                            outline: 'none',
+                            background: 'rgba(255,255,255,0.8)'
+                          }}
+                        />
+                        <button type="submit" className="water-drop-btn" style={{ padding: '6px 12px', fontSize: '0.75rem', fontWeight: 600 }}>关联</button>
+                      </form>
                     </div>
-                  </div>
 
-                  {/* 简要概述 */}
-                  <div style={{ borderTop: '1px solid rgba(15, 23, 42, 0.06)', paddingTop: '12px' }}>
-                    <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>📝 报告概述</div>
-                    <p style={{
-                      margin: 0,
-                      fontSize: '0.85rem',
-                      color: '#475569',
-                      lineHeight: 1.6,
-                      whiteSpace: 'pre-line'
-                    }}>
-                      {selectedNode.summary || '暂无概述'}
-                    </p>
-                  </div>
+                    {/* 覆盖渠道 */}
+                    <div>
+                      <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>🛣️ 覆盖渠道</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
+                        {selectedNode.channels && selectedNode.channels.length > 0 ? (
+                          selectedNode.channels.map((ch, i) => (
+                            <span key={i} style={{
+                              background: 'rgba(147, 51, 234, 0.08)',
+                              color: '#9333ea',
+                              border: '1px solid rgba(147, 51, 234, 0.15)',
+                              padding: '4px 10px',
+                              borderRadius: '12px',
+                              fontSize: '0.75rem',
+                              fontWeight: 500
+                            }}>
+                              {ch}
+                            </span>
+                          ))
+                        ) : (
+                          <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>暂无</span>
+                        )}
+                      </div>
+                      <form onSubmit={(e) => handleTagReport(e, 'channel')} style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                          type="text"
+                          placeholder="关联新渠道，如：配件超市"
+                          value={newReportChannel}
+                          onChange={(e) => setNewReportChannel(e.target.value)}
+                          style={{
+                            flex: 1,
+                            padding: '6px 12px',
+                            fontSize: '0.8rem',
+                            border: '1px solid rgba(15, 23, 42, 0.1)',
+                            borderRadius: '8px',
+                            outline: 'none',
+                            background: 'rgba(255,255,255,0.8)'
+                          }}
+                        />
+                        <button type="submit" className="water-drop-btn" style={{ padding: '6px 12px', fontSize: '0.75rem', fontWeight: 600 }}>关联</button>
+                      </form>
+                    </div>
 
-                  <Link
-                    href={`/reports/${selectedNode.id}`}
-                    className="water-drop-btn"
-                    style={{
-                      padding: '10px 0',
-                      fontSize: '0.85rem',
-                      width: '100%',
-                      textDecoration: 'none',
-                      fontWeight: 500,
-                      marginTop: '8px'
-                    }}
-                  >
-                    📖 阅读报告详情
-                  </Link>
-                </div>
+                    {/* 简要概述 */}
+                    <div style={{ borderTop: '1px solid rgba(15, 23, 42, 0.06)', paddingTop: '12px' }}>
+                      <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>📝 报告概述</div>
+                      <p style={{
+                        margin: 0,
+                        fontSize: '0.85rem',
+                        color: '#475569',
+                        lineHeight: 1.6,
+                        whiteSpace: 'pre-line'
+                      }}>
+                        {selectedNode.summary || '暂无概述'}
+                      </p>
+                    </div>
+
+                    <Link
+                      href={`/reports/${selectedNode.id}`}
+                      className="water-drop-btn"
+                      style={{
+                        padding: '10px 0',
+                        fontSize: '0.85rem',
+                        width: '100%',
+                        textDecoration: 'none',
+                        fontWeight: 500,
+                        marginTop: '8px'
+                      }}
+                    >
+                      📖 阅读报告详情
+                    </Link>
+                  </div>
+                )
               ) : (
                 <div style={{
                   flex: 1,
@@ -729,25 +1127,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     let graphData: any = { nodes: [], links: [] };
 
     if (userId) {
-      if (userRole === 'admin') {
-        const reportsRes = await dbClient.query(`SELECT id, title, category, market_region FROM reports`);
-        const nodes = reportsRes.rows;
-        const reportIds = nodes.map(n => n.id);
-        
-        let links = [];
-        if (reportIds.length > 0) {
-          const relationsRes = await dbClient.query(
-            `SELECT report_id_a AS source, report_id_b AS target, relation_key 
-             FROM relations 
-             WHERE report_id_a = ANY($1) AND report_id_b = ANY($1)`,
-            [reportIds]
-          );
-          links = relationsRes.rows;
-        }
-        graphData = { nodes, links };
-      } else {
-        graphData = await getUserGraph(userId, dbClient);
-      }
+      graphData = await getGraphData(userId, userRole, dbClient);
     }
 
     return {

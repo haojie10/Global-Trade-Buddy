@@ -7,8 +7,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const { sourceEntityId, targetEntityId, aliasName } = req.body;
-  if (!sourceEntityId || !targetEntityId || !aliasName) {
-    return res.status(400).json({ error: 'Missing parameters: sourceEntityId, targetEntityId, aliasName are required.' });
+  if (!targetEntityId || !aliasName) {
+    return res.status(400).json({ error: 'Missing parameters: targetEntityId, aliasName are required.' });
   }
 
   const client = await pool.connect();
@@ -25,7 +25,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       [targetEntityId, aliasName]
     );
 
-    // 2. 将所有关联了旧公司的报告转移到新公司上
+    // 如果指定了旧实体 ID，则执行数据合并和转移逻辑
+    if (sourceEntityId) {
     // 查询旧公司被哪些报告提及过
     const reportEnts = await client.query(
       `SELECT report_id FROM report_entities WHERE entity_id = $1`,
@@ -86,6 +87,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       `DELETE FROM entities WHERE id = $1`,
       [sourceEntityId]
     );
+    }
 
     await client.query('COMMIT');
 
