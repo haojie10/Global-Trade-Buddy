@@ -84,7 +84,12 @@ export async function runDehydration(html: string, uploadFn: UploadFn) {
 export async function extractAndNormalizeEntities(
   html: string,
   title: string,
-  dbClient: any
+  dbClient: any,
+  manualTags?: {
+    companies?: string[];
+    products?: string[];
+    channels?: string[];
+  }
 ): Promise<{ id: string; canonical_name: string }[]> {
   // 1. 从 entities 和 entity_aliases 表读取所有已知的实体名和别名
   const entitiesRes = await dbClient.query(`
@@ -124,7 +129,57 @@ export async function extractAndNormalizeEntities(
     }
   }
 
-  // 3. 正文匹配兜底逻辑：继续在标题和正文里检索常见关键词，如果 HTML 包含它们且它们不在已提取列表中，将其作为实体提取。
+  // 3. 处理手动标记的实体 (优先级高，自动注册未知实体)
+  if (manualTags) {
+    const categories = [
+      { tags: manualTags.companies, type: 'company' },
+      { tags: manualTags.products, type: 'product' },
+      { tags: manualTags.channels, type: 'channel' }
+    ];
+
+    for (const cat of categories) {
+      if (!cat.tags) continue;
+      for (const rawTag of cat.tags) {
+        const tag = rawTag.trim();
+        if (!tag) continue;
+
+        // 查找是否已存在于已知实体或别名中
+        let foundEntity: { id: string; canonical_name: string } | null = null;
+        for (const ent of entityMap.values()) {
+          if (ent.matches.has(tag)) {
+            foundEntity = { id: ent.id, canonical_name: ent.canonical_name };
+            break;
+          }
+        }
+
+        if (foundEntity) {
+          matchedEntities.set(foundEntity.id, foundEntity);
+        } else {
+          // 不存在，则自动写入 entities 表，扩充词库
+          const insertRes = await dbClient.query(
+            `INSERT INTO entities (canonical_name, entity_type) 
+             VALUES ($1, $2) 
+             ON CONFLICT (canonical_name) DO UPDATE SET entity_type = EXCLUDED.entity_type
+             RETURNING id`,
+            [tag, cat.type]
+          );
+          const entId = insertRes.rows[0].id;
+          const newEntity = { id: entId, canonical_name: tag };
+          matchedEntities.set(entId, newEntity);
+          
+          // 动态加入内存缓存，防止本次事务后续重复插入
+          entityMap.set(entId, {
+            id: entId,
+            canonical_name: tag,
+            entity_type: cat.type,
+            matches: new Set([tag])
+          });
+        }
+      }
+    }
+  }
+
+  // 4. 正文匹配兜底逻辑：继续在标题和正文里检索常见关键词，如果 HTML 包含它们且它们不在已提取列表中，将其作为实体提取。
   const commonKeywords = ['A 公司', '铝合金轮毂', '刹车片', '欧美汽配', '汇率风险', '运费波动'];
   const blacklist = ['公司', '工厂', '超市', '产品', '客户', '供应商', '采购商', '贸易'];
   const keywordTypeMap: Record<string, string> = {
@@ -165,7 +220,7 @@ export async function extractAndNormalizeEntities(
     }
   }
 
-  // 4. 过滤黑名单词：任何提取出来的实体如果存在于 ['公司', '工厂', '超市', '产品', '客户', '供应商', '采购商', '贸易'] 中，必须被完全丢弃。
+  // 5. 过滤黑名单词：任何提取出来的实体如果存在于黑名单中，必须被完全丢弃。
   const result: { id: string; canonical_name: string }[] = [];
   for (const ent of matchedEntities.values()) {
     if (blacklist.includes(ent.canonical_name)) {
@@ -183,7 +238,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const { rawHtml } = req.body;
+  const { rawHtml, manualTags } = req.body;
   if (!rawHtml) {
     return res.status(400).json({ error: 'Missing rawHtml parameter' });
   }
@@ -213,17 +268,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 2. 元数据及实体提取
     const meta = parseMetadata(rawHtml);
 
+    // 处理手动标记的地区标签
+    let regionsList: string[] = [];
+    if (manualTags?.regions) {
+      regionsList = manualTags.regions.map((r: string) => r.trim()).filter(Boolean);
+    }
+    
+    // 合并自动提取的地区（如果不是“全球”默认值）
+    if (meta.market_region && meta.market_region !== '全球') {
+      regionsList.push(meta.market_region);
+    }
+    
+    // 如果最终列表为空，则使用自动提取的地区或“全球”
+    if (regionsList.length === 0) {
+      regionsList = [meta.market_region || '全球'];
+    }
+    
+    const finalMarketRegion = Array.from(new Set(regionsList)).join(', ');
+
     await dbClient.query('BEGIN');
 
     // 3. 提取并归一化实体
-    const resolvedEntities = await extractAndNormalizeEntities(rawHtml, meta.title, dbClient);
+    const resolvedEntities = await extractAndNormalizeEntities(rawHtml, meta.title, dbClient, manualTags);
 
     // 4. 写入报告表
     const insertReportRes = await dbClient.query(
       `INSERT INTO reports (title, category, market_region, summary, content_html) 
        VALUES ($1, $2, $3, $4, $5) 
        RETURNING id`,
-      [meta.title, meta.category, meta.market_region, meta.summary, cleanHtml]
+      [meta.title, meta.category, finalMarketRegion, meta.summary, cleanHtml]
     );
     const newReportId = insertReportRes.rows[0].id;
 
@@ -252,7 +325,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         await dbClient.query(
           `INSERT INTO relations (report_id_a, report_id_b, relation_key, market_region, relation_type) 
            VALUES ($1, $2, $3, $4, $5)`,
-          [newReportId, row.report_id, row.canonical_name, meta.market_region, 'produces']
+          [newReportId, row.report_id, row.canonical_name, finalMarketRegion, 'produces']
         );
       }
     }

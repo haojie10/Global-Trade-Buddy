@@ -47,6 +47,10 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [rawHtmlContent, setRawHtmlContent] = useState('');
   const [uploadLoading, setUploadLoading] = useState(false);
+  const [manualCompanies, setManualCompanies] = useState<string[]>(['']);
+  const [manualProducts, setManualProducts] = useState<string[]>(['']);
+  const [manualRegions, setManualRegions] = useState<string[]>(['']);
+  const [manualChannels, setManualChannels] = useState<string[]>(['']);
 
   // 拖拽及文件状态
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -119,7 +123,15 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
       const res = await fetch('/api/admin/reports/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rawHtml: rawHtmlContent })
+        body: JSON.stringify({
+          rawHtml: rawHtmlContent,
+          manualTags: {
+            companies: manualCompanies.map(c => c.trim()).filter(Boolean),
+            products: manualProducts.map(p => p.trim()).filter(Boolean),
+            regions: manualRegions.map(r => r.trim()).filter(Boolean),
+            channels: manualChannels.map(c => c.trim()).filter(Boolean)
+          }
+        })
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -127,6 +139,10 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
         setRawHtmlContent('');
         setSelectedFile(null);
         setIsDragActive(false);
+        setManualCompanies(['']);
+        setManualProducts(['']);
+        setManualRegions(['']);
+        setManualChannels(['']);
         setShowUploadModal(false);
         window.location.reload();
       } else {
@@ -190,6 +206,95 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
     if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
     }
+  };
+
+  const renderTagListInput = (
+    title: string,
+    tags: string[],
+    setTags: React.Dispatch<React.SetStateAction<string[]>>,
+    placeholder: string
+  ) => {
+    const handleAdd = () => setTags([...tags, '']);
+    const handleRemove = (index: number) => {
+      const newTags = tags.filter((_, i) => i !== index);
+      setTags(newTags.length === 0 ? [''] : newTags);
+    };
+    const handleChange = (index: number, val: string) => {
+      const newTags = [...tags];
+      newTags[index] = val;
+      setTags(newTags);
+    };
+
+    return (
+      <div style={{
+        background: 'rgba(255, 255, 255, 0.4)',
+        border: '1px solid rgba(15, 23, 42, 0.08)',
+        borderRadius: '16px',
+        padding: '14px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+          <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#0f172a' }}>{title}</span>
+          <button
+            type="button"
+            onClick={handleAdd}
+            style={{
+              background: '#2563eb',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '50%',
+              width: '20px',
+              height: '20px',
+              fontSize: '0.9rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontWeight: 700,
+              boxShadow: '0 2px 6px rgba(37, 99, 235, 0.2)'
+            }}
+          >
+            +
+          </button>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '110px', overflowY: 'auto', paddingRight: '4px' }}>
+          {tags.map((tag, idx) => (
+            <div key={idx} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              <input
+                type="text"
+                value={tag}
+                placeholder={placeholder}
+                onChange={(e) => handleChange(idx, e.target.value)}
+                style={{
+                  ...inputStyle,
+                  padding: '6px 10px',
+                  borderRadius: '8px',
+                  fontSize: '0.8rem',
+                }}
+              />
+              {tags.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => handleRemove(idx)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#ef4444',
+                    fontSize: '1rem',
+                    cursor: 'pointer',
+                    padding: '0 4px',
+                  }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -1048,9 +1153,11 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
             background: 'rgba(255, 255, 255, 0.45)',
             border: '1px solid rgba(255, 255, 255, 0.75)',
             borderRadius: '24px',
-            padding: '40px 30px',
-            width: '90%',
-            maxWidth: '650px',
+            padding: '30px',
+            width: '95%',
+            maxWidth: '850px',
+            maxHeight: '95vh',
+            overflowY: 'auto',
             boxShadow: '0 20px 40px rgba(15, 23, 42, 0.08), inset 0 8px 16px rgba(255, 255, 255, 0.55)',
             position: 'relative'
           }}>
@@ -1060,6 +1167,10 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
                 setSelectedFile(null);
                 setIsDragActive(false);
                 setRawHtmlContent('');
+                setManualCompanies(['']);
+                setManualProducts(['']);
+                setManualRegions(['']);
+                setManualChannels(['']);
               }}
               style={{
                 position: 'absolute',
@@ -1204,6 +1315,21 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
                   </>
                 )}
               </div>
+              
+              {/* 手动标注核心关键词区域 */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+                gap: '12px',
+                marginTop: '4px',
+                marginBottom: '8px'
+              }}>
+                {renderTagListInput('🏢 公司名称 (Company)', manualCompanies, setManualCompanies, '例如: 特斯拉, 丰田汽车')}
+                {renderTagListInput('📦 产品名称 (Product)', manualProducts, setManualProducts, '例如: 锂电池, 刹车片')}
+                {renderTagListInput('🌍 市场地区 (Region)', manualRegions, setManualRegions, '例如: 北美, 欧盟')}
+                {renderTagListInput('🤝 渠道类型 (Channel)', manualChannels, setManualChannels, '例如: 一级供应链')}
+              </div>
+
               <button 
                 type="submit" 
                 className="water-drop-btn"

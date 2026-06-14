@@ -43,7 +43,8 @@ export function filterGraphData(
   const filteredNodes = nodes.filter(node => {
     // 国家/市场过滤
     if (selectedMarket !== 'All') {
-      if (node.market_region !== selectedMarket && node.market_region !== '全球') {
+      const regions = node.market_region ? node.market_region.split(',').map(r => r.trim()) : [];
+      if (!regions.includes(selectedMarket) && !regions.includes('全球')) {
         return false;
       }
     }

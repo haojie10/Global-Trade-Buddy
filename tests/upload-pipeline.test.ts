@@ -160,4 +160,130 @@ describe('Report Upload & Dehydration Pipeline Test', () => {
       }
     }
   });
+
+  it('should successfully parse manualTags, register new entities, concatenate market regions, and build relations', async () => {
+    // 确保特斯拉、锂电池这些测试用的实体在运行前不存在，防止脏数据干扰
+    await dbClient.query("DELETE FROM entities WHERE canonical_name = ANY($1)", [['特斯拉', '锂电池']]);
+
+    // 获取 "A 公司" 的实体 ID
+    const aCompanyRes = await dbClient.query("SELECT id FROM entities WHERE canonical_name = 'A 公司'");
+    expect(aCompanyRes.rows.length).toBeGreaterThan(0);
+    const aCompanyId = aCompanyRes.rows[0].id;
+
+    // 插入一个已有的历史报告，并将其与 "A 公司" 关联
+    const insertExistingReportRes = await dbClient.query(
+      `INSERT INTO reports (title, category, market_region, summary, content_html)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id`,
+      ['历史报告 2', 'product', '全球', '历史报告摘要', '关于 A 公司的内容']
+    );
+    const existingReportId = insertExistingReportRes.rows[0].id;
+
+    await dbClient.query(
+      `INSERT INTO report_entities (report_id, entity_id) VALUES ($1, $2)`,
+      [existingReportId, aCompanyId]
+    );
+
+    const mockHtml = `
+      <html>
+        <head>
+          <title>特斯拉与丰田的竞争分析</title>
+          <meta name="category" content="customer">
+          <meta name="market_region" content="亚洲">
+          <meta name="summary" content="关于特斯拉和丰田汽车。">
+        </head>
+        <body>
+          <p>正文内容：特斯拉在亚洲市场表现优异，使用的是锂电池。</p>
+        </body>
+      </html>
+    `;
+
+    const req = {
+      method: 'POST',
+      body: {
+        rawHtml: mockHtml,
+        manualTags: {
+          companies: ['A 公司', '特斯拉'],
+          products: ['锂电池'],
+          regions: ['北美', '中东'],
+          channels: ['一级供应链']
+        }
+      },
+    } as any;
+
+    let statusVal = 200;
+    let jsonVal: any = null;
+    const res = {
+      status(code: number) {
+        statusVal = code;
+        return this;
+      },
+      json(data: any) {
+        jsonVal = data;
+        return this;
+      },
+    } as any;
+
+    let newReportId: any;
+    try {
+      await uploadHandler(req, res);
+
+      expect(statusVal).toBe(200);
+      newReportId = jsonVal.reportId;
+      expect(newReportId).toBeDefined();
+
+      // 验证新报告的 market_region：应该是由 HTML 中的 "亚洲" 与 manual中的 "北美", "中东" 去重并用逗号拼接
+      const reportRes = await dbClient.query('SELECT market_region FROM reports WHERE id = $1', [newReportId]);
+      const reportRegion = reportRes.rows[0].market_region;
+      expect(reportRegion).toContain('亚洲');
+      expect(reportRegion).toContain('北美');
+      expect(reportRegion).toContain('中东');
+
+      // 验证实体是否成功自动注册（"特斯拉"、"锂电池"）
+      const teslaRes = await dbClient.query("SELECT id FROM entities WHERE canonical_name = '特斯拉' AND entity_type = 'company'");
+      expect(teslaRes.rows.length).toBe(1);
+
+      const batteryRes = await dbClient.query("SELECT id FROM entities WHERE canonical_name = '锂电池' AND entity_type = 'product'");
+      expect(batteryRes.rows.length).toBe(1);
+
+      const channelRes = await dbClient.query("SELECT id FROM entities WHERE canonical_name = '一级供应链' AND entity_type = 'channel'");
+      expect(channelRes.rows.length).toBe(1);
+
+      // 验证 report_entities 中的关联：新报告关联了 A 公司、特斯拉、锂电池、一级供应链
+      const resolvedEntitiesRes = await dbClient.query(
+        `SELECT e.canonical_name FROM report_entities re
+         JOIN entities e ON re.entity_id = e.id
+         WHERE re.report_id = $1`,
+        [newReportId]
+      );
+      const resolvedNames = resolvedEntitiesRes.rows.map(r => r.canonical_name);
+      expect(resolvedNames).toContain('A 公司');
+      expect(resolvedNames).toContain('特斯拉');
+      expect(resolvedNames).toContain('锂电池');
+      expect(resolvedNames).toContain('一级供应链');
+
+      // 验证关系建边
+      const relationsRes = await dbClient.query(
+        `SELECT * FROM relations WHERE report_id_a = $1 AND report_id_b = $2`,
+        [newReportId, existingReportId]
+      );
+      expect(relationsRes.rows.length).toBe(1);
+      const relation = relationsRes.rows[0];
+      expect(relation.relation_key).toBe('A 公司');
+      expect(relation.market_region).toBe(reportRegion);
+      expect(relation.relation_type).toBe('produces');
+
+    } finally {
+      // 清理测试产生的数据
+      if (newReportId) {
+        await dbClient.query(`DELETE FROM relations WHERE report_id_a = $1 OR report_id_b = $1`, [newReportId]);
+        await dbClient.query(`DELETE FROM report_entities WHERE report_id = $1 OR report_id = $2`, [newReportId, existingReportId]);
+        await dbClient.query(`DELETE FROM reports WHERE id = $1 OR id = $2`, [newReportId, existingReportId]);
+      } else {
+        await dbClient.query(`DELETE FROM report_entities WHERE report_id = $1`, [existingReportId]);
+        await dbClient.query(`DELETE FROM reports WHERE id = $1`, [existingReportId]);
+      }
+      await dbClient.query("DELETE FROM entities WHERE canonical_name = ANY($1)", [['特斯拉', '锂电池']]);
+    }
+  });
 });
