@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import pool from '../../../lib/db';
+import { PoolClient } from 'pg';
+import { withDb } from '../../../lib/api-handler';
 
 // 保存笔记服务 (供 API 和单元测试调用)
 export async function saveUserNote(userId: string, reportId: string, content: string, dbClient: any) {
@@ -35,28 +36,21 @@ export async function getUserNote(userId: string, reportId: string, dbClient: an
   return res.rows[0] || null;
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function noteHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
   const { userId, reportId } = req.query;
-  if (!userId || !reportId) {
-    return res.status(400).json({ error: 'Missing userId or reportId query parameters' });
-  }
 
-  const dbClient = await pool.connect();
-
-  try {
-    if (req.method === 'POST') {
-      const { content } = req.body;
-      const result = await saveUserNote(userId as string, reportId as string, content || '', dbClient);
-      return res.status(200).json(result);
-    } else if (req.method === 'GET') {
-      const note = await getUserNote(userId as string, reportId as string, dbClient);
-      return res.status(200).json({ success: true, note });
-    } else {
-      return res.status(405).json({ error: 'Method Not Allowed' });
-    }
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  } finally {
-    dbClient.release();
+  if (req.method === 'POST') {
+    const { content } = req.body;
+    const result = await saveUserNote(userId as string, reportId as string, content || '', dbClient);
+    return res.status(200).json(result);
+  } else {
+    // 因为 withDb 限制了方法仅为 GET, POST，故此处必为 GET
+    const note = await getUserNote(userId as string, reportId as string, dbClient);
+    return res.status(200).json({ success: true, note });
   }
 }
+
+export default withDb(noteHandler, {
+  methods: ['GET', 'POST'],
+  requiredQuery: ['userId', 'reportId']
+});

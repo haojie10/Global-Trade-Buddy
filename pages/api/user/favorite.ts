@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import pool from '../../../lib/db';
+import { PoolClient } from 'pg';
+import { withDb } from '../../../lib/api-handler';
 
 // 检查是否收藏 (供 API 和单元测试调用)
 export async function checkIsFavorite(userId: string, reportId: string, dbClient: any): Promise<boolean> {
@@ -31,24 +32,13 @@ export async function toggleFavorite(userId: string, reportId: string, dbClient:
   }
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
-  }
-
+async function favoriteHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
   const { userId, reportId } = req.body;
-  if (!userId || !reportId) {
-    return res.status(400).json({ error: 'Missing userId or reportId parameter' });
-  }
-
-  const dbClient = await pool.connect();
-
-  try {
-    const result = await toggleFavorite(userId, reportId, dbClient);
-    return res.status(200).json(result);
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  } finally {
-    dbClient.release();
-  }
+  const result = await toggleFavorite(userId, reportId, dbClient);
+  return res.status(200).json(result);
 }
+
+export default withDb(favoriteHandler, {
+  methods: ['POST'],
+  requiredBody: ['userId', 'reportId']
+});
