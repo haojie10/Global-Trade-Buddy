@@ -239,9 +239,12 @@ describe('Report Upload & Dehydration Pipeline Test', () => {
       expect(reportRegion).toContain('北美');
       expect(reportRegion).toContain('中东');
 
-      // 验证实体是否成功自动注册（"特斯拉"、"锂电池"）
-      const teslaRes = await dbClient.query("SELECT id FROM entities WHERE canonical_name = '特斯拉' AND entity_type = 'company'");
-      expect(teslaRes.rows.length).toBe(1);
+      // 验证“特斯拉”是否成功作为别名归属于“A 公司”
+      const teslaAliasRes = await dbClient.query(
+        "SELECT * FROM entity_aliases WHERE alias_name = '特斯拉' AND entity_id = $1",
+        [aCompanyId]
+      );
+      expect(teslaAliasRes.rows.length).toBe(1);
 
       const batteryRes = await dbClient.query("SELECT id FROM entities WHERE canonical_name = '锂电池' AND entity_type = 'product'");
       expect(batteryRes.rows.length).toBe(1);
@@ -258,7 +261,6 @@ describe('Report Upload & Dehydration Pipeline Test', () => {
       );
       const resolvedNames = resolvedEntitiesRes.rows.map(r => r.canonical_name);
       expect(resolvedNames).toContain('A 公司');
-      expect(resolvedNames).toContain('特斯拉');
       expect(resolvedNames).toContain('锂电池');
       expect(resolvedNames).toContain('一级供应链');
 

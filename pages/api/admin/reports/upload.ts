@@ -131,13 +131,83 @@ export async function extractAndNormalizeEntities(
 
   // 3. 处理手动标记的实体 (优先级高，自动注册未知实体)
   if (manualTags) {
-    const categories = [
-      { tags: manualTags.companies, type: 'company' },
+    // 3.1 特殊处理公司标签：如果有多个公司标签，则取第一个作为标准名称，其余全部自动作为其别称并入数据库别称表，不在图上显示多个圆点
+    if (manualTags.companies && manualTags.companies.length > 0) {
+      const companyTags = manualTags.companies.map((c: string) => c.trim()).filter(Boolean);
+      if (companyTags.length > 0) {
+        const primaryTag = companyTags[0];
+        let primaryEntityId: string | null = null;
+        let primaryCanonicalName = primaryTag;
+
+        // 检查是否已有同名实体或已有的别称
+        for (const ent of entityMap.values()) {
+          if (ent.matches.has(primaryTag)) {
+            primaryEntityId = ent.id;
+            primaryCanonicalName = ent.canonical_name;
+            break;
+          }
+        }
+
+        if (!primaryEntityId) {
+          // 不存在，插入 entities 表作为主标准公司名
+          const insertRes = await dbClient.query(
+            `INSERT INTO entities (canonical_name, entity_type) 
+             VALUES ($1, 'company') 
+             ON CONFLICT (canonical_name) DO UPDATE SET entity_type = EXCLUDED.entity_type
+             RETURNING id`,
+            [primaryTag]
+          );
+          primaryEntityId = insertRes.rows[0].id;
+          
+          // 动态加入缓存
+          entityMap.set(primaryEntityId, {
+            id: primaryEntityId,
+            canonical_name: primaryTag,
+            entity_type: 'company',
+            matches: new Set([primaryTag])
+          });
+        }
+
+        // 记录标准实体
+        matchedEntities.set(primaryEntityId, { id: primaryEntityId, canonical_name: primaryCanonicalName });
+
+        // 将第 2 个及以后的公司名称自动作为第一个公司的别称写入别名表
+        for (let i = 1; i < companyTags.length; i++) {
+          const aliasTag = companyTags[i];
+          let isAliasExist = false;
+
+          for (const ent of entityMap.values()) {
+            if (ent.matches.has(aliasTag)) {
+              isAliasExist = true;
+              break;
+            }
+          }
+
+          if (!isAliasExist) {
+            await dbClient.query(
+              `INSERT INTO entity_aliases (entity_id, alias_name)
+               VALUES ($1, $2)
+               ON CONFLICT (alias_name) DO NOTHING`,
+              [primaryEntityId, aliasTag]
+            );
+            
+            // 动态扩充缓存
+            const cachedEnt = entityMap.get(primaryEntityId);
+            if (cachedEnt) {
+              cachedEnt.matches.add(aliasTag);
+            }
+          }
+        }
+      }
+    }
+
+    // 3.2 正常处理产品和渠道标签
+    const otherCategories = [
       { tags: manualTags.products, type: 'product' },
       { tags: manualTags.channels, type: 'channel' }
     ];
 
-    for (const cat of categories) {
+    for (const cat of otherCategories) {
       if (!cat.tags) continue;
       for (const rawTag of cat.tags) {
         const tag = rawTag.trim();
