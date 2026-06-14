@@ -284,6 +284,39 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota }: 
     }
   };
 
+  // 6. 处理管理员删除图谱节点（报告/公司等实体）
+  const handleDeleteNode = async () => {
+    if (!selectedNode) return;
+    const isReport = selectedNode.node_type === 'report';
+    const confirmMsg = isReport 
+      ? `⚠️ 您确定要永久删除报告【${selectedNode.title}】吗？\n删除后该报告的所有解锁数据、笔记、收藏以及关联边线都将随之丢失，此操作不可恢复！`
+      : `⚠️ 您确定要永久删除该实体【${selectedNode.title}】吗？\n删除后该实体的别名、关联线、竞争或供应商关系都将一并删除，此操作不可恢复！`;
+
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      const res = await fetch('/api/admin/delete-node', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: selectedNode.id,
+          nodeType: selectedNode.node_type
+        })
+      });
+
+      if (res.ok) {
+        alert('删除成功！');
+        setSelectedNode(null); // 清理选中状态以关闭侧边栏
+        await refreshGraphData(); // 立即重新拉取并更新图谱
+      } else {
+        const data = await res.json();
+        alert(data.error || '删除失败');
+      }
+    } catch (err: any) {
+      alert('请求网络失败：' + err.message);
+    }
+  };
+
   const hasData = currentGraphData.nodes && currentGraphData.nodes.length > 0;
 
   // 动态提取筛选选项
@@ -826,6 +859,31 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota }: 
                         <button type="submit" className="water-drop-btn" style={{ padding: '6px 12px', fontSize: '0.75rem', fontWeight: 600, alignSelf: 'flex-end' }}>添加合作伙伴</button>
                       </form>
                     </div>
+
+                    {/* 管理员专有删除按钮 */}
+                    {userRole === 'admin' && (
+                      <div style={{ borderTop: '1px solid rgba(239, 68, 68, 0.1)', paddingTop: '16px', marginTop: '8px', display: 'flex', justifyContent: 'flex-end' }}>
+                        <button
+                          onClick={handleDeleteNode}
+                          style={{
+                            background: 'rgba(239, 68, 68, 0.08)',
+                            color: '#ef4444',
+                            border: '1px solid rgba(239, 68, 68, 0.25)',
+                            borderRadius: '20px',
+                            padding: '6px 16px',
+                            fontSize: '0.8rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            width: '100%'
+                          }}
+                          onMouseOver={(e) => { e.currentTarget.style.background = '#ef4444'; e.currentTarget.style.color = '#fff'; }}
+                          onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)'; e.currentTarget.style.color = '#ef4444'; }}
+                        >
+                          🗑️ 永久删除此公司实体
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   /* 📄 报告 详情面板（原逻辑） */
@@ -1023,6 +1081,31 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota }: 
                     >
                       📖 阅读报告详情
                     </Link>
+
+                    {/* 管理员专有删除按钮 */}
+                    {userRole === 'admin' && (
+                      <div style={{ borderTop: '1px solid rgba(239, 68, 68, 0.1)', paddingTop: '16px', marginTop: '12px' }}>
+                        <button
+                          onClick={handleDeleteNode}
+                          style={{
+                            background: 'rgba(239, 68, 68, 0.08)',
+                            color: '#ef4444',
+                            border: '1px solid rgba(239, 68, 68, 0.25)',
+                            borderRadius: '20px',
+                            padding: '10px 0',
+                            fontSize: '0.85rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            width: '100%'
+                          }}
+                          onMouseOver={(e) => { e.currentTarget.style.background = '#ef4444'; e.currentTarget.style.color = '#fff'; }}
+                          onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)'; e.currentTarget.style.color = '#ef4444'; }}
+                        >
+                          🗑️ 永久删除此报告
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )
               ) : (
