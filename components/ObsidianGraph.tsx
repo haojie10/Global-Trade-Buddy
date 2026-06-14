@@ -188,8 +188,11 @@ export default function ObsidianGraph({ data, onNodeSelect, onNodeDoubleClick }:
           highlightNodesRef.current = hlNodes;
           highlightLinksRef.current = hlLinks;
           
-          // 仅触发 Canvas 重绘刷新
-          graph.refresh();
+          // 仅触发 Canvas 局部重绘刷新（通过重启一帧动画申请）
+          if (typeof graph.pauseAnimation === 'function') {
+            graph.pauseAnimation();
+            graph.resumeAnimation();
+          }
         })
         .onNodeClick((node: any) => {
           const now = Date.now();
