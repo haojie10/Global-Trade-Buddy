@@ -67,6 +67,19 @@ describe('Obsidian Graph & Safety API Test', () => {
       [reportId1, reportId2]
     );
 
+    // 3.5 插入实体并与报告关联，以供新图谱 API 抽取实体节点
+    const entRes = await dbClient.query(
+      `INSERT INTO entities (canonical_name, entity_type) 
+       VALUES ('铝合金轮毂', 'product') 
+       ON CONFLICT (canonical_name) DO UPDATE SET entity_type = EXCLUDED.entity_type
+       RETURNING id`
+    );
+    const entityId = entRes.rows[0].id;
+    await dbClient.query(
+      `INSERT INTO report_entities (report_id, entity_id) VALUES ($1, $3), ($2, $3)`,
+      [reportId1, reportId2, entityId]
+    );
+
     // 4. 用户 B 解锁了 Report 1 和 Report 2；用户 A 没解锁任何报告
     await dbClient.query(
       `INSERT INTO unlocks (user_id, report_id) VALUES ($1, $2), ($1, $3)`,
@@ -99,9 +112,13 @@ describe('Obsidian Graph & Safety API Test', () => {
   it('should query personal graph and only contain relationships of unlocked reports', async () => {
     // 用户 B 解锁了 1 和 2，它们有连接边，因此能查出图谱关系
     const graphB = await getUserGraph(userIdB, dbClient);
-    expect(graphB.nodes.length).toBe(2);
-    expect(graphB.links.length).toBe(1);
-    expect(graphB.links[0].relation_key).toBe('铝合金轮毂');
+    const reports = graphB.nodes.filter((n: any) => n.node_type === 'report');
+    const entities = graphB.nodes.filter((n: any) => n.node_type === 'entity');
+    const mentions = graphB.links.filter((l: any) => l.link_type === 'mention');
+
+    expect(reports.length).toBe(2);
+    expect(entities.length).toBeGreaterThanOrEqual(1);
+    expect(mentions.length).toBe(2); // 报告1和报告2提及相同的实体
 
     // 用户 A 没解锁任何有关系边的报告，因此图谱关系为空
     const graphA = await getUserGraph(userIdA, dbClient);
