@@ -31,16 +31,22 @@ async function main() {
     await dbClient.query('DELETE FROM users');
 
     // 2. 插入测试用户 (管理员 & 普通用户)
+    const bcrypt = require('bcryptjs');
+    const adminPasswordHash = await bcrypt.hash('admin123', 10);
+    const userPasswordHash = await bcrypt.hash('user123', 10);
+
     const adminRes = await dbClient.query(
       `INSERT INTO users (phone_number, email, password, role, free_quota) 
-       VALUES ('13800000000', 'admin@gtb.com', 'admin123', 'admin', 999) RETURNING id`
+       VALUES ('13800000000', 'admin@gtb.com', $1, 'admin', 999) RETURNING id`,
+      [adminPasswordHash]
     );
     const adminId = adminRes.rows[0].id;
     console.log(`已插入管理员用户，ID: ${adminId}`);
 
     const userRes = await dbClient.query(
       `INSERT INTO users (phone_number, email, password, role, free_quota) 
-       VALUES ('13800000001', 'user@gtb.com', 'user123', 'user', 3) RETURNING id`
+       VALUES ('13800000001', 'user@gtb.com', $1, 'user', 3) RETURNING id`,
+      [userPasswordHash]
     );
     const userId = userRes.rows[0].id;
     console.log(`已重置普通测试用户，ID: ${userId}`);
