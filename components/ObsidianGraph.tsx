@@ -142,10 +142,16 @@ export default function ObsidianGraph({ data, onNodeSelect, onNodeDoubleClick }:
           }
         })
         .linkWidth((link: any) => {
-          return getLinkWidth(link.relation_type, !!hoverNodeRef.current, highlightLinksRef.current.has(link));
+          const s = typeof link.source === 'object' ? link.source.id : link.source;
+          const t = typeof link.target === 'object' ? link.target.id : link.target;
+          const key = `${s}-${t}`;
+          return getLinkWidth(link.relation_type, !!hoverNodeRef.current, highlightLinksRef.current.has(key));
         })
         .linkColor((link: any) => {
-          return getLinkColor(link.relation_type, !!hoverNodeRef.current, highlightLinksRef.current.has(link));
+          const s = typeof link.source === 'object' ? link.source.id : link.source;
+          const t = typeof link.target === 'object' ? link.target.id : link.target;
+          const key = `${s}-${t}`;
+          return getLinkColor(link.relation_type, !!hoverNodeRef.current, highlightLinksRef.current.has(key));
         })
         .linkLineDash((link: any) => {
           return getLinkLineDash(link.relation_type);
@@ -166,17 +172,17 @@ export default function ObsidianGraph({ data, onNodeSelect, onNodeDoubleClick }:
           if (prevId === nextId) return;
 
           const hlNodes = new Set<string>();
-          const hlLinks = new Set<any>();
+          const hlLinks = new Set<string>();
           if (node) {
             hlNodes.add(node.id);
             visibleLinks.forEach((link: any) => {
               const s = typeof link.source === 'object' ? link.source.id : link.source;
               const t = typeof link.target === 'object' ? link.target.id : link.target;
               if (s === node.id) {
-                hlLinks.add(link);
+                hlLinks.add(`${s}-${t}`);
                 hlNodes.add(t);
               } else if (t === node.id) {
-                hlLinks.add(link);
+                hlLinks.add(`${s}-${t}`);
                 hlNodes.add(s);
               }
             });
@@ -260,7 +266,8 @@ export default function ObsidianGraph({ data, onNodeSelect, onNodeDoubleClick }:
       overflow: 'hidden',
       border: '1px solid rgba(15, 23, 42, 0.08)',
       backdropFilter: 'blur(20px)',
-      boxShadow: '0 10px 30px rgba(15, 23, 42, 0.03)'
+      boxShadow: '0 10px 30px rgba(15, 23, 42, 0.03)',
+      position: 'relative'
     }}>
       <div style={{
         padding: '14px 20px',
@@ -277,6 +284,52 @@ export default function ObsidianGraph({ data, onNodeSelect, onNodeDoubleClick }:
         </div>
       </div>
       <div ref={containerRef} style={{ width: '100%', height: 'calc(100% - 49px)', ...getGraphContainerBackgroundStyle() }} />
+      
+      {/* 底部左侧悬浮图例 (Legend) */}
+      <div style={{
+        position: 'absolute',
+        bottom: '20px',
+        left: '20px',
+        background: 'rgba(255, 255, 255, 0.9)',
+        backdropFilter: 'blur(12px)',
+        border: '1px solid rgba(15, 23, 42, 0.08)',
+        borderRadius: '16px',
+        padding: '12px 16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+        pointerEvents: 'none',
+        boxShadow: '0 4px 12px rgba(15, 23, 42, 0.05)',
+        zIndex: 10
+      }}>
+        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569', marginBottom: '2px' }}>📊 拓扑线缆关系图例</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.7rem', color: '#475569' }}>
+            <span style={{ display: 'inline-block', width: '24px', height: '3px', background: '#2563eb', borderRadius: '1.5px' }} />
+            <span>供应与经销关系 (商务蓝 粗线 + 双粒子流)</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.7rem', color: '#475569' }}>
+            <span style={{ display: 'inline-block', width: '24px', height: '0px', borderTop: '2px dotted #ef4444' }} />
+            <span>竞争对手关系 (警示红 细点虚线)</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.7rem', color: '#475569' }}>
+            <span style={{ display: 'inline-block', width: '24px', height: '2px', background: '#10b981', borderRadius: '1px' }} />
+            <span>相同产品关联 (极光绿 稍粗线 + 单粒子流)</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.7rem', color: '#475569' }}>
+            <span style={{ display: 'inline-block', width: '24px', height: '0px', borderTop: '2px dashed #f59e0b' }} />
+            <span>相同渠道关联 (琥珀橙 均匀虚线)</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.7rem', color: '#475569' }}>
+            <span style={{ display: 'inline-block', width: '24px', height: '0px', borderTop: '2px dashed #8b5cf6' }} />
+            <span>共享竞争对手 (优雅紫 短划虚线)</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.7rem', color: '#475569' }}>
+            <span style={{ display: 'inline-block', width: '24px', height: '1.5px', background: '#94a3b8', borderRadius: '0.75px' }} />
+            <span>其他默认关联 (灰色细实线)</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
