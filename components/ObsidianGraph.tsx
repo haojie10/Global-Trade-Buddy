@@ -1,5 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
+import {
+  getLinkColor,
+  getLinkWidth,
+  getLinkDashArray,
+  getLinkParticles,
+  getGraphContainerBackgroundStyle
+} from '../lib/graph-styles';
 
 export interface Node {
   id: string;
@@ -88,10 +95,10 @@ export default function ObsidianGraph({ data, onNodeSelect, onNodeDoubleClick }:
       const ForceGraph = ForceGraphModule.default;
       
       const graph = (ForceGraph as any)()(containerRef.current!)
-        .backgroundColor('#f8fafc')
+        .backgroundColor('rgba(0,0,0,0)')
         .graphData({
           nodes: visibleNodes.map(n => ({ ...n })),
-          links: visibleLinks
+          links: visibleLinks.map(l => ({ ...l }))
         })
         .nodeId('id')
         .nodeLabel((node: any) => node.node_type === 'report' ? `${node.title} (${node.market_region})` : `${node.title} [${node.entity_type === 'company' ? '公司' : node.entity_type === 'product' ? '产品' : '渠道'}]`)
@@ -135,34 +142,20 @@ export default function ObsidianGraph({ data, onNodeSelect, onNodeDoubleClick }:
           }
         })
         .linkWidth((link: any) => {
-          if (hoverNodeRef.current && !highlightLinksRef.current.has(link)) return 0.5;
-          return link.link_type === 'business' ? 2.5 : 1;
+          return getLinkWidth(link.relation_type, !!hoverNodeRef.current, highlightLinksRef.current.has(link));
         })
         .linkColor((link: any) => {
-          let opacity = 1;
-          if (hoverNodeRef.current && !highlightLinksRef.current.has(link)) {
-            return 'rgba(200, 200, 200, 0.03)';
-          }
-
-          if (link.link_type === 'mention') {
-            return 'rgba(148, 163, 184, 0.15)';
-          }
-
-          if (link.link_type === 'business') {
-            if (link.relation_type === 'competitor') return 'rgba(239, 68, 68, ' + (0.85 * opacity) + ')'; // 警示红
-            if (link.relation_type === 'supplier') return 'rgba(37, 99, 235, ' + (0.75 * opacity) + ')'; // 商务蓝
-            if (link.relation_type === 'product_sale') return 'rgba(16, 185, 129, ' + (0.6 * opacity) + ')'; // 极光绿
-          }
-          return 'rgba(37, 99, 235, 0.15)';
+          return getLinkColor(link.relation_type, !!hoverNodeRef.current, highlightLinksRef.current.has(link));
+        })
+        .linkDashArray((link: any) => {
+          return getLinkDashArray(link.relation_type);
         })
         .linkLabel((link: any) => {
           if (link.link_type === 'mention') return '提及';
           return `${link.relation_key} (${link.market_region || '全球'})`;
         })
-        // 商业关系线可以带粒子流动，增强视觉高端感
         .linkDirectionalParticles((link: any) => {
-          if (link.link_type === 'business' && link.relation_type === 'supplier') return 2; // 供应商流动粒子
-          return 0;
+          return getLinkParticles(link.relation_type);
         })
         .linkDirectionalParticleWidth(1.5)
         .linkDirectionalParticleSpeed(0.005)
@@ -283,7 +276,7 @@ export default function ObsidianGraph({ data, onNodeSelect, onNodeDoubleClick }:
           <span style={{ color: '#10b981' }}>● 品类分析</span>
         </div>
       </div>
-      <div ref={containerRef} style={{ width: '100%', height: 'calc(100% - 49px)', background: '#f8fafc' }} />
+      <div ref={containerRef} style={{ width: '100%', height: 'calc(100% - 49px)', ...getGraphContainerBackgroundStyle() }} />
     </div>
   );
 }
