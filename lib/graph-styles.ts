@@ -56,10 +56,10 @@ export function getLinkWidth(
 }
 
 /**
- * 获取关系虚线模式 (DashArray)
+ * 获取关系线划模式 (LineDash)
  * 返回 [dashLength, gapLength] 的数组，如果是实线则返回 null
  */
-export function getLinkDashArray(relationType: string): number[] | null {
+export function getLinkLineDash(relationType: string): number[] | null {
   switch (relationType) {
     case 'competitor':
       return [1, 4]; // 竞争对手：细密点线

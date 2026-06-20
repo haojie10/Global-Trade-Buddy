@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import {
   getLinkColor,
   getLinkWidth,
-  getLinkDashArray,
+  getLinkLineDash,
   getLinkParticles,
   getGraphContainerBackgroundStyle
 } from '../lib/graph-styles';
@@ -147,8 +147,8 @@ export default function ObsidianGraph({ data, onNodeSelect, onNodeDoubleClick }:
         .linkColor((link: any) => {
           return getLinkColor(link.relation_type, !!hoverNodeRef.current, highlightLinksRef.current.has(link));
         })
-        .linkDashArray((link: any) => {
-          return getLinkDashArray(link.relation_type);
+        .linkLineDash((link: any) => {
+          return getLinkLineDash(link.relation_type);
         })
         .linkLabel((link: any) => {
           if (link.link_type === 'mention') return '提及';

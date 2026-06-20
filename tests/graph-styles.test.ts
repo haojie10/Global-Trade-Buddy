@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   getLinkColor,
   getLinkWidth,
-  getLinkDashArray,
+  getLinkLineDash,
   getLinkParticles,
   getGraphContainerBackgroundStyle
 } from '../lib/graph-styles';
@@ -66,23 +66,23 @@ describe('Graph Connection Visual Styles mapping logic', () => {
     });
   });
 
-  describe('getLinkDashArray', () => {
+  describe('getLinkLineDash', () => {
     it('should return [1, 4] for competitor', () => {
-      expect(getLinkDashArray('competitor')).toEqual([1, 4]);
+      expect(getLinkLineDash('competitor')).toEqual([1, 4]);
     });
 
     it('should return [4, 4] for shared_channel', () => {
-      expect(getLinkDashArray('shared_channel')).toEqual([4, 4]);
+      expect(getLinkLineDash('shared_channel')).toEqual([4, 4]);
     });
 
     it('should return [2, 2] for shared_competitor', () => {
-      expect(getLinkDashArray('shared_competitor')).toEqual([2, 2]);
+      expect(getLinkLineDash('shared_competitor')).toEqual([2, 2]);
     });
 
     it('should return null for supplier, shared_product, and other relations', () => {
-      expect(getLinkDashArray('supplier')).toBeNull();
-      expect(getLinkDashArray('shared_product')).toBeNull();
-      expect(getLinkDashArray('shared_company')).toBeNull();
+      expect(getLinkLineDash('supplier')).toBeNull();
+      expect(getLinkLineDash('shared_product')).toBeNull();
+      expect(getLinkLineDash('shared_company')).toBeNull();
     });
   });
 
