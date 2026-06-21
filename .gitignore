@@ -39,3 +39,4 @@ next-env.d.ts
 # superpowers / antigravity (optional: decide if you want to keep them)
 # .antigravity/
 .superpowers/
+.worktrees/
