@@ -4,10 +4,10 @@ import pool from '../lib/db';
 import { parseCookies } from '../lib/cookies';
 import { getUserGraph, getGraphData } from './api/user/graph';
 import ObsidianGraph from '../components/ObsidianGraph';
-import ToolsPanel from '../components/ToolsPanel';
 import Link from 'next/link';
 import { filterGraphData, GraphNode, GraphLink } from '../lib/graph-helpers';
 import NodeProfilePanel from '../components/NodeProfilePanel';
+import ReportList from '../components/ReportList';
 
 interface MyGraphProps {
   graphData: {
@@ -17,23 +17,24 @@ interface MyGraphProps {
   userId: string;
   userRole: string;
   freeQuota: number;
+  unlockedReports: any[];
 }
 
-export default function MyGraphPage({ graphData, userId, userRole, freeQuota }: MyGraphProps) {
+export default function MyGraphPage({ graphData, userId, userRole, freeQuota, unlockedReports: initialUnlockedReports }: MyGraphProps) {
   const [quota, setQuota] = useState(freeQuota);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   // 筛选与画像状态管理
   const [selectedMarket, setSelectedMarket] = useState('All');
   const [selectedProduct, setSelectedProduct] = useState('All');
   const [focusNodeId, setFocusNodeId] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
-  const [activeTab, setActiveTab] = useState<'profile' | 'tools'>('tools');
 
   // 新增：实体详情及图谱动态数据源
   const [currentGraphData, setCurrentGraphData] = useState(graphData);
   const [entityDetail, setEntityDetail] = useState<any>(null);
+  const [unlockedReports, setUnlockedReports] = useState(initialUnlockedReports || []);
 
   if (!userId) {
     return (
@@ -234,7 +235,7 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota }: 
 
       {/* 主体内容区（分左右两栏） */}
       <main style={{
-        flex: 1,
+        height: '680px',
         display: 'flex',
         padding: '10px 40px 24px 40px',
         gap: '24px',
@@ -242,7 +243,8 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota }: 
         maxWidth: '1480px',
         margin: '0 auto',
         width: '100%',
-        zIndex: 10
+        zIndex: 10,
+        boxSizing: 'border-box'
       }}>
         {/* 左栏：图谱面板 */}
         <div style={{ flex: 1, minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -360,7 +362,6 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota }: 
                 data={filteredGraphData}
                 onNodeSelect={(node) => {
                   setSelectedNode(node as any);
-                  setActiveTab('profile');
                 }}
                 onNodeDoubleClick={(node) => {
                   setFocusNodeId(node.id);
@@ -452,69 +453,50 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota }: 
           backdropFilter: 'blur(20px)',
           boxShadow: '0 10px 30px rgba(15, 23, 42, 0.03)'
         }}>
-          {/* Tab 头部 */}
-          <div style={{
-            display: 'flex',
-            borderBottom: '1px solid rgba(15, 23, 42, 0.06)',
-            background: 'rgba(15, 23, 42, 0.02)',
-            padding: '4px 8px 0 8px'
-          }}>
-            <button
-              onClick={() => setActiveTab('profile')}
-              style={{
-                flex: 1,
-                padding: '12px 8px',
-                background: 'none',
-                border: 'none',
-                borderBottom: activeTab === 'profile' ? '2px solid #2563eb' : '2px solid transparent',
-                color: activeTab === 'profile' ? '#2563eb' : '#475569',
-                fontWeight: activeTab === 'profile' ? 600 : 400,
-                fontSize: '0.85rem',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-            >
-              📁 商业画像看板
-            </button>
-            <button
-              onClick={() => setActiveTab('tools')}
-              style={{
-                flex: 1,
-                padding: '12px 8px',
-                background: 'none',
-                border: 'none',
-                borderBottom: activeTab === 'tools' ? '2px solid #2563eb' : '2px solid transparent',
-                color: activeTab === 'tools' ? '#2563eb' : '#475569',
-                fontWeight: activeTab === 'tools' ? 600 : 400,
-                fontSize: '0.85rem',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-            >
-              🛠️ 外贸快捷工具箱
-            </button>
-          </div>
-
-          {/* Tab 内容区 */}
-          {activeTab === 'profile' ? (
-            <NodeProfilePanel
-              selectedNode={selectedNode}
-              userRole={userRole}
-              entityDetail={entityDetail}
-              onRefreshGraph={refreshGraphData}
-              onNodeSelectUpdate={(node) => setSelectedNode(node)}
-              onFetchEntityDetail={fetchEntityDetail}
-              onDeleteNodeSuccess={() => setSelectedNode(null)}
-            />
-          ) : (
-            <div style={{ flex: 1, padding: '10px 0', overflowY: 'auto' }}>
-              <ToolsPanel />
-            </div>
-          )}
+          <NodeProfilePanel
+            selectedNode={selectedNode}
+            userRole={userRole}
+            entityDetail={entityDetail}
+            onRefreshGraph={refreshGraphData}
+            onNodeSelectUpdate={(node) => setSelectedNode(node)}
+            onFetchEntityDetail={fetchEntityDetail}
+            onDeleteNodeSuccess={() => setSelectedNode(null)}
+          />
         </div>
 
       </main>
 
+      {/* 底部已解锁报告卡片区域 */}
+      {unlockedReports && unlockedReports.length > 0 && (
+        <section style={{
+          maxWidth: '1400px',
+          margin: '40px auto 80px auto',
+          padding: '0 40px',
+          width: '100%',
+          boxSizing: 'border-box',
+          zIndex: 10,
+          position: 'relative'
+        }}>
+          <h3 style={{
+            fontSize: '1.25rem',
+            fontWeight: 400,
+            color: '#0f172a',
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            🔓 最近解锁的报告 (最多显示10篇)
+          </h3>
+          <ReportList
+            reports={unlockedReports}
+            userId={userId}
+            userRole={userRole}
+            quota={quota}
+            onUnlockSuccess={() => {}}
+          />
+        </section>
+      )}
     </div>
   );
 }
@@ -541,9 +523,31 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     }
 
     let graphData: any = { nodes: [], links: [] };
+    let unlockedReports: any[] = [];
 
     if (userId) {
       graphData = await getGraphData(userId, userRole, dbClient);
+
+      if (userRole === 'admin') {
+        const reportsRes = await dbClient.query(
+          `SELECT id, title, category, market_region, summary, TRUE AS "isUnlocked" 
+           FROM reports 
+           ORDER BY created_at DESC 
+           LIMIT 10`
+        );
+        unlockedReports = reportsRes.rows;
+      } else {
+        const reportsRes = await dbClient.query(
+          `SELECT r.id, r.title, r.category, r.market_region, r.summary, TRUE AS "isUnlocked"
+           FROM reports r
+           JOIN unlocks u ON r.id = u.report_id
+           WHERE u.user_id = $1
+           ORDER BY u.created_at DESC
+           LIMIT 10`,
+          [userId]
+        );
+        unlockedReports = reportsRes.rows;
+      }
     }
 
     return {
@@ -551,7 +555,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         graphData,
         userId: userId || '',
         userRole,
-        freeQuota
+        freeQuota,
+        unlockedReports
       }
     };
   } catch (err) {
@@ -561,7 +566,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         graphData: { nodes: [], links: [] },
         userId: '',
         userRole: 'guest',
-        freeQuota: 0
+        freeQuota: 0,
+        unlockedReports: []
       }
     };
   } finally {

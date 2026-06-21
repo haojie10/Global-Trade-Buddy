@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import pool from '../lib/db';
 import { parseCookies } from '../lib/cookies';
 import { getUserGraph, GraphNode, GraphLink } from './api/user/graph';
-import ToolsPanel from '../components/ToolsPanel';
 import Link from 'next/link';
 import AdminPanel from '../components/AdminPanel';
 import ReportList, { PlatformReport } from '../components/ReportList';
@@ -359,33 +358,6 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
             >
               探索洞察报告库 ↓
             </button>
-          </div>
-        </section>
-
-        {/* 模块二：外贸智能工具箱 */}
-        <section className="animate-on-scroll" style={{
-          padding: '100px 40px',
-          maxWidth: '1440px',
-          margin: '0 auto',
-          position: 'relative'
-        }}>
-          <div style={{ textAlign: 'center', marginBottom: '60px' }}>
-            <h2 style={{
-              fontSize: '2.4rem',
-              fontWeight: 300,
-              margin: '0 0 16px 0',
-              color: '#0f172a',
-              letterSpacing: '-1px'
-            }}>
-              Trading tools for <span style={{ color: '#2563eb', fontWeight: 400 }}>everyone</span>.
-            </h2>
-            <p style={{ fontSize: '1.05rem', color: '#475569', maxWidth: '550px', margin: '0 auto', fontWeight: 300 }}>
-              无需繁复查阅，随时掌握海外客户沟通黄金时间，更支持 AI 商品展厅级渲染处理。
-            </p>
-          </div>
-
-          <div style={{ width: '100%' }}>
-            <ToolsPanel layout="row" />
           </div>
         </section>
 
