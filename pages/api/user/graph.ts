@@ -96,6 +96,7 @@ export async function getGraphData(userId: string, userRole: string, dbClient: a
       source: row.report_id,
       target: row.entity_id,
       link_type: 'mention',
+      relation_type: 'mention',
       relation_key: '提及'
     });
   }
