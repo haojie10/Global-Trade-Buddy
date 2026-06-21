@@ -5,6 +5,7 @@ export interface GraphNode {
   market_region: string;
   summary?: string;
   companies?: string[];
+  competitors?: string[];
   products?: string[];
   channels?: string[];
   node_type?: string;
@@ -87,3 +88,49 @@ export function filterGraphData(
 
   return { nodes: filteredNodes, links: filteredLinks };
 }
+
+export function computeTwoHopHighlight(
+  selectedNodeId: string | null,
+  links: GraphLink[]
+): { highlightNodes: Set<string>; highlightLinks: Set<string> } {
+  const highlightNodes = new Set<string>();
+  const highlightLinks = new Set<string>();
+
+  if (!selectedNodeId) {
+    return { highlightNodes, highlightLinks };
+  }
+
+  highlightNodes.add(selectedNodeId);
+
+  // 1-hop neighbors
+  const firstNeighbors = new Set<string>();
+  links.forEach((l: any) => {
+    const s = typeof l.source === 'object' ? l.source.id : l.source;
+    const t = typeof l.target === 'object' ? l.target.id : l.target;
+    if (s === selectedNodeId) {
+      firstNeighbors.add(t);
+      highlightNodes.add(t);
+      highlightLinks.add(`${s}-${t}`);
+    } else if (t === selectedNodeId) {
+      firstNeighbors.add(s);
+      highlightNodes.add(s);
+      highlightLinks.add(`${s}-${t}`);
+    }
+  });
+
+  // 2-hop neighbors
+  links.forEach((l: any) => {
+    const s = typeof l.source === 'object' ? l.source.id : l.source;
+    const t = typeof l.target === 'object' ? l.target.id : l.target;
+    if (firstNeighbors.has(s) && !highlightNodes.has(t)) {
+      highlightNodes.add(t);
+      highlightLinks.add(`${s}-${t}`);
+    } else if (firstNeighbors.has(t) && !highlightNodes.has(s)) {
+      highlightNodes.add(s);
+      highlightLinks.add(`${s}-${t}`);
+    }
+  });
+
+  return { highlightNodes, highlightLinks };
+}
+
