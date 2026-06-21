@@ -52,8 +52,6 @@ if (typeof window !== 'undefined') {
   };
 }
 
-
-
 function cleanHtmlBody(rawHtml: string): string {
   if (!rawHtml) return '';
   
@@ -75,23 +73,66 @@ function cleanHtmlBody(rawHtml: string): string {
   // 3. 移除富文本中的所有 <script>
   bodyContent = bodyContent.replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, '');
 
-  // 4. 强制注入的基础重置样式（不再强制覆盖前景色和背景色，允许模板原生的暗色主题和卡片显示）
+  // 4. 强制注入的基础重置样式，以适应 Scheme B 暖乳白图书阅读器风格
   const lightThemeOverrides = `
     <style>
       .report-content-body {
         width: 100%;
         font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        color: #3c3935;
+      }
+      .report-content-body h1, .report-content-body h2, .report-content-body h3, .report-content-body h4 {
+        color: #3c3935 !important;
+        font-weight: 400;
+        margin-top: 1.5em;
+        margin-bottom: 0.6em;
+      }
+      .report-content-body p, .report-content-body li {
+        color: #7a756f !important;
+        line-height: 1.7;
+        margin-bottom: 1em;
+        font-weight: 300;
+      }
+      .report-content-body a {
+        color: #ff641e !important;
+        text-decoration: none;
       }
       .report-content-body img {
         max-width: 100%;
         height: auto;
-        border-radius: 12px;
+        border-radius: 22px;
         margin: 16px 0;
       }
       .report-content-body table {
         width: 100%;
         border-collapse: collapse;
         margin: 20px 0;
+        background: #fdfbf7;
+        border-radius: 14px;
+        overflow: hidden;
+      }
+      .report-content-body th {
+        background: rgba(255, 100, 30, 0.05);
+        color: #3c3935;
+        font-weight: 400;
+        text-align: left;
+        padding: 12px 16px;
+      }
+      .report-content-body td {
+        border-bottom: 1px solid rgba(160, 109, 68, 0.05);
+        color: #7a756f;
+        padding: 12px 16px;
+        font-weight: 300;
+      }
+      /* 强制重写模板中可能含有的暗色和白色硬编码背景 */
+      .report-content-body, 
+      .report-content-body div, 
+      .report-content-body section,
+      .report-content-body article {
+        background: transparent !important;
+        color: #3c3935 !important;
+        border: none !important;
+        box-shadow: none !important;
       }
     </style>
   `;
@@ -103,9 +144,8 @@ export default function ReportDetailPage({ report, related, userId, userRole }: 
   const [unlocked, setUnlocked] = useState(report.isUnlocked);
   const [content, setContent] = useState(report.content_html);
 
-  // 挂载原 HTML 模板内联 onclick 所需 the JavaScript 全局函数（React dangerouslySetInnerHTML 默认屏蔽 Script 标签）
   React.useEffect(() => {
-    // 确保在客户端切换路由或刷新时 switchSection 挂载状态正常
+    // 挂载原 HTML 模板内联 onclick 所需 JavaScript 全局函数
   }, []);
 
   // 模拟微信/支付宝扫码解锁功能
@@ -136,7 +176,6 @@ export default function ReportDetailPage({ report, related, userId, userRole }: 
   React.useEffect(() => {
     if (!unlocked || !content) return;
 
-    // 1. 提取所有的 script 标签
     const scriptRegex = /<script([^>]*)>([\s\S]*?)<\/script>/gi;
     const scriptsToLoad: { src: string | null; content: string }[] = [];
     let match;
@@ -150,13 +189,11 @@ export default function ReportDetailPage({ report, related, userId, userRole }: 
 
     if (scriptsToLoad.length === 0) return;
 
-    // 2. 按顺序串行加载外部脚本，加载完后再执行内联脚本
     const loadExternalScripts = async () => {
       for (const s of scriptsToLoad) {
         if (s.src) {
           const srcUrl = s.src;
           await new Promise((resolve) => {
-            // 避免重复加载
             if (document.querySelector(`script[src="${srcUrl}"]`)) {
               resolve(true);
               return;
@@ -165,7 +202,7 @@ export default function ReportDetailPage({ report, related, userId, userRole }: 
             script.src = srcUrl;
             script.async = false;
             script.onload = () => resolve(true);
-            script.onerror = () => resolve(true); // 容错处理，防止加载失败阻塞后续
+            script.onerror = () => resolve(true);
             document.head.appendChild(script);
           });
         }
@@ -173,12 +210,10 @@ export default function ReportDetailPage({ report, related, userId, userRole }: 
     };
 
     const runInlineScripts = () => {
-      // 外部依赖加载完成后，稍等片刻让 DOM 彻底渲染完毕，再初始化图表
       setTimeout(() => {
         scriptsToLoad.forEach((s) => {
           if (!s.src && s.content.trim()) {
             try {
-              // 构造一个 script 节点来执行代码，利于保留作用域和全局变量访问
               const script = document.createElement('script');
               script.text = s.content;
               document.body.appendChild(script);
@@ -197,20 +232,20 @@ export default function ReportDetailPage({ report, related, userId, userRole }: 
   return (
     <WatermarkContainer text={userId ? `外贸智友 - 业务员 ID: ${userId.substring(0, 8)}...` : '外贸智友 - 游客浏览模式'}>
       <div style={{
-        background: '#f8fafc',
-        color: '#0f172a',
+        background: 'var(--bg-main)',
+        color: 'var(--color-text)',
         minHeight: '100vh',
         fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
         position: 'relative'
       }}>
-        {/* 渐变星云背景 - 清爽浅色淡蓝光晕 */}
+        {/* 渐变星云背景 - 清爽浅色淡暖色光晕 */}
         <div style={{
           position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
           height: '100%',
-          background: 'radial-gradient(circle at 15% 15%, rgba(37, 99, 235, 0.04) 0%, transparent 50%), radial-gradient(circle at 85% 85%, rgba(37, 99, 235, 0.03) 0%, transparent 50%)',
+          background: 'radial-gradient(circle at 15% 15%, rgba(255, 100, 30, 0.02) 0%, transparent 50%), radial-gradient(circle at 85% 85%, rgba(255, 100, 30, 0.015) 0%, transparent 50%)',
           pointerEvents: 'none',
           zIndex: 0
         }} />
@@ -225,38 +260,45 @@ export default function ReportDetailPage({ report, related, userId, userRole }: 
         }}>
           
           {/* 面包屑 */}
-          <div style={{ marginBottom: '20px', fontSize: '0.85rem' }}>
-            <Link href="/" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>🏠 知识图谱主页</Link>
-            <span style={{ color: '#475569', margin: '0 8px' }}>/</span>
-            <span style={{ color: '#475569' }}>
-              {report.category === 'customer' ? '👥 客户 360 度洞察' : '📈 品类分析'}
+          <div style={{ marginBottom: '20px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Link href="/" style={{ color: 'var(--color-accent)', textDecoration: 'none', fontWeight: 300, display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+              </svg>
+              知识图谱主页
+            </Link>
+            <span style={{ color: 'var(--color-muted)', margin: '0 4px' }}>/</span>
+            <span style={{ color: 'var(--color-muted)', fontWeight: 300 }}>
+              {report.category === 'customer' ? '客户 360 度洞察' : '品类分析'}
             </span>
           </div>
 
           {/* 标题 */}
-          <h1 style={{ fontSize: '2rem', fontWeight: 300, color: '#0f172a', marginBottom: '16px', lineHeight: 1.3, letterSpacing: '-0.5px' }}>
+          <h1 style={{ fontSize: '2rem', fontWeight: 300, color: 'var(--color-text)', marginBottom: '16px', lineHeight: 1.3, letterSpacing: '-0.5px' }}>
             {report.title}
           </h1>
 
           {/* 标签 */}
           <div style={{ display: 'flex', gap: '10px', marginBottom: '30px' }}>
             <span style={{
-              background: report.category === 'customer' ? 'rgba(37, 99, 235, 0.06)' : 'rgba(217, 119, 6, 0.06)',
-              color: report.category === 'customer' ? '#2563eb' : '#b45309',
+              background: report.category === 'customer' ? 'rgba(255, 100, 30, 0.05)' : 'rgba(122, 117, 111, 0.08)',
+              color: report.category === 'customer' ? 'var(--color-accent)' : 'var(--color-muted)',
               fontSize: '0.75rem',
               padding: '4px 12px',
-              borderRadius: '6px',
-              fontWeight: 500
+              borderRadius: '8px',
+              fontWeight: 300
             }}>
-              {report.category === 'customer' ? '👥 客户洞察' : '📈 品类分析'}
+              {report.category === 'customer' ? '客户洞察' : '品类分析'}
             </span>
             <span style={{
-              background: 'rgba(15, 23, 42, 0.03)',
-              color: '#475569',
-              border: '1px solid rgba(15, 23, 42, 0.08)',
+              background: 'var(--bg-sub)',
+              color: 'var(--color-muted)',
+              border: 'none',
               fontSize: '0.75rem',
               padding: '4px 12px',
-              borderRadius: '6px'
+              borderRadius: '8px',
+              fontWeight: 300
             }}>
               Target: {report.market_region}
             </span>
@@ -264,45 +306,47 @@ export default function ReportDetailPage({ report, related, userId, userRole }: 
 
           {/* 摘要区 */}
           <div style={{
-            background: 'rgba(255, 255, 255, 0.85)',
-            borderLeft: '4px solid #2563eb',
-            borderTop: '1px solid rgba(15, 23, 42, 0.08)',
-            borderRight: '1px solid rgba(15, 23, 42, 0.08)',
-            borderBottom: '1px solid rgba(15, 23, 42, 0.08)',
-            borderRadius: '16px',
-            padding: '20px',
+            background: 'var(--bg-sub)',
+            border: 'none',
+            borderRadius: 'var(--border-radius)',
+            padding: '24px 30px',
             marginBottom: '30px',
-            boxShadow: '0 8px 30px rgba(15, 23, 42, 0.03)',
-            backdropFilter: 'blur(10px)'
+            boxShadow: '0 4px 12px rgba(160, 109, 68, 0.01)'
           }}>
-            <h3 style={{ margin: '0 0 10px 0', fontSize: '1rem', color: '#0f172a', fontWeight: 500 }}>📖 报告摘要</h3>
-            <p style={{ margin: 0, fontSize: '0.9rem', color: '#475569', lineHeight: 1.6, fontWeight: 300 }}>{report.summary}</p>
+            <h3 style={{ margin: '0 0 10px 0', fontSize: '1rem', color: 'var(--color-text)', fontWeight: 400, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                <path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5v-15z" />
+              </svg>
+              报告摘要
+            </h3>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--color-muted)', lineHeight: 1.6, fontWeight: 300 }}>{report.summary}</p>
           </div>
 
           {/* 内容展示区 */}
           <div style={{ position: 'relative', minHeight: '300px', marginBottom: '50px' }}>
             {unlocked ? (
-              // 已解锁：自适应暗绿奢华背景容器，渲染大图脱水后的 HTML
+              // 已解锁：温润图书阅读器风格容器，渲染 HTML
               <div style={{
-                background: 'linear-gradient(135deg, #090e07 0%, #030502 100%)',
-                borderRadius: '24px',
+                background: 'var(--bg-sub)',
+                borderRadius: 'var(--border-radius)',
                 padding: '40px',
-                boxShadow: '0 20px 50px rgba(9, 14, 7, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(143, 168, 116, 0.12)',
+                boxShadow: '0 10px 40px rgba(160, 109, 68, 0.02)',
+                border: 'none',
                 marginTop: '20px',
                 transition: 'all 0.5s ease',
                 overflow: 'hidden'
               }}>
                 <div 
                   className="report-content-body"
-                  style={{ fontSize: '1rem', color: '#f2f5f0', lineHeight: 1.8 }}
+                  style={{ fontSize: '1rem', color: 'var(--color-text)', lineHeight: 1.8 }}
                   dangerouslySetInnerHTML={{ __html: cleanHtmlBody(content || '') }} 
                 />
               </div>
             ) : (
               // 未解锁：呈现高斯模糊与引导解锁弹窗
               <div>
-                <div style={{ filter: 'blur(8px)', userSelect: 'none', pointerEvents: 'none', opacity: 0.15, lineHeight: 1.8, color: '#475569' }}>
+                <div style={{ filter: 'blur(8px)', userSelect: 'none', pointerEvents: 'none', opacity: 0.15, lineHeight: 1.8, color: 'var(--color-muted)' }}>
                   <p>这里是高度敏感的外贸客户交易细节及供应链核心数据分析...</p>
                   <p>包含该买家在过去三年的采购总量、核心供应商分布、以及针对各大关税政策的应对变化调整。</p>
                   <p>在海关数据记录中，该客户具有明显的采购周期性特征，且主要的议价权在以下决策人名下...</p>
@@ -316,31 +360,36 @@ export default function ReportDetailPage({ report, related, userId, userRole }: 
                   transform: 'translateX(-50%)',
                   width: '90%',
                   maxWidth: '450px',
-                  background: 'rgba(255, 255, 255, 0.9)',
-                  border: '1px solid rgba(37, 99, 235, 0.25)',
-                  borderRadius: '24px',
+                  background: 'var(--bg-sub)',
+                  border: 'none',
+                  borderRadius: 'var(--border-radius)',
                   padding: '36px 30px',
                   textAlign: 'center',
-                  boxShadow: '0 12px 40px rgba(15, 23, 42, 0.08)',
+                  boxShadow: '0 20px 45px rgba(160, 109, 68, 0.06)',
                   zIndex: 10,
                   backdropFilter: 'blur(20px)',
-                  color: '#0f172a'
+                  color: 'var(--color-text)'
                 }}>
-                  <h3 style={{ margin: '0 0 10px 0', fontSize: '1.25rem', fontWeight: 300, letterSpacing: '-0.3px' }}>🔒 解锁报告阅读全文</h3>
-                  <p style={{ fontSize: '0.85rem', color: '#475569', marginBottom: '24px', lineHeight: 1.5, fontWeight: 300 }}>
+                  <h3 style={{ margin: '0 0 10px 0', fontSize: '1.25rem', fontWeight: 300, letterSpacing: '-0.3px' }}>解锁报告阅读全文</h3>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)', marginBottom: '24px', lineHeight: 1.5, fontWeight: 300 }}>
                     此报告为付费增值资讯。您可以消耗 1 次免费额度，或通过微信/支付宝扫码付费解锁。
                   </p>
                   <button 
                     onClick={handleUnlock}
-                    className="water-drop-btn"
                     style={{
                       padding: '14px 28px',
                       fontSize: '0.95rem',
-                      fontWeight: 500,
-                      width: '100%'
+                      fontWeight: 300,
+                      width: '100%',
+                      background: 'var(--color-accent)',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: 'var(--border-radius)',
+                      cursor: 'pointer',
+                      boxShadow: 'none'
                     }}
                   >
-                    {userId ? '🚀 立即解锁报告 (消耗1次额度)' : '🔒 请先登录后再解锁'}
+                    {userId ? '立即解锁报告 (消耗 1 次额度)' : '请先登录后再解锁'}
                   </button>
                 </div>
               </div>
@@ -349,49 +398,58 @@ export default function ReportDetailPage({ report, related, userId, userRole }: 
 
           {/* 知识跳转链 (强关联延伸推荐) */}
           {unlocked && related.length > 0 && (
-            <div style={{ borderTop: '1px solid rgba(15, 23, 42, 0.08)', paddingTop: '40px' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 300, color: '#0f172a', marginBottom: '20px', letterSpacing: '-0.3px' }}>
-                🔗 延伸知识链条 (顺藤摸瓜探索更多关联报告)
+            <div style={{ borderTop: 'none', paddingTop: '40px' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 300, color: 'var(--color-text)', marginBottom: '20px', letterSpacing: '-0.3px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                </svg>
+                延伸知识链条 (顺藤摸瓜探索更多关联报告)
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                 {related.map(item => (
                   <Link href={`/reports/${item.id}`} key={item.id} style={{ textDecoration: 'none' }}>
                     <div style={{
-                      border: '1px solid rgba(15, 23, 42, 0.08)',
-                      borderRadius: '16px',
+                      border: 'none',
+                      borderRadius: 'var(--border-radius)',
                       padding: '20px',
-                      background: 'rgba(255, 255, 255, 0.75)',
-                      backdropFilter: 'blur(10px)',
+                      background: 'var(--bg-sub)',
                       cursor: 'pointer',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                      transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                      boxShadow: '0 4px 12px rgba(160, 109, 68, 0.01)'
                     }}
                     onMouseOver={(e) => {
-                      e.currentTarget.style.borderColor = 'rgba(37, 99, 235, 0.3)';
+                      e.currentTarget.style.background = 'var(--bg-main)';
                       e.currentTarget.style.transform = 'translateY(-4px)';
-                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(37, 99, 235, 0.05)';
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.95)';
+                      e.currentTarget.style.boxShadow = '0 12px 30px rgba(160, 109, 68, 0.04)';
                     }}
                     onMouseOut={(e) => {
-                      e.currentTarget.style.borderColor = 'rgba(15, 23, 42, 0.08)';
+                      e.currentTarget.style.background = 'var(--bg-sub)';
                       e.currentTarget.style.transform = 'none';
-                      e.currentTarget.style.boxShadow = 'none';
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.75)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(160, 109, 68, 0.01)';
                     }}
                     >
                       <span style={{
                         fontSize: '0.7rem',
-                        fontWeight: 500,
-                        color: item.category === 'customer' ? '#2563eb' : '#b45309',
-                        background: item.category === 'customer' ? 'rgba(37, 99, 235, 0.06)' : 'rgba(217, 119, 6, 0.06)',
+                        fontWeight: 300,
+                        color: item.category === 'customer' ? 'var(--color-accent)' : 'var(--color-muted)',
+                        background: item.category === 'customer' ? 'rgba(255, 100, 30, 0.05)' : 'rgba(122, 117, 111, 0.08)',
                         padding: '4px 10px',
                         borderRadius: '6px',
                         display: 'inline-block',
                         marginBottom: '10px'
                       }}>
-                        {item.category === 'customer' ? '👥 客户洞察' : '📈 品类分析'}
+                        {item.category === 'customer' ? '客户洞察' : '品类分析'}
                       </span>
-                      <h4 style={{ margin: '0 0 8px 0', fontSize: '0.95rem', color: '#0f172a', fontWeight: 500 }}>{item.title}</h4>
-                      <span style={{ fontSize: '0.75rem', color: '#475569', fontWeight: 300 }}>🌍 目标地区: {item.market_region}</span>
+                      <h4 style={{ margin: '0 0 8px 0', fontSize: '0.95rem', color: 'var(--color-text)', fontWeight: 400 }}>{item.title}</h4>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--color-muted)', fontWeight: 300, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10" />
+                          <line x1="2" y1="12" x2="22" y2="12" />
+                          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                        </svg>
+                        目标地区: {item.market_region}
+                      </span>
                     </div>
                   </Link>
                 ))}
@@ -406,7 +464,6 @@ export default function ReportDetailPage({ report, related, userId, userRole }: 
   );
 }
 
-// 服务端数据预取 (SSR)
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const { id } = context.params!;
   const cookies = parseCookies(context.req.headers.cookie);

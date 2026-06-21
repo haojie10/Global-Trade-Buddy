@@ -76,7 +76,7 @@ describe('Report Duplicate Detection and Overwrite Logic Test', () => {
       category: 'customer'
     });
 
-    await checkDuplicateHandler(req, res, dbClient);
+    await (checkDuplicateHandler as any)(req, res, dbClient);
 
     expect(getStatus()).toBe(200);
     const payload = getJson();
@@ -107,7 +107,7 @@ describe('Report Duplicate Detection and Overwrite Logic Test', () => {
       }
     });
 
-    await uploadHandler(req, res, dbClient);
+    await (uploadHandler as any)(req, res, dbClient);
 
     expect(getStatus()).toBe(200);
     expect(getJson().success).toBe(true);

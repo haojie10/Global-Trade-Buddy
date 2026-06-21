@@ -192,15 +192,15 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
   };
 
   const inputStyle = {
-    background: 'rgba(255, 255, 255, 0.65)',
-    border: '1px solid rgba(15, 23, 42, 0.08)',
-    borderRadius: '12px',
+    background: 'var(--bg-main)',
+    border: 'none',
+    borderRadius: '14px',
     padding: '12px 16px',
     fontSize: '0.85rem',
-    color: '#0f172a',
+    color: 'var(--color-text)',
     outline: 'none',
     width: '100%',
-    transition: 'border-color 0.3s ease',
+    transition: 'box-shadow 0.3s ease',
     boxSizing: 'border-box' as const
   };
 
@@ -223,21 +223,22 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
 
     return (
       <div style={{
-        background: 'rgba(255, 255, 255, 0.4)',
-        border: '1px solid rgba(15, 23, 42, 0.08)',
-        borderRadius: '16px',
+        background: 'var(--bg-sub)',
+        border: 'none',
+        borderRadius: 'var(--border-radius)',
         padding: '14px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '8px'
+        gap: '8px',
+        boxShadow: '0 4px 12px rgba(160, 109, 68, 0.01)'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-          <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#0f172a' }}>{title}</span>
+          <span style={{ fontSize: '0.85rem', fontWeight: 400, color: 'var(--color-text)' }}>{title}</span>
           <button
             type="button"
             onClick={handleAdd}
             style={{
-              background: '#2563eb',
+              background: 'var(--color-accent)',
               color: '#ffffff',
               border: 'none',
               borderRadius: '50%',
@@ -248,8 +249,8 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              fontWeight: 700,
-              boxShadow: '0 2px 6px rgba(37, 99, 235, 0.2)'
+              fontWeight: 400,
+              boxShadow: 'none'
             }}
           >
             +
@@ -300,24 +301,24 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
       left: 0,
       right: 0,
       bottom: 0,
-      background: 'rgba(15, 23, 42, 0.25)',
-      backdropFilter: 'blur(16px)',
-      WebkitBackdropFilter: 'blur(16px)',
+      background: 'rgba(60, 57, 53, 0.15)',
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
       zIndex: 1000
     }}>
       <div style={{
-        background: 'rgba(255, 255, 255, 0.45)',
-        border: '1px solid rgba(255, 255, 255, 0.75)',
-        borderRadius: '24px',
+        background: 'var(--bg-main)',
+        border: 'none',
+        borderRadius: 'var(--border-radius)',
         padding: '30px',
         width: '95%',
         maxWidth: '850px',
         maxHeight: '95vh',
         overflowY: 'auto',
-        boxShadow: '0 20px 40px rgba(15, 23, 42, 0.08), inset 0 8px 16px rgba(255, 255, 255, 0.55)',
+        boxShadow: '0 20px 50px rgba(160, 109, 68, 0.05)',
         position: 'relative'
       }}>
         <button 
@@ -330,15 +331,15 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
             border: 'none',
             fontSize: '1.25rem',
             cursor: 'pointer',
-            color: '#64748b'
+            color: 'var(--color-muted)'
           }}
         >
           ✕
         </button>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 300, marginBottom: '10px', textAlign: 'center', color: '#0f172a' }}>
-          📤 发布外贸数据报告 (Admin)
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 300, marginBottom: '10px', textAlign: 'center', color: 'var(--color-text)' }}>
+          发布外贸数据报告 (Admin)
         </h2>
-        <p style={{ fontSize: '0.8rem', color: '#475569', textAlign: 'center', marginBottom: '24px' }}>
+        <p style={{ fontSize: '0.8rem', color: 'var(--color-muted)', textAlign: 'center', marginBottom: '24px', fontWeight: 300 }}>
           拖拽上传报告的原始 HTML 文件，系统将自动进行脱水处理（自动转码、自动剥离 Base64 图并上传）。
         </p>
         <form onSubmit={handleUploadReport} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -361,16 +362,16 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
               width: '100%',
               height: '240px',
               background: selectedFile 
-                ? 'linear-gradient(135deg, rgba(37, 99, 235, 0.03) 0%, rgba(37, 99, 235, 0.08) 100%)' 
+                ? 'rgba(255, 100, 30, 0.03)' 
                 : isDragActive 
-                  ? 'linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(37, 99, 235, 0.12) 100%)'
-                  : 'rgba(255, 255, 255, 0.65)',
+                  ? 'rgba(255, 100, 30, 0.05)'
+                  : 'var(--bg-sub)',
               border: selectedFile 
-                ? '2px solid #2563eb' 
+                ? '1.5px dashed var(--color-accent)' 
                 : isDragActive 
-                  ? '2px dashed #2563eb' 
-                  : '2px dashed rgba(15, 23, 42, 0.15)',
-              borderRadius: '20px',
+                  ? '1.5px dashed var(--color-accent)' 
+                  : '1.5px dashed rgba(122, 117, 111, 0.25)',
+              borderRadius: 'var(--border-radius)',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -379,7 +380,7 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
               cursor: 'pointer',
               transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
               padding: '20px',
-              boxShadow: isDragActive ? '0 12px 30px rgba(37, 99, 235, 0.08)' : 'none',
+              boxShadow: '0 4px 12px rgba(160, 109, 68, 0.01)'
             }}
           >
             <input 
@@ -395,12 +396,18 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
             />
             {selectedFile ? (
               <>
-                <div style={{ fontSize: '3rem' }}>📄</div>
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                  <polyline points="10 9 9 9 8 9" />
+                </svg>
                 <div style={{ textAlign: 'center' }}>
-                  <p style={{ margin: '0 0 4px 0', fontWeight: 600, fontSize: '0.95rem', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '350px' }}>
+                  <p style={{ margin: '0 0 4px 0', fontWeight: 400, fontSize: '0.95rem', color: 'var(--color-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '350px' }}>
                     {selectedFile.name}
                   </p>
-                  <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--color-muted)' }}>
                     文件大小: {(selectedFile.size / 1024).toFixed(1)} KB
                   </p>
                 </div>
@@ -414,27 +421,31 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
                   style={{
                     marginTop: '8px',
                     background: 'rgba(239, 68, 68, 0.08)',
-                    border: '1px solid rgba(239, 68, 68, 0.2)',
+                    border: 'none',
                     color: '#ef4444',
                     borderRadius: '12px',
                     padding: '6px 16px',
                     fontSize: '0.8rem',
                     cursor: 'pointer',
-                    fontWeight: 500,
+                    fontWeight: 300,
                   }}
                 >
-                  ✕ 清除重选
+                  清除重选
                 </button>
               </>
             ) : (
               <>
-                <div style={{ fontSize: '3rem' }}>☁️</div>
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
                 <div style={{ textAlign: 'center' }}>
-                  <p style={{ margin: '0 0 4px 0', fontWeight: 500, color: '#0f172a', fontSize: '0.95rem' }}>
+                  <p style={{ margin: '0 0 4px 0', fontWeight: 400, color: 'var(--color-text)', fontSize: '0.95rem' }}>
                     将 HTML 报告文件拖到这里
                   </p>
-                  <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>
-                    支持 Drag & Drop，或点击本卡片浏览文件
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--color-muted)' }}>
+                    支持拖放，或点击卡片浏览文件
                   </p>
                 </div>
               </>
@@ -448,39 +459,41 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
             marginTop: '4px',
             marginBottom: '8px'
           }}>
-            {renderTagListInput('🏢 公司名称 (Company)', manualCompanies, setManualCompanies, '例如: 特斯拉, 丰田汽车')}
-            {renderTagListInput('👥 竞争对手 (Competitor)', manualCompetitors, setManualCompetitors, '例如: 宜家, 百安居')}
-            {renderTagListInput('📦 产品名称 (Product)', manualProducts, setManualProducts, '例如: 锂电池, 刹车片')}
-            {renderTagListInput('🌍 市场地区 (Region)', manualRegions, setManualRegions, '例如: 北美, 欧盟')}
-            {renderTagListInput('🤝 渠道类型 (Channel)', manualChannels, setManualChannels, '例如: 一级供应链')}
+            {renderTagListInput('公司名称 (Company)', manualCompanies, setManualCompanies, '例如: 特斯拉, 丰田汽车')}
+            {renderTagListInput('竞争对手 (Competitor)', manualCompetitors, setManualCompetitors, '例如: 宜家, 百安居')}
+            {renderTagListInput('产品名称 (Product)', manualProducts, setManualProducts, '例如: 锂电池, 刹车片')}
+            {renderTagListInput('市场地区 (Region)', manualRegions, setManualRegions, '例如: 北美, 欧盟')}
+            {renderTagListInput('渠道类型 (Channel)', manualChannels, setManualChannels, '例如: 一级供应链')}
           </div>
           
           <div style={{ display: 'flex', gap: '20px', alignItems: 'center', marginTop: '12px' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#0f172a' }}>📊 报告类型：</span>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', cursor: 'pointer', color: '#475569' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--color-text)' }}>报告类型：</span>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', cursor: 'pointer', color: 'var(--color-muted)' }}>
               <input 
                 type="radio" 
                 name="category" 
                 value="customer" 
                 checked={category === 'customer'} 
                 onChange={() => setCategory('customer')} 
+                style={{ accentColor: 'var(--color-accent)' }}
               />
-              🏢 公司调查报告 (Company)
+              公司调查报告 (Company)
             </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', cursor: 'pointer', color: '#475569' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', cursor: 'pointer', color: 'var(--color-muted)' }}>
               <input 
                 type="radio" 
                 name="category" 
                 value="product" 
                 checked={category === 'product'} 
                 onChange={() => setCategory('product')} 
+                style={{ accentColor: 'var(--color-accent)' }}
               />
-              📈 品类调查报告 (Product)
+              品类调查报告 (Product)
             </label>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '12px' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#0f172a' }}>🔗 公司官网 (Website)：</span>
+            <span style={{ fontSize: '0.85rem', color: 'var(--color-text)' }}>公司官网 (Website)：</span>
             <input
               type="text"
               placeholder="例如: https://brauberg.com (自动从报告中提取，可手动修改)"
@@ -491,7 +504,7 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '12px', marginBottom: '12px' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#0f172a' }}>📄 报告简介 (Summary)：</span>
+            <span style={{ fontSize: '0.85rem', color: 'var(--color-text)' }}>报告简介 (Summary)：</span>
             <textarea
               placeholder="请输入报告的简要介绍（手动填写的简介将显示在报告大厅卡片上，留空则自动从报告中提取）"
               value={summary}
@@ -508,11 +521,22 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
 
           <button 
             type="submit" 
-            className="water-drop-btn"
             disabled={uploadLoading || !rawHtmlContent}
-            style={{ padding: '12px', fontSize: '0.95rem', fontWeight: 500, width: '100%' }}
+            style={{ 
+              padding: '14px', 
+              fontSize: '0.95rem', 
+              width: '100%',
+              background: 'var(--color-accent)',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: 'var(--border-radius)',
+              cursor: 'pointer',
+              fontWeight: 300,
+              transition: 'opacity 0.2s',
+              opacity: (uploadLoading || !rawHtmlContent) ? 0.6 : 1
+            }}
           >
-            {uploadLoading ? '⏳ 正在处理并上传报告...' : '🚀 立即发布报告'}
+            {uploadLoading ? '正在处理并上传报告...' : '立即发布报告'}
           </button>
         </form>
       </div>
@@ -525,29 +549,29 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(15, 23, 42, 0.4)',
-          backdropFilter: 'blur(8px)',
+          background: 'rgba(60, 57, 53, 0.2)',
+          backdropFilter: 'blur(12px)',
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
           zIndex: 2000
         }}>
           <div style={{
-            background: '#ffffff',
-            borderRadius: '20px',
+            background: 'var(--bg-main)',
+            borderRadius: 'var(--border-radius)',
             padding: '28px',
             width: '90%',
             maxWidth: '500px',
-            boxShadow: '0 20px 40px rgba(15, 23, 42, 0.15)',
-            border: '1px solid rgba(15, 23, 42, 0.08)',
+            boxShadow: '0 20px 50px rgba(160, 109, 68, 0.06)',
+            border: 'none',
             display: 'flex',
             flexDirection: 'column',
             gap: '16px'
           }}>
-            <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a', fontWeight: 600 }}>
-              ⚠️ 检测到关联企业已存在报告
+            <h3 style={{ margin: 0, fontSize: '1.15rem', color: 'var(--color-text)', fontWeight: 400 }}>
+              检测到关联企业已存在报告
             </h3>
-            <p style={{ margin: 0, fontSize: '0.85rem', color: '#475569', lineHeight: 1.6 }}>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--color-muted)', lineHeight: 1.6, fontWeight: 300 }}>
               系统分析发现相似企业 <strong>{duplicateInfo.matchedCanonicalName}</strong> 且已发布报告<strong>《{duplicateInfo.reportTitle}》</strong>（相似度: {(duplicateInfo.score * 100).toFixed(0)}%）。
               为了维持图谱“一企一报”的规整结构，请做出您的选择：
             </p>
@@ -555,20 +579,19 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
               <button
                 type="button"
                 onClick={() => handleUploadReport(null as any, duplicateInfo.reportId)}
-                className="water-drop-btn"
                 style={{
                   padding: '12px 14px',
                   fontSize: '0.85rem',
-                  fontWeight: 600,
-                  background: '#2563eb',
+                  fontWeight: 300,
+                  background: 'var(--color-accent)',
                   color: '#ffffff',
                   border: 'none',
-                  borderRadius: '10px',
+                  borderRadius: 'var(--border-radius)',
                   cursor: 'pointer',
                   textAlign: 'center'
                 }}
               >
-                🔄 选项 A：覆盖更新已有报告 (并绑定别名)
+                选项 A：覆盖更新已有报告 (并绑定别名)
               </button>
               <button
                 type="button"
@@ -576,16 +599,16 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
                 style={{
                   padding: '12px 14px',
                   fontSize: '0.85rem',
-                  fontWeight: 500,
-                  background: 'rgba(15, 23, 42, 0.04)',
-                  color: '#0f172a',
-                  border: '1px solid rgba(15, 23, 42, 0.08)',
-                  borderRadius: '10px',
+                  fontWeight: 300,
+                  background: 'var(--bg-sub)',
+                  color: 'var(--color-text)',
+                  border: 'none',
+                  borderRadius: 'var(--border-radius)',
                   cursor: 'pointer',
                   textAlign: 'center'
                 }}
               >
-                ➕ 选项 B：仍保存为全新独立报告
+                选项 B：仍保存为全新独立报告
               </button>
               <button
                 type="button"
@@ -596,16 +619,16 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
                 style={{
                   padding: '12px 14px',
                   fontSize: '0.85rem',
-                  fontWeight: 500,
-                  background: '#ffffff',
-                  color: '#64748b',
-                  border: '1px solid rgba(15, 23, 42, 0.08)',
-                  borderRadius: '10px',
+                  fontWeight: 300,
+                  background: 'transparent',
+                  color: 'var(--color-muted)',
+                  border: 'none',
+                  borderRadius: 'var(--border-radius)',
                   cursor: 'pointer',
                   textAlign: 'center'
                 }}
               >
-                ❌ 选项 C：取消上传并关闭
+                选项 C：取消上传并关闭
               </button>
             </div>
           </div>
