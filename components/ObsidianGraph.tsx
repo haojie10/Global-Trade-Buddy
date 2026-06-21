@@ -118,11 +118,20 @@ export default function ObsidianGraph({
     });
   }, [data, visibleNodeIds]);
 
+  const [localActiveRelations, setLocalActiveRelations] = React.useState<string[]>(
+    activeRelations || ['competitor', 'supplier', 'operation', 'mention']
+  );
+
+  React.useEffect(() => {
+    if (activeRelations) {
+      setLocalActiveRelations(activeRelations);
+    }
+  }, [activeRelations]);
+
   // 根据当前勾选的活跃关系对 Links 进行过滤
   const filteredLinksByRelations = React.useMemo(() => {
-    if (!activeRelations) return visibleLinks;
-    return visibleLinks.filter((l: any) => activeRelations.includes(l.relation_type || ''));
-  }, [visibleLinks, activeRelations]);
+    return visibleLinks.filter((l: any) => localActiveRelations.includes(l.relation_type || ''));
+  }, [visibleLinks, localActiveRelations]);
 
   // 计算二阶高亮节点集和连线集
   const { highlightNodes: selectHighlightNodes, highlightLinks: selectHighlightLinks } = React.useMemo(() => {
@@ -448,7 +457,7 @@ export default function ObsidianGraph({
       </div>
       <div ref={containerRef} style={{ width: '100%', height: 'calc(100% - 49px)', ...getGraphContainerBackgroundStyle() }} />
       
-      {/* 底部左侧悬浮图例 (Legend) */}
+      {/* 底部左侧悬浮图例 (Legend - 交互多选版) */}
       <div style={{
         position: 'absolute',
         bottom: '20px',
@@ -461,36 +470,56 @@ export default function ObsidianGraph({
         display: 'flex',
         flexDirection: 'column',
         gap: '8px',
-        pointerEvents: 'none',
         boxShadow: '0 4px 12px rgba(15, 23, 42, 0.05)',
         zIndex: 10
       }}>
-        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569', marginBottom: '2px' }}>📊 拓扑线缆关系图例</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.7rem', color: '#475569' }}>
-            <span style={{ display: 'inline-block', width: '24px', height: '3px', background: '#2563eb', borderRadius: '1.5px' }} />
-            <span>供应与经销关系 (商务蓝 粗线 + 双粒子流)</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.7rem', color: '#475569' }}>
-            <span style={{ display: 'inline-block', width: '24px', height: '0px', borderTop: '2px dotted #ef4444' }} />
-            <span>竞争对手关系 (警示红 细点虚线)</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.7rem', color: '#475569' }}>
-            <span style={{ display: 'inline-block', width: '24px', height: '2px', background: '#10b981', borderRadius: '1px' }} />
-            <span>相同产品关联 (极光绿 稍粗线 + 单粒子流)</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.7rem', color: '#475569' }}>
-            <span style={{ display: 'inline-block', width: '24px', height: '0px', borderTop: '2px dashed #f59e0b' }} />
-            <span>相同渠道关联 (琥珀橙 均匀虚线)</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.7rem', color: '#475569' }}>
-            <span style={{ display: 'inline-block', width: '24px', height: '0px', borderTop: '2px dashed #8b5cf6' }} />
-            <span>共享竞争对手 (优雅紫 短划虚线)</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.7rem', color: '#475569' }}>
-            <span style={{ display: 'inline-block', width: '24px', height: '1.5px', background: '#94a3b8', borderRadius: '0.75px' }} />
-            <span>其他默认关联 (灰色细实线)</span>
-          </div>
+        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569', marginBottom: '2px' }}>图谱关系</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {[
+            { key: 'competitor', label: '竞争关系', desc: '最粗红线', color: customColorsRef.current?.competitor || '#d32f2f', isDash: true },
+            { key: 'supplier', label: '供销关系', desc: '单向流转线', color: customColorsRef.current?.supplier || '#ff641e', isDash: false },
+            { key: 'operation', label: '经营关系', desc: '固定实线', color: customColorsRef.current?.operation || '#1565c0', isDash: false },
+            { key: 'mention', label: '涉及关系', desc: '最细淡灰色', color: customColorsRef.current?.mention || '#a09b95', isDash: true }
+          ].map(relation => {
+            const isChecked = localActiveRelations.includes(relation.key);
+            return (
+              <label 
+                key={relation.key} 
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px', 
+                  fontSize: '0.7rem', 
+                  color: '#475569',
+                  cursor: 'pointer',
+                  userSelect: 'none'
+                }}
+              >
+                <input 
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={() => {
+                    setLocalActiveRelations(prev => {
+                      const next = prev.includes(relation.key)
+                        ? prev.filter(r => r !== relation.key)
+                        : [...prev, relation.key];
+                      return next;
+                    });
+                  }}
+                  style={{ accentColor: 'var(--color-accent)', cursor: 'pointer' }}
+                />
+                <span style={{ 
+                  display: 'inline-block', 
+                  width: '24px', 
+                  height: relation.isDash ? '0px' : '3px', 
+                  background: relation.isDash ? 'none' : relation.color,
+                  borderTop: relation.isDash ? `2px dotted ${relation.color}` : 'none',
+                  borderRadius: '1.5px' 
+                }} />
+                <span>{relation.label} ({relation.desc})</span>
+              </label>
+            );
+          })}
         </div>
       </div>
     </div>
