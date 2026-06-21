@@ -66,14 +66,14 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
   };
 
   const inputStyle = {
-    background: 'rgba(255, 255, 255, 0.65)',
-    border: '1px solid rgba(15, 23, 42, 0.08)',
+    background: 'var(--bg-main)',
+    border: 'none',
     borderRadius: '12px',
     padding: '12px 16px',
     fontSize: '0.85rem',
-    color: '#0f172a',
+    color: 'var(--color-text)',
     outline: 'none',
-    transition: 'border-color 0.3s ease',
+    transition: 'box-shadow 0.3s ease',
   };
 
   return (
@@ -85,36 +85,34 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
         marginBottom: '40px',
         alignItems: 'center',
         flexWrap: 'wrap',
-        background: 'rgba(255, 255, 255, 0.45)',
-        backdropFilter: 'blur(16px)',
+        background: 'var(--bg-sub)',
         padding: '16px 24px',
-        borderRadius: '20px',
-        border: '1px solid rgba(15, 23, 42, 0.08)',
-        boxShadow: '0 4px 20px rgba(15, 23, 42, 0.02)'
+        borderRadius: 'var(--border-radius)',
+        boxShadow: '0 10px 40px rgba(160, 109, 68, 0.015)'
       }}>
         <input
           type="text"
-          placeholder="🔍 搜索报告标题或摘要内容..."
+          placeholder="搜索报告标题或摘要内容..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           style={{ ...inputStyle, flex: 1, minWidth: '240px' }}
         />
         
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 500 }}>类别</span>
+          <span style={{ fontSize: '0.85rem', color: 'var(--color-muted)', fontWeight: 500 }}>类别</span>
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
             style={{ ...inputStyle, padding: '8px 12px', cursor: 'pointer' }}
           >
             <option value="All">全部类别</option>
-            <option value="customer">👥 客户洞察</option>
-            <option value="product">📈 品类分析</option>
+            <option value="customer">客户洞察</option>
+            <option value="product">品类分析</option>
           </select>
         </div>
 
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 500 }}>市场</span>
+          <span style={{ fontSize: '0.85rem', color: 'var(--color-muted)', fontWeight: 500 }}>市场</span>
           <select
             value={selectedRegion}
             onChange={(e) => setSelectedRegion(e.target.value)}
@@ -122,7 +120,7 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
           >
             {regions.map(r => (
               <option key={r} value={r}>
-                {r === 'All' ? '全部地区' : `🎯 ${r}`}
+                {r === 'All' ? '全部地区' : r}
               </option>
             ))}
           </select>
@@ -139,52 +137,54 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
               style={{ textDecoration: 'none' }}
             >
               <div style={{
-                border: '1px solid rgba(15, 23, 42, 0.08)',
-                borderRadius: '24px',
+                border: 'none',
+                borderRadius: 'var(--border-radius)',
                 padding: '28px',
-                background: 'rgba(255, 255, 255, 0.75)',
-                backdropFilter: 'blur(20px)',
+                background: 'var(--bg-sub)',
                 cursor: 'pointer',
                 transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
                 height: '260px',
-                boxShadow: '0 8px 30px rgba(15, 23, 42, 0.03)'
+                boxShadow: '0 6px 20px rgba(160, 109, 68, 0.015)'
               }}
               onMouseOver={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(37, 99, 235, 0.4)';
+                e.currentTarget.style.background = 'var(--bg-main)';
                 e.currentTarget.style.transform = 'translateY(-6px)';
-                e.currentTarget.style.boxShadow = '0 20px 40px rgba(37, 99, 235, 0.08)';
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.95)';
+                e.currentTarget.style.boxShadow = '0 20px 40px rgba(160, 109, 68, 0.06)';
               }}
               onMouseOut={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(15, 23, 42, 0.08)';
+                e.currentTarget.style.background = 'var(--bg-sub)';
                 e.currentTarget.style.transform = 'none';
-                e.currentTarget.style.boxShadow = '0 8px 30px rgba(15, 23, 42, 0.03)';
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.75)';
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(160, 109, 68, 0.015)';
               }}
               >
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                     <span style={{
                       fontSize: '0.75rem',
-                      fontWeight: 500,
-                      color: report.category === 'customer' ? '#2563eb' : '#b45309',
-                      background: report.category === 'customer' ? 'rgba(37, 99, 235, 0.06)' : 'rgba(217, 119, 6, 0.06)',
+                      fontWeight: 'var(--btn-font-weight)',
+                      letterSpacing: 'var(--btn-letter-spacing)',
+                      color: report.category === 'customer' ? 'var(--color-accent)' : 'var(--color-muted)',
+                      background: report.category === 'customer' ? 'rgba(255, 100, 30, 0.05)' : 'rgba(122, 117, 111, 0.08)',
                       padding: '5px 12px',
                       borderRadius: '8px'
                     }}>
-                      {report.category === 'customer' ? '👥 客户洞察' : '📈 品类分析'}
+                      {report.category === 'customer' ? '客户洞察' : '品类分析'}
                     </span>
-                    <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 500 }}>
-                      🎯 {report.market_region}
+                    <span style={{ fontSize: '0.8rem', color: 'var(--color-muted)', fontWeight: 300, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                        <circle cx="12" cy="10" r="3" />
+                      </svg>
+                      {report.market_region}
                     </span>
                   </div>
                   <h4 style={{
                     margin: '0 0 10px 0',
                     fontSize: '1.05rem',
-                    color: '#0f172a',
+                    color: 'var(--color-text)',
                     fontWeight: 500,
                     lineHeight: 1.4,
                     display: '-webkit-box',
@@ -197,7 +197,7 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
                   <p style={{
                     margin: 0,
                     fontSize: '0.85rem',
-                    color: '#475569',
+                    color: 'var(--color-muted)',
                     lineHeight: 1.5,
                     display: '-webkit-box',
                     WebkitLineClamp: 2,
@@ -213,41 +213,54 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   marginTop: '16px',
-                  borderTop: '1px solid rgba(15, 23, 42, 0.06)',
+                  borderTop: '1px solid rgba(160, 109, 68, 0.05)',
                   paddingTop: '16px'
                 }}>
                   {report.isUnlocked ? (
                     <span style={{
                       fontSize: '0.75rem',
-                      fontWeight: 500,
+                      fontWeight: 300,
                       padding: '4px 10px',
                       borderRadius: '8px',
                       background: 'rgba(16, 185, 129, 0.08)',
-                      color: '#059669'
+                      color: '#059669',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
                     }}>
-                      ✅ 已解锁
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      已解锁
                     </span>
                   ) : (
                     <button
                       onClick={(e) => handleUnlock(e, report.id)}
                       style={{
-                        background: 'rgba(217, 119, 6, 0.08)',
+                        background: 'rgba(255, 100, 30, 0.08)',
                         border: 'none',
-                        color: '#b45309',
+                        color: 'var(--color-accent)',
                         fontSize: '0.75rem',
-                        fontWeight: 500,
+                        fontWeight: 300,
                         padding: '4px 10px',
                         borderRadius: '8px',
                         cursor: 'pointer',
-                        transition: 'background 0.2s'
+                        transition: 'background 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
                       }}
-                      onMouseOver={(e) => e.currentTarget.style.background = 'rgba(217, 119, 6, 0.15)'}
-                      onMouseOut={(e) => e.currentTarget.style.background = 'rgba(217, 119, 6, 0.08)'}
+                      onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 100, 30, 0.15)'}
+                      onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255, 100, 30, 0.08)'}
                     >
-                      🔒 未解锁 (点击解锁)
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                      </svg>
+                      未解锁
                     </button>
                   )}
-                  <span style={{ fontSize: '0.8rem', color: '#2563eb', fontWeight: 500 }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--color-accent)', fontWeight: 'var(--btn-font-weight)', letterSpacing: 'var(--btn-letter-spacing)' }}>
                     立即预览与解锁 →
                   </span>
                 </div>
@@ -255,8 +268,8 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
             </Link>
           ))
         ) : (
-          <div style={{ gridColumn: '1 / -1', padding: '80px 40px', textAlign: 'center', color: '#64748b', fontWeight: 300 }}>
-            📭 没有符合筛选条件的报告。
+          <div style={{ gridColumn: '1 / -1', padding: '80px 40px', textAlign: 'center', color: 'var(--color-muted)', fontWeight: 300 }}>
+            没有符合筛选条件的报告。
           </div>
         )}
       </div>
