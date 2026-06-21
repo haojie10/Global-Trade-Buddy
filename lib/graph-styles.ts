@@ -53,7 +53,10 @@ export function getLinkWidth(
   } else {
     switch (relationType) {
       case 'supplier':
-        baseWidth = 2.5; // 供应/经销关系加粗
+        baseWidth = 3.5; // 供应/经销关系加粗
+        break;
+      case 'competitor':
+        baseWidth = 2.2; // 竞争关系
         break;
       case 'shared_product':
         baseWidth = 1.5; // 相同产品稍粗
@@ -74,12 +77,13 @@ export function getLinkWidth(
  */
 export function getLinkLineDash(relationType: string): number[] | null {
   switch (relationType) {
-    case 'competitor':
-      return [1, 4]; // 竞争对手：细密点线
+    case 'supplier':
+      return [2, 2]; // 供销：粗虚线
     case 'shared_channel':
       return [4, 4]; // 渠道：稀疏虚线
     case 'shared_competitor':
       return [2, 2]; // 共享竞争对手：短划线
+    case 'competitor':
     default:
       return null; // 其他为实线
   }
@@ -90,8 +94,8 @@ export function getLinkLineDash(relationType: string): number[] | null {
  */
 export function getLinkParticles(relationType: string): number {
   switch (relationType) {
-    case 'supplier':
-      return 2; // 供应商流动粒子
+    case 'competitor':
+      return 2; // 竞争对手流动粒子
     case 'shared_product':
       return 1; // 共享产品流动粒子
     default:

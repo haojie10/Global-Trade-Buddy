@@ -58,8 +58,12 @@ describe('Graph Connection Visual Styles mapping logic', () => {
   });
 
   describe('getLinkWidth', () => {
-    it('should return 2.5 width for supplier', () => {
-      expect(getLinkWidth('supplier')).toBe(2.5);
+    it('should return 3.5 width for supplier', () => {
+      expect(getLinkWidth('supplier')).toBe(3.5);
+    });
+
+    it('should return 2.2 width for competitor', () => {
+      expect(getLinkWidth('competitor')).toBe(2.2);
     });
 
     it('should return 1.5 width for shared_product', () => {
@@ -68,7 +72,6 @@ describe('Graph Connection Visual Styles mapping logic', () => {
 
     it('should return 1.0 width for standard relations', () => {
       expect(getLinkWidth('shared_channel')).toBe(1.0);
-      expect(getLinkWidth('competitor')).toBe(1.0);
       expect(getLinkWidth('shared_company')).toBe(1.0);
     });
 
@@ -77,19 +80,19 @@ describe('Graph Connection Visual Styles mapping logic', () => {
     });
 
     it('should scale the width by lineWidthScale', () => {
-      expect(getLinkWidth('supplier', false, false, 2.0)).toBe(5.0);
+      expect(getLinkWidth('supplier', false, false, 2.0)).toBe(7.0);
       expect(getLinkWidth('shared_product', false, false, 0.5)).toBe(0.75);
       expect(getLinkWidth('shared_channel', false, false, 1.5)).toBe(1.5);
       expect(getLinkWidth('supplier', true, false, 2.0)).toBe(1.0);
       // Safety boundaries
-      expect(getLinkWidth('supplier', false, false, NaN)).toBe(2.5);
+      expect(getLinkWidth('supplier', false, false, NaN)).toBe(3.5);
       expect(getLinkWidth('supplier', false, false, -1.5)).toBe(0);
     });
   });
 
   describe('getLinkLineDash', () => {
-    it('should return [1, 4] for competitor', () => {
-      expect(getLinkLineDash('competitor')).toEqual([1, 4]);
+    it('should return [2, 2] for supplier', () => {
+      expect(getLinkLineDash('supplier')).toEqual([2, 2]);
     });
 
     it('should return [4, 4] for shared_channel', () => {
@@ -100,16 +103,16 @@ describe('Graph Connection Visual Styles mapping logic', () => {
       expect(getLinkLineDash('shared_competitor')).toEqual([2, 2]);
     });
 
-    it('should return null for supplier, shared_product, and other relations', () => {
-      expect(getLinkLineDash('supplier')).toBeNull();
+    it('should return null for competitor, shared_product, and other relations', () => {
+      expect(getLinkLineDash('competitor')).toBeNull();
       expect(getLinkLineDash('shared_product')).toBeNull();
       expect(getLinkLineDash('shared_company')).toBeNull();
     });
   });
 
   describe('getLinkParticles', () => {
-    it('should return 2 particles for supplier', () => {
-      expect(getLinkParticles('supplier')).toBe(2);
+    it('should return 2 particles for competitor', () => {
+      expect(getLinkParticles('competitor')).toBe(2);
     });
 
     it('should return 1 particle for shared_product', () => {
@@ -117,7 +120,7 @@ describe('Graph Connection Visual Styles mapping logic', () => {
     });
 
     it('should return 0 particles for other relations', () => {
-      expect(getLinkParticles('competitor')).toBe(0);
+      expect(getLinkParticles('supplier')).toBe(0);
       expect(getLinkParticles('shared_channel')).toBe(0);
       expect(getLinkParticles('shared_company')).toBe(0);
     });

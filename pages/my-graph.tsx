@@ -261,13 +261,13 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
     !graphData.links || 
     graphData.links.length === 0
   );
-  const [nodeSizeScale, setNodeSizeScale] = useState(1.0);
-  const [lineWidthScale, setLineWidthScale] = useState(1.0);
-  const [speedScale, setSpeedScale] = useState(1.0);
+  const [nodeSizeScale, setNodeSizeScale] = useState(0.5);
+  const [lineWidthScale, setLineWidthScale] = useState(1.9);
+  const [speedScale, setSpeedScale] = useState(1.8);
   const [customColors, setCustomColors] = useState<Record<string, string>>({
     competitor: '#d32f2f',
     supplier: '#ff641e',
-    operation: '#1565c0',
+    operation: '#c8c3fb',
     mention: '#a09b95'
   });
   const [activeRelations, setActiveRelations] = useState<string[]>(['competitor', 'supplier', 'operation', 'mention']);

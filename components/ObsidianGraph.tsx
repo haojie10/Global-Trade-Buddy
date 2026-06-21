@@ -317,7 +317,7 @@ export default function ObsidianGraph({
         })
         .linkDirectionalParticles((link: any) => {
           const currentSpeedScale = speedScaleRef.current;
-          return (currentSpeedScale && currentSpeedScale > 0 && link.relation_type === 'supplier') ? 2 : 0;
+          return (currentSpeedScale && currentSpeedScale > 0) ? getLinkParticles(link.relation_type) : 0;
         })
         .linkDirectionalParticleWidth(1.5)
         .linkDirectionalParticleSpeed(() => {
@@ -457,12 +457,12 @@ export default function ObsidianGraph({
       </div>
       <div ref={containerRef} style={{ width: '100%', height: 'calc(100% - 49px)', ...getGraphContainerBackgroundStyle() }} />
       
-      {/* 底部左侧悬浮图例 (Legend - 交互多选版) */}
+      {/* 底部左侧悬浮图例 (Legend - 纯静态 Scheme B 版) */}
       <div style={{
         position: 'absolute',
         bottom: '20px',
         left: '20px',
-        background: 'rgba(255, 255, 255, 0.9)',
+        background: 'rgba(255, 255, 255, 0.95)',
         backdropFilter: 'blur(12px)',
         border: '1px solid rgba(15, 23, 42, 0.08)',
         borderRadius: '16px',
@@ -471,19 +471,19 @@ export default function ObsidianGraph({
         flexDirection: 'column',
         gap: '8px',
         boxShadow: '0 4px 12px rgba(15, 23, 42, 0.05)',
-        zIndex: 10
+        zIndex: 10,
+        pointerEvents: 'none'
       }}>
         <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569', marginBottom: '2px' }}>图谱关系</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {[
-            { key: 'competitor', label: '竞争关系', desc: '最粗红线', color: customColorsRef.current?.competitor || '#d32f2f', isDash: true },
-            { key: 'supplier', label: '供销关系', desc: '单向流转线', color: customColorsRef.current?.supplier || '#ff641e', isDash: false },
-            { key: 'operation', label: '经营关系', desc: '固定实线', color: customColorsRef.current?.operation || '#1565c0', isDash: false },
-            { key: 'mention', label: '涉及关系', desc: '最细淡灰色', color: customColorsRef.current?.mention || '#a09b95', isDash: true }
+            { key: 'competitor', label: '竞争关系', color: customColorsRef.current?.competitor || '#d32f2f', isDash: false },
+            { key: 'supplier', label: '供销关系', color: customColorsRef.current?.supplier || '#ff641e', isDash: true },
+            { key: 'operation', label: '经营关系', color: customColorsRef.current?.operation || '#1565c0', isDash: false },
+            { key: 'mention', label: '涉及关系', color: customColorsRef.current?.mention || '#a09b95', isDash: false }
           ].map(relation => {
-            const isChecked = localActiveRelations.includes(relation.key);
             return (
-              <label 
+              <div 
                 key={relation.key} 
                 style={{ 
                   display: 'flex', 
@@ -491,23 +491,9 @@ export default function ObsidianGraph({
                   gap: '8px', 
                   fontSize: '0.7rem', 
                   color: '#475569',
-                  cursor: 'pointer',
                   userSelect: 'none'
                 }}
               >
-                <input 
-                  type="checkbox"
-                  checked={isChecked}
-                  onChange={() => {
-                    setLocalActiveRelations(prev => {
-                      const next = prev.includes(relation.key)
-                        ? prev.filter(r => r !== relation.key)
-                        : [...prev, relation.key];
-                      return next;
-                    });
-                  }}
-                  style={{ accentColor: 'var(--color-accent)', cursor: 'pointer' }}
-                />
                 <span style={{ 
                   display: 'inline-block', 
                   width: '24px', 
@@ -516,8 +502,8 @@ export default function ObsidianGraph({
                   borderTop: relation.isDash ? `2px dotted ${relation.color}` : 'none',
                   borderRadius: '1.5px' 
                 }} />
-                <span>{relation.label} ({relation.desc})</span>
-              </label>
+                <span>{relation.label}</span>
+              </div>
             );
           })}
         </div>
