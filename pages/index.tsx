@@ -127,48 +127,39 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
 
   return (
     <div style={{
-      background: '#f8fafc',
-      color: '#0f172a',
+      background: 'var(--bg-main)',
+      color: 'var(--color-text)',
       minHeight: '100vh',
       fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
       position: 'relative',
       overflowX: 'hidden'
     }}>
-      {/* 渐变星云背景 - 清爽浅色淡蓝光晕 */}
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: '100%',
-        background: 'radial-gradient(circle at 15% 15%, rgba(37, 99, 235, 0.04) 0%, transparent 50%), radial-gradient(circle at 85% 45%, rgba(37, 99, 235, 0.03) 0%, transparent 50%), radial-gradient(circle at 50% 85%, rgba(37, 99, 235, 0.02) 0%, transparent 60%)',
-        pointerEvents: 'none',
-        zIndex: 0
-      }} />
-
       {/* 头部导航栏 - 浮空漂浮样式 */}
       <div style={{ padding: '20px 40px 10px 40px', position: 'sticky', top: 0, zIndex: 100 }}>
         <header style={{
-          background: 'rgba(255, 255, 255, 0.75)',
+          background: 'rgba(246, 243, 236, 0.8)',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
           padding: '12px 30px',
-          borderRadius: '24px',
-          border: '1px solid rgba(15, 23, 42, 0.08)',
+          borderRadius: 'var(--border-radius)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          boxShadow: '0 10px 30px rgba(15, 23, 42, 0.03)',
+          boxShadow: '0 10px 40px rgba(160, 109, 68, 0.02)',
           maxWidth: '1400px',
           margin: '0 auto',
           width: '100%'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '1.6rem' }}>🌐</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="2" y1="12" x2="22" y2="12" />
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+            </svg>
             <span style={{
               fontSize: '1.25rem',
               fontWeight: 400,
-              color: '#0f172a',
+              color: 'var(--color-text)',
               letterSpacing: '-0.5px'
             }}>
               Globaltradebuddy
@@ -177,86 +168,120 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
           <div style={{ display: 'flex', alignItems: 'center', gap: '24px', fontSize: '0.85rem' }}>
             <Link 
               href="/my-graph" 
-              className="water-drop-btn"
+              className="sand-btn"
               style={{
                 textDecoration: 'none',
-                fontWeight: 500,
-                padding: '8px 24px',
-                fontSize: '0.85rem'
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
               }}
             >
-              🕸️ 个人知识拓扑网图
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4.5 16.5c-1.5 1.26-2.5 3.19-2.5 5.5h20c0-2.31-1-4.24-2.5-5.5" />
+                <circle cx="12" cy="12" r="2" />
+                <circle cx="12" cy="2" r="1" />
+                <circle cx="4" cy="16" r="1" />
+                <circle cx="20" cy="16" r="1" />
+              </svg>
+              个人知识拓扑网图
             </Link>
             {userId ? (
               <>
                 {userRole === 'admin' ? (
                   <>
-                    <span style={{ color: '#475569', fontWeight: 300 }}>
-                      👑 管理员: <code style={{ color: '#2563eb', fontWeight: 400 }}>{userId.substring(0, 8)}...</code>
+                    <span style={{ color: 'var(--color-muted)', fontWeight: 300, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z" />
+                        <path d="M3 20h18" />
+                      </svg>
+                      管理员: <code style={{ color: 'var(--color-accent)', fontWeight: 400 }}>{userId.substring(0, 8)}...</code>
                     </span>
                     <button 
                       onClick={() => setShowUploadModal(true)}
-                      className="water-drop-btn"
+                      className="sand-btn"
                       style={{
-                        fontWeight: 500,
-                        padding: '8px 24px',
-                        fontSize: '0.85rem',
-                        color: '#2563eb',
-                        border: '1px solid rgba(37, 99, 235, 0.3)'
+                        color: 'var(--color-accent)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
                       }}
                     >
-                      📤 上传新报告
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                      </svg>
+                      上传新报告
                     </button>
                   </>
                 ) : (
                   <>
-                    <span style={{ color: '#475569', fontWeight: 300 }}>
-                      🔑 业务员 ID: <code style={{ color: '#2563eb', fontWeight: 400 }}>{userId.substring(0, 8)}...</code>
+                    <span style={{ color: 'var(--color-muted)', fontWeight: 300 }}>
+                      业务员 ID: <code style={{ color: 'var(--color-accent)', fontWeight: 400 }}>{userId.substring(0, 8)}...</code>
                     </span>
                     <span style={{
-                      background: 'rgba(15, 23, 42, 0.03)',
-                      border: '1px solid rgba(15, 23, 42, 0.08)',
+                      background: 'var(--bg-sub)',
                       padding: '6px 14px',
                       borderRadius: '20px',
-                      color: '#0f172a',
-                      fontWeight: 300
+                      color: 'var(--color-text)',
+                      fontWeight: 300,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
                     }}>
-                      🔓 剩余额度: <b style={{ color: '#10b981', fontWeight: 500 }}>{quota}</b> 次
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                        <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+                      </svg>
+                      剩余额度: <b style={{ color: 'var(--color-accent)', fontWeight: 500 }}>{quota}</b> 次
                     </span>
                   </>
                 )}
                 <button 
                   onClick={handleLogout}
-                  className="water-drop-btn"
+                  className="sand-btn"
                   style={{
-                    fontWeight: 500,
-                    padding: '8px 24px',
-                    fontSize: '0.85rem',
                     color: '#ef4444',
-                    border: '1px solid rgba(239, 68, 68, 0.3)'
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
                   }}
                 >
-                  🚪 退出登录
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                    <polyline points="16 17 21 12 16 7" />
+                    <line x1="21" y1="12" x2="9" y2="12" />
+                  </svg>
+                  退出登录
                 </button>
               </>
             ) : (
               <>
-                <span style={{ color: '#64748b' }}>👤 游客模式</span>
+                <span style={{ color: 'var(--color-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                  游客模式
+                </span>
                 <button 
                   onClick={() => {
                     setAuthMode('login');
                     setShowAuthModal(true);
                   }}
-                  className="water-drop-btn"
+                  className="sand-btn"
                   style={{
-                    fontWeight: 500,
-                    padding: '8px 24px',
-                    fontSize: '0.85rem',
-                    color: '#2563eb',
-                    border: '1px solid rgba(37, 99, 235, 0.3)'
+                    color: 'var(--color-accent)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
                   }}
                 >
-                  🔐 登录 / 注册
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                  登录 / 注册
                 </button>
               </>
             )}
