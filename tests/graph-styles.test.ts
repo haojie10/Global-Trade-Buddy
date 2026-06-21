@@ -44,6 +44,17 @@ describe('Graph Connection Visual Styles mapping logic', () => {
       // 当处于 hover 且该 link 没有被 highlight 时，不透明度极低
       expect(getLinkColor('supplier', true, false)).toBe('rgba(200, 200, 200, 0.03)');
     });
+
+    it('should return custom color when customColors map is provided', () => {
+      const customColors = {
+        supplier: 'rgba(255, 0, 0, 1)',
+        competitor: '#ff00ff'
+      };
+      expect(getLinkColor('supplier', false, false, customColors)).toBe('rgba(255, 0, 0, 1)');
+      expect(getLinkColor('competitor', false, false, customColors)).toBe('#ff00ff');
+      expect(getLinkColor('shared_product', false, false, customColors)).toBe('rgba(16, 185, 129, 0.75)');
+      expect(getLinkColor('supplier', true, false, customColors)).toBe('rgba(200, 200, 200, 0.03)');
+    });
   });
 
   describe('getLinkWidth', () => {
@@ -63,6 +74,16 @@ describe('Graph Connection Visual Styles mapping logic', () => {
 
     it('should return thin width when not highlighted during hover state', () => {
       expect(getLinkWidth('supplier', true, false)).toBe(0.5);
+    });
+
+    it('should scale the width by lineWidthScale', () => {
+      expect(getLinkWidth('supplier', false, false, 2.0)).toBe(5.0);
+      expect(getLinkWidth('shared_product', false, false, 0.5)).toBe(0.75);
+      expect(getLinkWidth('shared_channel', false, false, 1.5)).toBe(1.5);
+      expect(getLinkWidth('supplier', true, false, 2.0)).toBe(1.0);
+      // Safety boundaries
+      expect(getLinkWidth('supplier', false, false, NaN)).toBe(2.5);
+      expect(getLinkWidth('supplier', false, false, -1.5)).toBe(0);
     });
   });
 

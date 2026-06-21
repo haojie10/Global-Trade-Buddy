@@ -9,11 +9,16 @@ import React from 'react';
 export function getLinkColor(
   relationType: string,
   isHovered: boolean = false,
-  isHighlighted: boolean = false
+  isHighlighted: boolean = false,
+  customColors?: Record<string, string>
 ): string {
   // 如果处于 hover 聚焦状态，且当前连线未被高亮，则进行低透明度虚化
   if (isHovered && !isHighlighted) {
     return 'rgba(200, 200, 200, 0.03)';
+  }
+
+  if (customColors && customColors[relationType]) {
+    return customColors[relationType];
   }
 
   switch (relationType) {
@@ -39,20 +44,28 @@ export function getLinkColor(
 export function getLinkWidth(
   relationType: string,
   isHovered: boolean = false,
-  isHighlighted: boolean = false
+  isHighlighted: boolean = false,
+  lineWidthScale: number = 1.0
 ): number {
+  let baseWidth = 1.0;
   if (isHovered && !isHighlighted) {
-    return 0.5;
+    baseWidth = 0.5;
+  } else {
+    switch (relationType) {
+      case 'supplier':
+        baseWidth = 2.5; // 供应/经销关系加粗
+        break;
+      case 'shared_product':
+        baseWidth = 1.5; // 相同产品稍粗
+        break;
+      default:
+        baseWidth = 1.0; // 默认细线
+        break;
+    }
   }
 
-  switch (relationType) {
-    case 'supplier':
-      return 2.5; // 供应/经销关系加粗
-    case 'shared_product':
-      return 1.5; // 相同产品稍粗
-    default:
-      return 1.0; // 默认细线
-  }
+  const safeScale = Math.max(0, isNaN(lineWidthScale) ? 1.0 : lineWidthScale);
+  return baseWidth * safeScale;
 }
 
 /**
