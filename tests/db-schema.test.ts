@@ -91,4 +91,18 @@ describe('PostgreSQL Schema Test', () => {
     expect(aliases).toContain('德国 B 公司');
     expect(aliases).toContain('汽配连锁超市');
   });
+
+  it('should contain the new entity details columns in entities table', async () => {
+    const res = await client.query(`
+      SELECT column_name, data_type 
+      FROM information_schema.columns 
+      WHERE table_name = 'entities' AND table_schema = 'public'
+    `);
+    const columns = res.rows.map(row => row.column_name);
+    
+    expect(columns).toContain('description');
+    expect(columns).toContain('website');
+    expect(columns).toContain('headquarters');
+    expect(columns).toContain('employee_count');
+  });
 });

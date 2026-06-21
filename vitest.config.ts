@@ -7,5 +7,6 @@ export default defineConfig({
   test: {
     environment: 'node',
     globalSetup: './tests/helpers/test-setup.ts',
+    exclude: ['**/node_modules/**', '**/dist/**', '**/.worktrees/**', '**/.next/**'],
   },
 });

@@ -17,7 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: '实体名称不能为空' });
   }
 
-  if (!['company', 'product', 'channel'].includes(entityType)) {
+  if (!['company', 'product', 'channel', 'competitor'].includes(entityType)) {
     return res.status(400).json({ error: '无效的实体类型' });
   }
 

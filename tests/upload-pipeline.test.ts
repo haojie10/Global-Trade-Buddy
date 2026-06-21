@@ -274,7 +274,7 @@ describe('Report Upload & Dehydration Pipeline Test', () => {
       expect(relation.market_region).toBe(reportRegion);
       expect(relation.relation_type).toBe('produces');
 
-    } finally {
+     } finally {
       // 清理测试产生的数据
       if (newReportId) {
         await dbClient.query(`DELETE FROM relations WHERE report_id_a = $1 OR report_id_b = $1`, [newReportId]);
@@ -285,6 +285,138 @@ describe('Report Upload & Dehydration Pipeline Test', () => {
         await dbClient.query(`DELETE FROM reports WHERE id = $1`, [existingReportId]);
       }
       await dbClient.query("DELETE FROM entities WHERE canonical_name = ANY($1)", [['特斯拉', '锂电池']]);
+    }
+  });
+
+  it('should successfully parse manualTags for competitor, register new competitor entities, and build relations', async () => {
+    await dbClient.query("DELETE FROM entities WHERE canonical_name = ANY($1)", [['测试对手1', '测试对手2']]);
+
+    const mockHtml = `
+      <html>
+        <head>
+          <title>测试竞争对手报告</title>
+        </head>
+        <body>
+          <p>正文内容：测试报告内容。</p>
+        </body>
+      </html>
+    `;
+
+    const req = {
+      method: 'POST',
+      body: {
+        rawHtml: mockHtml,
+        manualTags: {
+          companies: ['测试公司A'],
+          competitors: ['测试对手1', '测试对手2'],
+          products: ['轮毂'],
+          channels: ['直营']
+        }
+      },
+    } as any;
+
+    let statusVal = 200;
+    let jsonVal: any = null;
+    const res = {
+      status(code: number) {
+        statusVal = code;
+        return this;
+      },
+      json(data: any) {
+        jsonVal = data;
+        return this;
+      },
+    } as any;
+
+    let newReportId: any;
+    try {
+      await uploadHandler(req, res);
+
+      expect(statusVal).toBe(200);
+      newReportId = jsonVal.reportId;
+      expect(newReportId).toBeDefined();
+
+      const competitorRes = await dbClient.query("SELECT id FROM entities WHERE canonical_name = '测试对手1' AND entity_type = 'competitor'");
+      expect(competitorRes.rows.length).toBe(1);
+
+      const competitorRes2 = await dbClient.query("SELECT id FROM entities WHERE canonical_name = '测试对手2' AND entity_type = 'competitor'");
+      expect(competitorRes2.rows.length).toBe(1);
+
+      const resolvedEntitiesRes = await dbClient.query(
+        `SELECT e.canonical_name FROM report_entities re
+         JOIN entities e ON re.entity_id = e.id
+         WHERE re.report_id = $1`,
+        [newReportId]
+      );
+      const resolvedNames = resolvedEntitiesRes.rows.map(r => r.canonical_name);
+      expect(resolvedNames).toContain('测试公司A');
+      expect(resolvedNames).toContain('测试对手1');
+      expect(resolvedNames).toContain('测试对手2');
+    } finally {
+      if (newReportId) {
+        await dbClient.query(`DELETE FROM relations WHERE report_id_a = $1 OR report_id_b = $1`, [newReportId]);
+        await dbClient.query(`DELETE FROM report_entities WHERE report_id = $1`, [newReportId]);
+        await dbClient.query(`DELETE FROM reports WHERE id = $1`, [newReportId]);
+      }
+      await dbClient.query("DELETE FROM entities WHERE canonical_name = ANY($1)", [['测试公司A', '测试对手1', '测试对手2', '轮毂', '直营']]);
+    }
+  });
+
+  it('should override HTML metadata category and summary when manually supplied', async () => {
+    const mockHtml = `
+      <html>
+        <head>
+          <title>分类重写测试报告</title>
+          <meta name="category" content="customer">
+          <meta name="summary" content="HTML原始的简介。">
+        </head>
+        <body>
+          <p>正文内容。</p>
+        </body>
+      </html>
+    `;
+
+    const req = {
+      method: 'POST',
+      body: {
+        rawHtml: mockHtml,
+        category: 'product',
+        summary: '这是管理员手动填写的更棒的简介内容。',
+        manualTags: {}
+      },
+    } as any;
+
+    let statusVal = 200;
+    let jsonVal: any = null;
+    const res = {
+      status(code: number) {
+        statusVal = code;
+        return this;
+      },
+      json(data: any) {
+        jsonVal = data;
+        return this;
+      },
+    } as any;
+
+    let newReportId: any;
+    try {
+      await uploadHandler(req, res);
+
+      expect(statusVal).toBe(200);
+      newReportId = jsonVal.reportId;
+      expect(newReportId).toBeDefined();
+
+      const reportRes = await dbClient.query('SELECT category, summary FROM reports WHERE id = $1', [newReportId]);
+      const report = reportRes.rows[0];
+      // 应该是重写后的 category (product) 与 summary (这是管理员手动填写的...)
+      expect(report.category).toBe('product');
+      expect(report.summary).toBe('这是管理员手动填写的更棒的简介内容。');
+
+    } finally {
+      if (newReportId) {
+        await dbClient.query(`DELETE FROM reports WHERE id = $1`, [newReportId]);
+      }
     }
   });
 });

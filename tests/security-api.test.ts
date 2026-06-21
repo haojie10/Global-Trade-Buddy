@@ -118,11 +118,11 @@ describe('Obsidian Graph & Safety API Test', () => {
     const graphB = await getUserGraph(userIdB, dbClient);
     const reports = graphB.nodes.filter((n: any) => n.node_type === 'report');
     const entities = graphB.nodes.filter((n: any) => n.node_type === 'entity');
-    const mentions = graphB.links.filter((l: any) => l.link_type === 'mention');
+    const reportLinks = graphB.links;
 
     expect(reports.length).toBe(2);
-    expect(entities.length).toBeGreaterThanOrEqual(1);
-    expect(mentions.length).toBe(2); // 报告1和报告2提及相同的实体
+    expect(entities.length).toBe(0);
+    expect(reportLinks.length).toBe(1); // 报告1和报告2之间有一条直接的边
 
     // 用户 A 没解锁任何有关系边的报告，因此图谱关系为空
     const graphA = await getUserGraph(userIdA, dbClient);

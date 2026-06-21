@@ -85,7 +85,10 @@ export async function extractAndNormalizeEntities(
   dbClient: any,
   manualTags?: {
     companies?: string[];
+    companyWebsite?: string;
+    competitors?: string[];
     products?: string[];
+    regions?: string[];
     channels?: string[];
   }
 ): Promise<{ id: string; canonical_name: string }[]> {
@@ -149,11 +152,13 @@ export async function extractAndNormalizeEntities(
         if (!primaryEntityId) {
           // 不存在，插入 entities 表作为主标准公司名
           const insertRes = await dbClient.query(
-            `INSERT INTO entities (canonical_name, entity_type) 
-             VALUES ($1, 'company') 
-             ON CONFLICT (canonical_name) DO UPDATE SET entity_type = EXCLUDED.entity_type
+            `INSERT INTO entities (canonical_name, entity_type, website) 
+             VALUES ($1, 'company', $2) 
+             ON CONFLICT (canonical_name) DO UPDATE SET 
+               entity_type = EXCLUDED.entity_type,
+               website = COALESCE(entities.website, EXCLUDED.website)
              RETURNING id`,
-            [primaryTag]
+            [primaryTag, manualTags.companyWebsite || null]
           );
           primaryEntityId = insertRes.rows[0].id;
           
@@ -164,6 +169,12 @@ export async function extractAndNormalizeEntities(
             entity_type: 'company',
             matches: new Set([primaryTag])
           });
+        } else if (manualTags.companyWebsite) {
+          // 如果已存在且传入了官网，若数据库中官网为空，则更新它
+          await dbClient.query(
+            `UPDATE entities SET website = COALESCE(website, $1) WHERE id = $2`,
+            [manualTags.companyWebsite, primaryEntityId]
+          );
         }
 
         // 记录标准实体
@@ -199,8 +210,9 @@ export async function extractAndNormalizeEntities(
       }
     }
 
-    // 3.2 正常处理产品和渠道标签
+    // 3.2 正常处理产品、渠道和竞争对手标签
     const otherCategories = [
+      { tags: manualTags.competitors, type: 'competitor' },
       { tags: manualTags.products, type: 'product' },
       { tags: manualTags.channels, type: 'channel' }
     ];

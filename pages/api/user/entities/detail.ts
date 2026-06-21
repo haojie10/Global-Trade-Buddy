@@ -13,6 +13,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const client = await pool.connect();
   try {
+    // 0. 查询实体自身基础信息
+    const entityRes = await client.query(
+      `SELECT canonical_name, entity_type, description, website, headquarters, employee_count FROM entities WHERE id = $1`,
+      [id]
+    );
+    if (entityRes.rows.length === 0) {
+      return res.status(404).json({ error: '未找到该实体' });
+    }
+    const entity = entityRes.rows[0];
+
     // 1. 查询该实体的别名
     const aliasesRes = await client.query(
       `SELECT alias_name FROM entity_aliases WHERE entity_id = $1`,
@@ -50,6 +60,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return res.status(200).json({
       id,
+      canonical_name: entity.canonical_name,
+      entity_type: entity.entity_type,
+      description: entity.description || '',
+      website: entity.website || '',
+      headquarters: entity.headquarters || '',
+      employee_count: entity.employee_count || '',
       aliases,
       competitors,
       suppliers

@@ -9,6 +9,7 @@ export interface GraphNode {
   market_region: string;
   summary: string;
   companies: string[];
+  competitors: string[];
   products: string[];
   channels: string[];
 }
@@ -59,6 +60,7 @@ export async function getGraphData(userId: string, userRole: string, dbClient: a
     ...node,
     node_type: 'report',
     companies: [],
+    competitors: [],
     products: [],
     channels: []
   }));
@@ -68,64 +70,71 @@ export async function getGraphData(userId: string, userRole: string, dbClient: a
     reportMap.set(node.id, node);
   }
 
-  // 2. 收集并去重被提及的实体节点，同时为报告节点拼装向下兼容的分类数组
-  const entityNodeMap = new Map<string, any>();
-  const mentionLinks: any[] = [];
-
+  // 2. 收集并填充报告节点的归一化数组（保持向后兼容）
   for (const row of entitiesRes.rows) {
-    // 填充报告的归一化数组（保持向后兼容）
     const repNode = reportMap.get(row.report_id);
     if (repNode) {
       if (row.entity_type === 'company') repNode.companies.push(row.canonical_name);
+      else if (row.entity_type === 'competitor') repNode.competitors.push(row.canonical_name);
       else if (row.entity_type === 'product') repNode.products.push(row.canonical_name);
       else if (row.entity_type === 'channel') repNode.channels.push(row.canonical_name);
     }
-
-    // 建立实体节点
-    if (!entityNodeMap.has(row.entity_id)) {
-      entityNodeMap.set(row.entity_id, {
-        id: row.entity_id,
-        title: row.canonical_name,
-        entity_type: row.entity_type,
-        node_type: 'entity'
-      });
-    }
-
-    // 建立 报告 ↔ 实体的提及线 (mention)
-    mentionLinks.push({
-      source: row.report_id,
-      target: row.entity_id,
-      link_type: 'mention',
-      relation_type: 'mention',
-      relation_key: '提及'
-    });
   }
 
-  const entityNodes = Array.from(entityNodeMap.values());
-  const entityIds = Array.from(entityNodeMap.keys());
+  // 3. 从 relations 表中查询报告与报告之间的直接关联连线（并关联实体以判断类型）
+  const relationsRes = await dbClient.query(
+    `SELECT r.report_id_a, r.report_id_b, r.relation_key, e.entity_type, r.market_region 
+     FROM relations r
+     LEFT JOIN entities e ON r.relation_key = e.canonical_name
+     WHERE r.report_id_a = ANY($1) AND r.report_id_b = ANY($1)`,
+    [reportIds]
+  );
 
-  // 3. 查询当前图中已出场实体之间的商业关系 (competitor, supplier 等)
-  let businessLinks: any[] = [];
-  if (entityIds.length > 0) {
-    const bizRes = await dbClient.query(
-      `SELECT entity_id_a AS source, entity_id_b AS target, relation_type, market_region 
-       FROM entity_relations 
-       WHERE entity_id_a = ANY($1) AND entity_id_b = ANY($1)`,
-      [entityIds]
-    );
-    businessLinks = bizRes.rows.map((r: any) => ({
-      source: r.source,
-      target: r.target,
-      link_type: 'business',
-      relation_type: r.relation_type,
-      market_region: r.market_region,
-      relation_key: r.relation_type === 'competitor' ? '竞争对手' : r.relation_type === 'supplier' ? '供应商' : '合作'
-    }));
-  }
+  const reportLinks = relationsRes.rows.map((row: any) => {
+    let relType = 'shared_company';
+    if (row.entity_type === 'product') relType = 'shared_product';
+    else if (row.entity_type === 'channel') relType = 'shared_channel';
+    else if (row.entity_type === 'competitor') relType = 'shared_competitor';
+
+    return {
+      source: row.report_id_a,
+      target: row.report_id_b,
+      relation_key: row.relation_key,
+      relation_type: relType,
+      market_region: row.market_region
+    };
+  });
+
+  // 4. 查询报告对应公司实体之间的商业关系（竞争对手、供应商），直接连线两个报告
+  const bizRes = await dbClient.query(
+    `SELECT DISTINCT
+       re1.report_id AS report_id_a,
+       re2.report_id AS report_id_b,
+       er.relation_type,
+       er.market_region
+     FROM report_entities re1
+     JOIN entities e1 ON re1.entity_id = e1.id AND e1.entity_type = 'company'
+     JOIN entity_relations er ON (er.entity_id_a = e1.id OR er.entity_id_b = e1.id)
+     JOIN entities e2 ON (
+       (er.entity_id_a = e2.id AND er.entity_id_b = e1.id) OR 
+       (er.entity_id_b = e2.id AND er.entity_id_a = e1.id)
+     ) AND e2.entity_type = 'company' AND e2.id != e1.id
+     JOIN report_entities re2 ON re2.entity_id = e2.id
+     WHERE re1.report_id = ANY($1) AND re2.report_id = ANY($1) AND re1.report_id < re2.report_id`,
+    [reportIds]
+  );
+
+  const bizLinks = bizRes.rows.map((row: any) => ({
+    source: row.report_id_a,
+    target: row.report_id_b,
+    relation_key: row.relation_type === 'competitor' ? '竞争对手' : row.relation_type === 'supplier' ? '供应关系' : '合作关系',
+    relation_type: row.relation_type, // 'competitor' 或 'supplier'
+    market_region: row.market_region
+  }));
 
   return {
-    nodes: [...reportNodes, ...entityNodes],
-    links: [...mentionLinks, ...businessLinks]
+    nodes: reportNodes,
+    links: [...reportLinks, ...bizLinks]
   };
 }
 

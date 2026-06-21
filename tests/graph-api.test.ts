@@ -94,16 +94,16 @@ describe('Graph Core API - getGraphData & Compatibility', () => {
   });
 
   it('should query personal graph data for normal user with entities and relation attributes', async () => {
-    // 1. 普通用户仅解锁了 reportIdA，因此图谱仅返回关联报告A及报告A提及的实体
+    // 1. 普通用户仅解锁了 reportIdA，因此图谱仅返回关联报告A
     const data = await getGraphData(userIdNormal, 'user', dbClient);
     
-    // 应该包含报告节点和实体节点
+    // 应该只包含报告节点，不含实体节点
     const reports = data.nodes.filter(n => n.node_type === 'report');
     const entities = data.nodes.filter(n => n.node_type === 'entity');
     
     expect(reports.length).toBe(1);
     expect(reports[0].id).toBe(reportIdA);
-    expect(entities.length).toBeGreaterThan(0);
+    expect(entities.length).toBe(0);
   });
 
   it('should query full graph data for admin including all nodes, entities and connection attributes', async () => {
@@ -114,12 +114,12 @@ describe('Graph Core API - getGraphData & Compatibility', () => {
     const entities = data.nodes.filter(n => n.node_type === 'entity');
     
     expect(reports.length).toBe(2);
-    expect(entities.length).toBe(3); // 测试公司、测试产品、测试渠道
+    expect(entities.length).toBe(0);
     
-    // 验证包含商业关系线
-    const businessLinks = data.links.filter(l => l.link_type === 'business');
-    expect(businessLinks.length).toBe(1);
-    expect(businessLinks[0].relation_type).toBe('competitor');
+    // 验证包含报告与报告的关联线
+    const reportLinks = data.links;
+    expect(reportLinks.length).toBe(1);
+    expect(reportLinks[0].relation_key).toBe('共有组件');
   });
 
   it('should verify backward compatibility of getUserGraph', async () => {
