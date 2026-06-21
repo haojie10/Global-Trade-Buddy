@@ -1,29 +1,35 @@
-/* 全局样式整理 */
+:root {
+  --bg-main: #fdfbf7;      /* 主背景色 (70%): 护眼暖乳白 */
+  --bg-sub: #f6f3ec;       /* 结构辅助色 (20%): 无框承载色 */
+  --color-accent: #ff641e; /* 焦点强调色 (10%): 极富活力的暖阳橘 */
+  --color-text: #3c3935;   /* 主要文字: 柔和石墨深灰 */
+  --color-muted: #7a756f;  /* 次要文字: 烟灰次要描述 */
+  
+  --btn-font-weight: 300;      /* 按钮与交互文字字重: 极细 Light */
+  --btn-letter-spacing: 0px;   /* 按钮字间距 */
+  --border-radius: 22px;       /* 柔和高级的圆角大小 */
+}
 
-.water-drop-btn {
-  background: rgba(255, 255, 255, 0.45);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.75);
-  border-radius: 30px;
-  color: #0f172a;
-  box-shadow: 
-    0 8px 24px rgba(31, 38, 135, 0.03), 
-    inset 0 4px 10px rgba(255, 255, 255, 0.65), 
-    inset 0 -4px 10px rgba(15, 23, 42, 0.02);
+.water-drop-btn, .sand-btn {
+  background: var(--bg-sub);
+  border: none;
+  border-radius: var(--border-radius);
+  color: var(--color-accent);
+  padding: 10px 24px;
+  font-weight: var(--btn-font-weight);
+  letter-spacing: var(--btn-letter-spacing);
+  box-shadow: 0 4px 12px rgba(160, 109, 68, 0.03);
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
   outline: none;
   display: inline-block;
   text-align: center;
+  font-size: 0.85rem;
 }
 
-.water-drop-btn:hover {
-  background: rgba(255, 255, 255, 0.7);
-  box-shadow: 
-    0 12px 30px rgba(31, 38, 135, 0.05), 
-    inset 0 8px 16px rgba(255, 255, 255, 0.8), 
-    inset 0 -6px 16px rgba(15, 23, 42, 0.03);
+.water-drop-btn:hover, .sand-btn:hover {
+  background: var(--bg-main);
+  box-shadow: 0 6px 16px rgba(160, 109, 68, 0.08);
   transform: translateY(-1px);
 }
 
@@ -68,15 +74,13 @@
 
 .floating-card {
   position: absolute;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 20px;
-  padding: 16px 20px;
+  background: var(--bg-sub);
+  border: none;
+  border-radius: 14px;
+  padding: 12px 18px;
   align-items: center;
-  gap: 12px;
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.04);
+  gap: 10px;
+  box-shadow: 0 6px 20px rgba(160, 109, 68, 0.02);
   z-index: 2;
 }
 
