@@ -93,4 +93,10 @@ describe('Extensions Modules API Test', () => {
     expect(refUserQuery.rows[0].free_quota).toBe(4);
     expect(testUserQuery.rows[0].free_quota).toBe(4);
   });
+
+  // pg_trgm 数据库扩展测试
+  it('should successfully check that pg_trgm extension is active', async () => {
+    const res = await dbClient.query("SELECT extname FROM pg_extension WHERE extname = 'pg_trgm'");
+    expect(res.rows.length).toBe(1);
+  });
 });

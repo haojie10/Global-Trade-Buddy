@@ -7,7 +7,7 @@ import { parseMetadata, runDehydration, extractAndNormalizeEntities } from '../.
 export { parseMetadata, runDehydration, extractAndNormalizeEntities } from '../../../../lib/entity-extractor';
 
 async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
-  const { rawHtml, manualTags } = req.body;
+  const { rawHtml, manualTags, category, summary, overwriteReportId } = req.body;
 
   // 模拟的 OSS 图片上传，在本地开发环境下将图片真实写入 public/uploads，返回 /uploads/ 相对链接
   const mockUpload = async (buffer: Buffer, mime: string) => {
@@ -55,13 +55,33 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
   const resolvedEntities = await extractAndNormalizeEntities(rawHtml, meta.title, dbClient, manualTags);
 
   // 4. 写入报告表
-  const insertReportRes = await dbClient.query(
-    `INSERT INTO reports (title, category, market_region, summary, content_html) 
-     VALUES ($1, $2, $3, $4, $5) 
-     RETURNING id`,
-    [meta.title, meta.category, finalMarketRegion, meta.summary, cleanHtml]
-  );
-  const newReportId = insertReportRes.rows[0].id;
+  const finalCategory = category || meta.category;
+  const finalSummary = summary !== undefined ? summary.trim() : meta.summary;
+
+  let newReportId = overwriteReportId;
+
+  if (overwriteReportId) {
+    // 覆盖更新模式：更新报告内容，同时清理旧的关联网络
+    await dbClient.query(
+      `UPDATE reports 
+       SET title = $1, category = $2, market_region = $3, summary = $4, content_html = $5 
+       WHERE id = $6`,
+      [meta.title, finalCategory, finalMarketRegion, finalSummary, cleanHtml, overwriteReportId]
+    );
+
+    // 清理旧的报告与实体的映射和关系边，以便重新建立
+    await dbClient.query(`DELETE FROM report_entities WHERE report_id = $1`, [overwriteReportId]);
+    await dbClient.query(`DELETE FROM relations WHERE report_id_a = $1 OR report_id_b = $1`, [overwriteReportId]);
+  } else {
+    // 新建模式
+    const insertReportRes = await dbClient.query(
+      `INSERT INTO reports (title, category, market_region, summary, content_html) 
+       VALUES ($1, $2, $3, $4, $5) 
+       RETURNING id`,
+      [meta.title, finalCategory, finalMarketRegion, finalSummary, cleanHtml]
+    );
+    newReportId = insertReportRes.rows[0].id;
+  }
 
   // 5. 写入 report_entities 表
   for (const ent of resolvedEntities) {

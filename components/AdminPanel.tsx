@@ -11,13 +11,26 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
   const [rawHtmlContent, setRawHtmlContent] = useState('');
   const [uploadLoading, setUploadLoading] = useState(false);
   const [manualCompanies, setManualCompanies] = useState<string[]>(['']);
+  const [manualCompetitors, setManualCompetitors] = useState<string[]>(['']);
   const [manualProducts, setManualProducts] = useState<string[]>(['']);
   const [manualRegions, setManualRegions] = useState<string[]>(['']);
   const [manualChannels, setManualChannels] = useState<string[]>(['']);
+  const [category, setCategory] = useState<'customer' | 'product'>('customer');
+  const [summary, setSummary] = useState('');
+  const [companyWebsite, setCompanyWebsite] = useState('');
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 防重提示状态
+  const [duplicateInfo, setDuplicateInfo] = useState<{
+    reportId: string;
+    reportTitle: string;
+    matchedCanonicalName: string;
+    score: number;
+  } | null>(null);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
 
   if (!isOpen) return null;
 
@@ -35,6 +48,63 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
       try {
         const decodedText = detectAndDecodeHtml(buffer);
         setRawHtmlContent(decodedText);
+
+        // 自动解析 HTML 元数据
+        try {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(decodedText, 'text/html');
+
+          // 报告基础信息
+          const cat = doc.querySelector('meta[name="category"]')?.getAttribute('content');
+          if (cat === 'customer' || cat === 'product') {
+            setCategory(cat);
+          }
+
+          const summ = doc.querySelector('meta[name="summary"]')?.getAttribute('content');
+          if (summ) {
+            setSummary(summ);
+          }
+
+          // 公司基础信息
+          const compName = doc.querySelector('meta[name="company_name"]')?.getAttribute('content');
+          const compWebsite = doc.querySelector('meta[name="company_website"]')?.getAttribute('content');
+          const compAliases = doc.querySelector('meta[name="company_aliases"]')?.getAttribute('content');
+
+          if (compName) {
+            const aliasArr = compAliases ? compAliases.split(',').map(s => s.trim()).filter(Boolean) : [];
+            setManualCompanies([compName, ...aliasArr]);
+          }
+          if (compWebsite) {
+            setCompanyWebsite(compWebsite);
+          }
+
+          // 业务网络关联信息
+          const competitors = doc.querySelector('meta[name="competitors"]')?.getAttribute('content');
+          if (competitors) {
+            const arr = competitors.split(',').map(s => s.trim()).filter(Boolean);
+            setManualCompetitors(arr.length > 0 ? arr : ['']);
+          }
+
+          const products = doc.querySelector('meta[name="products"]')?.getAttribute('content');
+          if (products) {
+            const arr = products.split(',').map(s => s.trim()).filter(Boolean);
+            setManualProducts(arr.length > 0 ? arr : ['']);
+          }
+
+          const regions = doc.querySelector('meta[name="regions"]')?.getAttribute('content');
+          if (regions) {
+            const arr = regions.split(',').map(s => s.trim()).filter(Boolean);
+            setManualRegions(arr.length > 0 ? arr : ['']);
+          }
+
+          const channels = doc.querySelector('meta[name="channels"]')?.getAttribute('content');
+          if (channels) {
+            const arr = channels.split(',').map(s => s.trim()).filter(Boolean);
+            setManualChannels(arr.length > 0 ? arr : ['']);
+          }
+        } catch (domErr) {
+          console.error('自动解析报告元数据出错:', domErr);
+        }
       } catch (err) {
         alert('读取或解析文件失败，请检查编码格式');
       }
@@ -45,9 +115,35 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
     reader.readAsArrayBuffer(file);
   };
 
-  const handleUploadReport = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleUploadReport = async (e: React.FormEvent, overwriteId?: string, bypassCheck?: boolean) => {
+    if (e) e.preventDefault();
     if (!rawHtmlContent.trim()) return;
+
+    // 前置去重校验：如果不是强制上传并且有填写公司标签，首先查询是否已有该公司的报告
+    const primaryCompany = manualCompanies.map(c => c.trim()).filter(Boolean)[0];
+    if (!bypassCheck && !overwriteId && primaryCompany) {
+      setUploadLoading(true);
+      try {
+        const checkRes = await fetch('/api/admin/reports/check-duplicate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            companyName: primaryCompany,
+            category
+          })
+        });
+        const checkData = await checkRes.json();
+        if (checkRes.ok && checkData.duplicateFound) {
+          setDuplicateInfo(checkData);
+          setShowDuplicateModal(true);
+          setUploadLoading(false);
+          return; // 中断流程，弹窗等待管理员确认
+        }
+      } catch (err) {
+        console.error('检测重复报告失败:', err);
+      }
+    }
+
     setUploadLoading(true);
     try {
       const res = await fetch('/api/admin/reports/upload', {
@@ -55,8 +151,13 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           rawHtml: rawHtmlContent,
+          category,
+          summary,
+          overwriteReportId: overwriteId !== 'force-new' ? overwriteId : undefined,
           manualTags: {
             companies: manualCompanies.map(c => c.trim()).filter(Boolean),
+            companyWebsite: companyWebsite.trim() || undefined,
+            competitors: manualCompetitors.map(c => c.trim()).filter(Boolean),
             products: manualProducts.map(p => p.trim()).filter(Boolean),
             regions: manualRegions.map(r => r.trim()).filter(Boolean),
             channels: manualChannels.map(c => c.trim()).filter(Boolean)
@@ -65,14 +166,20 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        alert('报告上传成功！');
+        alert(overwriteId && overwriteId !== 'force-new' ? '报告覆盖更新成功！' : '报告上传成功！');
         setRawHtmlContent('');
         setSelectedFile(null);
         setIsDragActive(false);
         setManualCompanies(['']);
+        setManualCompetitors(['']);
         setManualProducts(['']);
         setManualRegions(['']);
         setManualChannels(['']);
+        setCategory('customer');
+        setSummary('');
+        setCompanyWebsite('');
+        setShowDuplicateModal(false);
+        setDuplicateInfo(null);
         onUploadSuccess();
       } else {
         alert(data.error || '上传失败');
@@ -342,9 +449,61 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
             marginBottom: '8px'
           }}>
             {renderTagListInput('🏢 公司名称 (Company)', manualCompanies, setManualCompanies, '例如: 特斯拉, 丰田汽车')}
+            {renderTagListInput('👥 竞争对手 (Competitor)', manualCompetitors, setManualCompetitors, '例如: 宜家, 百安居')}
             {renderTagListInput('📦 产品名称 (Product)', manualProducts, setManualProducts, '例如: 锂电池, 刹车片')}
             {renderTagListInput('🌍 市场地区 (Region)', manualRegions, setManualRegions, '例如: 北美, 欧盟')}
             {renderTagListInput('🤝 渠道类型 (Channel)', manualChannels, setManualChannels, '例如: 一级供应链')}
+          </div>
+          
+          <div style={{ display: 'flex', gap: '20px', alignItems: 'center', marginTop: '12px' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#0f172a' }}>📊 报告类型：</span>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', cursor: 'pointer', color: '#475569' }}>
+              <input 
+                type="radio" 
+                name="category" 
+                value="customer" 
+                checked={category === 'customer'} 
+                onChange={() => setCategory('customer')} 
+              />
+              🏢 公司调查报告 (Company)
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', cursor: 'pointer', color: '#475569' }}>
+              <input 
+                type="radio" 
+                name="category" 
+                value="product" 
+                checked={category === 'product'} 
+                onChange={() => setCategory('product')} 
+              />
+              📈 品类调查报告 (Product)
+            </label>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '12px' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#0f172a' }}>🔗 公司官网 (Website)：</span>
+            <input
+              type="text"
+              placeholder="例如: https://brauberg.com (自动从报告中提取，可手动修改)"
+              value={companyWebsite}
+              onChange={(e) => setCompanyWebsite(e.target.value)}
+              style={inputStyle}
+            />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '12px', marginBottom: '12px' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#0f172a' }}>📄 报告简介 (Summary)：</span>
+            <textarea
+              placeholder="请输入报告的简要介绍（手动填写的简介将显示在报告大厅卡片上，留空则自动从报告中提取）"
+              value={summary}
+              onChange={(e) => setSummary(e.target.value)}
+              rows={3}
+              style={{
+                ...inputStyle,
+                resize: 'vertical',
+                minHeight: '85px',
+                fontFamily: 'inherit'
+              }}
+            />
           </div>
 
           <button 
@@ -357,6 +516,101 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
           </button>
         </form>
       </div>
+
+      {/* 重复报告与别名判定 Modal 弹窗 */}
+      {showDuplicateModal && duplicateInfo && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.4)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 2000
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '20px',
+            padding: '28px',
+            width: '90%',
+            maxWidth: '500px',
+            boxShadow: '0 20px 40px rgba(15, 23, 42, 0.15)',
+            border: '1px solid rgba(15, 23, 42, 0.08)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px'
+          }}>
+            <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a', fontWeight: 600 }}>
+              ⚠️ 检测到关联企业已存在报告
+            </h3>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: '#475569', lineHeight: 1.6 }}>
+              系统分析发现相似企业 <strong>{duplicateInfo.matchedCanonicalName}</strong> 且已发布报告<strong>《{duplicateInfo.reportTitle}》</strong>（相似度: {(duplicateInfo.score * 100).toFixed(0)}%）。
+              为了维持图谱“一企一报”的规整结构，请做出您的选择：
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => handleUploadReport(null as any, duplicateInfo.reportId)}
+                className="water-drop-btn"
+                style={{
+                  padding: '12px 14px',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  background: '#2563eb',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  textAlign: 'center'
+                }}
+              >
+                🔄 选项 A：覆盖更新已有报告 (并绑定别名)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleUploadReport(null as any, 'force-new', true)}
+                style={{
+                  padding: '12px 14px',
+                  fontSize: '0.85rem',
+                  fontWeight: 500,
+                  background: 'rgba(15, 23, 42, 0.04)',
+                  color: '#0f172a',
+                  border: '1px solid rgba(15, 23, 42, 0.08)',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  textAlign: 'center'
+                }}
+              >
+                ➕ 选项 B：仍保存为全新独立报告
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDuplicateModal(false);
+                  setDuplicateInfo(null);
+                }}
+                style={{
+                  padding: '12px 14px',
+                  fontSize: '0.85rem',
+                  fontWeight: 500,
+                  background: '#ffffff',
+                  color: '#64748b',
+                  border: '1px solid rgba(15, 23, 42, 0.08)',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  textAlign: 'center'
+                }}
+              >
+                ❌ 选项 C：取消上传并关闭
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
