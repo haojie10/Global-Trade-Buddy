@@ -39,8 +39,8 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
   if (!userId) {
     return (
       <div style={{
-        background: '#f8fafc',
-        color: '#0f172a',
+        background: 'var(--bg-main)',
+        color: 'var(--color-text)',
         minHeight: '100vh',
         fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
         display: 'flex',
@@ -50,20 +50,23 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
         textAlign: 'center'
       }}>
         <div style={{
-          background: 'rgba(255, 255, 255, 0.45)',
-          backdropFilter: 'blur(16px)',
-          border: '1px solid rgba(15, 23, 42, 0.08)',
+          background: 'var(--bg-sub)',
+          border: 'none',
           padding: '40px',
-          borderRadius: '24px',
+          borderRadius: 'var(--border-radius)',
           maxWidth: '480px',
-          boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07)'
+          boxShadow: '0 10px 40px rgba(160, 109, 68, 0.04)'
         }}>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 300, marginBottom: '16px' }}>🔒 暂未登录</h2>
-          <p style={{ color: '#475569', fontSize: '0.9rem', marginBottom: '24px', lineHeight: 1.6 }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 300, marginBottom: '16px' }}>暂未登录</h2>
+          <p style={{ color: 'var(--color-muted)', fontSize: '0.9rem', marginBottom: '24px', lineHeight: 1.6 }}>
             游客模式下无法查看个人知识拓扑网图。请返回首页登录或注册账号后体验！
           </p>
-          <Link href="/" className="water-drop-btn" style={{ padding: '10px 24px', textDecoration: 'none' }}>
-            🏠 返回首页登录
+          <Link href="/" className="sand-btn" style={{ padding: '10px 24px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+            返回首页登录
           </Link>
         </div>
       </div>
@@ -156,8 +159,8 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
 
   return (
     <div style={{
-      background: '#f8fafc',
-      color: '#0f172a',
+      background: 'var(--bg-main)',
+      color: 'var(--color-text)',
       minHeight: '100vh',
       fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
       display: 'flex',
@@ -165,41 +168,34 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
       position: 'relative',
       overflowX: 'hidden'
     }}>
-      {/* 渐变背景 - 清爽浅色淡蓝光晕 */}
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: '100%',
-        background: 'radial-gradient(circle at 15% 15%, rgba(37, 99, 235, 0.04) 0%, transparent 50%), radial-gradient(circle at 85% 85%, rgba(37, 99, 235, 0.03) 0%, transparent 50%)',
-        pointerEvents: 'none',
-        zIndex: 0
-      }} />
-      
       {/* 头部导航栏 - 漂浮样式 */}
       <div style={{ padding: '20px 40px 10px 40px', flexShrink: 0, zIndex: 10 }}>
         <header style={{
-          background: 'rgba(255, 255, 255, 0.75)',
+          background: 'rgba(246, 243, 236, 0.8)',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
           padding: '12px 30px',
-          borderRadius: '24px',
-          border: '1px solid rgba(15, 23, 42, 0.08)',
+          borderRadius: 'var(--border-radius)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          boxShadow: '0 10px 30px rgba(15, 23, 42, 0.04)',
+          boxShadow: '0 10px 40px rgba(160, 109, 68, 0.02)',
           maxWidth: '1400px',
           margin: '0 auto',
           width: '100%'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '1.5rem' }}>🕸️</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4.5 16.5c-1.5 1.26-2.5 3.19-2.5 5.5h20c0-2.31-1-4.24-2.5-5.5" />
+              <circle cx="12" cy="12" r="2" />
+              <circle cx="12" cy="2" r="1" />
+              <circle cx="4" cy="16" r="1" />
+              <circle cx="20" cy="16" r="1" />
+            </svg>
             <span style={{
               fontSize: '1.25rem',
               fontWeight: 400,
-              color: '#0f172a',
+              color: 'var(--color-text)',
               letterSpacing: '-0.5px'
             }}>
               个人外贸知识拓扑网络
@@ -208,26 +204,43 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
           <div style={{ display: 'flex', alignItems: 'center', gap: '24px', fontSize: '0.9rem' }}>
             <Link 
               href="/" 
-              className="water-drop-btn"
+              className="sand-btn"
               style={{
                 textDecoration: 'none',
-                fontWeight: 400,
-                padding: '8px 20px',
-                fontSize: '0.85rem'
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
               }}
             >
-              🌐 返回平台报告大厅
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="2" y1="12" x2="22" y2="12" />
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+              </svg>
+              返回平台报告大厅
             </Link>
-            <span style={{ color: '#475569', fontWeight: 300 }}>🔑 业务员 ID: <code style={{ color: '#2563eb', fontWeight: 400 }}>{userId.substring(0, 8)}...</code></span>
+            <span style={{ color: 'var(--color-muted)', fontWeight: 300, display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+              业务员 ID: <code style={{ color: 'var(--color-accent)', fontWeight: 400 }}>{userId.substring(0, 8)}...</code>
+            </span>
             <span style={{
-              background: 'rgba(15, 23, 42, 0.03)',
-              border: '1px solid rgba(15, 23, 42, 0.08)',
+              background: 'var(--bg-sub)',
               padding: '6px 14px',
               borderRadius: '20px',
-              color: '#0f172a',
-              fontWeight: 300
+              color: 'var(--color-text)',
+              fontWeight: 300,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
             }}>
-              🔓 剩余额度: <b style={{ color: '#10b981', fontWeight: 500 }}>{quota}</b> 次
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+              </svg>
+              剩余额度: <b style={{ color: 'var(--color-accent)', fontWeight: 500 }}>{quota}</b> 次
             </span>
           </div>
         </header>
@@ -257,29 +270,27 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
                 justifyContent: 'space-between',
                 gap: '16px',
                 padding: '12px 24px',
-                background: 'rgba(255, 255, 255, 0.45)',
-                backdropFilter: 'blur(16px)',
-                borderRadius: '16px',
-                border: '1px solid rgba(15, 23, 42, 0.08)',
+                background: 'var(--bg-sub)',
+                borderRadius: 'var(--border-radius)',
                 marginBottom: '16px',
-                boxShadow: '0 4px 20px rgba(15, 23, 42, 0.02)',
+                boxShadow: '0 6px 20px rgba(160, 109, 68, 0.01)',
                 flexWrap: 'wrap'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 500 }}>🌎 国家/市场</span>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--color-muted)', fontWeight: 500 }}>国家/市场</span>
                     <select
                       value={selectedMarket}
                       onChange={(e) => setSelectedMarket(e.target.value)}
                       style={{
                         padding: '6px 12px',
                         borderRadius: '10px',
-                        border: '1px solid rgba(15, 23, 42, 0.12)',
-                        background: 'rgba(255, 255, 255, 0.8)',
+                        border: 'none',
+                        background: 'var(--bg-main)',
                         fontSize: '0.85rem',
                         outline: 'none',
                         cursor: 'pointer',
-                        color: '#0f172a'
+                        color: 'var(--color-text)'
                       }}
                     >
                       {markets.map(m => <option key={m} value={m}>{m}</option>)}
@@ -287,19 +298,19 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 500 }}>📦 产品品类</span>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--color-muted)', fontWeight: 500 }}>产品品类</span>
                     <select
                       value={selectedProduct}
                       onChange={(e) => setSelectedProduct(e.target.value)}
                       style={{
                         padding: '6px 12px',
                         borderRadius: '10px',
-                        border: '1px solid rgba(15, 23, 42, 0.12)',
-                        background: 'rgba(255, 255, 255, 0.8)',
+                        border: 'none',
+                        background: 'var(--bg-main)',
                         fontSize: '0.85rem',
                         outline: 'none',
                         cursor: 'pointer',
-                        color: '#0f172a'
+                        color: 'var(--color-text)'
                       }}
                     >
                       {products.map(p => <option key={p} value={p}>{p}</option>)}
@@ -314,15 +325,14 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
                     setFocusNodeId(null);
                     setSelectedNode(null);
                   }}
-                  className="water-drop-btn"
+                  className="sand-btn"
                   style={{
                     padding: '6px 18px',
                     fontSize: '0.8rem',
-                    cursor: 'pointer',
-                    fontWeight: 500
+                    cursor: 'pointer'
                   }}
                 >
-                  🔄 重置筛选与聚焦
+                  重置筛选与聚焦
                 </button>
               </div>
 
@@ -330,17 +340,16 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
               {focusNodeId && focusedNode && (
                 <div style={{
                   padding: '10px 20px',
-                  background: 'rgba(37, 99, 235, 0.08)',
-                  border: '1px solid rgba(37, 99, 235, 0.15)',
+                  background: 'rgba(255, 100, 30, 0.05)',
                   borderRadius: '12px',
-                  color: '#1d4ed8',
+                  color: 'var(--color-accent)',
                   fontSize: '0.85rem',
                   marginBottom: '16px',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center'
                 }}>
-                  <span>📍 正在聚焦报告：<strong>{focusedNode.title}</strong> (只展示其一阶关联节点)</span>
+                  <span>正在聚焦报告：<strong>{focusedNode.title}</strong> (只展示其一阶关联节点)</span>
                   <span
                     onClick={() => setFocusNodeId(null)}
                     style={{
