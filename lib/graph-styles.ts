@@ -96,8 +96,6 @@ export function getLinkParticles(relationType: string): number {
   switch (relationType) {
     case 'competitor':
       return 2; // 竞争对手流动粒子
-    case 'supplier':
-      return 2; // 供销关系流动粒子
     case 'shared_product':
       return 1; // 共享产品流动粒子
     default:

@@ -81,6 +81,9 @@ export default function ObsidianGraph({
   const speedScaleRef = useRef(speedScale);
   const customColorsRef = useRef(customColors);
 
+  // 声明供销虚线的流动动画缓存 Ref
+  const animDashRef = useRef<number[] | null>(null);
+
   // 保存 graph 实例引用，以实现强制重绘和销毁
   const graphInstanceRef = useRef<any>(null);
 
@@ -149,21 +152,44 @@ export default function ObsidianGraph({
     customColorsRef.current = customColors;
   }, [selectedNodeId, selectHighlightNodes, selectHighlightLinks, nodeSizeScale, lineWidthScale, speedScale, customColors]);
 
-  // 呼吸动画循环：当 selectedNodeId 存在时，通过 requestAnimationFrame 每帧调用重绘
+  // 全局不间断的虚线流动与重绘动画循环
   useEffect(() => {
-    if (!selectedNodeId) return;
-
     let animId: number;
+    const startTime = Date.now();
+    const dashAnimateTime = 800; // 虚线流动周期：800毫秒
+
     const tick = () => {
       if (graphInstanceRef.current) {
+        const elapsed = Date.now() - startTime;
+        const t = (elapsed % dashAnimateTime) / dashAnimateTime;
+        
+        const dashLen = 3.5;
+        const gapLen = 3.5;
+        let currentDash = [2, 2];
+
+        // 条纹朝着 target 流动方向计算
+        if (t < 0.5) {
+          const shift = t * 2;
+          currentDash = [0, gapLen * shift, dashLen, gapLen * (1 - shift)];
+        } else {
+          const shift = (t - 0.5) * 2;
+          currentDash = [dashLen * shift, gapLen, dashLen * (1 - shift), 0];
+        }
+
+        animDashRef.current = currentDash;
+
+        // 触发重绘以呈现流动动画（不重启物理力引擎，只做 Canvas 画面重刷）
         graphInstanceRef.current.pauseAnimation();
         graphInstanceRef.current.resumeAnimation();
       }
       animId = requestAnimationFrame(tick);
     };
+
     tick();
-    return () => cancelAnimationFrame(animId);
-  }, [selectedNodeId]);
+    return () => {
+      cancelAnimationFrame(animId);
+    };
+  }, []);
 
   // 样式微调属性变更时，触发单次 Canvas 刷新
   useEffect(() => {
@@ -309,6 +335,9 @@ export default function ObsidianGraph({
           return getLinkColor(link.relation_type, isFocused, isHighlighted, customColorsRef.current);
         })
         .linkLineDash((link: any) => {
+          if (link.relation_type === 'supplier') {
+            return animDashRef.current || [2, 2];
+          }
           return getLinkLineDash(link.relation_type);
         })
         .linkLabel((link: any) => {
