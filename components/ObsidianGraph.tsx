@@ -125,6 +125,12 @@ export default function ObsidianGraph({
     activeRelations || ['competitor', 'supplier', 'operation', 'mention']
   );
 
+  const handleToggleRelation = (key: string) => {
+    setLocalActiveRelations(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
+  };
+
   React.useEffect(() => {
     if (activeRelations) {
       setLocalActiveRelations(activeRelations);
@@ -501,7 +507,7 @@ export default function ObsidianGraph({
         gap: '8px',
         boxShadow: '0 4px 12px rgba(15, 23, 42, 0.05)',
         zIndex: 10,
-        pointerEvents: 'none'
+        pointerEvents: 'auto'
       }}>
         <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569', marginBottom: '2px' }}>图谱关系</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -511,17 +517,26 @@ export default function ObsidianGraph({
             { key: 'operation', label: '经营关系', color: customColorsRef.current?.operation || '#1565c0', isDash: false },
             { key: 'mention', label: '涉及关系', color: customColorsRef.current?.mention || '#a09b95', isDash: false }
           ].map(relation => {
+            const isActived = localActiveRelations.includes(relation.key);
             return (
               <div 
                 key={relation.key} 
+                onClick={() => handleToggleRelation(relation.key)}
                 style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
                   gap: '8px', 
                   fontSize: '0.7rem', 
-                  color: '#475569',
-                  userSelect: 'none'
+                  color: isActived ? '#475569' : '#94a3b8',
+                  userSelect: 'none',
+                  cursor: 'pointer',
+                  opacity: isActived ? 1 : 0.4,
+                  transition: 'all 0.2s',
+                  padding: '2px 4px',
+                  borderRadius: '4px',
+                  background: isActived ? 'transparent' : 'rgba(15, 23, 42, 0.02)'
                 }}
+                title={isActived ? `点击隐藏${relation.label}` : `点击显示${relation.label}`}
               >
                 <span style={{ 
                   display: 'inline-block', 
