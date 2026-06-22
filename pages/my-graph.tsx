@@ -626,10 +626,10 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
                 activeRelations={activeRelations}
               />
 
-              {/* 右上角图谱样式与颜色自定义设置面板 (Scheme B 暖乳白) */}
+              {/* 右下角图谱样式与颜色自定义设置面板 (Scheme B 暖乳白) */}
               <div style={{
                 position: 'absolute',
-                top: '20px',
+                bottom: '20px',
                 right: '20px',
                 background: 'rgba(253, 251, 247, 0.95)',
                 backdropFilter: 'blur(12px)',
