@@ -512,7 +512,7 @@ export default function ObsidianGraph({
             { key: 'competitor', label: '竞争关系', color: customColorsRef.current?.competitor || '#d32f2f', isDash: false },
             { key: 'supplier', label: '供销关系', color: customColorsRef.current?.supplier || '#ff641e', isDash: true },
             { key: 'operation', label: '经营关系', color: customColorsRef.current?.operation || '#1565c0', isDash: false },
-            { key: 'mention', label: '涉及关系', color: customColorsRef.current?.mention || '#a09b95', isDash: false }
+            { key: 'mention', label: '涉及关系', color: customColorsRef.current?.mention || '#a09b95', isDash: true }
           ].map(relation => {
             const isActived = localActiveRelations.includes(relation.key);
             return (

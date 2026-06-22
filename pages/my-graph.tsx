@@ -262,7 +262,7 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
   const [customColors, setCustomColors] = useState<Record<string, string>>({
     competitor: '#d32f2f',
     supplier: '#ff641e',
-    operation: '#c8c3fb',
+    operation: '#a09b95',
     mention: '#a09b95'
   });
   const [activeRelations, setActiveRelations] = useState<string[]>(['competitor', 'supplier', 'operation', 'mention']);

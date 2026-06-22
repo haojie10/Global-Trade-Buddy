@@ -79,6 +79,8 @@ export function getLinkLineDash(relationType: string): number[] | null {
   switch (relationType) {
     case 'supplier':
       return [2, 2]; // 供销：粗虚线
+    case 'mention':
+      return [3, 3]; // 涉及关系：细虚线
     case 'shared_channel':
       return [4, 4]; // 渠道：稀疏虚线
     case 'shared_competitor':
