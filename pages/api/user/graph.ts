@@ -91,11 +91,21 @@ export async function getGraphData(userId: string, userRole: string, dbClient: a
   );
 
   const reportLinks = relationsRes.rows.map((row: any) => {
+    const reportA = reportMap.get(row.report_id_a);
+    const reportB = reportMap.get(row.report_id_b);
+    const catA = reportA ? reportA.category : null;
+    const catB = reportB ? reportB.category : null;
+
+    const hasProductReport = (catA === 'product' || catB === 'product');
+    const isBothCustomerReports = (catA === 'customer' && catB === 'customer');
+
     let relType = 'mention';
-    if (row.entity_type === 'product' || row.entity_type === 'channel') {
-      relType = 'operation';
+    if (hasProductReport && (row.entity_type === 'product' || row.entity_type === 'channel')) {
+      relType = 'operation'; // 品类报告关联的产品/渠道 -> 经营关系
+    } else if (isBothCustomerReports && (row.entity_type === 'channel' || row.entity_type === 'company')) {
+      relType = 'supplier';  // 公司报告关联的渠道/公司 -> 供销关系
     } else if (row.entity_type === 'competitor') {
-      relType = 'competitor';
+      relType = 'competitor'; // 竞争对手 -> 竞争关系
     }
 
     return {

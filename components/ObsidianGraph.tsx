@@ -211,7 +211,7 @@ export default function ObsidianGraph({
           // 1. 绘制圆形节点
           ctx.beginPath();
           const isReport = node.node_type === 'report';
-          const baseSize = isReport ? 7 : (node.entity_type === 'company' ? 6.5 : 5);
+          const baseSize = isReport ? 3.5 : (node.entity_type === 'company' ? 3.25 : 2.5);
           const radius = baseSize * (nodeSizeScaleRef.current || 1.0);
           ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
 
