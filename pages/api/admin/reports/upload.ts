@@ -122,7 +122,7 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
   if (resolvedEntities.length > 0) {
     const entityIds = resolvedEntities.map(e => e.id);
     const sharedReportsRes = await dbClient.query(
-      `SELECT DISTINCT re.report_id, e.canonical_name
+      `SELECT DISTINCT re.report_id, e.canonical_name, e.entity_type
        FROM report_entities re
        JOIN entities e ON re.entity_id = e.id
        WHERE re.entity_id = ANY($1) AND re.report_id != $2`,
@@ -130,10 +130,17 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
     );
 
     for (const row of sharedReportsRes.rows) {
+      let relType = 'mention';
+      if (row.entity_type === 'product' || row.entity_type === 'channel') {
+        relType = 'operation';
+      } else if (row.entity_type === 'competitor') {
+        relType = 'competitor';
+      }
+
       await dbClient.query(
         `INSERT INTO relations (report_id_a, report_id_b, relation_key, market_region, relation_type) 
          VALUES ($1, $2, $3, $4, $5)`,
-        [newReportId, row.report_id, row.canonical_name, finalMarketRegion, 'produces']
+        [newReportId, row.report_id, row.canonical_name, finalMarketRegion, relType]
       );
     }
   }

@@ -91,10 +91,12 @@ export async function getGraphData(userId: string, userRole: string, dbClient: a
   );
 
   const reportLinks = relationsRes.rows.map((row: any) => {
-    let relType = 'shared_company';
-    if (row.entity_type === 'product') relType = 'shared_product';
-    else if (row.entity_type === 'channel') relType = 'shared_channel';
-    else if (row.entity_type === 'competitor') relType = 'shared_competitor';
+    let relType = 'mention';
+    if (row.entity_type === 'product' || row.entity_type === 'channel') {
+      relType = 'operation';
+    } else if (row.entity_type === 'competitor') {
+      relType = 'competitor';
+    }
 
     return {
       source: row.report_id_a,
@@ -124,13 +126,24 @@ export async function getGraphData(userId: string, userRole: string, dbClient: a
     [reportIds]
   );
 
-  const bizLinks = bizRes.rows.map((row: any) => ({
-    source: row.report_id_a,
-    target: row.report_id_b,
-    relation_key: row.relation_type === 'competitor' ? '竞争对手' : row.relation_type === 'supplier' ? '供应关系' : '合作关系',
-    relation_type: row.relation_type, // 'competitor' 或 'supplier'
-    market_region: row.market_region
-  }));
+  const bizLinks = bizRes.rows.map((row: any) => {
+    let relType = 'mention';
+    if (row.relation_type === 'competitor') {
+      relType = 'competitor';
+    } else if (row.relation_type === 'supplier') {
+      relType = 'supplier';
+    } else if (row.relation_type === 'product_sale') {
+      relType = 'operation';
+    }
+
+    return {
+      source: row.report_id_a,
+      target: row.report_id_b,
+      relation_key: row.relation_type === 'competitor' ? '竞争对手' : row.relation_type === 'supplier' ? '供应关系' : '合作关系',
+      relation_type: relType,
+      market_region: row.market_region
+    };
+  });
 
   return {
     nodes: reportNodes,

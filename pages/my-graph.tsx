@@ -254,13 +254,8 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
   const [error, setError] = useState<string | null>(null);
 
   // 演示模式及样式微调状态
-  // 演示模式及样式微调状态（若真实数据量过小或完全无连线，则默认直接开启演示模式以获得完美演示体验）
-  const [isDemoMode, setIsDemoMode] = useState(
-    !graphData.nodes || 
-    graphData.nodes.length < 10 || 
-    !graphData.links || 
-    graphData.links.length === 0
-  );
+  // 去掉模拟演示，默认直接加载已解锁真实数据
+  const [isDemoMode, setIsDemoMode] = useState(false);
   const [nodeSizeScale, setNodeSizeScale] = useState(0.5);
   const [lineWidthScale, setLineWidthScale] = useState(1.9);
   const [speedScale, setSpeedScale] = useState(1.8);
@@ -450,32 +445,7 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px', fontSize: '0.9rem' }}>
-            <button
-              onClick={() => {
-                setIsDemoMode(!isDemoMode);
-                setSelectedNode(null);
-                setFocusNodeId(null);
-              }}
-              style={{
-                background: 'rgba(255, 100, 30, 0.06)',
-                color: 'var(--color-accent)',
-                border: 'none',
-                padding: '6px 14px',
-                borderRadius: '20px',
-                fontSize: '0.85rem',
-                fontWeight: 300,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.2s'
-              }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
-              </svg>
-              {isDemoMode ? "切换至真实已解锁数据" : "体验 20 份演示拓扑"}
-            </button>
+
             <Link 
               href="/" 
               className="sand-btn"
