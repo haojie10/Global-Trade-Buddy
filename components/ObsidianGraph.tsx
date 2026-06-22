@@ -184,9 +184,8 @@ export default function ObsidianGraph({
 
         animDashRef.current = currentDash;
 
-        // 触发重绘以呈现流动动画（不重启物理力引擎，只做 Canvas 画面重刷）
-        graphInstanceRef.current.pauseAnimation();
-        graphInstanceRef.current.resumeAnimation();
+        // 触发重绘以呈现流动动画（使用官方 refresh 方法，不打扰或重置物理引力引擎，极高运行效率）
+        graphInstanceRef.current.refresh();
       }
       animId = requestAnimationFrame(tick);
     };
@@ -197,11 +196,10 @@ export default function ObsidianGraph({
     };
   }, []);
 
-  // 样式微调属性变更时，触发单次 Canvas 刷新
+  // 样式微调属性变更时，使用 refresh 触发 Canvas 重绘
   useEffect(() => {
     if (graphInstanceRef.current) {
-      graphInstanceRef.current.pauseAnimation();
-      graphInstanceRef.current.resumeAnimation();
+      graphInstanceRef.current.refresh();
     }
   }, [nodeSizeScale, lineWidthScale, speedScale, customColors]);
 
@@ -388,9 +386,8 @@ export default function ObsidianGraph({
           
           // 异步调用以切断同步递归堆栈，防止 RangeError 溢出
           setTimeout(() => {
-            if (graphInstanceRef.current && typeof graphInstanceRef.current.pauseAnimation === 'function') {
-              graphInstanceRef.current.pauseAnimation();
-              graphInstanceRef.current.resumeAnimation();
+            if (graphInstanceRef.current && typeof graphInstanceRef.current.refresh === 'function') {
+              graphInstanceRef.current.refresh();
             }
           }, 0);
         })
