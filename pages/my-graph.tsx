@@ -260,7 +260,7 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
   const [lineWidthScale, setLineWidthScale] = useState(1.9);
   const [speedScale, setSpeedScale] = useState(1.8);
   const [customColors, setCustomColors] = useState<Record<string, string>>({
-    competitor: '#d32f2f',
+    competitor: '#ff641e',
     supplier: '#ff641e',
     operation: '#a09b95',
     mention: '#a09b95'
