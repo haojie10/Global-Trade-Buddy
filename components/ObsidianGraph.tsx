@@ -161,7 +161,7 @@ export default function ObsidianGraph({
     const tick = () => {
       if (graphInstanceRef.current) {
         const elapsed = Date.now() - startTime;
-        const t = (elapsed % dashAnimateTime) / dashAnimateTime;
+        const t = 1 - ((elapsed % dashAnimateTime) / dashAnimateTime);
         
         const dashLen = 3.5;
         const gapLen = 3.5;
