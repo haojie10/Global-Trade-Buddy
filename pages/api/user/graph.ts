@@ -123,7 +123,9 @@ export async function getGraphData(userId: string, userRole: string, dbClient: a
        re1.report_id AS report_id_a,
        re2.report_id AS report_id_b,
        er.relation_type,
-       er.market_region
+       er.market_region,
+       er.entity_id_a,
+       re1.entity_id AS re1_entity_id
      FROM report_entities re1
      JOIN entities e1 ON re1.entity_id = e1.id AND e1.entity_type = 'company'
      JOIN entity_relations er ON (er.entity_id_a = e1.id OR er.entity_id_b = e1.id)
@@ -132,28 +134,55 @@ export async function getGraphData(userId: string, userRole: string, dbClient: a
        (er.entity_id_b = e2.id AND er.entity_id_a = e1.id)
      ) AND e2.entity_type = 'company' AND e2.id != e1.id
      JOIN report_entities re2 ON re2.entity_id = e2.id
-     WHERE re1.report_id = ANY($1) AND re2.report_id = ANY($1) AND re1.report_id < re2.report_id`,
+     WHERE re1.report_id = ANY($1) AND re2.report_id = ANY($1)`,
     [reportIds]
   );
 
-  const bizLinks = bizRes.rows.map((row: any) => {
-    let relType = 'mention';
-    if (row.relation_type === 'competitor') {
-      relType = 'competitor';
-    } else if (row.relation_type === 'supplier') {
-      relType = 'supplier';
-    } else if (row.relation_type === 'product_sale') {
-      relType = 'operation';
+  const seen = new Set<string>();
+  const bizLinks: any[] = [];
+  for (const row of bizRes.rows) {
+    let sourceId = row.report_id_a;
+    let targetId = row.report_id_b;
+
+    if (row.relation_type === 'supplier') {
+      // 供销关系具有方向：从 entity_id_a (供方) 流向 entity_id_b (销方)
+      if (row.re1_entity_id === row.entity_id_a) {
+        sourceId = row.report_id_a;
+        targetId = row.report_id_b;
+      } else {
+        sourceId = row.report_id_b;
+        targetId = row.report_id_a;
+      }
+    } else {
+      // 竞争关系无向，通过 ID 排序确保去重一致性
+      if (sourceId > targetId) {
+        const tmp = sourceId;
+        sourceId = targetId;
+        targetId = tmp;
+      }
     }
 
-    return {
-      source: row.report_id_a,
-      target: row.report_id_b,
-      relation_key: row.relation_type === 'competitor' ? '竞争对手' : row.relation_type === 'supplier' ? '供应关系' : '合作关系',
-      relation_type: relType,
-      market_region: row.market_region
-    };
-  });
+    const key = `${sourceId}-${targetId}-${row.relation_type}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      let relType = 'mention';
+      if (row.relation_type === 'competitor') {
+        relType = 'competitor';
+      } else if (row.relation_type === 'supplier') {
+        relType = 'supplier';
+      } else if (row.relation_type === 'product_sale') {
+        relType = 'operation';
+      }
+
+      bizLinks.push({
+        source: sourceId,
+        target: targetId,
+        relation_key: row.relation_type === 'competitor' ? '竞争对手' : row.relation_type === 'supplier' ? '供应关系' : '合作关系',
+        relation_type: relType,
+        market_region: row.market_region
+      });
+    }
+  }
 
   return {
     nodes: reportNodes,
