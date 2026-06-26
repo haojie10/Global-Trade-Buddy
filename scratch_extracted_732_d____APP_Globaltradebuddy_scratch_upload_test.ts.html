@@ -1,0 +1,36 @@
+    await uploadHandler(req1, res1);
+    const bReportRes = getJson1();
+    console.log('  Upload Res:', bReportRes);
+
+    // 2. 模拟上传 Brilliant AG 报告
+    console.log('\n2. Uploading Brilliant report...');
+    const brilliantHtml = `
+      <html>
+        <head>
+          <title>Brilliant AG - 360° 企业战略情报报告</title>
+          <meta name="category" content="customer">
+          <meta name="market_region" content="德国, 欧洲">
+          <meta name="summary" content="住宅照明, 室内照明, 吸顶灯">
+        </head>
+        <body>
+          <h1>Brilliant AG 的销售渠道分析</h1>
+          <p>Brilliant AG 的产品在 Bauhaus，OBI 以及 Hornbach 卖。</p>
+        </body>
+      </html>
+    `;
+    const brilliantTags = {
+      companies: ["Brilliant AG", "Brilliant", "Brillanteuchten AG"],
+      competitors: ["Paulmann", "EGLO", "Trio Leuchten"],
+      products: ["住宅照明", "室内照明", "吸顶灯"],
+      regions: ["德国", "欧洲"],
+      channels: ["Bauhaus", "OBI", "Hornbach"],
+      sisters: ["NLC Group of Companies Limited", "Relight", "Lightbox"]
+    };
+
+    const { req: req2, res: res2, getJson: getJson2 } = createMockReqRes({
+      rawHtml: brilliantHtml,
+      manualTags: brilliantTags,
+      category: 'customer'
+    });
+
+    await uploadHandler(req2, res2);

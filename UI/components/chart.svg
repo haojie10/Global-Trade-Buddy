@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M3 3v18h18" stroke="var(--primary, #8fa874)" />
+  <path d="M6 17l4-6 4 3 5-7" stroke="var(--brand-gold, #d1b48c)" />
+  <path d="M15 7h4v4" stroke="var(--brand-gold, #d1b48c)" />
+</svg>

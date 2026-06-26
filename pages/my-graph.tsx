@@ -386,7 +386,21 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
   const hasData = activeGraphData.nodes && activeGraphData.nodes.length > 0;
 
   // 动态提取筛选选项
-  const markets = hasData ? ['All', ...Array.from(new Set(activeGraphData.nodes.map(n => n.market_region).filter(Boolean)))] : ['All'];
+  // 动态提取筛选选项：对地区按逗号分割、扁平化提取，并过滤掉英文，只保留纯中文国家/地区选项
+  const markets = hasData 
+    ? [
+        'All', 
+        ...Array.from(
+          new Set(
+            activeGraphData.nodes
+              .map(n => n.market_region)
+              .filter(Boolean)
+              .flatMap(rStr => rStr.split(',').map(r => r.trim()).filter(Boolean))
+              .filter(region => /^[\u4e00-\u9fa5]+$/.test(region))
+          )
+        )
+      ] 
+    : ['All'];
   const products = hasData ? ['All', ...Array.from(new Set(activeGraphData.nodes.flatMap(n => n.products || []).filter(Boolean)))] : ['All'];
 
   // 过滤数据
@@ -408,11 +422,10 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
       fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
       display: 'flex',
       flexDirection: 'column',
-      position: 'relative',
-      overflowX: 'hidden'
+      position: 'relative'
     }}>
       {/* 头部导航栏 - 漂浮样式 */}
-      <div style={{ padding: '20px 40px 10px 40px', flexShrink: 0, zIndex: 10 }}>
+      <div style={{ padding: '20px 40px 10px 40px', flexShrink: 0, position: 'sticky', top: 0, zIndex: 1000 }}>
         <header style={{
           background: 'rgba(246, 243, 236, 0.8)',
           backdropFilter: 'blur(24px)',
@@ -730,19 +743,25 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
               boxShadow: '0 12px 40px 0 rgba(15, 23, 42, 0.03)'
             }}>
               <div 
-                className="floating-planet"
                 style={{
-                  fontSize: '4.5rem',
+                  width: '72px',
+                  height: '72px',
                   marginBottom: '28px',
-                  background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  fontWeight: 800,
-                  cursor: 'default',
-                  userSelect: 'none'
+                  background: 'linear-gradient(135deg, var(--color-accent) 0%, #ff8c52 100%)',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 8px 24px rgba(255, 100, 30, 0.15)'
                 }}
               >
-                🪐
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4.5 16.5c-1.5 1.26-2.5 3.19-2.5 5.5h20c0-2.31-1-4.24-2.5-5.5" />
+                  <circle cx="12" cy="12" r="2" />
+                  <circle cx="12" cy="2" r="1" />
+                  <circle cx="4" cy="16" r="1" />
+                  <circle cx="20" cy="16" r="1" />
+                </svg>
               </div>
               <h2 style={{
                 fontSize: '1.7rem',
@@ -775,12 +794,12 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
                   cursor: loading ? 'not-allowed' : 'pointer'
                 }}
               >
-                {loading ? '⚡ 正在生成专属知识节点...' : '🔌 快速生成演示图谱并解锁首批报告'}
+                {loading ? '正在生成专属知识节点...' : '快速生成演示图谱并解锁首批报告'}
               </button>
 
               {error && (
                 <div style={{ marginTop: '16px', color: '#ef4444', fontSize: '0.85rem', fontWeight: 600 }}>
-                  ⚠️ {error}
+                  {error}
                 </div>
               )}
             </div>
@@ -807,6 +826,7 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
             onNodeSelectUpdate={(node) => setSelectedNode(node)}
             onFetchEntityDetail={fetchEntityDetail}
             onDeleteNodeSuccess={() => setSelectedNode(null)}
+            allNodes={activeGraphData.nodes}
           />
         </div>
 
@@ -832,7 +852,7 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
             alignItems: 'center',
             gap: '8px'
           }}>
-            🔓 最近解锁的报告 (最多显示10篇)
+            你的报告
           </h3>
           <ReportList
             reports={unlockedReports}

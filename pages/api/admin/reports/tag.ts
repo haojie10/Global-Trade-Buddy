@@ -17,7 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: '实体名称不能为空' });
   }
 
-  if (!['company', 'product', 'channel', 'competitor'].includes(entityType)) {
+  if (!['company', 'product', 'channel', 'competitor', 'supplier', 'customer'].includes(entityType)) {
     return res.status(400).json({ error: '无效的实体类型' });
   }
 
@@ -71,22 +71,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (entityCheck.rows.length > 0) {
       entityId = entityCheck.rows[0].id;
     } else {
+      let dbEntityType = entityType;
+      if (entityType === 'supplier' || entityType === 'customer') {
+        dbEntityType = 'company';
+      }
       const insertEntityRes = await dbClient.query(
         `INSERT INTO entities (canonical_name, entity_type)
          VALUES ($1, $2)
          ON CONFLICT (canonical_name) DO UPDATE SET entity_type = EXCLUDED.entity_type
          RETURNING id`,
-        [tag, entityType]
+        [tag, dbEntityType]
       );
       entityId = insertEntityRes.rows[0].id;
     }
 
-    // 3. 关联到 report_entities 表
+    // 3. 关联到 report_entities 表，并写明在此报告中扮演的角色 role
     await dbClient.query(
-      `INSERT INTO report_entities (report_id, entity_id)
-       VALUES ($1, $2)
-       ON CONFLICT (report_id, entity_id) DO NOTHING`,
-      [reportId, entityId]
+      `INSERT INTO report_entities (report_id, entity_id, role)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (report_id, entity_id) DO UPDATE SET role = EXCLUDED.role`,
+      [reportId, entityId, entityType]
     );
 
     // 4. 重建 relations 关联边，让图谱关联报告

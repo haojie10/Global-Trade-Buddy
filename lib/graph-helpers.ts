@@ -8,6 +8,8 @@ export interface GraphNode {
   competitors?: string[];
   products?: string[];
   channels?: string[];
+  suppliers?: string[];
+  customers?: string[];
   node_type?: string;
   entity_type?: string;
 }

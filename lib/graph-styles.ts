@@ -53,10 +53,8 @@ export function getLinkWidth(
   } else {
     switch (relationType) {
       case 'supplier':
-        baseWidth = 3.5; // 供应/经销关系加粗
-        break;
       case 'competitor':
-        baseWidth = 2.2; // 竞争关系
+        baseWidth = 1.0; // 竞争和供销关系粗细与其他关系保持一致 (1.0)
         break;
       case 'shared_product':
         baseWidth = 1.5; // 相同产品稍粗
@@ -110,8 +108,8 @@ export function getLinkParticles(relationType: string): number {
  */
 export function getGraphContainerBackgroundStyle(): React.CSSProperties {
   return {
-    background: '#f8fafc',
-    backgroundImage: 'radial-gradient(rgba(15, 23, 42, 0.08) 1px, transparent 1px)',
+    background: 'rgba(160, 109, 68, 0.03)',
+    backgroundImage: 'radial-gradient(rgba(160, 109, 68, 0.15) 1px, transparent 1px)',
     backgroundSize: '24px 24px'
   };
 }

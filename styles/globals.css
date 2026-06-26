@@ -1,3 +1,7 @@
+body {
+  overflow-x: hidden;
+}
+
 :root {
   --bg-main: #fdfbf7;      /* 主背景色 (70%): 护眼暖乳白 */
   --bg-sub: #f6f3ec;       /* 结构辅助色 (20%): 无框承载色 */

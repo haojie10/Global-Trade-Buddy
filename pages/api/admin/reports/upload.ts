@@ -51,45 +51,55 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
 
   await dbClient.query('BEGIN');
 
-  // 3. 提取并归一化实体
-  const resolvedEntities = await extractAndNormalizeEntities(rawHtml, meta.title, dbClient, manualTags);
-
-  // 4. 写入报告表
+  // 4. 确定分类和摘要
   const finalCategory = category || meta.category;
   const finalSummary = summary !== undefined ? summary.trim() : meta.summary;
+
+  // 3. 提取并归一化实体
+  const resolvedEntities = await extractAndNormalizeEntities(
+    rawHtml,
+    meta.title,
+    dbClient,
+    manualTags,
+    meta.primary_subject,
+    finalCategory
+  );
+
+  // 找到主体公司的实体 ID
+  const primaryEnt = resolvedEntities.find(e => e.role === 'primary');
+  const primaryEntityId = primaryEnt ? primaryEnt.id : null;
 
   let newReportId = overwriteReportId;
 
   if (overwriteReportId) {
-    // 覆盖更新模式：更新报告内容，同时清理旧的关联网络
+    // 覆盖更新模式：更新报告内容，同时更新主体实体关联
     await dbClient.query(
       `UPDATE reports 
-       SET title = $1, category = $2, market_region = $3, summary = $4, content_html = $5 
-       WHERE id = $6`,
-      [meta.title, finalCategory, finalMarketRegion, finalSummary, cleanHtml, overwriteReportId]
+       SET title = $1, category = $2, market_region = $3, summary = $4, content_html = $5, primary_entity_id = $6
+       WHERE id = $7`,
+      [meta.title, finalCategory, finalMarketRegion, finalSummary, cleanHtml, primaryEntityId, overwriteReportId]
     );
 
-    // 清理旧的报告与实体的映射和关系边，以便重新建立
+    // 清理旧的报告与实体的映射，以便重新建立
     await dbClient.query(`DELETE FROM report_entities WHERE report_id = $1`, [overwriteReportId]);
-    await dbClient.query(`DELETE FROM relations WHERE report_id_a = $1 OR report_id_b = $1`, [overwriteReportId]);
   } else {
     // 新建模式
     const insertReportRes = await dbClient.query(
-      `INSERT INTO reports (title, category, market_region, summary, content_html) 
-       VALUES ($1, $2, $3, $4, $5) 
+      `INSERT INTO reports (title, category, market_region, summary, content_html, primary_entity_id) 
+       VALUES ($1, $2, $3, $4, $5, $6) 
        RETURNING id`,
-      [meta.title, finalCategory, finalMarketRegion, finalSummary, cleanHtml]
+      [meta.title, finalCategory, finalMarketRegion, finalSummary, cleanHtml, primaryEntityId]
     );
     newReportId = insertReportRes.rows[0].id;
   }
 
-  // 5. 写入 report_entities 表
+  // 5. 写入 report_entities 表并携带其扮演的角色 role
   for (const ent of resolvedEntities) {
     await dbClient.query(
-      `INSERT INTO report_entities (report_id, entity_id) 
-       VALUES ($1, $2) 
-       ON CONFLICT (report_id, entity_id) DO NOTHING`,
-      [newReportId, ent.id]
+      `INSERT INTO report_entities (report_id, entity_id, role) 
+       VALUES ($1, $2, $3) 
+       ON CONFLICT (report_id, entity_id) DO UPDATE SET role = EXCLUDED.role`,
+      [newReportId, ent.id, ent.role]
     );
   }
 
@@ -115,33 +125,6 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
           );
         }
       }
-    }
-  }
-
-  // 6. 在 relations 表中建边并携带 market_region 属性
-  if (resolvedEntities.length > 0) {
-    const entityIds = resolvedEntities.map(e => e.id);
-    const sharedReportsRes = await dbClient.query(
-      `SELECT DISTINCT re.report_id, e.canonical_name, e.entity_type
-       FROM report_entities re
-       JOIN entities e ON re.entity_id = e.id
-       WHERE re.entity_id = ANY($1) AND re.report_id != $2`,
-      [entityIds, newReportId]
-    );
-
-    for (const row of sharedReportsRes.rows) {
-      let relType = 'mention';
-      if (row.entity_type === 'product' || row.entity_type === 'channel') {
-        relType = 'operation';
-      } else if (row.entity_type === 'competitor') {
-        relType = 'competitor';
-      }
-
-      await dbClient.query(
-        `INSERT INTO relations (report_id_a, report_id_b, relation_key, market_region, relation_type) 
-         VALUES ($1, $2, $3, $4, $5)`,
-        [newReportId, row.report_id, row.canonical_name, finalMarketRegion, relType]
-      );
     }
   }
 

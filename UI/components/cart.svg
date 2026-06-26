@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M1 1h4l2.6 12.4A2 2 0 0 0 9.6 15h9.1a2 2 0 0 0 2-1.6L22 6H6" stroke="var(--primary, #8fa874)" />
+  <circle cx="10" cy="19" r="2" stroke="var(--brand-gold, #d1b48c)" />
+  <circle cx="18" cy="19" r="2" stroke="var(--brand-gold, #d1b48c)" />
+</svg>

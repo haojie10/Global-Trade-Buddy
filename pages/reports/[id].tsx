@@ -74,65 +74,19 @@ function cleanHtmlBody(rawHtml: string): string {
   bodyContent = bodyContent.replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, '');
 
   // 4. 强制注入的基础重置样式，以适应 Scheme B 暖乳白图书阅读器风格
+  // 4. 强制注入的基础重置样式，仅作溢出保护，不干扰原报告格式配色
   const lightThemeOverrides = `
     <style>
       .report-content-body {
         width: 100%;
-        font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-        color: #3c3935;
-      }
-      .report-content-body h1, .report-content-body h2, .report-content-body h3, .report-content-body h4 {
-        color: #3c3935 !important;
-        font-weight: 400;
-        margin-top: 1.5em;
-        margin-bottom: 0.6em;
-      }
-      .report-content-body p, .report-content-body li {
-        color: #7a756f !important;
-        line-height: 1.7;
-        margin-bottom: 1em;
-        font-weight: 300;
-      }
-      .report-content-body a {
-        color: #ff641e !important;
-        text-decoration: none;
       }
       .report-content-body img {
         max-width: 100%;
         height: auto;
-        border-radius: 22px;
-        margin: 16px 0;
       }
       .report-content-body table {
         width: 100%;
         border-collapse: collapse;
-        margin: 20px 0;
-        background: #fdfbf7;
-        border-radius: 14px;
-        overflow: hidden;
-      }
-      .report-content-body th {
-        background: rgba(255, 100, 30, 0.05);
-        color: #3c3935;
-        font-weight: 400;
-        text-align: left;
-        padding: 12px 16px;
-      }
-      .report-content-body td {
-        border-bottom: 1px solid rgba(160, 109, 68, 0.05);
-        color: #7a756f;
-        padding: 12px 16px;
-        font-weight: 300;
-      }
-      /* 强制重写模板中可能含有的暗色和白色硬编码背景 */
-      .report-content-body, 
-      .report-content-body div, 
-      .report-content-body section,
-      .report-content-body article {
-        background: transparent !important;
-        color: #3c3935 !important;
-        border: none !important;
-        box-shadow: none !important;
       }
     </style>
   `;

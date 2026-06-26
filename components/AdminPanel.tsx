@@ -15,6 +15,9 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
   const [manualProducts, setManualProducts] = useState<string[]>(['']);
   const [manualRegions, setManualRegions] = useState<string[]>(['']);
   const [manualChannels, setManualChannels] = useState<string[]>(['']);
+  const [manualSuppliers, setManualSuppliers] = useState<string[]>(['']);
+  const [manualCustomers, setManualCustomers] = useState<string[]>(['']);
+  const [manualSisters, setManualSisters] = useState<string[]>(['']);
   const [category, setCategory] = useState<'customer' | 'product'>('customer');
   const [summary, setSummary] = useState('');
   const [companyWebsite, setCompanyWebsite] = useState('');
@@ -102,6 +105,24 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
             const arr = channels.split(',').map(s => s.trim()).filter(Boolean);
             setManualChannels(arr.length > 0 ? arr : ['']);
           }
+
+          const suppliers = doc.querySelector('meta[name="suppliers"]')?.getAttribute('content');
+          if (suppliers) {
+            const arr = suppliers.split(',').map(s => s.trim()).filter(Boolean);
+            setManualSuppliers(arr.length > 0 ? arr : ['']);
+          }
+
+          const customers = doc.querySelector('meta[name="customers"]')?.getAttribute('content');
+          if (customers) {
+            const arr = customers.split(',').map(s => s.trim()).filter(Boolean);
+            setManualCustomers(arr.length > 0 ? arr : ['']);
+          }
+
+          const sisters = doc.querySelector('meta[name="sister_parents"]')?.getAttribute('content');
+          if (sisters) {
+            const arr = sisters.split(',').map(s => s.trim()).filter(Boolean);
+            setManualSisters(arr.length > 0 ? arr : ['']);
+          }
         } catch (domErr) {
           console.error('自动解析报告元数据出错:', domErr);
         }
@@ -119,28 +140,50 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
     if (e) e.preventDefault();
     if (!rawHtmlContent.trim()) return;
 
-    // 前置去重校验：如果不是强制上传并且有填写公司标签，首先查询是否已有该公司的报告
-    const primaryCompany = manualCompanies.map(c => c.trim()).filter(Boolean)[0];
-    if (!bypassCheck && !overwriteId && primaryCompany) {
-      setUploadLoading(true);
+    // 前置去重校验：如果不是强制上传，首先查询是否已有相似报告
+    if (!bypassCheck && !overwriteId) {
+      let extractedTitle = '';
       try {
-        const checkRes = await fetch('/api/admin/reports/check-duplicate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            companyName: primaryCompany,
-            category
-          })
-        });
-        const checkData = await checkRes.json();
-        if (checkRes.ok && checkData.duplicateFound) {
-          setDuplicateInfo(checkData);
-          setShowDuplicateModal(true);
-          setUploadLoading(false);
-          return; // 中断流程，弹窗等待管理员确认
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(rawHtmlContent, 'text/html');
+        extractedTitle = doc.querySelector('title')?.textContent || '';
+      } catch (domErr) {}
+
+      const primaryCompany = manualCompanies.map(c => c.trim()).filter(Boolean)[0];
+      const primaryProduct = manualProducts.map(p => p.trim()).filter(Boolean)[0];
+      const primaryRegion = manualRegions.map(r => r.trim()).filter(Boolean)[0];
+      const primaryChannel = manualChannels.map(c => c.trim()).filter(Boolean)[0];
+
+      // 公司报告以公司名为查重条件；品类报告以主产品或报告标题为条件
+      const shouldCheck = category === 'customer' 
+        ? !!primaryCompany 
+        : (!!primaryProduct || !!extractedTitle);
+
+      if (shouldCheck) {
+        setUploadLoading(true);
+        try {
+          const checkRes = await fetch('/api/admin/reports/check-duplicate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              category,
+              companyName: category === 'customer' ? primaryCompany : undefined,
+              productName: category === 'product' ? primaryProduct : undefined,
+              region: category === 'product' ? primaryRegion : undefined,
+              channel: category === 'product' ? primaryChannel : undefined,
+              title: extractedTitle || undefined
+            })
+          });
+          const checkData = await checkRes.json();
+          if (checkRes.ok && checkData.duplicateFound) {
+            setDuplicateInfo(checkData);
+            setShowDuplicateModal(true);
+            setUploadLoading(false);
+            return; // 中断流程，弹窗等待管理员确认
+          }
+        } catch (err) {
+          console.error('检测重复报告失败:', err);
         }
-      } catch (err) {
-        console.error('检测重复报告失败:', err);
       }
     }
 
@@ -160,7 +203,10 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
             competitors: manualCompetitors.map(c => c.trim()).filter(Boolean),
             products: manualProducts.map(p => p.trim()).filter(Boolean),
             regions: manualRegions.map(r => r.trim()).filter(Boolean),
-            channels: manualChannels.map(c => c.trim()).filter(Boolean)
+            channels: manualChannels.map(c => c.trim()).filter(Boolean),
+            suppliers: manualSuppliers.map(s => s.trim()).filter(Boolean),
+            customers: manualCustomers.map(cu => cu.trim()).filter(Boolean),
+            sisters: manualSisters.map(si => si.trim()).filter(Boolean)
           }
         })
       });
@@ -175,6 +221,9 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
         setManualProducts(['']);
         setManualRegions(['']);
         setManualChannels(['']);
+        setManualSuppliers(['']);
+        setManualCustomers(['']);
+        setManualSisters(['']);
         setCategory('customer');
         setSummary('');
         setCompanyWebsite('');
@@ -460,10 +509,13 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
             marginBottom: '8px'
           }}>
             {renderTagListInput('公司名称 (Company)', manualCompanies, setManualCompanies, '例如: 特斯拉, 丰田汽车')}
-            {renderTagListInput('竞争对手 (Competitor)', manualCompetitors, setManualCompetitors, '例如: 宜家, 百安居')}
+            {renderTagListInput('竞争对手 (Competitor)', manualCompetitors, setManualCompetitors, '例如: 宜家, OBI')}
             {renderTagListInput('产品名称 (Product)', manualProducts, setManualProducts, '例如: 锂电池, 刹车片')}
             {renderTagListInput('市场地区 (Region)', manualRegions, setManualRegions, '例如: 北美, 欧盟')}
-            {renderTagListInput('渠道类型 (Channel)', manualChannels, setManualChannels, '例如: 一级供应链')}
+            {renderTagListInput('销售渠道 (Channel)', manualChannels, setManualChannels, '例如: 沃尔玛, 麦德龙')}
+            {renderTagListInput('供应商 (Supplier)', manualSuppliers, setManualSuppliers, '例如: 中国电动工具厂')}
+            {renderTagListInput('主要客户 (Customer)', manualCustomers, setManualCustomers, '例如: 德国工程商')}
+            {renderTagListInput('姐妹/母公司 (Sister/Parent)', manualSisters, setManualSisters, '例如: 家族母集团')}
           </div>
           
           <div style={{ display: 'flex', gap: '20px', alignItems: 'center', marginTop: '12px' }}>

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" width="100%" height="100%">
+  <defs>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e3cfb3" />
+      <stop offset="100%" stop-color="#d1b48c" />
+    </linearGradient>
+    <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8fa874" />
+      <stop offset="100%" stop-color="#5a7043" />
+    </linearGradient>
+  </defs>
+  <rect width="400" height="120" rx="16" fill="#090e07" />
+  
+  <!-- Logo Icon: Shield (Credit/Compliance) + Upward growth chart arrow + Balance scales -->
+  <g transform="translate(15, 10)">
+    <!-- Outer Shield Boundary -->
+    <path d="M50 15c15 0 28-8 28-8s4 28-4 50c-7 19-24 28-24 28s-17-9-24-28c-8-22-4-50-4-50s13 8 28 8Z" stroke="url(#goldGrad)" stroke-width="2.5" fill="none" stroke-linejoin="round" />
+    <!-- Inner Shield Boundary -->
+    <path d="M50 22c11 0 21-6 21-6s3 22-3 40c-6 15-18 22-18 22s-12-7-18-22c-6-18-3-40-3-40s7 6 21 6Z" fill="url(#greenGrad)" opacity="0.3" />
+    <!-- Scale Beam (Balance / Compliance) -->
+    <path d="M36 44h28" stroke="url(#goldGrad)" stroke-width="1.5" stroke-linecap="round" />
+    <path d="M50 32v24M44 56h12" stroke="url(#goldGrad)" stroke-width="1.5" stroke-linecap="round" />
+    <!-- Upward Trend Line (Growth) -->
+    <path d="M30 64l12-10 8 6 18-18" stroke="#f2f5f0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M62 42h6v6" stroke="#f2f5f0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
+
+  <!-- Brand Typography -->
+  <text x="130" y="58" font-family="'Outfit', 'Inter', sans-serif" font-size="24" font-weight="800" fill="#f2f5f0" letter-spacing="0.5">
+    GlobalTrade<tspan fill="url(#goldGrad)">Buddy</tspan>
+  </text>
+  <text x="130" y="80" font-family="'Inter', sans-serif" font-size="10" font-weight="500" fill="#9aa693" letter-spacing="3.5">
+    CREDIT & COMPLIANCE GUARD
+  </text>
+</svg>

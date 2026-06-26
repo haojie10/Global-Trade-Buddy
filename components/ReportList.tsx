@@ -20,7 +20,17 @@ export function filterReports(
   return reports.filter(r => {
     const matchQuery = !query || r.title.toLowerCase().includes(query) || r.summary.toLowerCase().includes(query);
     const matchCat = category === 'All' || r.category === category;
-    const matchRegion = region === 'All' || r.market_region === region || r.market_region === '全球';
+    
+    // 支持逗号分割的国家/地区匹配，如果包含选中的地区或“全球”，即代表匹配
+    const reportRegions = r.market_region
+      ? r.market_region.split(',').map(s => s.trim()).filter(Boolean)
+      : [];
+    const matchRegion =
+      region === 'All' ||
+      reportRegions.includes(region) ||
+      reportRegions.includes('全球') ||
+      r.market_region === '全球';
+
     return matchQuery && matchCat && matchRegion;
   });
 }
@@ -39,7 +49,20 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
   const [selectedRegion, setSelectedRegion] = useState('All');
 
   const filtered = filterReports(reports, searchQuery, selectedCategory, selectedRegion);
-  const regions = ['All', ...Array.from(new Set(reports.map(r => r.market_region).filter(Boolean)))];
+  
+  // 对地区进行分割、扁平化，过滤掉非中文并去重，对齐图谱页面
+  const regions = [
+    'All',
+    ...Array.from(
+      new Set(
+        reports
+          .map(r => r.market_region)
+          .filter(Boolean)
+          .flatMap(rStr => rStr.split(',').map(r => r.trim()).filter(Boolean))
+          .filter(region => /^[\u4e00-\u9fa5]+$/.test(region))
+      )
+    )
+  ];
 
   const handleUnlock = async (e: React.MouseEvent, reportId: string) => {
     e.preventDefault();

@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" width="100%" height="100%">
+  <defs>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e3cfb3" />
+      <stop offset="100%" stop-color="#d1b48c" />
+    </linearGradient>
+    <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8fa874" />
+      <stop offset="100%" stop-color="#5a7043" />
+    </linearGradient>
+    <linearGradient id="facetGrad1" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#8fa874" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#d1b48c" stop-opacity="0.3" />
+    </linearGradient>
+    <linearGradient id="facetGrad2" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#202b19" />
+      <stop offset="100%" stop-color="#8fa874" />
+    </linearGradient>
+  </defs>
+  <rect width="400" height="120" rx="16" fill="#090e07" />
+  
+  <!-- Logo Icon: Geometric 3D Obsidian Crystal + Node Connections -->
+  <g transform="translate(15, 10)">
+    <!-- Network connection lines behind crystal -->
+    <path d="M15 30l35 20M50 50l35-20M50 50v38M15 70l35-20M85 70l-35-20" stroke="url(#greenGrad)" stroke-width="1" stroke-dasharray="2 2" opacity="0.6" />
+    <!-- 3D Obsidian Facets -->
+    <polygon points="50,15 18,35 50,55" fill="url(#facetGrad1)" stroke="url(#goldGrad)" stroke-width="1" />
+    <polygon points="50,15 82,35 50,55" fill="url(#facetGrad2)" stroke="url(#goldGrad)" stroke-width="1" opacity="0.8" />
+    <polygon points="18,35 18,65 50,85 50,55" fill="url(#greenGrad)" stroke="url(#goldGrad)" stroke-width="1" opacity="0.9" />
+    <polygon points="82,35 82,65 50,85 50,55" fill="#12190e" stroke="url(#goldGrad)" stroke-width="1" />
+    <!-- Glowing Node dots -->
+    <circle cx="50" cy="15" r="3.5" fill="#e3cfb3" />
+    <circle cx="18" cy="35" r="3" fill="#8fa874" />
+    <circle cx="82" cy="35" r="3" fill="#8fa874" />
+    <circle cx="50" cy="85" r="3.5" fill="#e3cfb3" />
+  </g>
+
+  <!-- Brand Typography -->
+  <text x="130" y="58" font-family="'Outfit', 'Inter', sans-serif" font-size="24" font-weight="800" fill="#f2f5f0" letter-spacing="0.5">
+    GlobalTrade<tspan fill="url(#goldGrad)">Buddy</tspan>
+  </text>
+  <text x="130" y="80" font-family="'Inter', sans-serif" font-size="10" font-weight="500" fill="#9aa693" letter-spacing="3.5">
+    MARKET KNOWLEDGE GRAPH
+  </text>
+</svg>

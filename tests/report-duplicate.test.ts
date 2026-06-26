@@ -129,7 +129,108 @@ describe('Report Duplicate Detection and Overwrite Logic Test', () => {
     expect(checkAlias.rows[0].canonical_name).toBe('X5 Retail');
 
     // 6. 核心验证：用户解锁关系依旧存在
+    // 6. 核心验证：用户解锁关系依旧存在
     const checkUnlock = await dbClient.query("SELECT id FROM unlocks WHERE user_id = $1 AND report_id = $2", [testUserId, reportId]);
     expect(checkUnlock.rows.length).toBe(1);
+  });
+
+  it('should NOT trigger duplicate when company is only a competitor in another report', async () => {
+    // 1. 创建公司 A (Primary) 和 公司 B (Competitor)
+    const entARes = await dbClient.query("INSERT INTO entities (canonical_name, entity_type) VALUES ('Company A Corp', 'company') RETURNING id");
+    const entBRes = await dbClient.query("INSERT INTO entities (canonical_name, entity_type) VALUES ('Company B Ltd', 'company') RETURNING id");
+    const idA = entARes.rows[0].id;
+    const idB = entBRes.rows[0].id;
+
+    // 创建关联别名
+    await dbClient.query("INSERT INTO entity_aliases (entity_id, alias_name) VALUES ($1, 'Company B')", [idB]);
+
+    // 2. 创建报告，主公司是 A，但关联了 B 作为竞争对手 (role = 'competitor')
+    const repRes = await dbClient.query(
+      `INSERT INTO reports (title, category, summary, content_html) 
+       VALUES ('Company A Business Analysis', 'customer', 'Summary info A', '<div>content</div>') RETURNING id`
+    );
+    const repId = repRes.rows[0].id;
+
+    await dbClient.query("INSERT INTO report_entities (report_id, entity_id, role) VALUES ($1, $2, 'primary')", [repId, idA]);
+    await dbClient.query("INSERT INTO report_entities (report_id, entity_id, role) VALUES ($1, $2, 'competitor')", [repId, idB]);
+
+    // 3. 校验如果上传主公司为 "Company B" 的报告，不应该触发与 Company A 报告重复
+    const { req, res, getStatus, getJson } = mockRequestResponse('POST', {
+      companyName: 'Company B',
+      category: 'customer'
+    });
+
+    await (checkDuplicateHandler as any)(req, res, dbClient);
+
+    expect(getStatus()).toBe(200);
+    const payload = getJson();
+    expect(payload.duplicateFound).toBe(false); // 预期不重复！因为 B 在前一份报告里仅是 competitor，而非 primary
+  });
+
+  it('should enforce product category compound duplicate check (product + market/channel)', async () => {
+    // 1. 创建产品实体 "LED Spotlight"
+    const prodRes = await dbClient.query("INSERT INTO entities (canonical_name, entity_type) VALUES ('LED Spotlight', 'product') RETURNING id");
+    const prodId = prodRes.rows[0].id;
+
+    // 创建地区实体 "Europe" 和 "North America"
+    const regEuRes = await dbClient.query("INSERT INTO entities (canonical_name, entity_type) VALUES ('Europe', 'region') RETURNING id");
+    const regNaRes = await dbClient.query("INSERT INTO entities (canonical_name, entity_type) VALUES ('North America', 'region') RETURNING id");
+    const euId = regEuRes.rows[0].id;
+    const naId = regNaRes.rows[0].id;
+
+    // 2. 插入一份针对欧洲的 LED 投光灯品类报告
+    const repRes = await dbClient.query(
+      `INSERT INTO reports (title, category, market_region, summary, content_html) 
+       VALUES ('Europe LED Spotlight Market Report', 'product', 'Europe', 'Summary Europe', '<div>Europe content</div>') RETURNING id`
+    );
+    const repId = repRes.rows[0].id;
+
+    // 关联产品和市场实体
+    await dbClient.query("INSERT INTO report_entities (report_id, entity_id, role) VALUES ($1, $2, 'product')", [repId, prodId]);
+    await dbClient.query("INSERT INTO report_entities (report_id, entity_id, role) VALUES ($1, $2, 'region')", [repId, euId]);
+
+    // 3. 上传相同产品但不同市场的报告 (如：North America) -> 预期不重复
+    const { req: req1, res: res1, getStatus: getStatus1, getJson: getJson1 } = mockRequestResponse('POST', {
+      category: 'product',
+      productName: 'LED Spotlight',
+      region: 'North America'
+    });
+    await (checkDuplicateHandler as any)(req1, res1, dbClient);
+    expect(getStatus1()).toBe(200);
+    expect(getJson1().duplicateFound).toBe(false);
+
+    // 4. 上传相同产品且相同市场的报告 (Europe) -> 预期触发重复
+    const { req: req2, res: res2, getStatus: getStatus2, getJson: getJson2 } = mockRequestResponse('POST', {
+      category: 'product',
+      productName: 'LED Spotlight',
+      region: 'Europe'
+    });
+    await (checkDuplicateHandler as any)(req2, res2, dbClient);
+    expect(getStatus2()).toBe(200);
+    expect(getJson2().duplicateFound).toBe(true);
+    expect(getJson2().reportId).toBe(repId);
+  });
+
+  it('should detect duplicate product reports based on title similarity (> 0.7)', async () => {
+    // 1. 插入一个特定的产品报告
+    const repRes = await dbClient.query(
+      `INSERT INTO reports (title, category, summary, content_html) 
+       VALUES ('Specific Lamp Product Insight Report', 'product', 'Summary Specific', '<div>content</div>') RETURNING id`
+    );
+    const repId = repRes.rows[0].id;
+
+    // 2. 用非常相似的标题去请求查重 -> 预期通过标题匹配去重
+    const { req, res, getStatus, getJson } = mockRequestResponse('POST', {
+      category: 'product',
+      title: 'Specific Lamp Product Insight Report 2026'
+    });
+
+    await (checkDuplicateHandler as any)(req, res, dbClient);
+
+    expect(getStatus()).toBe(200);
+    const payload = getJson();
+    expect(payload.duplicateFound).toBe(true);
+    expect(payload.reportId).toBe(repId);
+    expect(payload.reason).toBe('title-similarity');
   });
 });

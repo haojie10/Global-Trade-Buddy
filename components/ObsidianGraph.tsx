@@ -167,7 +167,7 @@ export default function ObsidianGraph({
     const tick = () => {
       if (graphInstanceRef.current) {
         const elapsed = Date.now() - startTime;
-        const t = 1 - ((elapsed % dashAnimateTime) / dashAnimateTime);
+        const t = (elapsed % dashAnimateTime) / dashAnimateTime;
         
         const dashLen = 3.5;
         const gapLen = 3.5;
@@ -481,10 +481,10 @@ export default function ObsidianGraph({
         justifyContent: 'space-between',
         alignItems: 'center'
       }}>
-        <span style={{ fontSize: '0.85rem', color: '#475569', fontWeight: 600 }}>📂 您的个人外贸知识拓扑网络 (已解锁报告)</span>
-        <div style={{ display: 'flex', gap: '16px', fontSize: '0.75rem', fontWeight: 600 }}>
-          <span style={{ color: '#2563eb' }}>● 客户洞察</span>
-          <span style={{ color: '#10b981' }}>● 品类分析</span>
+        <span style={{ fontSize: '0.85rem', color: 'var(--color-muted)', fontWeight: 500 }}>市场图谱</span>
+        <div style={{ display: 'flex', gap: '16px', fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-muted)' }}>
+          <span><span style={{ color: '#ff641e', marginRight: '4px' }}>●</span>客户洞察</span>
+          <span><span style={{ color: '#7a756f', marginRight: '4px' }}>●</span>品类分析</span>
         </div>
       </div>
       <div ref={containerRef} style={{ width: '100%', height: 'calc(100% - 49px)', ...getGraphContainerBackgroundStyle() }} />

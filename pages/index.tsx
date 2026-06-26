@@ -131,11 +131,10 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
       color: 'var(--color-text)',
       minHeight: '100vh',
       fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-      position: 'relative',
-      overflowX: 'hidden'
+      position: 'relative'
     }}>
       {/* 头部导航栏 - 浮空漂浮样式 */}
-      <div style={{ padding: '20px 40px 10px 40px', position: 'sticky', top: 0, zIndex: 100 }}>
+      <div style={{ padding: '20px 40px 10px 40px', position: 'sticky', top: 0, zIndex: 1000 }}>
         <header style={{
           background: 'rgba(246, 243, 236, 0.8)',
           backdropFilter: 'blur(24px)',
