@@ -53,7 +53,7 @@ describe('Graph Core API - getGraphData & Compatibility', () => {
     // 3. 关联关系，增加 market_region 和 relation_type
     await dbClient.query(
       `INSERT INTO relations (report_id_a, report_id_b, relation_key, market_region, relation_type) 
-       VALUES ($1, $2, '共有组件', '中东', 'supply_chain')`,
+       VALUES ($1, $2, '经营关系', '中东', 'operation')`,
       [reportIdA, reportIdB]
     );
 
@@ -75,10 +75,14 @@ describe('Graph Core API - getGraphData & Compatibility', () => {
     );
 
     await dbClient.query(
-      `INSERT INTO report_entities (report_id, entity_id) VALUES 
-       ($1, $3), ($1, $4), ($2, $5)`,
+      `INSERT INTO report_entities (report_id, entity_id, role) VALUES 
+       ($1, $3, 'primary'), ($1, $4, 'product'), ($2, $4, 'product'), ($2, $5, 'channel')`,
       [reportIdA, reportIdB, entComp.rows[0].id, entProd.rows[0].id, entChan.rows[0].id]
     );
+
+    // 更新 reports 主实体引用
+    await dbClient.query("UPDATE reports SET primary_entity_id = $1 WHERE id = $2", [entComp.rows[0].id, reportIdA]);
+    await dbClient.query("UPDATE reports SET primary_entity_id = $1 WHERE id = $2", [entProd.rows[0].id, reportIdB]);
 
     // 6. 插入实体商业关系
     await dbClient.query(
@@ -119,7 +123,7 @@ describe('Graph Core API - getGraphData & Compatibility', () => {
     // 验证包含报告与报告的关联线
     const reportLinks = data.links;
     expect(reportLinks.length).toBe(1);
-    expect(reportLinks[0].relation_key).toBe('共有组件');
+    expect(reportLinks[0].relation_key).toBe('经营关系');
   });
 
   it('should verify backward compatibility of getUserGraph', async () => {

@@ -104,27 +104,71 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
   }
 
   // 5.5 自动关系推理逻辑 (1个产品，多个公司 -> 两两建立 competitor 关系)
-  if (manualTags?.products && manualTags?.companies) {
-    const companyNames = manualTags.companies.map((c: string) => c.trim()).filter(Boolean);
+  if (manualTags?.products) {
     const productNames = manualTags.products.map((p: string) => p.trim()).filter(Boolean);
     
-    if (companyNames.length > 1 && productNames.length === 1) {
-      const compRes = await dbClient.query(
-        `SELECT id FROM entities WHERE canonical_name = ANY($1) AND entity_type = 'company'`,
-        [companyNames]
-      );
-      const compIds = compRes.rows.map((r: any) => r.id);
+    if (productNames.length === 1) {
+      const companyNames: string[] = [];
+      if (manualTags.companies && manualTags.companies.length > 0) {
+        companyNames.push(manualTags.companies[0]);
+      }
+      const otherCompanies = [
+        ...(manualTags.competitors || []),
+        ...(manualTags.suppliers || []),
+        ...(manualTags.customers || []),
+        ...(manualTags.sisters || [])
+      ].map(c => c.trim()).filter(Boolean);
       
-      for (let i = 0; i < compIds.length; i++) {
-        for (let j = i + 1; j < compIds.length; j++) {
-          await dbClient.query(
-            `INSERT INTO entity_relations (entity_id_a, entity_id_b, relation_type, market_region)
-             VALUES ($1, $2, 'competitor', $3)
-             ON CONFLICT (entity_id_a, entity_id_b, relation_type, market_region) DO NOTHING`,
-            [compIds[i], compIds[j], finalMarketRegion || null]
-          );
+      const allCompanyNames = Array.from(new Set([...companyNames, ...otherCompanies]));
+
+      if (allCompanyNames.length > 1) {
+        const compRes = await dbClient.query(
+          `SELECT id FROM entities WHERE canonical_name = ANY($1) AND entity_type = 'company'`,
+          [allCompanyNames]
+        );
+        const compIds = compRes.rows.map((r: any) => r.id);
+        
+        for (let i = 0; i < compIds.length; i++) {
+          for (let j = i + 1; j < compIds.length; j++) {
+            await dbClient.query(
+              `INSERT INTO entity_relations (entity_id_a, entity_id_b, relation_type, market_region)
+               VALUES ($1, $2, 'competitor', $3)
+               ON CONFLICT (entity_id_a, entity_id_b, relation_type, market_region) DO NOTHING`,
+              [compIds[i], compIds[j], finalMarketRegion || null]
+            );
+          }
         }
       }
+    }
+  }
+
+  // 6. 在 relations 表中建边并携带 market_region 属性
+  if (resolvedEntities.length > 0) {
+    const entityIds = resolvedEntities.map(e => e.id);
+    const sharedReportsRes = await dbClient.query(
+      `SELECT DISTINCT re.report_id, e.canonical_name, e.entity_type
+       FROM report_entities re
+       JOIN entities e ON re.entity_id = e.id
+       WHERE re.entity_id = ANY($1) AND re.report_id != $2`,
+      [entityIds, newReportId]
+    );
+
+    for (const row of sharedReportsRes.rows) {
+      let relType = 'mention';
+      if (row.entity_type === 'product' || row.entity_type === 'channel') {
+        relType = 'operation';
+      } else if (row.entity_type === 'competitor') {
+        relType = 'competitor';
+      } else if (row.entity_type === 'company') {
+        relType = 'produces';
+      }
+
+      await dbClient.query(
+        `INSERT INTO relations (report_id_a, report_id_b, relation_key, market_region, relation_type) 
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (report_id_a, report_id_b, relation_key) DO NOTHING`,
+        [newReportId, row.report_id, row.canonical_name, finalMarketRegion, relType]
+      );
     }
   }
 

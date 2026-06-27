@@ -58,12 +58,12 @@ describe('Graph Connection Visual Styles mapping logic', () => {
   });
 
   describe('getLinkWidth', () => {
-    it('should return 3.5 width for supplier', () => {
-      expect(getLinkWidth('supplier')).toBe(3.5);
+    it('should return 1.0 width for supplier', () => {
+      expect(getLinkWidth('supplier')).toBe(1.0);
     });
 
-    it('should return 2.2 width for competitor', () => {
-      expect(getLinkWidth('competitor')).toBe(2.2);
+    it('should return 1.0 width for competitor', () => {
+      expect(getLinkWidth('competitor')).toBe(1.0);
     });
 
     it('should return 1.5 width for shared_product', () => {
@@ -80,12 +80,12 @@ describe('Graph Connection Visual Styles mapping logic', () => {
     });
 
     it('should scale the width by lineWidthScale', () => {
-      expect(getLinkWidth('supplier', false, false, 2.0)).toBe(7.0);
+      expect(getLinkWidth('supplier', false, false, 2.0)).toBe(2.0);
       expect(getLinkWidth('shared_product', false, false, 0.5)).toBe(0.75);
       expect(getLinkWidth('shared_channel', false, false, 1.5)).toBe(1.5);
       expect(getLinkWidth('supplier', true, false, 2.0)).toBe(1.0);
       // Safety boundaries
-      expect(getLinkWidth('supplier', false, false, NaN)).toBe(3.5);
+      expect(getLinkWidth('supplier', false, false, NaN)).toBe(1.0);
       expect(getLinkWidth('supplier', false, false, -1.5)).toBe(0);
     });
   });
@@ -129,7 +129,7 @@ describe('Graph Connection Visual Styles mapping logic', () => {
   describe('getGraphContainerBackgroundStyle', () => {
     it('should return correct background styles for dotted grid', () => {
       const style = getGraphContainerBackgroundStyle();
-      expect(style.background).toBe('#f8fafc');
+      expect(style.background).toBe('rgba(160, 109, 68, 0.03)');
       expect(style.backgroundImage).toContain('radial-gradient');
       expect(style.backgroundSize).toBe('24px 24px');
     });

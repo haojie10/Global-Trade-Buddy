@@ -65,7 +65,7 @@ describe('Report Duplicate Detection and Overwrite Logic Test', () => {
 
     // 建立报告与实体关联
     await dbClient.query(
-      `INSERT INTO report_entities (report_id, entity_id) VALUES ($1, $2)`,
+      `INSERT INTO report_entities (report_id, entity_id, role) VALUES ($1, $2, 'primary')`,
       [reportId, entityId]
     );
 

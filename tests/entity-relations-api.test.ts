@@ -56,7 +56,8 @@ describe('Entity Relations and Automated Inference API', () => {
       body: {
         rawHtml: '<html><head><title>自动推理报告</title></head><body>测试内容</body></html>',
         manualTags: {
-          companies: ['测试公司A', '测试公司B'],
+          companies: ['测试公司A'],
+          competitors: ['测试公司B'],
           products: ['测试玩具品类'],
           regions: ['俄罗斯'],
         },
