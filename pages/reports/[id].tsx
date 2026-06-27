@@ -26,6 +26,7 @@ interface ReportDetailProps {
   related: RelatedReport[];
   userId: string;
   userRole: string;
+  reportEntities?: { id: string; canonical_name: string; entity_type: string }[];
 }
 
 if (typeof window !== 'undefined') {
@@ -126,9 +127,13 @@ function cleanHtmlBody(rawHtml: string): string {
   return `${lightThemeOverrides}\n${stylesStr}\n${bodyContent}`;
 }
 
-export default function ReportDetailPage({ report, related, userId, userRole }: ReportDetailProps) {
+export default function ReportDetailPage({ report, related, userId, userRole, reportEntities = [] }: ReportDetailProps) {
   const [unlocked, setUnlocked] = useState(report.isUnlocked);
   const [content, setContent] = useState(report.content_html);
+
+  const companies = reportEntities.filter(e => e.entity_type === 'company');
+  const products = reportEntities.filter(e => e.entity_type === 'product');
+  const channels = reportEntities.filter(e => e.entity_type === 'channel');
 
   React.useEffect(() => {
     // 挂载原 HTML 模板内联 onclick 所需 JavaScript 全局函数
@@ -308,6 +313,146 @@ export default function ReportDetailPage({ report, related, userId, userRole }: 
             <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--color-muted)', lineHeight: 1.6, fontWeight: 300 }}>{report.summary}</p>
           </div>
 
+          {/* Base44 极简风格可视化关系链 */}
+          {unlocked && (companies.length > 0 || products.length > 0 || channels.length > 0) && (
+            <div style={{
+              background: 'var(--bg-sub)',
+              borderRadius: 'var(--border-radius)',
+              padding: '24px 30px',
+              marginBottom: '30px',
+              boxShadow: '0 4px 12px rgba(160, 109, 68, 0.01)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px'
+            }}>
+              <div style={{ fontSize: '0.85rem', color: 'var(--color-muted)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                  <line x1="2" y1="12" x2="22" y2="12" />
+                </svg>
+                报告知识实体关系链 (自动推理)
+              </div>
+              
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px',
+                padding: '10px 0'
+              }}>
+                {/* 节点 1：研报 */}
+                <div style={{
+                  background: 'rgba(255, 100, 30, 0.05)',
+                  border: '1px solid rgba(255, 100, 30, 0.15)',
+                  borderRadius: '12px',
+                  padding: '10px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '0.85rem',
+                  color: 'var(--color-accent)',
+                  fontWeight: 500
+                }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                  </svg>
+                  <span>本研报</span>
+                </div>
+
+                {/* 箭头 1 */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: '40px', textAlign: 'center' }}>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--color-muted)', marginBottom: '2px' }}>关联买家</span>
+                  <div style={{ width: '100%', height: '1px', borderBottom: '1px dashed rgba(160, 109, 68, 0.25)', position: 'relative' }}>
+                    <div style={{ position: 'absolute', right: 0, top: '-3px', borderTop: '3px solid transparent', borderBottom: '3px solid transparent', borderLeft: '5px solid rgba(160, 109, 68, 0.4)' }}></div>
+                  </div>
+                </div>
+
+                {/* 节点 2：公司 */}
+                <div style={{
+                  background: 'var(--bg-main)',
+                  border: '1px solid rgba(160, 109, 68, 0.08)',
+                  borderRadius: '12px',
+                  padding: '10px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '0.85rem',
+                  color: 'var(--color-text)',
+                  fontWeight: 400
+                }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="4" y="2" width="16" height="20" rx="2" ry="2" />
+                    <line x1="9" y1="22" x2="9" y2="16" />
+                    <line x1="15" y1="22" x2="15" y2="16" />
+                    <line x1="9" y1="16" x2="15" y2="16" />
+                  </svg>
+                  <span>{companies.length > 0 ? companies.map(c => c.canonical_name).join(', ') : '通用市场'}</span>
+                </div>
+
+                {/* 箭头 2 */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: '40px', textAlign: 'center' }}>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--color-muted)', marginBottom: '2px' }}>主营品类</span>
+                  <div style={{ width: '100%', height: '1px', borderBottom: '1px dashed rgba(160, 109, 68, 0.25)', position: 'relative' }}>
+                    <div style={{ position: 'absolute', right: 0, top: '-3px', borderTop: '3px solid transparent', borderBottom: '3px solid transparent', borderLeft: '5px solid rgba(160, 109, 68, 0.4)' }}></div>
+                  </div>
+                </div>
+
+                {/* 节点 3：品类 */}
+                <div style={{
+                  background: 'var(--bg-main)',
+                  border: '1px solid rgba(160, 109, 68, 0.08)',
+                  borderRadius: '12px',
+                  padding: '10px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '0.85rem',
+                  color: 'var(--color-text)',
+                  fontWeight: 400
+                }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="21 16 12 21 3 16 12 11 21 16" />
+                    <polyline points="21 12 12 17 3 12" />
+                    <polyline points="21 8 12 13 3 8" />
+                  </svg>
+                  <span>{products.length > 0 ? products.map(p => p.canonical_name).join(', ') : '全局产品'}</span>
+                </div>
+
+                {/* 箭头 3 */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: '40px', textAlign: 'center' }}>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--color-muted)', marginBottom: '2px' }}>销往渠道</span>
+                  <div style={{ width: '100%', height: '1px', borderBottom: '1px dashed rgba(160, 109, 68, 0.25)', position: 'relative' }}>
+                    <div style={{ position: 'absolute', right: 0, top: '-3px', borderTop: '3px solid transparent', borderBottom: '3px solid transparent', borderLeft: '5px solid rgba(160, 109, 68, 0.4)' }}></div>
+                  </div>
+                </div>
+
+                {/* 节点 4：渠道 */}
+                <div style={{
+                  background: 'var(--bg-main)',
+                  border: '1px solid rgba(160, 109, 68, 0.08)',
+                  borderRadius: '12px',
+                  padding: '10px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '0.85rem',
+                  color: 'var(--color-text)',
+                  fontWeight: 400
+                }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="2" y1="12" x2="22" y2="12" />
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                  </svg>
+                  <span>{channels.length > 0 ? channels.map(c => c.canonical_name).join(', ') : '全渠道'}</span>
+                </div>
+
+              </div>
+            </div>
+          )}
+
           {/* 内容展示区 */}
           <div style={{ position: 'relative', minHeight: '300px', marginBottom: '50px' }}>
             {unlocked ? (
@@ -472,6 +617,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
     let report: any = null;
     let related: RelatedReport[] = [];
+    let reportEntities: any[] = [];
 
     if (userId) {
       if (userRole === 'admin') {
@@ -495,6 +641,16 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       } else {
         report = await getReportDetail(userId, id as string, dbClient);
       }
+
+      // 获取报告关联的规范化实体数据 (companies, products, channels)
+      const entitiesRes = await dbClient.query(
+        `SELECT e.id, e.canonical_name, e.entity_type 
+         FROM report_entities re
+         JOIN entities e ON re.entity_id = e.id
+         WHERE re.report_id = $1`,
+        [id]
+      );
+      reportEntities = entitiesRes.rows;
 
       if (report.isUnlocked) {
         const relatedRes = await dbClient.query(
@@ -532,7 +688,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         report,
         related,
         userId: userId || '',
-        userRole
+        userRole,
+        reportEntities
       }
     };
   } catch (err) {

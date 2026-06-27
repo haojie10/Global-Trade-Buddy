@@ -160,7 +160,7 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
               style={{ textDecoration: 'none' }}
             >
               <div style={{
-                border: 'none',
+                border: '1px solid rgba(160, 109, 68, 0.05)',
                 borderRadius: 'var(--border-radius)',
                 padding: '28px',
                 background: 'var(--bg-sub)',
@@ -176,11 +176,13 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
                 e.currentTarget.style.background = 'var(--bg-main)';
                 e.currentTarget.style.transform = 'translateY(-4px)';
                 e.currentTarget.style.boxShadow = '0 12px 30px rgba(160, 109, 68, 0.06), 0 0 15px rgba(255, 100, 30, 0.08)';
+                e.currentTarget.style.borderColor = 'rgba(255, 100, 30, 0.25)';
               }}
               onMouseOut={(e) => {
                 e.currentTarget.style.background = 'var(--bg-sub)';
                 e.currentTarget.style.transform = 'none';
                 e.currentTarget.style.boxShadow = '0 6px 20px rgba(160, 109, 68, 0.015)';
+                e.currentTarget.style.borderColor = 'rgba(160, 109, 68, 0.05)';
               }}
               >
                 <div>
