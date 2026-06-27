@@ -83,10 +83,42 @@ function cleanHtmlBody(rawHtml: string): string {
       .report-content-body img {
         max-width: 100%;
         height: auto;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(160, 109, 68, 0.04);
+        margin: 20px 0;
       }
       .report-content-body table {
         width: 100%;
         border-collapse: collapse;
+        margin: 24px 0;
+        background: #fdfbf7;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .report-content-body th, .report-content-body td {
+        padding: 12px 16px;
+        border-bottom: 1px solid rgba(160, 109, 68, 0.05);
+        text-align: left;
+      }
+      .report-content-body th {
+        background: #f6f3ec;
+        font-weight: 500;
+        color: var(--color-text);
+      }
+      .report-content-body h1, .report-content-body h2, .report-content-body h3 {
+        font-family: 'Playfair Display', Georgia, serif !important;
+        font-weight: 600 !important;
+        color: var(--color-text) !important;
+        margin-top: 2.2rem !important;
+        margin-bottom: 1rem !important;
+        letter-spacing: -0.01em !important;
+      }
+      .report-content-body p {
+        font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif !important;
+        line-height: 1.8 !important;
+        font-size: 1.05rem !important;
+        color: #4b4844 !important;
+        margin-bottom: 1.2rem !important;
       }
     </style>
   `;
@@ -189,7 +221,6 @@ export default function ReportDetailPage({ report, related, userId, userRole }: 
         background: 'var(--bg-main)',
         color: 'var(--color-text)',
         minHeight: '100vh',
-        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
         position: 'relative'
       }}>
         {/* 渐变星云背景 - 清爽浅色淡暖色光晕 */}
@@ -229,7 +260,7 @@ export default function ReportDetailPage({ report, related, userId, userRole }: 
           </div>
 
           {/* 标题 */}
-          <h1 style={{ fontSize: '2rem', fontWeight: 300, color: 'var(--color-text)', marginBottom: '16px', lineHeight: 1.3, letterSpacing: '-0.5px' }}>
+          <h1 className="font-editorial" style={{ fontSize: '2.4rem', fontWeight: 400, color: 'var(--color-text)', marginBottom: '16px', lineHeight: 1.3, letterSpacing: '-0.015em' }}>
             {report.title}
           </h1>
 
@@ -314,7 +345,7 @@ export default function ReportDetailPage({ report, related, userId, userRole }: 
                   transform: 'translateX(-50%)',
                   width: '90%',
                   maxWidth: '450px',
-                  background: 'var(--bg-sub)',
+                  background: 'rgba(253, 251, 247, 0.75)',
                   border: 'none',
                   borderRadius: 'var(--border-radius)',
                   padding: '36px 30px',
@@ -322,6 +353,7 @@ export default function ReportDetailPage({ report, related, userId, userRole }: 
                   boxShadow: '0 20px 45px rgba(160, 109, 68, 0.06)',
                   zIndex: 10,
                   backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
                   color: 'var(--color-text)'
                 }}>
                   <h3 style={{ margin: '0 0 10px 0', fontSize: '1.25rem', fontWeight: 300, letterSpacing: '-0.3px' }}>解锁报告阅读全文</h3>
@@ -330,17 +362,18 @@ export default function ReportDetailPage({ report, related, userId, userRole }: 
                   </p>
                   <button 
                     onClick={handleUnlock}
+                    className="accent-glow"
                     style={{
                       padding: '14px 28px',
                       fontSize: '0.95rem',
-                      fontWeight: 300,
+                      fontWeight: 500,
                       width: '100%',
                       background: 'var(--color-accent)',
                       color: '#ffffff',
                       border: 'none',
                       borderRadius: 'var(--border-radius)',
                       cursor: 'pointer',
-                      boxShadow: 'none'
+                      transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
                     }}
                   >
                     {userId ? '立即解锁报告 (消耗 1 次额度)' : '请先登录后再解锁'}
@@ -369,13 +402,13 @@ export default function ReportDetailPage({ report, related, userId, userRole }: 
                       padding: '20px',
                       background: 'var(--bg-sub)',
                       cursor: 'pointer',
-                      transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                      transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
                       boxShadow: '0 4px 12px rgba(160, 109, 68, 0.01)'
                     }}
                     onMouseOver={(e) => {
                       e.currentTarget.style.background = 'var(--bg-main)';
                       e.currentTarget.style.transform = 'translateY(-4px)';
-                      e.currentTarget.style.boxShadow = '0 12px 30px rgba(160, 109, 68, 0.04)';
+                      e.currentTarget.style.boxShadow = '0 12px 30px rgba(160, 109, 68, 0.06), 0 0 15px rgba(255, 100, 30, 0.08)';
                     }}
                     onMouseOut={(e) => {
                       e.currentTarget.style.background = 'var(--bg-sub)';

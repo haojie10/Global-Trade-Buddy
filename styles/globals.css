@@ -1,5 +1,14 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap');
+
 body {
   overflow-x: hidden;
+  background: 
+    radial-gradient(circle at 10% 10%, rgba(255, 100, 30, 0.015) 0%, transparent 40%),
+    radial-gradient(circle at 90% 90%, rgba(255, 100, 30, 0.01) 0%, transparent 40%),
+    linear-gradient(135deg, #fdfbf7 0%, #f5f0eb 100%) !important;
+  background-attachment: fixed;
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #3c3935;
 }
 
 :root {
@@ -14,6 +23,33 @@ body {
   --border-radius: 22px;       /* 柔和高级的圆角大小 */
 }
 
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: -0.025em;
+}
+
+.font-editorial {
+  font-family: 'Playfair Display', Georgia, serif;
+}
+
+.float-on-hover {
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.float-on-hover:hover {
+  transform: translateY(-4px) !important;
+  box-shadow: 0 12px 30px rgba(160, 109, 68, 0.06), 0 0 15px rgba(255, 100, 30, 0.08) !important;
+}
+
+.accent-glow {
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.accent-glow:hover {
+  box-shadow: 0 0 15px rgba(255, 100, 30, 0.15), 0 6px 16px rgba(160, 109, 68, 0.08) !important;
+  transform: translateY(-2px) !important;
+}
+
 .water-drop-btn, .sand-btn {
   background: var(--bg-sub);
   border: none;
@@ -23,7 +59,7 @@ body {
   font-weight: var(--btn-font-weight);
   letter-spacing: var(--btn-letter-spacing);
   box-shadow: 0 4px 12px rgba(160, 109, 68, 0.03);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
   outline: none;
   display: inline-block;
@@ -33,8 +69,8 @@ body {
 
 .water-drop-btn:hover, .sand-btn:hover {
   background: var(--bg-main);
-  box-shadow: 0 6px 16px rgba(160, 109, 68, 0.08);
-  transform: translateY(-1px);
+  box-shadow: 0 0 15px rgba(255, 100, 30, 0.15), 0 6px 16px rgba(160, 109, 68, 0.08);
+  transform: translateY(-2px);
 }
 
 @keyframes spin {

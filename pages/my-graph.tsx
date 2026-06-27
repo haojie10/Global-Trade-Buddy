@@ -419,7 +419,6 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
       background: 'var(--bg-main)',
       color: 'var(--color-text)',
       minHeight: '100vh',
-      fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
       display: 'flex',
       flexDirection: 'column',
       position: 'relative'
@@ -427,9 +426,9 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
       {/* 头部导航栏 - 漂浮样式 */}
       <div style={{ padding: '20px 40px 10px 40px', flexShrink: 0, position: 'sticky', top: 0, zIndex: 1000 }}>
         <header style={{
-          background: 'rgba(246, 243, 236, 0.8)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
+          background: 'rgba(253, 251, 247, 0.75)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
           padding: '12px 30px',
           borderRadius: 'var(--border-radius)',
           display: 'flex',
@@ -644,17 +643,18 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
                 position: 'absolute',
                 bottom: '20px',
                 right: '20px',
-                background: 'rgba(253, 251, 247, 0.95)',
-                backdropFilter: 'blur(12px)',
+                background: 'rgba(253, 251, 247, 0.75)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
                 borderRadius: '16px',
                 padding: '16px',
                 width: '180px',
-                boxShadow: '0 6px 20px rgba(160, 109, 68, 0.03)',
+                boxShadow: '0 12px 30px rgba(160, 109, 68, 0.06)',
                 zIndex: 10,
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '10px',
-                border: '1px solid rgba(160, 109, 68, 0.08)'
+                border: 'none'
               }}>
                 <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-muted)', letterSpacing: '0.5px' }}>图谱样式设置</div>
                 
@@ -809,14 +809,15 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
         {/* 右栏：外贸便捷小工具面板 */}
         <div style={{
           width: '450px',
-          background: 'rgba(255, 255, 255, 0.75)',
+          background: 'rgba(253, 251, 247, 0.75)',
           borderRadius: '24px',
-          border: '1px solid rgba(15, 23, 42, 0.08)',
+          border: 'none',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
           backdropFilter: 'blur(20px)',
-          boxShadow: '0 10px 30px rgba(15, 23, 42, 0.03)'
+          WebkitBackdropFilter: 'blur(20px)',
+          boxShadow: '0 12px 30px rgba(160, 109, 68, 0.06)'
         }}>
           <NodeProfilePanel
             selectedNode={selectedNode}

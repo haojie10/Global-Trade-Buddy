@@ -130,15 +130,14 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
       background: 'var(--bg-main)',
       color: 'var(--color-text)',
       minHeight: '100vh',
-      fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
       position: 'relative'
     }}>
       {/* 头部导航栏 - 浮空漂浮样式 */}
       <div style={{ padding: '20px 40px 10px 40px', position: 'sticky', top: 0, zIndex: 1000 }}>
         <header style={{
-          background: 'rgba(246, 243, 236, 0.8)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
+          background: 'rgba(253, 251, 247, 0.75)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
           padding: '12px 30px',
           borderRadius: 'var(--border-radius)',
           display: 'flex',
@@ -305,7 +304,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
           margin: '0 auto'
         }}>
           {/* 外贸元素悬浮浮动卡片 */}
-          <div className="floating-card floating-card-1" style={{ display: 'flex' }}>
+          <div className="floating-card floating-card-1 float-on-hover" style={{ display: 'flex' }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
               <circle cx="12" cy="12" r="10" />
               <line x1="2" y1="12" x2="22" y2="12" />
@@ -316,7 +315,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
               <div style={{ fontSize: '0.8rem', fontWeight: 500, color: '#10b981' }}>实时监控中</div>
             </div>
           </div>
-          <div className="floating-card floating-card-2" style={{ display: 'flex' }}>
+          <div className="floating-card floating-card-2 float-on-hover" style={{ display: 'flex' }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
               <circle cx="12" cy="12" r="10" />
               <path d="M12 6v12M15 9H10a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H9" />
@@ -326,7 +325,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
               <div style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--color-text)' }}>CNY 7.24</div>
             </div>
           </div>
-          <div className="floating-card floating-card-3" style={{ display: 'flex' }}>
+          <div className="floating-card floating-card-3 float-on-hover" style={{ display: 'flex' }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
               <path d="M3 3v18h18" />
               <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3" />
@@ -336,7 +335,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
               <div style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--color-accent)' }}>已收录 {allReports.length} 份</div>
             </div>
           </div>
-          <div className="floating-card floating-card-4" style={{ display: 'flex' }}>
+          <div className="floating-card floating-card-4 float-on-hover" style={{ display: 'flex' }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -362,13 +361,13 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
             }}>
               您的全智能出海展业伴侣
             </span>
-            <h2 style={{
-              fontSize: '3.6rem',
-              fontWeight: 300,
+            <h2 className="font-editorial" style={{
+              fontSize: '4.2rem',
+              fontWeight: 400,
               lineHeight: 1.15,
               margin: '0 0 24px 0',
               color: 'var(--color-text)',
-              letterSpacing: '-2px'
+              letterSpacing: '-0.02em'
             }}>
               Your home for trade insights,<br />predictions, and tools.
             </h2>
@@ -384,7 +383,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
             </p>
             <button 
               onClick={scrollToInsights}
-              className="sand-btn"
+              className="sand-btn accent-glow"
               style={{
                 padding: '16px 40px',
                 fontSize: '1rem'

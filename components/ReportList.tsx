@@ -165,7 +165,7 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
                 padding: '28px',
                 background: 'var(--bg-sub)',
                 cursor: 'pointer',
-                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
@@ -174,8 +174,8 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
               }}
               onMouseOver={(e) => {
                 e.currentTarget.style.background = 'var(--bg-main)';
-                e.currentTarget.style.transform = 'translateY(-6px)';
-                e.currentTarget.style.boxShadow = '0 20px 40px rgba(160, 109, 68, 0.06)';
+                e.currentTarget.style.transform = 'translateY(-4px)';
+                e.currentTarget.style.boxShadow = '0 12px 30px rgba(160, 109, 68, 0.06), 0 0 15px rgba(255, 100, 30, 0.08)';
               }}
               onMouseOut={(e) => {
                 e.currentTarget.style.background = 'var(--bg-sub)';
