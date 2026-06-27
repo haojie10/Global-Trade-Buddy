@@ -3,10 +3,14 @@ import React, { useState } from 'react';
 import pool from '../lib/db';
 import { parseCookies } from '../lib/cookies';
 import { getUserGraph, getGraphData } from './api/user/graph';
-import ObsidianGraph from '../components/ObsidianGraph';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { filterGraphData, GraphNode, GraphLink } from '../lib/graph-helpers';
-import NodeProfilePanel from '../components/NodeProfilePanel';
+const ObsidianGraph = dynamic(() => import('../components/ObsidianGraph'), {
+  ssr: false,
+  loading: () => <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-muted)' }}>图谱加载中...</div>
+});
+const NodeProfilePanel = dynamic(() => import('../components/NodeProfilePanel'), { ssr: false });
 import ReportList from '../components/ReportList';
 
 const DEMO_GRAPH_DATA = {
@@ -423,6 +427,13 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
       flexDirection: 'column',
       position: 'relative'
     }}>
+      {/* 全局背景流光光源 */}
+      <div className="ambient-glow-container">
+        <div className="ambient-light ambient-light-1" />
+        <div className="ambient-light ambient-light-2" />
+        <div className="ambient-light ambient-light-3" />
+      </div>
+
       {/* 头部导航栏 - 漂浮样式 */}
       <div style={{ padding: '20px 40px 10px 40px', flexShrink: 0, position: 'sticky', top: 0, zIndex: 1000 }}>
         <header style={{

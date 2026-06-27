@@ -8,7 +8,6 @@
     "test": "vitest run --fileParallelism=false"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0",
     "bcryptjs": "^3.0.3",
     "cookie": "^1.1.1",
     "force-graph": "^1.43.0",

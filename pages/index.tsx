@@ -4,7 +4,8 @@ import pool from '../lib/db';
 import { parseCookies } from '../lib/cookies';
 import { getUserGraph, GraphNode, GraphLink } from './api/user/graph';
 import Link from 'next/link';
-import AdminPanel from '../components/AdminPanel';
+import dynamic from 'next/dynamic';
+const AdminPanel = dynamic(() => import('../components/AdminPanel'), { ssr: false });
 import ReportList, { PlatformReport } from '../components/ReportList';
 
 interface HomeProps {
@@ -37,6 +38,23 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
   
   // 管理员上传报告弹窗状态
   const [showUploadModal, setShowUploadModal] = useState(false);
+
+  // 调色板定制状态
+  const [accentColor, setAccentColor] = useState('#ff641e');
+  const [bgSub, setBgSub] = useState('#f6f3ec');
+  const [ambientOpacity, setAmbientOpacity] = useState(0.12);
+  const [brandWeight, setBrandWeight] = useState<'standard' | 'vibrant'>('standard');
+  const [showCustomizer, setShowCustomizer] = useState(false);
+
+  // 实时同步 CSS 变量
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const root = document.documentElement;
+      root.style.setProperty('--color-accent', accentColor);
+      root.style.setProperty('--bg-sub', bgSub);
+      root.style.setProperty('--ambient-opacity', String(ambientOpacity));
+    }
+  }, [accentColor, bgSub, ambientOpacity]);
 
   const inputStyle = {
     background: 'var(--bg-main)',
@@ -132,6 +150,13 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
       minHeight: '100vh',
       position: 'relative'
     }}>
+      {/* 全局背景流光光源 */}
+      <div className="ambient-glow-container">
+        <div className="ambient-light ambient-light-1" />
+        <div className="ambient-light ambient-light-2" />
+        <div className="ambient-light ambient-light-3" />
+      </div>
+
       {/* 头部导航栏 - 浮空漂浮样式 */}
       <div style={{ padding: '20px 40px 10px 40px', position: 'sticky', top: 0, zIndex: 1000 }}>
         <header style={{
@@ -298,10 +323,14 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
           justifyContent: 'center',
           alignItems: 'center',
           textAlign: 'center',
-          padding: '40px 20px',
+          padding: brandWeight === 'vibrant' ? '80px 40px' : '40px 20px',
           position: 'relative',
           maxWidth: '1200px',
-          margin: '0 auto'
+          margin: brandWeight === 'vibrant' ? '40px auto' : '0 auto',
+          background: brandWeight === 'vibrant' ? 'linear-gradient(135deg, var(--color-accent) 0%, #ff884d 100%)' : 'transparent',
+          borderRadius: brandWeight === 'vibrant' ? '32px' : '0px',
+          boxShadow: brandWeight === 'vibrant' ? '0 20px 50px rgba(255, 100, 30, 0.15)' : 'none',
+          transition: 'all 0.5s ease-in-out'
         }}>
           {/* 外贸元素悬浮浮动卡片 */}
           <div className="floating-card floating-card-1 float-on-hover" style={{ display: 'flex' }}>
@@ -348,12 +377,12 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
 
           <div style={{ maxWidth: '800px', zIndex: 5 }}>
             <span style={{
-              background: 'rgba(255, 100, 30, 0.05)',
+              background: brandWeight === 'vibrant' ? 'rgba(255, 255, 255, 0.18)' : 'rgba(255, 100, 30, 0.05)',
               padding: '6px 16px',
               borderRadius: '20px',
-              color: 'var(--color-accent)',
+              color: brandWeight === 'vibrant' ? '#ffffff' : 'var(--color-accent)',
               fontSize: '0.85rem',
-              fontWeight: 300,
+              fontWeight: brandWeight === 'vibrant' ? 400 : 300,
               textTransform: 'uppercase',
               letterSpacing: '1.5px',
               display: 'inline-block',
@@ -366,14 +395,14 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
               fontWeight: 400,
               lineHeight: 1.15,
               margin: '0 0 24px 0',
-              color: 'var(--color-text)',
+              color: brandWeight === 'vibrant' ? '#ffffff' : 'var(--color-text)',
               letterSpacing: '-0.02em'
             }}>
               Your home for trade insights,<br />predictions, and tools.
             </h2>
             <p style={{
               fontSize: '1.25rem',
-              color: 'var(--color-muted)',
+              color: brandWeight === 'vibrant' ? 'rgba(255, 255, 255, 0.85)' : 'var(--color-muted)',
               lineHeight: 1.6,
               maxWidth: '620px',
               margin: '0 auto 36px auto',
@@ -386,7 +415,10 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
               className="sand-btn accent-glow"
               style={{
                 padding: '16px 40px',
-                fontSize: '1rem'
+                fontSize: '1rem',
+                background: brandWeight === 'vibrant' ? '#ffffff' : 'var(--bg-sub)',
+                color: 'var(--color-accent)',
+                boxShadow: brandWeight === 'vibrant' ? '0 10px 25px rgba(0,0,0,0.08)' : 'none'
               }}
             >
               探索洞察报告库
@@ -396,24 +428,47 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
 
         {/* 模块三：报告市场发现大厅 */}
         <section id="insights-library" className="animate-on-scroll" style={{
-          padding: '100px 40px',
-          maxWidth: '1440px',
-          margin: '0 auto'
+          padding: '60px 40px',
+          maxWidth: '1400px',
+          margin: '0 auto 60px auto',
+          background: 'rgba(246, 243, 236, 0.55)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          borderRadius: '32px',
+          boxShadow: '0 12px 40px rgba(160, 109, 68, 0.03)',
+          border: '1px solid rgba(255, 100, 30, 0.03)'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '50px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '50px', flexWrap: 'wrap', gap: '20px' }}>
             <div>
-              <h2 style={{
-                fontSize: '2.4rem',
-                fontWeight: 300,
+              <h2 className="font-editorial" style={{
+                fontSize: '2.8rem',
+                fontWeight: 400,
                 margin: '0 0 16px 0',
                 color: 'var(--color-text)',
-                letterSpacing: '-1px'
+                letterSpacing: '-0.015em'
               }}>
                 Discover, Unlock & Connect.
               </h2>
               <p style={{ fontSize: '1.05rem', color: 'var(--color-muted)', margin: 0, fontWeight: 300 }}>
                 探索大厅发布了 <b style={{ color: 'var(--color-text)', fontWeight: 500 }}>{reports.length}</b> 份最具潜力的跨国采购品类与买家画像报告。
               </p>
+            </div>
+            
+            <div style={{
+              background: 'var(--bg-main)',
+              border: '1px solid rgba(160, 109, 68, 0.05)',
+              padding: '12px 24px',
+              borderRadius: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px',
+              boxShadow: '0 4px 12px rgba(160, 109, 68, 0.02)'
+            }}>
+              <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-muted)' }}>数据中心状况</span>
+              <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '8px', height: '8px', background: '#10b981', borderRadius: '50%', display: 'inline-block' }} />
+                实时数据同步正常
+              </span>
             </div>
           </div>
 
@@ -429,128 +484,157 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
           />
         </section>
 
+        {/* 水平轻柔分割线 */}
+        <div style={{
+          width: '100%',
+          maxWidth: '1400px',
+          borderTop: '1px solid rgba(160, 109, 68, 0.08)',
+          margin: '40px auto 20px auto'
+        }} />
+
         {/* 模块四：安全保障与个人拓扑 */}
         <section className="animate-on-scroll" style={{
-          padding: '100px 40px',
-          maxWidth: '1440px',
+          padding: '80px 40px',
+          maxWidth: '1400px',
           margin: '0 auto',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+          gap: '60px',
+          alignItems: 'center',
           position: 'relative'
         }}>
-          <div style={{ textAlign: 'center', marginBottom: '60px' }}>
-            <h2 style={{
-              fontSize: '2.4rem',
+          <div>
+            <span style={{
+              background: 'rgba(255, 100, 30, 0.05)',
+              padding: '6px 16px',
+              borderRadius: '20px',
+              color: 'var(--color-accent)',
+              fontSize: '0.85rem',
               fontWeight: 300,
-              margin: '0 0 16px 0',
-              color: 'var(--color-text)',
-              letterSpacing: '-1px'
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+              display: 'inline-block',
+              marginBottom: '20px'
             }}>
-              Controlled by you, secured by us.
+              出海合规与安全防线
+            </span>
+            <h2 className="font-editorial" style={{
+              fontSize: '3rem',
+              fontWeight: 400,
+              margin: '0 0 24px 0',
+              color: 'var(--color-text)',
+              letterSpacing: '-0.02em',
+              lineHeight: 1.2
+            }}>
+              Controlled by you,<br />secured by us.
             </h2>
-            <p style={{ fontSize: '1.05rem', color: 'var(--color-muted)', maxWidth: '550px', margin: '0 auto', fontWeight: 300 }}>
-              构建最智能的数据隔离防火墙，全力呵护您的商机脉络不受二次流失。
+            <p style={{ fontSize: '1.1rem', color: 'var(--color-muted)', lineHeight: 1.7, margin: 0, fontWeight: 300, maxWidth: '480px' }}>
+              我们致力于构建最智能的数据隔离防火墙与隐私脱水管道，全力呵护您的核心买家商机与供应商脉络，规避数据二次泄露风险。
             </p>
           </div>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-            gap: '24px'
-          }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {/* 特色 1 */}
-            <div style={{
+            <div className="float-on-hover" style={{
               background: 'var(--bg-sub)',
-              border: 'none',
               borderRadius: 'var(--border-radius)',
-              padding: '36px',
-              transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+              padding: '24px 30px',
+              display: 'flex',
+              gap: '20px',
+              alignItems: 'flex-start',
               boxShadow: '0 6px 20px rgba(160, 109, 68, 0.015)'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = 'var(--bg-main)';
-              e.currentTarget.style.transform = 'translateY(-4px)';
-              e.currentTarget.style.boxShadow = '0 12px 30px rgba(160, 109, 68, 0.04)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = 'var(--bg-sub)';
-              e.currentTarget.style.transform = 'none';
-              e.currentTarget.style.boxShadow = '0 6px 20px rgba(160, 109, 68, 0.015)';
-            }}
-            >
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '20px' }}>
-                <path d="M4.5 16.5c-1.5 1.26-2.5 3.19-2.5 5.5h20c0-2.31-1-4.24-2.5-5.5" />
-                <circle cx="12" cy="12" r="2" />
-                <circle cx="12" cy="2" r="1" />
-                <circle cx="4" cy="16" r="1" />
-                <circle cx="20" cy="16" r="1" />
-              </svg>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 500, margin: '0 0 12px 0', color: 'var(--color-text)' }}>
-                个人专属知识拓扑
-              </h3>
-              <p style={{ fontSize: '0.9rem', color: 'var(--color-muted)', lineHeight: 1.6, margin: 0, fontWeight: 300 }}>
-                独创 of 3D 星空网状图谱，根据您解锁的每一份国家级、品类级洞察建立深度知识链。连线高亮与节点互动助您一眼发掘隐藏的商机。
-              </p>
+            }}>
+              <div style={{
+                background: 'var(--bg-main)',
+                padding: '12px',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4.5 16.5c-1.5 1.26-2.5 3.19-2.5 5.5h20c0-2.31-1-4.24-2.5-5.5" />
+                  <circle cx="12" cy="12" r="2" />
+                  <circle cx="12" cy="2" r="1" />
+                  <circle cx="4" cy="16" r="1" />
+                  <circle cx="20" cy="16" r="1" />
+                </svg>
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 500, margin: '0 0 8px 0', color: 'var(--color-text)' }}>
+                  个人专属知识拓扑
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)', lineHeight: 1.6, margin: 0, fontWeight: 300 }}>
+                  独创的 3D 星空网状图谱，根据您解锁的每一份国家级、品类级洞察建立深度知识链。连线高亮与节点互动助您一眼发掘隐藏的商机。
+                </p>
+              </div>
             </div>
 
             {/* 特色 2 */}
-            <div style={{
+            <div className="float-on-hover" style={{
               background: 'var(--bg-sub)',
-              border: 'none',
               borderRadius: 'var(--border-radius)',
-              padding: '36px',
-              transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+              padding: '24px 30px',
+              display: 'flex',
+              gap: '20px',
+              alignItems: 'flex-start',
               boxShadow: '0 6px 20px rgba(160, 109, 68, 0.015)'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = 'var(--bg-main)';
-              e.currentTarget.style.transform = 'translateY(-4px)';
-              e.currentTarget.style.boxShadow = '0 12px 30px rgba(160, 109, 68, 0.04)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = 'var(--bg-sub)';
-              e.currentTarget.style.transform = 'none';
-              e.currentTarget.style.boxShadow = '0 6px 20px rgba(160, 109, 68, 0.015)';
-            }}
-            >
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '20px' }}>
-                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-              </svg>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 500, margin: '0 0 12px 0', color: 'var(--color-text)' }}>
-                脱水上传管道技术
-              </h3>
-              <p style={{ fontSize: '0.9rem', color: 'var(--color-muted)', lineHeight: 1.6, margin: 0, fontWeight: 300 }}>
-                行业领先的智能处理核心。提取 PDF/Doc 文件并全自动“脱水”，自动滤除敏感数据，对结构进行去标识 Base64 化转码，规避合规风险。
-              </p>
+            }}>
+              <div style={{
+                background: 'var(--bg-main)',
+                padding: '12px',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                </svg>
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 500, margin: '0 0 8px 0', color: 'var(--color-text)' }}>
+                  脱水上传管道技术
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)', lineHeight: 1.6, margin: 0, fontWeight: 300 }}>
+                  行业领先的智能处理核心。提取 PDF/Doc 文件并全自动“脱水”，自动滤除敏感数据，对结构进行去标识 Base64 化转码，规避合规风险。
+                </p>
+              </div>
             </div>
 
             {/* 特色 3 */}
-            <div style={{
+            <div className="float-on-hover" style={{
               background: 'var(--bg-sub)',
-              border: 'none',
               borderRadius: 'var(--border-radius)',
-              padding: '36px',
-              transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+              padding: '24px 30px',
+              display: 'flex',
+              gap: '20px',
+              alignItems: 'flex-start',
               boxShadow: '0 6px 20px rgba(160, 109, 68, 0.015)'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = 'var(--bg-main)';
-              e.currentTarget.style.transform = 'translateY(-4px)';
-              e.currentTarget.style.boxShadow = '0 12px 30px rgba(160, 109, 68, 0.04)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = 'var(--bg-sub)';
-              e.currentTarget.style.transform = 'none';
-              e.currentTarget.style.boxShadow = '0 6px 20px rgba(160, 109, 68, 0.015)';
-            }}
-            >
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '20px' }}>
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              </svg>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 500, margin: '0 0 12px 0', color: 'var(--color-text)' }}>
-                动态微光防盗水印
-              </h3>
-              <p style={{ fontSize: '0.9rem', color: 'var(--color-muted)', lineHeight: 1.6, margin: 0, fontWeight: 300 }}>
-                专为防止机密外泄设计。用户专属业务员 ID 在报告底层以 0.015 极弱光动态旋转水印展现，结合高斯模糊付费锁，强力保护核心情报不被分发盗用。
-              </p>
+            }}>
+              <div style={{
+                background: 'var(--bg-main)',
+                padding: '12px',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 500, margin: '0 0 8px 0', color: 'var(--color-text)' }}>
+                  动态微光防盗水印
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)', lineHeight: 1.6, margin: 0, fontWeight: 300 }}>
+                  专为防止机密外泄设计。用户专属业务员 ID 在报告底层以 0.015 极弱光动态旋转水印展现，结合高斯模糊付费锁，强力保护核心情报不被分发盗用。
+                </p>
+              </div>
             </div>
           </div>
         </section>
@@ -563,25 +647,25 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
           borderTop: 'none'
         }}>
           <div style={{
-            background: 'var(--bg-sub)',
+            background: brandWeight === 'vibrant' ? 'linear-gradient(135deg, var(--color-accent) 0%, #ff884d 100%)' : 'var(--bg-sub)',
             borderRadius: 'var(--border-radius)',
             padding: '80px 40px',
             textAlign: 'center',
             position: 'relative',
             overflow: 'hidden',
             marginBottom: '80px',
-            boxShadow: '0 6px 20px rgba(160, 109, 68, 0.01)'
+            boxShadow: brandWeight === 'vibrant' ? '0 20px 50px rgba(255, 100, 30, 0.15)' : '0 6px 20px rgba(160, 109, 68, 0.01)'
           }}>
-            <h2 style={{
+            <h2 className={brandWeight === 'vibrant' ? "" : "font-editorial"} style={{
               fontSize: '2.6rem',
-              fontWeight: 300,
+              fontWeight: brandWeight === 'vibrant' ? 400 : 300,
               margin: '0 0 16px 0',
-              color: 'var(--color-text)',
+              color: brandWeight === 'vibrant' ? '#ffffff' : 'var(--color-text)',
               letterSpacing: '-1px'
             }}>
               Get started.<br />Subscribe to Globaltradebuddy.
             </h2>
-            <p style={{ fontSize: '1.05rem', color: 'var(--color-muted)', maxWidth: '480px', margin: '0 auto 36px auto', fontWeight: 300 }}>
+            <p style={{ fontSize: '1.05rem', color: brandWeight === 'vibrant' ? 'rgba(255, 255, 255, 0.85)' : 'var(--color-muted)', maxWidth: '480px', margin: '0 auto 36px auto', fontWeight: 300 }}>
               第一时间接收最新的市场洞察更新与全球宏观贸易数据。
             </p>
 
@@ -619,7 +703,10 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
                 className="sand-btn"
                 style={{
                   padding: '16px 36px',
-                  fontSize: '0.95rem'
+                  fontSize: '0.95rem',
+                  background: brandWeight === 'vibrant' ? '#ffffff' : 'var(--bg-sub)',
+                  color: 'var(--color-accent)',
+                  boxShadow: brandWeight === 'vibrant' ? '0 4px 12px rgba(0,0,0,0.08)' : 'none'
                 }}
               >
                 Submit
@@ -791,6 +878,276 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
         onClose={() => setShowUploadModal(false)} 
         onUploadSuccess={() => window.location.reload()} 
       />
+
+      {/* 浮动调色定制器入口 */}
+      <button
+        onClick={() => setShowCustomizer(!showCustomizer)}
+        className="accent-glow animate-pulse"
+        style={{
+          position: 'fixed',
+          bottom: '30px',
+          right: '30px',
+          zIndex: 1050,
+          width: '56px',
+          height: '56px',
+          borderRadius: '50%',
+          background: 'var(--color-accent)',
+          border: 'none',
+          cursor: 'pointer',
+          boxShadow: '0 8px 32px rgba(255, 100, 30, 0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#ffffff',
+          transition: 'all 0.3s cubic-bezier(0.25, 1, 0.22, 1)'
+        }}
+        aria-label="打开调色板"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 14.7255 3.09032 17.1962 4.85857 19C5.34484 19.4863 5.34484 20.2753 4.85857 20.7616L4.70711 20.913C4.31658 21.3035 4.31658 21.9367 4.70711 22.3272C5.09763 22.7177 5.7308 22.7177 6.12132 22.3272L6.27278 22.1757C6.75905 21.6895 7.54807 21.6895 8.03434 22.1757C9.2384 22.7153 10.5843 23 12 23" />
+          <circle cx="7.5" cy="10.5" r="1.5" fill="currentColor" />
+          <circle cx="11.5" cy="7.5" r="1.5" fill="currentColor" />
+          <circle cx="16.5" cy="9.5" r="1.5" fill="currentColor" />
+          <circle cx="15.5" cy="14.5" r="1.5" fill="currentColor" />
+        </svg>
+      </button>
+
+      {/* 定制器抽屉面板 */}
+      {showCustomizer && (
+        <div style={{
+          position: 'fixed',
+          bottom: '100px',
+          right: '30px',
+          width: '360px',
+          background: 'rgba(253, 251, 247, 0.85)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: '1px solid rgba(160, 109, 68, 0.08)',
+          borderRadius: '24px',
+          padding: '24px',
+          boxShadow: '0 20px 50px rgba(160, 109, 68, 0.1)',
+          zIndex: 1050,
+          color: 'var(--color-text)',
+          animation: 'float 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h3 className="font-editorial" style={{ margin: 0, fontSize: '1.25rem', fontWeight: 500 }}>
+              实时色彩与视觉定制
+            </h3>
+            <button 
+              onClick={() => setShowCustomizer(false)}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--color-muted)',
+                padding: '4px'
+              }}
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* 预设选择 */}
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ fontSize: '0.8rem', color: 'var(--color-muted)', display: 'block', marginBottom: '8px' }}>配色预设</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+              <button 
+                onClick={() => { setAccentColor('#ff641e'); setBgSub('#f6f3ec'); }}
+                style={{
+                  background: '#f6f3ec',
+                  border: accentColor === '#ff641e' ? '2px solid #ff641e' : '1px solid rgba(0,0,0,0.05)',
+                  padding: '8px',
+                  borderRadius: '12px',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <span style={{ width: '12px', height: '12px', background: '#ff641e', borderRadius: '50%', display: 'inline-block' }} />
+                琥珀暖橘
+              </button>
+              <button 
+                onClick={() => { setAccentColor('#d94126'); setBgSub('#f5efeb'); }}
+                style={{
+                  background: '#f5efeb',
+                  border: accentColor === '#d94126' ? '2px solid #d94126' : '1px solid rgba(0,0,0,0.05)',
+                  padding: '8px',
+                  borderRadius: '12px',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <span style={{ width: '12px', height: '12px', background: '#d94126', borderRadius: '50%', display: 'inline-block' }} />
+                焦糖朱红
+              </button>
+              <button 
+                onClick={() => { setAccentColor('#e14d0a'); setBgSub('#fbf5ee'); }}
+                style={{
+                  background: '#fbf5ee',
+                  border: accentColor === '#e14d0a' ? '2px solid #e14d0a' : '1px solid rgba(0,0,0,0.05)',
+                  padding: '8px',
+                  borderRadius: '12px',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <span style={{ width: '12px', height: '12px', background: '#e14d0a', borderRadius: '50%', display: 'inline-block' }} />
+                盛夏夕阳
+              </button>
+              <button 
+                onClick={() => { setAccentColor('#c23a3a'); setBgSub('#f8ecec'); }}
+                style={{
+                  background: '#f8ecec',
+                  border: accentColor === '#c23a3a' ? '2px solid #c23a3a' : '1px solid rgba(0,0,0,0.05)',
+                  padding: '8px',
+                  borderRadius: '12px',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <span style={{ width: '12px', height: '12px', background: '#c23a3a', borderRadius: '50%', display: 'inline-block' }} />
+                火山熔岩
+              </button>
+            </div>
+          </div>
+
+          {/* 细致调色 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
+            <div>
+              <label style={{ fontSize: '0.8rem', color: 'var(--color-muted)', display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span>自选强调色 (Accent)</span>
+                <code>{accentColor}</code>
+              </label>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <input 
+                  type="color" 
+                  value={accentColor}
+                  onChange={(e) => setAccentColor(e.target.value)}
+                  style={{ width: '40px', height: '36px', border: 'none', borderRadius: '8px', cursor: 'pointer', background: 'none' }}
+                />
+                <input 
+                  type="text" 
+                  value={accentColor}
+                  onChange={(e) => setAccentColor(e.target.value)}
+                  style={{ flex: 1, padding: '8px 12px', fontSize: '0.85rem', border: '1px solid rgba(160,109,68,0.15)', borderRadius: '8px', background: '#ffffff', color: 'var(--color-text)' }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '0.8rem', color: 'var(--color-muted)', display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span>卡片副背景 (Bg Sub)</span>
+                <code>{bgSub}</code>
+              </label>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <input 
+                  type="color" 
+                  value={bgSub}
+                  onChange={(e) => setBgSub(e.target.value)}
+                  style={{ width: '40px', height: '36px', border: 'none', borderRadius: '8px', cursor: 'pointer', background: 'none' }}
+                />
+                <input 
+                  type="text" 
+                  value={bgSub}
+                  onChange={(e) => setBgSub(e.target.value)}
+                  style={{ flex: 1, padding: '8px 12px', fontSize: '0.85rem', border: '1px solid rgba(160,109,68,0.15)', borderRadius: '8px', background: '#ffffff', color: 'var(--color-text)' }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '0.8rem', color: 'var(--color-muted)', display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span>背景流光浓度 (Glow)</span>
+                <code>{Math.round(ambientOpacity * 100)}%</code>
+              </label>
+              <input 
+                type="range" 
+                min="0.0" 
+                max="0.30" 
+                step="0.01" 
+                value={ambientOpacity}
+                onChange={(e) => setAmbientOpacity(parseFloat(e.target.value))}
+                style={{ width: '100%', accentColor: 'var(--color-accent)' }}
+              />
+            </div>
+
+            {/* 品牌色背景占比 */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: '1px solid rgba(160,109,68,0.06)' }}>
+              <div>
+                <span style={{ fontSize: '0.85rem', fontWeight: 500, display: 'block' }}>品牌大色块背景</span>
+                <span style={{ fontSize: '0.7rem', color: 'var(--color-muted)' }}>让 Hero 区与订阅区背景铺满强调色</span>
+              </div>
+              <button 
+                onClick={() => setBrandWeight(brandWeight === 'vibrant' ? 'standard' : 'vibrant')}
+                style={{
+                  background: brandWeight === 'vibrant' ? 'var(--color-accent)' : '#e2e8f0',
+                  color: brandWeight === 'vibrant' ? '#ffffff' : 'var(--color-text)',
+                  border: 'none',
+                  padding: '8px 16px',
+                  borderRadius: '20px',
+                  fontSize: '0.8rem',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  boxShadow: brandWeight === 'vibrant' ? '0 4px 12px rgba(255, 100, 30, 0.2)' : 'none',
+                  transition: 'all 0.3s'
+                }}
+              >
+                {brandWeight === 'vibrant' ? '已开启' : '已关闭'}
+              </button>
+            </div>
+          </div>
+
+          {/* 固化代码输出 */}
+          <div style={{
+            background: 'var(--bg-sub)',
+            borderRadius: '12px',
+            padding: '12px',
+            fontSize: '0.75rem',
+            border: '1px dashed rgba(160, 109, 68, 0.2)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', color: 'var(--color-muted)' }}>
+              <span>固化配置代码</span>
+              <button 
+                onClick={() => {
+                  const configStr = `Accent: ${accentColor}\nBgSub: ${bgSub}\nGlow: ${ambientOpacity}\nWeight: ${brandWeight}`;
+                  navigator.clipboard.writeText(configStr);
+                  alert('配置代码已复制！请直接发送给 AI 助手进行固化保存。');
+                }}
+                style={{
+                  background: 'var(--color-accent)',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '3px 8px',
+                  borderRadius: '4px',
+                  fontSize: '0.7rem',
+                  cursor: 'pointer',
+                  fontWeight: 500
+                }}
+              >
+                点击复制
+              </button>
+            </div>
+            <pre style={{ margin: 0, overflowX: 'auto', fontFamily: 'monospace', color: 'var(--color-text)' }}>
+{`--color-accent: ${accentColor};
+--bg-sub: ${bgSub};
+--ambient-opacity: ${ambientOpacity};
+--brand-weight: ${brandWeight};`}
+            </pre>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -853,6 +1210,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
                  EXISTS(SELECT 1 FROM unlocks u WHERE u.user_id = $1 AND u.report_id = r.id) as is_unlocked
           FROM reports r
           ORDER BY r.created_at DESC
+          LIMIT 30
         `, [userId]);
         
         allReports = reportsRes.rows.map(row => ({
@@ -866,7 +1224,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       }
     } else {
       const reportsRes = await dbClient.query(`
-        SELECT id, title, category, market_region, summary FROM reports ORDER BY created_at DESC
+        SELECT id, title, category, market_region, summary FROM reports ORDER BY created_at DESC LIMIT 30
       `);
       allReports = reportsRes.rows.map(row => ({
         id: row.id,
@@ -877,6 +1235,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         isUnlocked: false
       }));
     }
+
+    context.res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
 
     return {
       props: {

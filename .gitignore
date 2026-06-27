@@ -36,6 +36,12 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# scratch files
+scratch_*
+
+# user uploads
+public/uploads/
+
 # superpowers / antigravity (optional: decide if you want to keep them)
 # .antigravity/
 .superpowers/
