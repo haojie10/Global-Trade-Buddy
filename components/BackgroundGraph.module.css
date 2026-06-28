@@ -1,0 +1,19 @@
+.container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1; /* Layer behind all Next.js page content */
+  background: radial-gradient(circle at 10% 10%, rgba(255, 100, 30, 0.012) 0%, transparent 45%),
+              radial-gradient(circle at 90% 90%, rgba(255, 100, 30, 0.008) 0%, transparent 45%),
+              linear-gradient(135deg, #fdfbf7 0%, #f5f0eb 100%);
+  overflow: hidden;
+  pointer-events: none; /* Let user click on foreground elements */
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
