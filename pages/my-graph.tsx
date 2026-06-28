@@ -194,7 +194,7 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
 
   return (
     <div style={{
-      background: 'var(--bg-main)',
+      background: 'transparent',
       color: 'var(--color-text)',
       minHeight: '100vh',
       display: 'flex',

@@ -109,7 +109,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
 
   return (
     <div style={{
-      background: 'var(--bg-main)',
+      background: 'transparent',
       color: 'var(--color-text)',
       minHeight: '100vh',
       position: 'relative'

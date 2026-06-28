@@ -169,7 +169,7 @@ export default function ReportDetailPage({ report, related, userId, userRole }: 
   return (
     <WatermarkContainer text={userId ? `外贸智友 - 业务员 ID: ${userId.substring(0, 8)}...` : '外贸智友 - 游客浏览模式'}>
       <div style={{
-        background: 'var(--bg-main)',
+        background: 'transparent',
         color: 'var(--color-text)',
         minHeight: '100vh',
         position: 'relative'
