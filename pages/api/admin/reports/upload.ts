@@ -9,24 +9,41 @@ export { parseMetadata, runDehydration, extractAndNormalizeEntities } from '../.
 async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
   const { rawHtml, manualTags, category, summary, overwriteReportId } = req.body;
 
-  // 模拟的 OSS 图片上传，在本地开发环境下将图片真实写入 public/uploads，返回 /uploads/ 相对链接
-  const mockUpload = async (buffer: Buffer, mime: string) => {
+  // 真实的 Supabase Storage 图片上传
+  const supabaseUpload = async (buffer: Buffer, mime: string) => {
     const ext = mime.split('/')[1] || 'png';
     const fileName = `img_${Date.now()}_${Math.floor(Math.random() * 1000)}.${ext}`;
     
-    const fs = require('fs');
-    const path = require('path');
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Supabase URL or Anon Key is missing in environment variables');
     }
-    fs.writeFileSync(path.join(uploadDir, fileName), buffer);
-    
-    return `/uploads/${fileName}`;
+
+    // 1. 调用 REST API 写入 Supabase Storage
+    const uploadUrl = `${supabaseUrl}/storage/v1/object/report-images/${fileName}`;
+    const uploadRes = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${supabaseKey}`,
+        'Content-Type': mime,
+        'x-upsert': 'true'
+      },
+      body: buffer as any
+    });
+
+    if (!uploadRes.ok) {
+      const errText = await uploadRes.text();
+      throw new Error(`Failed to upload image to Supabase Storage: ${errText}`);
+    }
+
+    // 2. 返回公共 CDN 访问链接
+    return `${supabaseUrl}/storage/v1/object/public/report-images/${fileName}`;
   };
 
   // 1. 脱水处理
-  const { cleanHtml, imageCount } = await runDehydration(rawHtml, mockUpload);
+  const { cleanHtml, imageCount } = await runDehydration(rawHtml, supabaseUpload);
 
   // 2. 元数据及实体提取
   const meta = parseMetadata(rawHtml);
