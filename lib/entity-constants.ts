@@ -23,3 +23,14 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
 export const BLACKLIST = ['公司', '工厂', '超市', '产品', '客户', '供应商', '采购商', '贸易'];
 
 export const commonKeywords = ['A 公司', '铝合金轮毂', '刹车片', '欧美汽配', '汇率风险', '运费波动'];
+
+// 已知零售巨头与超市渠道集合，用于判断同业竞争关系
+export const RETAILER_ENTITIES = new Set([
+  'x5 group', 'x5 retail', 'magnit', 'lenta', 'auchan', 'dixy',
+  'detsky mir', '儿童世界', 'hoff', 'leroy merlin', 'ikea', '宜家',
+  'obi', '欧倍德', 'obi group holding se & co. kgaa',
+  'bauhaus', '包豪斯', 'bauhaus ag',
+  'hornbach', '霍恩巴赫', 'hornbach baumarkt ag',
+  'toom', 'toom baumarkt', 'toom baumarkt gmbh',
+  'hagebau', '哈格堡'
+]);

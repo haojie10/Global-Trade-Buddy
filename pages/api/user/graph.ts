@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import pool from '../../../lib/db';
 import { getSession } from '../../../lib/auth';
+import { RETAILER_ENTITIES } from '../../../lib/entity-constants';
 
 export interface GraphNode {
   id: string;
@@ -137,16 +138,7 @@ export async function getGraphData(userId: string, userRole: string, dbClient: a
     });
   }
 
-  // NOTE: 已知零售巨头与超市渠道集合，用于判断同业竞争关系
-  const RETAILER_ENTITIES = new Set([
-    'x5 group', 'x5 retail', 'magnit', 'lenta', 'auchan', 'dixy', 
-    'detsky mir', '儿童世界', 'hoff', 'leroy merlin', 'ikea', '宜家',
-    'obi', '欧倍德', 'obi group holding se & co. kgaa',
-    'bauhaus', '包豪斯', 'bauhaus ag',
-    'hornbach', '霍恩巴赫', 'hornbach baumarkt ag',
-    'toom', 'toom baumarkt', 'toom baumarkt gmbh',
-    'hagebau', '哈格堡'
-  ]);
+  // NOTE: RETAILER_ENTITIES 从 lib/entity-constants.ts 导入
 
   const links: any[] = [];
   const seenKeys = new Set<string>();

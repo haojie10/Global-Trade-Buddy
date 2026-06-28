@@ -73,57 +73,8 @@ function cleanHtmlBody(rawHtml: string): string {
   // 3. 移除富文本中的所有 <script>
   bodyContent = bodyContent.replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, '');
 
-  // 4. 强制注入的基础重置样式，以适应 Scheme B 暖乳白图书阅读器风格
-  // 4. 强制注入的基础重置样式，仅作溢出保护，不干扰原报告格式配色
-  const lightThemeOverrides = `
-    <style>
-      .report-content-body {
-        width: 100%;
-      }
-      .report-content-body img {
-        max-width: 100%;
-        height: auto;
-        border-radius: 12px;
-        box-shadow: 0 10px 30px rgba(160, 109, 68, 0.04);
-        margin: 20px 0;
-      }
-      .report-content-body table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 24px 0;
-        background: #fdfbf7;
-        border-radius: 12px;
-        overflow: hidden;
-      }
-      .report-content-body th, .report-content-body td {
-        padding: 12px 16px;
-        border-bottom: 1px solid rgba(160, 109, 68, 0.05);
-        text-align: left;
-      }
-      .report-content-body th {
-        background: #f6f3ec;
-        font-weight: 500;
-        color: var(--color-text);
-      }
-      .report-content-body h1, .report-content-body h2, .report-content-body h3 {
-        font-family: 'Playfair Display', Georgia, serif !important;
-        font-weight: 600 !important;
-        color: var(--color-text) !important;
-        margin-top: 2.2rem !important;
-        margin-bottom: 1rem !important;
-        letter-spacing: -0.01em !important;
-      }
-      .report-content-body p {
-        font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif !important;
-        line-height: 1.8 !important;
-        font-size: 1.05rem !important;
-        color: #4b4844 !important;
-        margin-bottom: 1.2rem !important;
-      }
-    </style>
-  `;
-
-  return `${lightThemeOverrides}\n${stylesStr}\n${bodyContent}`;
+  // 4. 基础重置样式已移至 styles/globals.css 中的 .report-content-body 规则
+  return `${stylesStr}\n${bodyContent}`;
 }
 
 export default function ReportDetailPage({ report, related, userId, userRole }: ReportDetailProps) {
