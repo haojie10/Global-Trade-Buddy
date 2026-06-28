@@ -1,6 +1,7 @@
 import '../styles/globals.css';
 import type { AppProps } from 'next/app';
 import { Outfit, Playfair_Display } from 'next/font/google';
+import BackgroundGraph from '../components/BackgroundGraph';
 
 const outfit = Outfit({
   subsets: ['latin'],
@@ -20,6 +21,7 @@ const playfair = Playfair_Display({
 export default function App({ Component, pageProps }: AppProps) {
   return (
     <div className={`${outfit.variable} ${playfair.variable}`}>
+      <BackgroundGraph />
       <Component {...pageProps} />
     </div>
   );
