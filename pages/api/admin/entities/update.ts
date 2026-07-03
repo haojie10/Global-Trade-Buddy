@@ -1,25 +1,15 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import pool from '../../../../lib/db';
-import { getSession } from '../../../../lib/auth';
+import { requireAdmin } from '../../../../lib/auth';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  // 校验管理员权限
-  const session = getSession(req);
-  let userRole = 'guest';
-  if (session) {
-    userRole = session.role;
-  } else {
-    const cookieUserRole = req.cookies?.['user_role'] || req.headers?.['x-user-role'];
-    if (cookieUserRole) {
-      userRole = cookieUserRole as string;
-    }
-  }
-
-  if (userRole !== 'admin') {
+  // 统一管理员鉴权，取代原有的 cookie/header 回退方案
+  const adminSession = requireAdmin(req);
+  if (!adminSession) {
     return res.status(403).json({ error: '权限不足，仅管理员可进行此操作' });
   }
 

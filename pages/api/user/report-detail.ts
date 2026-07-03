@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import pool from '../../../lib/db';
+import { getSession } from '../../../lib/auth';
 
 // 核心安全详情读取逻辑（供 API 和单元测试调用）
 export async function getReportDetail(userId: string, reportId: string, dbClient: any) {
@@ -40,10 +41,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  // 从 query 或 authorization 获取参数
-  const { reportId, userId } = req.query;
-  if (!reportId || !userId) {
-    return res.status(400).json({ error: 'Missing reportId or userId parameter' });
+  const session = getSession(req);
+  if (!session) {
+    return res.status(401).json({ error: '未登录，请先登录后操作' });
+  }
+  const userId = session.userId;
+  const { reportId } = req.query;
+  if (!reportId) {
+    return res.status(400).json({ error: 'Missing reportId parameter' });
   }
 
   const dbClient = await pool.connect();

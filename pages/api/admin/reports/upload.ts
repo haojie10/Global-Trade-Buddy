@@ -1,12 +1,18 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PoolClient } from 'pg';
 import { withDb } from '../../../../lib/api-handler';
+import { requireAdmin } from '../../../../lib/auth';
 import { parseMetadata, runDehydration, extractAndNormalizeEntities } from '../../../../lib/entity-extractor';
 
 // Re-export for compatibility with tests
 export { parseMetadata, runDehydration, extractAndNormalizeEntities } from '../../../../lib/entity-extractor';
 
 async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
+  const adminSession = requireAdmin(req);
+  if (!adminSession) {
+    return res.status(403).json({ error: '权限不足，仅管理员可执行此操作' });
+  }
+
   const { rawHtml, manualTags, category, summary, overwriteReportId } = req.body;
 
   // 真实的 Supabase Storage 图片上传
@@ -18,7 +24,15 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
     const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Supabase URL or Anon Key is missing in environment variables');
+      // NOTE: 本地/开发环境降级方案：若未配置 Supabase 环境变量，图片直接保存到本地 public/uploads 目录下
+      const fs = require('fs');
+      const path = require('path');
+      const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      fs.writeFileSync(path.join(uploadDir, fileName), buffer);
+      return `/uploads/${fileName}`;
     }
 
     // 1. 调用 REST API 写入 Supabase Storage

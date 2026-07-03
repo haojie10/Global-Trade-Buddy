@@ -29,7 +29,7 @@ export function getLinkColor(
     case 'shared_product':
       return 'rgba(16, 185, 129, 0.75)'; // 极光绿
     case 'shared_channel':
-      return 'rgba(245, 158, 11, 0.75)'; // 琥珀黄/橙色
+      return 'rgba(122, 117, 111, 0.65)'; // 极简冷灰
     case 'shared_competitor':
       return 'rgba(139, 92, 246, 0.6)'; // 优雅紫
     case 'shared_company':
@@ -108,8 +108,8 @@ export function getLinkParticles(relationType: string): number {
  */
 export function getGraphContainerBackgroundStyle(): React.CSSProperties {
   return {
-    background: 'rgba(160, 109, 68, 0.03)',
-    backgroundImage: 'radial-gradient(rgba(160, 109, 68, 0.15) 1px, transparent 1px)',
+    background: 'rgba(246, 246, 246, 0.03)',
+    backgroundImage: 'radial-gradient(rgba(18, 18, 18, 0.08) 1px, transparent 1px)',
     backgroundSize: '24px 24px'
   };
 }

@@ -242,8 +242,8 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
 
   const inputStyle = {
     background: 'var(--bg-main)',
-    border: 'none',
-    borderRadius: '14px',
+    border: '1px solid rgba(18, 18, 18, 0.08)',
+    borderRadius: '0px',
     padding: '12px 16px',
     fontSize: '0.85rem',
     color: 'var(--color-text)',
@@ -273,13 +273,13 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
     return (
       <div style={{
         background: 'var(--bg-sub)',
-        border: 'none',
+        border: '1px solid rgba(18, 18, 18, 0.08)',
         borderRadius: 'var(--border-radius)',
         padding: '14px',
         display: 'flex',
         flexDirection: 'column',
         gap: '8px',
-        boxShadow: '0 4px 12px rgba(160, 109, 68, 0.01)'
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.01)'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
           <span style={{ fontSize: '0.85rem', fontWeight: 400, color: 'var(--color-text)' }}>{title}</span>
@@ -316,7 +316,7 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
                 style={{
                   ...inputStyle,
                   padding: '6px 10px',
-                  borderRadius: '8px',
+                  borderRadius: '0px',
                   fontSize: '0.8rem',
                 }}
               />
@@ -360,14 +360,14 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
     }}>
       <div style={{
         background: 'var(--bg-main)',
-        border: 'none',
+        border: '1px solid rgba(18, 18, 18, 0.08)',
         borderRadius: 'var(--border-radius)',
         padding: '30px',
         width: '95%',
         maxWidth: '850px',
         maxHeight: '95vh',
         overflowY: 'auto',
-        boxShadow: '0 20px 50px rgba(160, 109, 68, 0.05)',
+        boxShadow: '0 20px 50px rgba(0, 0, 0, 0.03)',
         position: 'relative'
       }}>
         <button 
@@ -419,7 +419,7 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
                 ? '1.5px dashed var(--color-accent)' 
                 : isDragActive 
                   ? '1.5px dashed var(--color-accent)' 
-                  : '1.5px dashed rgba(122, 117, 111, 0.25)',
+                  : '1.5px dashed rgba(18, 18, 18, 0.15)',
               borderRadius: 'var(--border-radius)',
               display: 'flex',
               flexDirection: 'column',
@@ -429,7 +429,7 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
               cursor: 'pointer',
               transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
               padding: '20px',
-              boxShadow: '0 4px 12px rgba(160, 109, 68, 0.01)'
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.01)'
             }}
           >
             <input 
@@ -472,7 +472,7 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
                     background: 'rgba(239, 68, 68, 0.08)',
                     border: 'none',
                     color: '#ef4444',
-                    borderRadius: '12px',
+                    borderRadius: '0px',
                     padding: '6px 16px',
                     fontSize: '0.8rem',
                     cursor: 'pointer',
@@ -611,11 +611,11 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
           <div style={{
             background: 'var(--bg-main)',
             borderRadius: 'var(--border-radius)',
+            border: '1px solid rgba(18, 18, 18, 0.08)',
             padding: '28px',
             width: '90%',
             maxWidth: '500px',
-            boxShadow: '0 20px 50px rgba(160, 109, 68, 0.06)',
-            border: 'none',
+            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.03)',
             display: 'flex',
             flexDirection: 'column',
             gap: '16px'

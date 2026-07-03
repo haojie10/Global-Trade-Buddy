@@ -89,9 +89,9 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
   };
 
   const inputStyle = {
-    background: 'var(--bg-main)',
-    border: 'none',
-    borderRadius: '12px',
+    background: 'rgba(255, 255, 255, 0.65)',
+    border: '1px solid rgba(18, 18, 18, 0.08)',
+    borderRadius: '0px',
     padding: '12px 16px',
     fontSize: '0.85rem',
     color: 'var(--color-text)',
@@ -108,10 +108,13 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
         marginBottom: '40px',
         alignItems: 'center',
         flexWrap: 'wrap',
-        background: 'var(--bg-sub)',
+        background: 'rgba(255, 255, 255, 0.45)',
+        backdropFilter: 'blur(15px)',
+        WebkitBackdropFilter: 'blur(15px)',
+        border: '1px solid rgba(18, 18, 18, 0.05)',
         padding: '16px 24px',
         borderRadius: 'var(--border-radius)',
-        boxShadow: '0 10px 40px rgba(160, 109, 68, 0.015)'
+        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.01)'
       }}>
         <input
           type="text"
@@ -159,29 +162,19 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
               key={report.id} 
               style={{ textDecoration: 'none' }}
             >
-              <div style={{
-                border: 'none',
-                borderRadius: 'var(--border-radius)',
-                padding: '28px',
-                background: 'var(--bg-sub)',
-                cursor: 'pointer',
-                transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                height: '260px',
-                boxShadow: '0 6px 20px rgba(160, 109, 68, 0.015)'
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.background = 'var(--bg-main)';
-                e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.boxShadow = '0 12px 30px rgba(160, 109, 68, 0.06), 0 0 15px rgba(255, 100, 30, 0.08)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.background = 'var(--bg-sub)';
-                e.currentTarget.style.transform = 'none';
-                e.currentTarget.style.boxShadow = '0 6px 20px rgba(160, 109, 68, 0.015)';
-              }}
+              <div 
+                className="report-card"
+                style={{
+                  border: '1px solid rgba(18, 18, 18, 0.05)',
+                  borderRadius: 'var(--border-radius)',
+                  padding: '28px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  height: '260px',
+                  boxShadow: '0 6px 20px rgba(0, 0, 0, 0.01)'
+                }}
               >
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -192,7 +185,7 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
                       color: report.category === 'customer' ? 'var(--color-accent)' : 'var(--color-muted)',
                       background: report.category === 'customer' ? 'rgba(255, 100, 30, 0.05)' : 'rgba(122, 117, 111, 0.08)',
                       padding: '5px 12px',
-                      borderRadius: '8px'
+                      borderRadius: '0px'
                     }}>
                       {report.category === 'customer' ? '客户洞察' : '品类分析'}
                     </span>
@@ -236,56 +229,72 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   marginTop: '16px',
-                  borderTop: '1px solid rgba(160, 109, 68, 0.05)',
+                  borderTop: '1px solid rgba(18, 18, 18, 0.05)',
                   paddingTop: '16px'
                 }}>
                   {report.isUnlocked ? (
-                    <span style={{
-                      fontSize: '0.75rem',
-                      fontWeight: 300,
-                      padding: '4px 10px',
-                      borderRadius: '8px',
-                      background: 'rgba(16, 185, 129, 0.08)',
-                      color: '#059669',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                      已解锁
-                    </span>
-                  ) : (
-                    <button
-                      onClick={(e) => handleUnlock(e, report.id)}
-                      style={{
-                        background: 'rgba(255, 100, 30, 0.08)',
-                        border: 'none',
-                        color: 'var(--color-accent)',
+                    <>
+                      <span className="unlocked-tag" style={{
                         fontSize: '0.75rem',
                         fontWeight: 300,
                         padding: '4px 10px',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        transition: 'background 0.2s',
+                        borderRadius: '0px',
+                        background: 'rgba(18, 18, 18, 0.05)',
+                        color: '#555555',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '4px'
-                      }}
-                      onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 100, 30, 0.15)'}
-                      onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255, 100, 30, 0.08)'}
-                    >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                      </svg>
-                      未解锁
-                    </button>
+                        gap: '4px',
+                        transition: 'all 0.3s'
+                      }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        已解锁
+                      </span>
+                      <span className="read-now-label" style={{ fontSize: '0.8rem', color: '#555555', fontWeight: 'var(--btn-font-weight)', letterSpacing: 'var(--btn-letter-spacing)', transition: 'all 0.2s' }}>
+                        立即阅读 →
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={(e) => handleUnlock(e, report.id)}
+                        style={{
+                          background: 'transparent',
+                          border: '1px solid rgba(18, 18, 18, 0.15)',
+                          color: '#555555',
+                          fontSize: '0.75rem',
+                          fontWeight: 300,
+                          padding: '4px 10px',
+                          borderRadius: '0px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.borderColor = 'var(--color-accent)';
+                          e.currentTarget.style.color = 'var(--color-accent)';
+                          e.currentTarget.style.background = 'rgba(255, 100, 30, 0.05)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.borderColor = 'rgba(18, 18, 18, 0.15)';
+                          e.currentTarget.style.color = '#555555';
+                          e.currentTarget.style.background = 'transparent';
+                        }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                        未解锁
+                      </button>
+                      <span className="preview-unlock-label" style={{ fontSize: '0.8rem', color: '#555555', fontWeight: 'var(--btn-font-weight)', letterSpacing: 'var(--btn-letter-spacing)', transition: 'all 0.2s' }}>
+                        立即预览与解锁 →
+                      </span>
+                    </>
                   )}
-                  <span style={{ fontSize: '0.8rem', color: 'var(--color-accent)', fontWeight: 'var(--btn-font-weight)', letterSpacing: 'var(--btn-letter-spacing)' }}>
-                    立即预览与解锁 →
-                  </span>
                 </div>
               </div>
             </Link>

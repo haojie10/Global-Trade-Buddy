@@ -1,7 +1,13 @@
 import { NextApiRequest, NextApiResponse } from 'next';
+import { requireAdmin } from '../../../../lib/auth';
 import pool from '../../../../lib/db';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const adminSession = requireAdmin(req);
+  if (!adminSession) {
+    return res.status(403).json({ error: '权限不足，仅管理员可执行此操作' });
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }

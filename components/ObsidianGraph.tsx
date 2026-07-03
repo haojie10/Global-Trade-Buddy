@@ -247,7 +247,7 @@ export default function ObsidianGraph({
 
           const isProduct = node.category === 'product' || node.node_type === 'product';
           ctx.fillStyle = isReport 
-            ? (isProduct ? `rgba(122, 117, 111, ${opacity})` : `rgba(255, 100, 30, ${opacity})`)
+            ? (isProduct ? `rgba(122, 117, 111, ${opacity})` : `rgba(18, 18, 18, ${opacity * 0.75})`)
             : `rgba(148, 163, 184, ${opacity})`;
           ctx.fill();
 
@@ -422,11 +422,14 @@ export default function ObsidianGraph({
               // 单击逻辑：设为选中或取消选中，同时触发 onNodeSelect 外部回调
               setSelectedNodeId(prev => {
                 const next = prev === node.id ? null : node.id;
-                if (next === null) {
-                  callbacksRef.current.onNodeSelect?.(null);
-                } else {
-                  callbacksRef.current.onNodeSelect?.(node);
-                }
+                // NOTE: 使用 setTimeout 切断同步递归堆栈，防止在渲染流程中更新父组件状态引发 React 报错
+                setTimeout(() => {
+                  if (next === null) {
+                    callbacksRef.current.onNodeSelect?.(null);
+                  } else {
+                    callbacksRef.current.onNodeSelect?.(node);
+                  }
+                }, 0);
                 return next;
               });
               clickTimeoutRef.current = null;
@@ -510,7 +513,7 @@ export default function ObsidianGraph({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {[
             { key: 'competitor', label: '竞争关系', color: customColorsRef.current?.competitor || '#d32f2f', isDash: false },
-            { key: 'supplier', label: '供销关系', color: customColorsRef.current?.supplier || '#ff641e', isDash: true },
+            { key: 'supplier', label: '供销关系', color: customColorsRef.current?.supplier || '#121212', isDash: true },
             { key: 'operation', label: '经营关系', color: customColorsRef.current?.operation || '#1565c0', isDash: false },
             { key: 'mention', label: '涉及关系', color: customColorsRef.current?.mention || '#a09b95', isDash: true }
           ].map(relation => {

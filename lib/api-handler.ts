@@ -50,7 +50,11 @@ export function withDb(handler: DbHandler, options?: WithDbOptions) {
       } catch (rollbackErr) {
         // 忽略 rollback 失败的情况（如未开启事务）
       }
-      return res.status(500).json({ error: err.message || 'Internal Server Error' });
+      // NOTE: 生产环境隐藏内部错误细节，防止泄露 SQL 语句、表名等敏感信息
+      const safeMessage = process.env.NODE_ENV === 'production'
+        ? '服务器内部错误'
+        : (err.message || 'Internal Server Error');
+      return res.status(500).json({ error: safeMessage });
     } finally {
       dbClient.release();
     }

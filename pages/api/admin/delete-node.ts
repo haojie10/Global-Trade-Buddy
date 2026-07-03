@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PoolClient } from 'pg';
 import { withDb } from '../../../lib/api-handler';
-import { getSession } from '../../../lib/auth';
+import { requireAdmin } from '../../../lib/auth';
 
 async function deleteNodeHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
   const { id, nodeType } = req.body;
@@ -10,30 +10,9 @@ async function deleteNodeHandler(req: NextApiRequest, res: NextApiResponse, dbCl
     return res.status(400).json({ error: '无效的节点类型' });
   }
 
-  // 兼容传统 user_id cookie 的两重鉴权逻辑，保障单元测试和浏览器页面端都能正常使用管理员登录角色
-  let userId: string | null = null;
-  let userRole = 'guest';
-
-  const session = getSession(req);
-  if (session) {
-    userId = session.userId;
-    userRole = session.role;
-  } else {
-    const cookieUserId = req.cookies?.['user_id'];
-    if (cookieUserId) {
-      const userRes = await dbClient.query('SELECT id, role FROM users WHERE id = $1', [cookieUserId]);
-      if (userRes.rows.length > 0) {
-        userId = userRes.rows[0].id;
-        userRole = userRes.rows[0].role;
-      }
-    }
-  }
-
-  if (!userId) {
-    return res.status(401).json({ error: '未登录，请先登录后操作' });
-  }
-
-  if (userRole !== 'admin') {
+  // 统一管理员鉴权，取代原有的 session/cookie 双重回退方案
+  const adminSession = requireAdmin(req);
+  if (!adminSession) {
     return res.status(403).json({ error: '权限不足，只有管理员可以执行此操作' });
   }
 

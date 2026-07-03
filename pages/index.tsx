@@ -45,20 +45,26 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
 
   // 调色板定制状态
   const [accentColor, setAccentColor] = useState('#ff641e');
-  const [bgSub, setBgSub] = useState('#f6f3ec');
-  const [ambientOpacity, setAmbientOpacity] = useState(0.12);
+  const [bgSub, setBgSub] = useState('#eaeaea');
+  const [ambientOpacity, setAmbientOpacity] = useState(0.40);
+  const [ambientBlur, setAmbientBlur] = useState(30);
+  const [ambientScale, setAmbientScale] = useState(1.4);
+  const [ambientBlendMode, setAmbientBlendMode] = useState('normal');
   const [brandWeight, setBrandWeight] = useState<'standard' | 'vibrant'>('standard');
   const [showCustomizer, setShowCustomizer] = useState(false);
 
   // 实时同步 CSS 变量
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const root = document.documentElement;
+    const root = document.documentElement;
+    if (root) {
       root.style.setProperty('--color-accent', accentColor);
       root.style.setProperty('--bg-sub', bgSub);
       root.style.setProperty('--ambient-opacity', String(ambientOpacity));
+      root.style.setProperty('--ambient-blur', `${ambientBlur}px`);
+      root.style.setProperty('--ambient-scale', String(ambientScale));
+      root.style.setProperty('--ambient-blend-mode', ambientBlendMode);
     }
-  }, [accentColor, bgSub, ambientOpacity]);
+  }, [accentColor, bgSub, ambientOpacity, ambientBlur, ambientScale, ambientBlendMode]);
 
   const handleLogout = () => {
     document.cookie = `user_id=; path=/; max-age=0`;
@@ -117,22 +123,27 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
       {/* 全局背景流光光源 */}
       <div className="ambient-glow-container">
         <div className="ambient-light ambient-light-1" />
-        <div className="ambient-light ambient-light-2" />
-        <div className="ambient-light ambient-light-3" />
       </div>
 
-      {/* 头部导航栏 - 浮空漂浮样式 */}
-      <div style={{ padding: '20px 40px 10px 40px', position: 'sticky', top: 0, zIndex: 1000 }}>
+      {/* 头部导航栏 - 贴顶置顶黑色样式 */}
+      <div style={{ 
+        position: 'fixed', 
+        top: 0, 
+        left: 0, 
+        right: 0, 
+        background: '#121212', 
+        zIndex: 1000, 
+        borderBottom: '1px solid rgba(255, 255, 255, 0.1)' 
+      }}>
         <header style={{
-          background: 'rgba(253, 251, 247, 0.75)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          padding: '12px 30px',
-          borderRadius: 'var(--border-radius)',
+          background: 'transparent',
+          padding: '16px 40px',
+          borderRadius: '0px',
+          border: 'none',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          boxShadow: '0 10px 40px rgba(160, 109, 68, 0.02)',
+          boxShadow: 'none',
           maxWidth: '1400px',
           margin: '0 auto',
           width: '100%'
@@ -142,7 +153,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
             <span style={{
               fontSize: '1.25rem',
               fontWeight: 400,
-              color: 'var(--color-text)',
+              color: '#ffffff',
               letterSpacing: '-0.5px'
             }}>
               Globaltradebuddy
@@ -156,51 +167,79 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
                 textDecoration: 'none',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px'
+                gap: '6px',
+                color: '#ffffff',
+                background: 'transparent',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                borderRadius: '0px',
+                padding: '6px 16px',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-accent)';
+                e.currentTarget.style.color = 'var(--color-accent)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+                e.currentTarget.style.color = '#ffffff';
               }}
             >
-              <GraphIcon size={14} />
+              <GraphIcon size={14} stroke="currentColor" />
               个人知识拓扑网图
             </Link>
             {userId ? (
               <>
                 {userRole === 'admin' ? (
                   <>
-                    <span style={{ color: 'var(--color-muted)', fontWeight: 300, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <CrownIcon size={14} />
-                      管理员: <code style={{ color: 'var(--color-accent)', fontWeight: 400 }}>{userId.substring(0, 8)}...</code>
+                    <span style={{ color: '#ffffff', fontWeight: 400, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <CrownIcon size={14} stroke="currentColor" />
+                      管理员: <code style={{ color: 'rgba(255, 255, 255, 0.6)', fontWeight: 500 }}>{userId.substring(0, 8)}...</code>
                     </span>
                     <button 
                       onClick={() => setShowUploadModal(true)}
                       className="sand-btn"
                       style={{
-                        color: 'var(--color-accent)',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '6px'
+                        gap: '6px',
+                        color: '#ffffff',
+                        background: 'transparent',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        borderRadius: '0px',
+                        padding: '6px 16px',
+                        transition: 'all 0.2s',
+                        cursor: 'pointer'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--color-accent)';
+                        e.currentTarget.style.color = 'var(--color-accent)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+                        e.currentTarget.style.color = '#ffffff';
                       }}
                     >
-                      <UploadIcon size={14} />
+                      <UploadIcon size={14} stroke="currentColor" />
                       上传新报告
                     </button>
                   </>
                 ) : (
                   <>
-                    <span style={{ color: 'var(--color-muted)', fontWeight: 300 }}>
-                      业务员 ID: <code style={{ color: 'var(--color-accent)', fontWeight: 400 }}>{userId.substring(0, 8)}...</code>
+                    <span style={{ color: '#ffffff', fontWeight: 400 }}>
+                      业务员 ID: <code style={{ color: 'rgba(255, 255, 255, 0.6)', fontWeight: 500 }}>{userId.substring(0, 8)}...</code>
                     </span>
                     <span style={{
-                      background: 'var(--bg-sub)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
                       padding: '6px 14px',
-                      borderRadius: '20px',
-                      color: 'var(--color-text)',
-                      fontWeight: 300,
+                      borderRadius: '0px',
+                      color: '#ffffff',
+                      fontWeight: 400,
                       display: 'flex',
                       alignItems: 'center',
                       gap: '6px'
                     }}>
-                      <LockIcon size={14} />
-                      剩余额度: <b style={{ color: 'var(--color-accent)', fontWeight: 500 }}>{quota}</b> 次
+                      <LockIcon size={14} stroke="currentColor" />
+                      剩余额度: <b style={{ color: 'rgba(255, 255, 255, 0.6)', fontWeight: 500 }}>{quota}</b> 次
                     </span>
                   </>
                 )}
@@ -208,20 +247,34 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
                   onClick={handleLogout}
                   className="sand-btn"
                   style={{
-                    color: '#ef4444',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px'
+                    gap: '6px',
+                    color: '#ffffff',
+                    background: 'transparent',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    borderRadius: '0px',
+                    padding: '6px 16px',
+                    transition: 'all 0.2s',
+                    cursor: 'pointer'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--color-accent)';
+                    e.currentTarget.style.color = 'var(--color-accent)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+                    e.currentTarget.style.color = '#ffffff';
                   }}
                 >
-                  <LogOutIcon size={14} />
+                  <LogOutIcon size={14} stroke="currentColor" />
                   退出登录
                 </button>
               </>
             ) : (
               <>
-                <span style={{ color: 'var(--color-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <UserIcon size={14} />
+                <span style={{ color: '#ffffff', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <UserIcon size={14} stroke="currentColor" />
                   游客模式
                 </span>
                 <button 
@@ -230,13 +283,27 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
                   }}
                   className="sand-btn"
                   style={{
-                    color: 'var(--color-accent)',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px'
+                    gap: '6px',
+                    color: '#ffffff',
+                    background: 'transparent',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    borderRadius: '0px',
+                    padding: '6px 16px',
+                    transition: 'all 0.2s',
+                    cursor: 'pointer'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--color-accent)';
+                    e.currentTarget.style.color = 'var(--color-accent)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+                    e.currentTarget.style.color = '#ffffff';
                   }}
                 >
-                  <LockIcon size={14} />
+                  <LockIcon size={14} stroke="currentColor" />
                   登录 / 注册
                 </button>
               </>
@@ -246,7 +313,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
       </div>
 
       {/* 滚动大容器 */}
-      <div style={{ position: 'relative', zIndex: 10 }}>
+      <div style={{ position: 'relative', zIndex: 10, paddingTop: '80px' }}>
         
         {/* 模块一：Hero 核心引导区 */}
         <section style={{
@@ -261,48 +328,21 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
           maxWidth: '1200px',
           margin: brandWeight === 'vibrant' ? '40px auto' : '0 auto',
           background: brandWeight === 'vibrant' ? 'linear-gradient(135deg, var(--color-accent) 0%, #ff884d 100%)' : 'transparent',
-          borderRadius: brandWeight === 'vibrant' ? '32px' : '0px',
+          borderRadius: '0px',
           boxShadow: brandWeight === 'vibrant' ? '0 20px 50px rgba(255, 100, 30, 0.15)' : 'none',
           transition: 'all 0.5s ease-in-out'
         }}>
-          {/* 外贸元素悬浮浮动卡片 */}
-          <div className="floating-card floating-card-1 float-on-hover" style={{ display: 'flex' }}>
-            <GlobeIcon size={20} stroke="var(--color-accent)" style={{ flexShrink: 0 }} />
-            <div style={{ textAlign: 'left' }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--color-muted)', fontWeight: 300 }}>全球商机</div>
-              <div style={{ fontSize: '0.8rem', fontWeight: 500, color: '#10b981' }}>实时监控中</div>
-            </div>
-          </div>
-          <div className="floating-card floating-card-2 float-on-hover" style={{ display: 'flex' }}>
-            <DollarIcon size={20} stroke="var(--color-accent)" style={{ flexShrink: 0 }} />
-            <div style={{ textAlign: 'left' }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--color-muted)', fontWeight: 300 }}>结汇汇率</div>
-              <div style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--color-text)' }}>CNY 7.24</div>
-            </div>
-          </div>
-          <div className="floating-card floating-card-3 float-on-hover" style={{ display: 'flex' }}>
-            <TrendIcon size={20} stroke="var(--color-accent)" style={{ flexShrink: 0 }} />
-            <div style={{ textAlign: 'left' }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--color-muted)', fontWeight: 300 }}>前沿报告</div>
-              <div style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--color-accent)' }}>已收录 {allReports.length} 份</div>
-            </div>
-          </div>
-          <div className="floating-card floating-card-4 float-on-hover" style={{ display: 'flex' }}>
-            <SearchIcon size={20} stroke="var(--color-accent)" style={{ flexShrink: 0 }} />
-            <div style={{ textAlign: 'left' }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--color-muted)', fontWeight: 300 }}>海关检索</div>
-              <div style={{ fontSize: '0.8rem', fontWeight: 500, color: '#b45309' }}>HS: 8708.70</div>
-            </div>
-          </div>
+          {/* 移除浮动卡片 */}
 
           <div style={{ maxWidth: '800px', zIndex: 5 }}>
             <span style={{
-              background: brandWeight === 'vibrant' ? 'rgba(255, 255, 255, 0.18)' : 'rgba(255, 100, 30, 0.05)',
+              background: 'transparent',
+              border: '1px solid rgba(18, 18, 18, 0.08)',
               padding: '6px 16px',
-              borderRadius: '20px',
-              color: brandWeight === 'vibrant' ? '#ffffff' : 'var(--color-accent)',
+              borderRadius: '0px',
+              color: 'var(--color-muted)',
               fontSize: '0.85rem',
-              fontWeight: brandWeight === 'vibrant' ? 400 : 300,
+              fontWeight: 300,
               textTransform: 'uppercase',
               letterSpacing: '1.5px',
               display: 'inline-block',
@@ -332,13 +372,24 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
             </p>
             <button 
               onClick={scrollToInsights}
-              className="sand-btn accent-glow"
+              className="sand-btn"
               style={{
                 padding: '16px 40px',
                 fontSize: '1rem',
-                background: brandWeight === 'vibrant' ? '#ffffff' : 'var(--bg-sub)',
-                color: 'var(--color-accent)',
-                boxShadow: brandWeight === 'vibrant' ? '0 10px 25px rgba(0,0,0,0.08)' : 'none'
+                background: 'transparent',
+                border: '1px solid rgba(18, 18, 18, 0.15)',
+                color: '#000000',
+                borderRadius: '0px',
+                transition: 'all 0.2s',
+                cursor: 'pointer'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-accent)';
+                e.currentTarget.style.color = 'var(--color-accent)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(18, 18, 18, 0.15)';
+                e.currentTarget.style.color = '#000000';
               }}
             >
               探索洞察报告库
@@ -351,14 +402,10 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
           padding: '60px 40px',
           maxWidth: '1400px',
           margin: '0 auto 60px auto',
-          background: 'rgba(246, 243, 236, 0.55)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          borderRadius: '32px',
-          boxShadow: '0 12px 40px rgba(160, 109, 68, 0.03)',
-          border: '1px solid rgba(255, 100, 30, 0.03)'
+          background: 'transparent',
+          borderRadius: '0px'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '50px', flexWrap: 'wrap', gap: '20px' }}>
+          <div style={{ marginBottom: '50px' }}>
             <div>
               <h2 className="font-editorial" style={{
                 fontSize: '2.8rem',
@@ -372,23 +419,6 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
               <p style={{ fontSize: '1.05rem', color: 'var(--color-muted)', margin: 0, fontWeight: 300 }}>
                 探索大厅发布了 <b style={{ color: 'var(--color-text)', fontWeight: 500 }}>{reports.length}</b> 份最具潜力的跨国采购品类与买家画像报告。
               </p>
-            </div>
-            
-            <div style={{
-              background: 'var(--bg-main)',
-              border: '1px solid rgba(160, 109, 68, 0.05)',
-              padding: '12px 24px',
-              borderRadius: '16px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px',
-              boxShadow: '0 4px 12px rgba(160, 109, 68, 0.02)'
-            }}>
-              <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--color-muted)' }}>数据中心状况</span>
-              <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '8px', height: '8px', background: '#10b981', borderRadius: '50%', display: 'inline-block' }} />
-                实时数据同步正常
-              </span>
             </div>
           </div>
 
@@ -425,10 +455,11 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
         }}>
           <div>
             <span style={{
-              background: 'rgba(255, 100, 30, 0.05)',
+              background: 'transparent',
+              border: '1px solid rgba(18, 18, 18, 0.08)',
               padding: '6px 16px',
-              borderRadius: '20px',
-              color: 'var(--color-accent)',
+              borderRadius: '0px',
+              color: 'var(--color-muted)',
               fontSize: '0.85rem',
               fontWeight: 300,
               textTransform: 'uppercase',
@@ -456,18 +487,22 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {/* 特色 1 */}
             <div className="float-on-hover" style={{
-              background: 'var(--bg-sub)',
+              background: 'rgba(255, 255, 255, 0.45)',
+              backdropFilter: 'blur(15px)',
+              WebkitBackdropFilter: 'blur(15px)',
+              border: '1px solid rgba(18, 18, 18, 0.05)',
               borderRadius: 'var(--border-radius)',
               padding: '24px 30px',
               display: 'flex',
               gap: '20px',
               alignItems: 'flex-start',
-              boxShadow: '0 6px 20px rgba(160, 109, 68, 0.015)'
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.01)'
             }}>
               <div style={{
                 background: 'var(--bg-main)',
+                border: '1px solid rgba(18, 18, 18, 0.08)',
                 padding: '12px',
-                borderRadius: '12px',
+                borderRadius: '0px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -493,18 +528,22 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
 
             {/* 特色 2 */}
             <div className="float-on-hover" style={{
-              background: 'var(--bg-sub)',
+              background: 'rgba(255, 255, 255, 0.45)',
+              backdropFilter: 'blur(15px)',
+              WebkitBackdropFilter: 'blur(15px)',
+              border: '1px solid rgba(18, 18, 18, 0.05)',
               borderRadius: 'var(--border-radius)',
               padding: '24px 30px',
               display: 'flex',
               gap: '20px',
               alignItems: 'flex-start',
-              boxShadow: '0 6px 20px rgba(160, 109, 68, 0.015)'
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.01)'
             }}>
               <div style={{
                 background: 'var(--bg-main)',
+                border: '1px solid rgba(18, 18, 18, 0.08)',
                 padding: '12px',
-                borderRadius: '12px',
+                borderRadius: '0px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -526,18 +565,22 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
 
             {/* 特色 3 */}
             <div className="float-on-hover" style={{
-              background: 'var(--bg-sub)',
+              background: 'rgba(255, 255, 255, 0.45)',
+              backdropFilter: 'blur(15px)',
+              WebkitBackdropFilter: 'blur(15px)',
+              border: '1px solid rgba(18, 18, 18, 0.05)',
               borderRadius: 'var(--border-radius)',
               padding: '24px 30px',
               display: 'flex',
               gap: '20px',
               alignItems: 'flex-start',
-              boxShadow: '0 6px 20px rgba(160, 109, 68, 0.015)'
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.01)'
             }}>
               <div style={{
                 background: 'var(--bg-main)',
+                border: '1px solid rgba(18, 18, 18, 0.08)',
                 padding: '12px',
-                borderRadius: '12px',
+                borderRadius: '0px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -567,25 +610,28 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
           borderTop: 'none'
         }}>
           <div style={{
-            background: brandWeight === 'vibrant' ? 'linear-gradient(135deg, var(--color-accent) 0%, #ff884d 100%)' : 'var(--bg-sub)',
+            background: 'rgba(255, 255, 255, 0.45)',
+            backdropFilter: 'blur(15px)',
+            WebkitBackdropFilter: 'blur(15px)',
+            border: '1px solid rgba(18, 18, 18, 0.05)',
             borderRadius: 'var(--border-radius)',
             padding: '80px 40px',
             textAlign: 'center',
             position: 'relative',
             overflow: 'hidden',
             marginBottom: '80px',
-            boxShadow: brandWeight === 'vibrant' ? '0 20px 50px rgba(255, 100, 30, 0.15)' : '0 6px 20px rgba(160, 109, 68, 0.01)'
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.01)'
           }}>
-            <h2 className={brandWeight === 'vibrant' ? "" : "font-editorial"} style={{
+            <h2 className="font-editorial" style={{
               fontSize: '2.6rem',
-              fontWeight: brandWeight === 'vibrant' ? 400 : 300,
+              fontWeight: 300,
               margin: '0 0 16px 0',
-              color: brandWeight === 'vibrant' ? '#ffffff' : 'var(--color-text)',
+              color: 'var(--color-text)',
               letterSpacing: '-1px'
             }}>
               Get started.<br />Subscribe to Globaltradebuddy.
             </h2>
-            <p style={{ fontSize: '1.05rem', color: brandWeight === 'vibrant' ? 'rgba(255, 255, 255, 0.85)' : 'var(--color-muted)', maxWidth: '480px', margin: '0 auto 36px auto', fontWeight: 300 }}>
+            <p style={{ fontSize: '1.05rem', color: 'var(--color-muted)', maxWidth: '480px', margin: '0 auto 36px auto', fontWeight: 300 }}>
               第一时间接收最新的市场洞察更新与全球宏观贸易数据。
             </p>
 
@@ -606,9 +652,9 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
                 style={{
                   flex: 1,
                   padding: '16px 24px',
-                  borderRadius: '30px',
+                  borderRadius: '0px',
                   background: 'var(--bg-main)',
-                  border: 'none',
+                  border: '1px solid rgba(18, 18, 18, 0.15)',
                   color: 'var(--color-text)',
                   outline: 'none',
                   fontSize: '0.95rem',
@@ -624,9 +670,20 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
                 style={{
                   padding: '16px 36px',
                   fontSize: '0.95rem',
-                  background: brandWeight === 'vibrant' ? '#ffffff' : 'var(--bg-sub)',
-                  color: 'var(--color-accent)',
-                  boxShadow: brandWeight === 'vibrant' ? '0 4px 12px rgba(0,0,0,0.08)' : 'none'
+                  background: 'transparent',
+                  border: '1px solid rgba(18, 18, 18, 0.15)',
+                  color: '#000000',
+                  borderRadius: '0px',
+                  transition: 'all 0.2s',
+                  cursor: 'pointer'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-accent)';
+                  e.currentTarget.style.color = 'var(--color-accent)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(18, 18, 18, 0.15)';
+                  e.currentTarget.style.color = '#000000';
                 }}
               >
                 Submit
@@ -634,7 +691,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
             </form>
 
             {subscribed && (
-              <div style={{ marginTop: '16px', color: 'var(--color-accent)', fontWeight: 500, fontSize: '0.95rem' }}>
+              <div style={{ marginTop: '16px', color: 'var(--color-muted)', fontWeight: 500, fontSize: '0.95rem' }}>
                 订阅成功！感谢您的关注。
               </div>
             )}
@@ -691,7 +748,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
           zIndex: 1050,
           width: '56px',
           height: '56px',
-          borderRadius: '50%',
+          borderRadius: '0px',
           background: 'var(--color-accent)',
           border: 'none',
           cursor: 'pointer',
@@ -722,6 +779,12 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
         setBgSub={setBgSub}
         ambientOpacity={ambientOpacity}
         setAmbientOpacity={setAmbientOpacity}
+        ambientBlur={ambientBlur}
+        setAmbientBlur={setAmbientBlur}
+        ambientScale={ambientScale}
+        setAmbientScale={setAmbientScale}
+        ambientBlendMode={ambientBlendMode}
+        setAmbientBlendMode={setAmbientBlendMode}
         brandWeight={brandWeight}
         setBrandWeight={setBrandWeight}
       />
@@ -734,9 +797,10 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   const cookies = parseCookies(context.req.headers.cookie);
   const cookieUserId = cookies.user_id;
   
-  const dbClient = await pool.connect();
+  let dbClient: any = null;
 
   try {
+    dbClient = await pool.connect();
     let userId: string | null = null;
     let userRole = 'guest';
     let freeQuota = 0;
@@ -757,7 +821,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       if (userRole === 'admin') {
         const reportsRes = await dbClient.query(`SELECT id, title, category, market_region, summary FROM reports`);
         const nodes = reportsRes.rows;
-        const reportIds = nodes.map(n => n.id);
+        const reportIds = nodes.map((n: any) => n.id);
         
         let links = [];
         if (reportIds.length > 0) {
@@ -771,7 +835,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         }
         graphData = { nodes, links };
         
-        allReports = reportsRes.rows.map(row => ({
+        allReports = reportsRes.rows.map((row: any) => ({
           id: row.id,
           title: row.title,
           category: row.category,
@@ -790,7 +854,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
           LIMIT 30
         `, [userId]);
         
-        allReports = reportsRes.rows.map(row => ({
+        allReports = reportsRes.rows.map((row: any) => ({
           id: row.id,
           title: row.title,
           category: row.category,
@@ -803,7 +867,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       const reportsRes = await dbClient.query(`
         SELECT id, title, category, market_region, summary FROM reports ORDER BY created_at DESC LIMIT 30
       `);
-      allReports = reportsRes.rows.map(row => ({
+      allReports = reportsRes.rows.map((row: any) => ({
         id: row.id,
         title: row.title,
         category: row.category,
@@ -836,6 +900,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       }
     };
   } finally {
-    dbClient.release();
+    if (dbClient) {
+      dbClient.release();
+    }
   }
 };

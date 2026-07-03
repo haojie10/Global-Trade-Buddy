@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PoolClient } from 'pg';
 import { withDb } from '../../../lib/api-handler';
+import { getSession } from '../../../lib/auth';
 
 // 保存笔记服务 (供 API 和单元测试调用)
 export async function saveUserNote(userId: string, reportId: string, content: string, dbClient: any) {
@@ -37,7 +38,12 @@ export async function getUserNote(userId: string, reportId: string, dbClient: an
 }
 
 async function noteHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
-  const { userId, reportId } = req.query;
+  const session = getSession(req);
+  if (!session) {
+    return res.status(401).json({ error: '未登录，请先登录后操作' });
+  }
+  const userId = session.userId;
+  const { reportId } = req.query;
 
   if (req.method === 'POST') {
     const { content } = req.body;
@@ -52,5 +58,5 @@ async function noteHandler(req: NextApiRequest, res: NextApiResponse, dbClient: 
 
 export default withDb(noteHandler, {
   methods: ['GET', 'POST'],
-  requiredQuery: ['userId', 'reportId']
+  requiredQuery: ['reportId']
 });

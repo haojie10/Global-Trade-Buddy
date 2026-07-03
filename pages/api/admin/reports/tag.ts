@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import pool from '../../../../lib/db';
-import { getSession } from '../../../../lib/auth';
+import { requireAdmin } from '../../../../lib/auth';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -21,32 +21,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: '无效的实体类型' });
   }
 
+  // 统一管理员鉴权，取代原有的 session/cookie 双重回退方案
+  const adminSession = requireAdmin(req);
+  if (!adminSession) {
+    return res.status(403).json({ error: '权限不足，仅管理员可执行此操作' });
+  }
+
   const dbClient = await pool.connect();
 
   try {
-    // 兼容传统 user_id cookie 的两重鉴权逻辑，保障单元测试和浏览器页面端都能正常使用管理员登录角色
-    let userId: string | null = null;
-    let userRole = 'guest';
-
-    const session = getSession(req);
-    if (session) {
-      userId = session.userId;
-      userRole = session.role;
-    } else {
-      const cookieUserId = req.cookies?.['user_id'];
-      if (cookieUserId) {
-        const userRes = await dbClient.query('SELECT id, role FROM users WHERE id = $1', [cookieUserId]);
-        if (userRes.rows.length > 0) {
-          userId = userRes.rows[0].id;
-          userRole = userRes.rows[0].role;
-        }
-      }
-    }
-
-    if (!userId) {
-      return res.status(401).json({ error: '未登录，请先登录后操作' });
-    }
-
     await dbClient.query('BEGIN');
 
     // 1. 查询报告是否存在

@@ -9,6 +9,12 @@ interface ThemeCustomizerProps {
   setBgSub: (bg: string) => void;
   ambientOpacity: number;
   setAmbientOpacity: (opacity: number) => void;
+  ambientBlur: number;
+  setAmbientBlur: (blur: number) => void;
+  ambientScale: number;
+  setAmbientScale: (scale: number) => void;
+  ambientBlendMode: string;
+  setAmbientBlendMode: (mode: string) => void;
   brandWeight: 'standard' | 'vibrant';
   setBrandWeight: (weight: 'standard' | 'vibrant') => void;
 }
@@ -22,6 +28,12 @@ export default function ThemeCustomizer({
   setBgSub,
   ambientOpacity,
   setAmbientOpacity,
+  ambientBlur,
+  setAmbientBlur,
+  ambientScale,
+  setAmbientScale,
+  ambientBlendMode,
+  setAmbientBlendMode,
   brandWeight,
   setBrandWeight
 }: ThemeCustomizerProps) {
@@ -183,22 +195,78 @@ export default function ThemeCustomizer({
 
         <div>
           <label style={{ fontSize: '0.8rem', color: 'var(--color-muted)', display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-            <span>背景流光浓度 (Glow)</span>
+            <span>背景流光浓度 (Opacity)</span>
             <code>{Math.round(ambientOpacity * 100)}%</code>
           </label>
           <input 
             type="range" 
             min="0.0" 
-            max="0.30" 
+            max="0.40" 
             step="0.01" 
             value={ambientOpacity}
             onChange={(e) => setAmbientOpacity(parseFloat(e.target.value))}
-            style={{ width: '100%', accentColor: 'var(--color-accent)' }}
+            style={{ width: '100%', accentColor: 'var(--color-accent)', cursor: 'pointer' }}
           />
         </div>
 
+        <div>
+          <label style={{ fontSize: '0.8rem', color: 'var(--color-muted)', display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+            <span>背景流光模糊度 (Blur)</span>
+            <code>{ambientBlur}px</code>
+          </label>
+          <input 
+            type="range" 
+            min="50" 
+            max="200" 
+            step="5" 
+            value={ambientBlur}
+            onChange={(e) => setAmbientBlur(parseInt(e.target.value))}
+            style={{ width: '100%', accentColor: 'var(--color-accent)', cursor: 'pointer' }}
+          />
+        </div>
+
+        <div>
+          <label style={{ fontSize: '0.8rem', color: 'var(--color-muted)', display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+            <span>背景流光大小 (Scale)</span>
+            <code>{ambientScale.toFixed(1)}x</code>
+          </label>
+          <input 
+            type="range" 
+            min="0.5" 
+            max="2.0" 
+            step="0.1" 
+            value={ambientScale}
+            onChange={(e) => setAmbientScale(parseFloat(e.target.value))}
+            style={{ width: '100%', accentColor: 'var(--color-accent)', cursor: 'pointer' }}
+          />
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <label style={{ fontSize: '0.8rem', color: 'var(--color-muted)' }}>背景混合模式 (Blend Mode)</label>
+          <select 
+            value={ambientBlendMode} 
+            onChange={(e) => setAmbientBlendMode(e.target.value)}
+            style={{
+              padding: '8px 12px',
+              borderRadius: '8px',
+              border: '1px solid rgba(160, 109, 68, 0.15)',
+              background: '#ffffff',
+              color: 'var(--color-text)',
+              fontSize: '0.8rem',
+              outline: 'none',
+              cursor: 'pointer',
+              width: '100%'
+            }}
+          >
+            <option value="normal">normal (推荐: 柔和鲜亮)</option>
+            <option value="multiply">multiply (默认: 偏暗融合)</option>
+            <option value="screen">screen (滤色)</option>
+            <option value="overlay">overlay (叠加)</option>
+          </select>
+        </div>
+
         {/* 品牌色背景占比 */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: '1px solid rgba(160,109,68,0.06)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: '1px solid rgba(160, 109, 68, 0.06)' }}>
           <div>
             <span style={{ fontSize: '0.85rem', fontWeight: 500, display: 'block' }}>品牌大色块背景</span>
             <span style={{ fontSize: '0.7rem', color: 'var(--color-muted)' }}>让 Hero 区与订阅区背景铺满强调色</span>
@@ -235,7 +303,7 @@ export default function ThemeCustomizer({
           <span>固化配置代码</span>
           <button 
             onClick={() => {
-              const configStr = `Accent: ${accentColor}\nBgSub: ${bgSub}\nGlow: ${ambientOpacity}\nWeight: ${brandWeight}`;
+              const configStr = `Accent: ${accentColor}\nBgSub: ${bgSub}\nGlowOpacity: ${ambientOpacity}\nGlowBlur: ${ambientBlur}px\nGlowScale: ${ambientScale}\nGlowBlendMode: ${ambientBlendMode}\nWeight: ${brandWeight}`;
               navigator.clipboard.writeText(configStr);
               alert('配置代码已复制！请直接发送给 AI 助手进行固化保存。');
             }}
@@ -257,6 +325,9 @@ export default function ThemeCustomizer({
 {`--color-accent: ${accentColor};
 --bg-sub: ${bgSub};
 --ambient-opacity: ${ambientOpacity};
+--ambient-blur: ${ambientBlur}px;
+--ambient-scale: ${ambientScale};
+--ambient-blend-mode: ${ambientBlendMode};
 --brand-weight: ${brandWeight};`}
         </pre>
       </div>

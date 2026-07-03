@@ -26,6 +26,7 @@ interface ReportDetailProps {
   related: RelatedReport[];
   userId: string;
   userRole: string;
+  freeQuota: number;
 }
 
 if (typeof window !== 'undefined') {
@@ -77,9 +78,45 @@ function cleanHtmlBody(rawHtml: string): string {
   return `${stylesStr}\n${bodyContent}`;
 }
 
-export default function ReportDetailPage({ report, related, userId, userRole }: ReportDetailProps) {
+export default function ReportDetailPage({ report, related, userId, userRole, freeQuota }: ReportDetailProps) {
   const [unlocked, setUnlocked] = useState(report.isUnlocked);
   const [content, setContent] = useState(report.content_html);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [quota, setQuota] = useState(freeQuota);
+
+  // NOTE: 当通过延伸知识链条切换报告时，Next.js 会复用此组件（Props 改变但组件不重新挂载）
+  // 必须同步重置 unlocked、content 状态，且退出全屏模式
+  React.useEffect(() => {
+    setUnlocked(report.isUnlocked);
+    setContent(report.content_html);
+    setIsFullscreen(false);
+    setQuota(freeQuota);
+  }, [report.id, report.isUnlocked, report.content_html, freeQuota]);
+
+  // 控制全屏时的页面滚动条锁定，防止外层和 iframe 同时滚动的糟糕体验
+  React.useEffect(() => {
+    if (isFullscreen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isFullscreen]);
+
+  // 监听 Esc 键快速退出全屏阅读模式
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   React.useEffect(() => {
     // 挂载原 HTML 模板内联 onclick 所需 JavaScript 全局函数
@@ -101,6 +138,7 @@ export default function ReportDetailPage({ report, related, userId, userRole }: 
       if (data.success) {
         setUnlocked(true);
         setContent(data.content_html);
+        setQuota(q => Math.max(0, q - 1));
       } else {
         alert(data.error || '解锁失败，请充值额度');
       }
@@ -108,63 +146,6 @@ export default function ReportDetailPage({ report, related, userId, userRole }: 
       alert('连接支付网关失败');
     }
   };
-
-  // 动态解析并执行 HTML 报告中携带的脚本（用于初始化 ECharts 和 Lucide 图标）
-  React.useEffect(() => {
-    if (!unlocked || !content) return;
-
-    const scriptRegex = /<script([^>]*)>([\s\S]*?)<\/script>/gi;
-    const scriptsToLoad: { src: string | null; content: string }[] = [];
-    let match;
-    while ((match = scriptRegex.exec(content)) !== null) {
-      const attrs = match[1];
-      const srcMatch = attrs.match(/src="([^"]*)"/i) || attrs.match(/src=\'([^\']*)\'/i);
-      const src = srcMatch ? srcMatch[1] : null;
-      const inlineCode = match[2];
-      scriptsToLoad.push({ src, content: inlineCode });
-    }
-
-    if (scriptsToLoad.length === 0) return;
-
-    const loadExternalScripts = async () => {
-      for (const s of scriptsToLoad) {
-        if (s.src) {
-          const srcUrl = s.src;
-          await new Promise((resolve) => {
-            if (document.querySelector(`script[src="${srcUrl}"]`)) {
-              resolve(true);
-              return;
-            }
-            const script = document.createElement('script');
-            script.src = srcUrl;
-            script.async = false;
-            script.onload = () => resolve(true);
-            script.onerror = () => resolve(true);
-            document.head.appendChild(script);
-          });
-        }
-      }
-    };
-
-    const runInlineScripts = () => {
-      setTimeout(() => {
-        scriptsToLoad.forEach((s) => {
-          if (!s.src && s.content.trim()) {
-            try {
-              const script = document.createElement('script');
-              script.text = s.content;
-              document.body.appendChild(script);
-              document.body.removeChild(script);
-            } catch (err) {
-              console.error('执行内联报告脚本出错:', err);
-            }
-          }
-        });
-      }, 150);
-    };
-
-    loadExternalScripts().then(runInlineScripts);
-  }, [unlocked, content]);
 
   return (
     <WatermarkContainer text={userId ? `外贸智友 - 业务员 ID: ${userId.substring(0, 8)}...` : '外贸智友 - 游客浏览模式'}>
@@ -174,41 +155,157 @@ export default function ReportDetailPage({ report, related, userId, userRole }: 
         minHeight: '100vh',
         position: 'relative'
       }}>
-        {/* 渐变星云背景 - 清爽浅色淡暖色光晕 */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '100%',
-          background: 'radial-gradient(circle at 15% 15%, rgba(255, 100, 30, 0.02) 0%, transparent 50%), radial-gradient(circle at 85% 85%, rgba(255, 100, 30, 0.015) 0%, transparent 50%)',
-          pointerEvents: 'none',
-          zIndex: 0
-        }} />
+        {/* 全局背景流光光源 */}
+        <div className="ambient-glow-container">
+          <div className="ambient-light ambient-light-1" />
+        </div>
+
+        {/* 头部导航栏 - 贴顶置顶黑色样式 */}
+        <div style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          background: '#121212', 
+          zIndex: 1000, 
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)' 
+        }}>
+          <header style={{
+            background: 'transparent',
+            padding: '16px 40px',
+            borderRadius: '0px',
+            border: 'none',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            boxShadow: 'none',
+            maxWidth: '1400px',
+            margin: '0 auto',
+            width: '100%'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="2" y1="12" x2="22" y2="12" />
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+              </svg>
+              <span style={{
+                fontSize: '1.25rem',
+                fontWeight: 400,
+                color: '#ffffff',
+                letterSpacing: '-0.5px'
+              }}>
+                报告详情
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px', fontSize: '0.9rem' }}>
+              <Link 
+                href="/" 
+                className="sand-btn"
+                style={{
+                  textDecoration: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  color: '#ffffff',
+                  background: 'transparent',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  borderRadius: '0px',
+                  padding: '6px 16px',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-accent)';
+                  e.currentTarget.style.color = 'var(--color-accent)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+                  e.currentTarget.style.color = '#ffffff';
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                  <polyline points="9 22 9 12 15 12 15 22" />
+                </svg>
+                返回平台报告大厅
+              </Link>
+              
+              <Link 
+                href="/my-graph" 
+                className="sand-btn"
+                style={{
+                  textDecoration: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  color: '#ffffff',
+                  background: 'transparent',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  borderRadius: '0px',
+                  padding: '6px 16px',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-accent)';
+                  e.currentTarget.style.color = 'var(--color-accent)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+                  e.currentTarget.style.color = '#ffffff';
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="2" />
+                  <circle cx="12" cy="2" r="1" />
+                  <circle cx="4" cy="16" r="1" />
+                  <circle cx="20" cy="16" r="1" />
+                </svg>
+                个人知识拓扑网图
+              </Link>
+
+              {userId ? (
+                <>
+                  <span style={{ color: '#ffffff', fontWeight: 400, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                    业务员 ID: <code style={{ color: 'rgba(255, 255, 255, 0.6)', fontWeight: 500 }}>{userId.substring(0, 8)}...</code>
+                  </span>
+                  <span style={{
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    padding: '6px 14px',
+                    borderRadius: '0px',
+                    color: '#ffffff',
+                    fontWeight: 400,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+                    </svg>
+                    剩余额度: <b style={{ color: 'rgba(255, 255, 255, 0.6)', fontWeight: 500 }}>{quota}</b> 次
+                  </span>
+                </>
+              ) : (
+                <span style={{ color: '#ffffff', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  游客模式
+                </span>
+              )}
+            </div>
+          </header>
+        </div>
 
         <div style={{ 
           maxWidth: unlocked ? '1400px' : '900px', 
           margin: '0 auto', 
-          padding: '40px 20px', 
+          padding: '110px 20px 40px 20px', 
           position: 'relative', 
           zIndex: 5,
           transition: 'max-width 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
         }}>
-          
-          {/* 面包屑 */}
-          <div style={{ marginBottom: '20px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Link href="/" style={{ color: 'var(--color-accent)', textDecoration: 'none', fontWeight: 300, display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                <polyline points="9 22 9 12 15 12 15 22" />
-              </svg>
-              知识图谱主页
-            </Link>
-            <span style={{ color: 'var(--color-muted)', margin: '0 4px' }}>/</span>
-            <span style={{ color: 'var(--color-muted)', fontWeight: 300 }}>
-              {report.category === 'customer' ? '客户 360 度洞察' : '品类分析'}
-            </span>
-          </div>
 
           {/* 标题 */}
           <h1 className="font-editorial" style={{ fontSize: '2.4rem', fontWeight: 400, color: 'var(--color-text)', marginBottom: '16px', lineHeight: 1.3, letterSpacing: '-0.015em' }}>
@@ -218,22 +315,23 @@ export default function ReportDetailPage({ report, related, userId, userRole }: 
           {/* 标签 */}
           <div style={{ display: 'flex', gap: '10px', marginBottom: '30px' }}>
             <span style={{
-              background: report.category === 'customer' ? 'rgba(255, 100, 30, 0.05)' : 'rgba(122, 117, 111, 0.08)',
-              color: report.category === 'customer' ? 'var(--color-accent)' : 'var(--color-muted)',
+              background: 'transparent',
+              border: '1px solid rgba(18, 18, 18, 0.08)',
+              color: 'var(--color-muted)',
               fontSize: '0.75rem',
               padding: '4px 12px',
-              borderRadius: '8px',
+              borderRadius: '0px',
               fontWeight: 300
             }}>
               {report.category === 'customer' ? '客户洞察' : '品类分析'}
             </span>
             <span style={{
-              background: 'var(--bg-sub)',
+              background: 'transparent',
               color: 'var(--color-muted)',
-              border: 'none',
+              border: '1px solid rgba(18, 18, 18, 0.08)',
               fontSize: '0.75rem',
               padding: '4px 12px',
-              borderRadius: '8px',
+              borderRadius: '0px',
               fontWeight: 300
             }}>
               Target: {report.market_region}
@@ -242,12 +340,14 @@ export default function ReportDetailPage({ report, related, userId, userRole }: 
 
           {/* 摘要区 */}
           <div style={{
-            background: 'var(--bg-sub)',
-            border: 'none',
+            background: 'rgba(255, 255, 255, 0.45)',
+            backdropFilter: 'blur(15px)',
+            WebkitBackdropFilter: 'blur(15px)',
+            border: '1px solid rgba(18, 18, 18, 0.05)',
             borderRadius: 'var(--border-radius)',
             padding: '24px 30px',
             marginBottom: '30px',
-            boxShadow: '0 4px 12px rgba(160, 109, 68, 0.01)'
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.01)'
           }}>
             <h3 style={{ margin: '0 0 10px 0', fontSize: '1rem', color: 'var(--color-text)', fontWeight: 400, display: 'flex', alignItems: 'center', gap: '6px' }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
@@ -262,22 +362,183 @@ export default function ReportDetailPage({ report, related, userId, userRole }: 
           {/* 内容展示区 */}
           <div style={{ position: 'relative', minHeight: '300px', marginBottom: '50px' }}>
             {unlocked ? (
-              // 已解锁：温润图书阅读器风格容器，渲染 HTML
-              <div style={{
-                background: 'var(--bg-sub)',
-                borderRadius: 'var(--border-radius)',
-                padding: '40px',
-                boxShadow: '0 10px 40px rgba(160, 109, 68, 0.02)',
-                border: 'none',
-                marginTop: '20px',
-                transition: 'all 0.5s ease',
-                overflow: 'hidden'
-              }}>
-                <div 
-                  className="report-content-body"
-                  style={{ fontSize: '1rem', color: 'var(--color-text)', lineHeight: 1.8 }}
-                  dangerouslySetInnerHTML={{ __html: cleanHtmlBody(content || '') }} 
-                />
+              // 已解锁：高保真 iframe 呈现，已集成全屏沉浸阅读模式
+              <div>
+                {/* 沉浸式阅读操作顶栏：仅全屏时显示 */}
+                {isFullscreen && (
+                  <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: '52px',
+                    background: 'rgba(253, 251, 247, 0.95)',
+                    backdropFilter: 'blur(20px)',
+                    borderBottom: '1px solid rgba(15, 23, 42, 0.08)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '0 24px',
+                    zIndex: 10000,
+                    color: 'var(--color-text)',
+                    boxShadow: '0 4px 12px rgba(15, 23, 42, 0.02)'
+                  }}>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 500, letterSpacing: '-0.2px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '75%' }}>
+                      {report.title}
+                    </span>
+                    <button 
+                      onClick={() => setIsFullscreen(false)}
+                      style={{
+                        background: 'var(--color-accent)',
+                        color: '#ffffff',
+                        border: 'none',
+                        padding: '6px 14px',
+                        borderRadius: '0px',
+                        fontSize: '0.8rem',
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 4px 10px rgba(46, 91, 255, 0.2)',
+                        transition: 'all 0.3s'
+                      }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                      </svg>
+                      退出沉浸阅读 (Esc)
+                    </button>
+                  </div>
+                )}
+
+                {/* 报告容器 (非全屏时卡片展示，全屏时铺满整个窗口) */}
+                <div style={isFullscreen ? {
+                  position: 'fixed',
+                  top: '52px',
+                  left: 0,
+                  width: '100vw',
+                  height: 'calc(100vh - 52px)',
+                  zIndex: 9999,
+                  background: '#ffffff',
+                  borderRadius: 0,
+                  margin: 0,
+                  overflow: 'hidden'
+                } : {
+                  position: 'relative', // 设为定位基准，以承载悬浮按钮
+                  borderRadius: 'var(--border-radius)',
+                  boxShadow: '0 10px 40px rgba(160, 109, 68, 0.02)',
+                  border: 'none',
+                  marginTop: '10px',
+                  transition: 'all 0.5s ease',
+                  overflow: 'hidden',
+                  background: '#ffffff'
+                }}>
+                  <iframe
+                    srcDoc={content || ''}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      minHeight: isFullscreen ? 'calc(100vh - 52px)' : '80vh',
+                      border: 'none',
+                      display: 'block'
+                    }}
+                    sandbox="allow-scripts allow-same-origin allow-popups"
+                  />
+
+                  {/* 智能悬浮全屏控制按钮：仅在未全屏时悬浮在报告窗口右下角 */}
+                  {!isFullscreen && (
+                    <button
+                      onClick={() => setIsFullscreen(true)}
+                      style={{
+                        position: 'absolute',
+                        bottom: '24px',
+                        right: '24px',
+                        zIndex: 50,
+                        background: 'rgba(253, 251, 247, 0.95)',
+                        backdropFilter: 'blur(12px)',
+                        border: '1px solid rgba(160, 109, 68, 0.18)',
+                        borderRadius: '50%',
+                        width: '46px',
+                        height: '46px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        boxShadow: '0 6px 20px rgba(160, 109, 68, 0.12)',
+                        color: 'var(--color-text)',
+                        opacity: 0.5,
+                        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.opacity = '1';
+                        e.currentTarget.style.transform = 'scale(1.08)';
+                        e.currentTarget.style.borderColor = 'var(--color-accent)';
+                        e.currentTarget.style.color = 'var(--color-accent)';
+                        e.currentTarget.style.boxShadow = '0 0 15px rgba(255, 100, 30, 0.2)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.opacity = '0.5';
+                        e.currentTarget.style.transform = 'none';
+                        e.currentTarget.style.borderColor = 'rgba(160, 109, 68, 0.18)';
+                        e.currentTarget.style.color = 'var(--color-text)';
+                        e.currentTarget.style.boxShadow = '0 6px 20px rgba(160, 109, 68, 0.12)';
+                      }}
+                      title="全屏沉浸阅读模式"
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+                      </svg>
+                    </button>
+                  )}
+
+                  {/* 全屏缩小悬浮控制按钮：在全屏时悬浮在屏幕右下角 */}
+                  {isFullscreen && (
+                    <button
+                      onClick={() => setIsFullscreen(false)}
+                      style={{
+                        position: 'fixed',
+                        bottom: '24px',
+                        right: '24px',
+                        zIndex: 10005,
+                        background: 'rgba(253, 251, 247, 0.95)',
+                        backdropFilter: 'blur(12px)',
+                        border: '1px solid rgba(160, 109, 68, 0.18)',
+                        borderRadius: '50%',
+                        width: '46px',
+                        height: '46px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        boxShadow: '0 6px 20px rgba(160, 109, 68, 0.12)',
+                        color: 'var(--color-text)',
+                        opacity: 0.5,
+                        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.opacity = '1';
+                        e.currentTarget.style.transform = 'scale(1.08)';
+                        e.currentTarget.style.borderColor = 'var(--color-accent)';
+                        e.currentTarget.style.color = 'var(--color-accent)';
+                        e.currentTarget.style.boxShadow = '0 0 15px rgba(255, 100, 30, 0.2)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.opacity = '0.5';
+                        e.currentTarget.style.transform = 'none';
+                        e.currentTarget.style.borderColor = 'rgba(160, 109, 68, 0.18)';
+                        e.currentTarget.style.color = 'var(--color-text)';
+                        e.currentTarget.style.boxShadow = '0 6px 20px rgba(160, 109, 68, 0.12)';
+                      }}
+                      title="退出全屏沉浸阅读"
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7"/>
+                      </svg>
+                    </button>
+                  )}
+                </div>
               </div>
             ) : (
               // 未解锁：呈现高斯模糊与引导解锁弹窗
@@ -347,33 +608,23 @@ export default function ReportDetailPage({ report, related, userId, userRole }: 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                 {related.map(item => (
                   <Link href={`/reports/${item.id}`} key={item.id} style={{ textDecoration: 'none' }}>
-                    <div style={{
-                      border: 'none',
+                  <div 
+                    className="report-card"
+                    style={{
                       borderRadius: 'var(--border-radius)',
                       padding: '20px',
-                      background: 'var(--bg-sub)',
                       cursor: 'pointer',
-                      transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                      boxShadow: '0 4px 12px rgba(160, 109, 68, 0.01)'
+                      boxSizing: 'border-box'
                     }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.background = 'var(--bg-main)';
-                      e.currentTarget.style.transform = 'translateY(-4px)';
-                      e.currentTarget.style.boxShadow = '0 12px 30px rgba(160, 109, 68, 0.06), 0 0 15px rgba(255, 100, 30, 0.08)';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.background = 'var(--bg-sub)';
-                      e.currentTarget.style.transform = 'none';
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(160, 109, 68, 0.01)';
-                    }}
-                    >
+                  >
                       <span style={{
                         fontSize: '0.7rem',
                         fontWeight: 300,
-                        color: item.category === 'customer' ? 'var(--color-accent)' : 'var(--color-muted)',
-                        background: item.category === 'customer' ? 'rgba(255, 100, 30, 0.05)' : 'rgba(122, 117, 111, 0.08)',
+                        color: 'var(--color-muted)',
+                        background: 'transparent',
+                        border: '1px solid rgba(18, 18, 18, 0.08)',
                         padding: '4px 10px',
-                        borderRadius: '6px',
+                        borderRadius: '0px',
                         display: 'inline-block',
                         marginBottom: '10px'
                       }}>
@@ -413,11 +664,13 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     let userId: string | null = null;
     let userRole = 'guest';
 
+    let freeQuota = 0;
     if (cookieUserId) {
-      const userRes = await dbClient.query('SELECT id, role FROM users WHERE id = $1', [cookieUserId]);
+      const userRes = await dbClient.query('SELECT id, role, free_quota FROM users WHERE id = $1', [cookieUserId]);
       if (userRes.rows.length > 0) {
         userId = userRes.rows[0].id;
         userRole = userRes.rows[0].role;
+        freeQuota = userRes.rows[0].free_quota || 0;
       }
     }
 
@@ -449,7 +702,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
       if (report.isUnlocked) {
         const relatedRes = await dbClient.query(
-          `SELECT r.id, r.title, r.category, r.market_region 
+          `SELECT DISTINCT r.id, r.title, r.category, r.market_region 
            FROM reports r
            JOIN relations rel ON (r.id = rel.report_id_a AND rel.report_id_b = $1) 
                               OR (r.id = rel.report_id_b AND rel.report_id_a = $1)
@@ -490,7 +743,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         report,
         related,
         userId: userId || '',
-        userRole
+        userRole,
+        freeQuota
       }
     };
   } catch (err) {

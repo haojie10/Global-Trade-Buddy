@@ -1,9 +1,15 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PoolClient } from 'pg';
 import { withDb } from '../../../lib/api-handler';
+import { getSession } from '../../../lib/auth';
 
 async function unlockHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
-  const { userId, reportId } = req.body;
+  const session = getSession(req);
+  if (!session) {
+    return res.status(401).json({ error: '未登录，请先登录后操作' });
+  }
+  const userId = session.userId;
+  const { reportId } = req.body;
 
   await dbClient.query('BEGIN');
 
@@ -87,5 +93,5 @@ async function unlockHandler(req: NextApiRequest, res: NextApiResponse, dbClient
 
 export default withDb(unlockHandler, {
   methods: ['POST'],
-  requiredBody: ['userId', 'reportId']
+  requiredBody: ['reportId']
 });

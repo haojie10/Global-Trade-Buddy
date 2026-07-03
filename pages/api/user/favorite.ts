@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PoolClient } from 'pg';
 import { withDb } from '../../../lib/api-handler';
+import { getSession } from '../../../lib/auth';
 
 // 检查是否收藏 (供 API 和单元测试调用)
 export async function checkIsFavorite(userId: string, reportId: string, dbClient: any): Promise<boolean> {
@@ -33,12 +34,17 @@ export async function toggleFavorite(userId: string, reportId: string, dbClient:
 }
 
 async function favoriteHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
-  const { userId, reportId } = req.body;
+  const session = getSession(req);
+  if (!session) {
+    return res.status(401).json({ error: '未登录，请先登录后操作' });
+  }
+  const userId = session.userId;
+  const { reportId } = req.body;
   const result = await toggleFavorite(userId, reportId, dbClient);
   return res.status(200).json(result);
 }
 
 export default withDb(favoriteHandler, {
   methods: ['POST'],
-  requiredBody: ['userId', 'reportId']
+  requiredBody: ['reportId']
 });

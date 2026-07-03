@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PoolClient } from 'pg';
 import { withDb } from '../../../../lib/api-handler';
+import { requireAdmin } from '../../../../lib/auth';
 
 async function checkDuplicateHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
   const { 
@@ -206,9 +207,17 @@ async function checkDuplicateHandler(req: NextApiRequest, res: NextApiResponse, 
 
 // 导出包装过的 API，并且直接导出核心 handler 供测试调用
 export default async function handler(req: NextApiRequest, res: NextApiResponse, testDbClient?: PoolClient) {
+  // NOTE: testDbClient 分支用于单元测试直接调用，跳过鉴权
   if (testDbClient) {
     return checkDuplicateHandler(req, res, testDbClient);
   }
+
+  // 生产路径：先校验管理员权限
+  const adminSession = requireAdmin(req);
+  if (!adminSession) {
+    return res.status(403).json({ error: '权限不足，仅管理员可执行此操作' });
+  }
+
   return withDb(checkDuplicateHandler, {
     methods: ['POST']
   })(req, res);

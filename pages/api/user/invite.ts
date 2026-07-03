@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import pool from '../../../lib/db';
+import { getSession } from '../../../lib/auth';
 
 // 执行邀请兑换逻辑 (双向赠送解锁额度，包裹在 SQL 事务中)
 export async function processInvitation(referrerId: string, inviteeId: string, dbClient: any) {
@@ -53,9 +54,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const { referrerId, inviteeId } = req.body;
-  if (!referrerId || !inviteeId) {
-    return res.status(400).json({ error: 'Missing referrerId or inviteeId parameters' });
+  const session = getSession(req);
+  if (!session) {
+    return res.status(401).json({ error: '未登录，请先登录后操作' });
+  }
+  const inviteeId = session.userId;
+  const { referrerId } = req.body;
+  if (!referrerId) {
+    return res.status(400).json({ error: 'Missing referrerId parameter' });
   }
 
   const dbClient = await pool.connect();

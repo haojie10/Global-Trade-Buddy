@@ -71,17 +71,39 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
       }}>
         <div style={{
           background: 'var(--bg-sub)',
-          border: 'none',
+          border: '1px solid rgba(18, 18, 18, 0.08)',
           padding: '40px',
           borderRadius: 'var(--border-radius)',
           maxWidth: '480px',
-          boxShadow: '0 10px 40px rgba(160, 109, 68, 0.04)'
+          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.01)'
         }}>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 300, marginBottom: '16px' }}>暂未登录</h2>
           <p style={{ color: 'var(--color-muted)', fontSize: '0.9rem', marginBottom: '24px', lineHeight: 1.6 }}>
             游客模式下无法查看个人知识拓扑网图。请返回首页登录或注册账号后体验！
           </p>
-          <Link href="/" className="sand-btn" style={{ padding: '10px 24px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
+          <Link 
+            href="/" 
+            className="sand-btn" 
+            style={{ 
+              padding: '10px 24px', 
+              textDecoration: 'none', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '6px', 
+              justifyContent: 'center',
+              background: 'transparent',
+              border: '1px solid var(--color-accent)',
+              color: 'var(--color-accent)',
+              borderRadius: '0px',
+              transition: 'all 0.2s'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 100, 30, 0.05)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
+          >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
               <polyline points="9 22 9 12 15 12 15 22" />
@@ -204,22 +226,27 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
       {/* 全局背景流光光源 */}
       <div className="ambient-glow-container">
         <div className="ambient-light ambient-light-1" />
-        <div className="ambient-light ambient-light-2" />
-        <div className="ambient-light ambient-light-3" />
       </div>
 
-      {/* 头部导航栏 - 漂浮样式 */}
-      <div style={{ padding: '20px 40px 10px 40px', flexShrink: 0, position: 'sticky', top: 0, zIndex: 1000 }}>
+      {/* 头部导航栏 - 贴顶置顶黑色样式 */}
+      <div style={{ 
+        position: 'fixed', 
+        top: 0, 
+        left: 0, 
+        right: 0, 
+        background: '#121212', 
+        zIndex: 1000, 
+        borderBottom: '1px solid rgba(255, 255, 255, 0.1)' 
+      }}>
         <header style={{
-          background: 'rgba(253, 251, 247, 0.75)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          padding: '12px 30px',
-          borderRadius: 'var(--border-radius)',
+          background: 'transparent',
+          padding: '16px 40px',
+          borderRadius: '0px',
+          border: 'none',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          boxShadow: '0 10px 40px rgba(160, 109, 68, 0.02)',
+          boxShadow: 'none',
           maxWidth: '1400px',
           margin: '0 auto',
           width: '100%'
@@ -235,7 +262,7 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
             <span style={{
               fontSize: '1.25rem',
               fontWeight: 400,
-              color: 'var(--color-text)',
+              color: '#ffffff',
               letterSpacing: '-0.5px'
             }}>
               市场图谱
@@ -250,7 +277,21 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
                 textDecoration: 'none',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px'
+                gap: '6px',
+                color: '#ffffff',
+                background: 'transparent',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                borderRadius: '0px',
+                padding: '6px 16px',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.borderColor = 'var(--color-accent)';
+                e.currentTarget.style.color = 'var(--color-accent)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+                e.currentTarget.style.color = '#ffffff';
               }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
@@ -260,19 +301,19 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
               </svg>
               返回平台报告大厅
             </Link>
-            <span style={{ color: 'var(--color-muted)', fontWeight: 300, display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ color: '#ffffff', fontWeight: 400, display: 'flex', alignItems: 'center', gap: '4px' }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                 <circle cx="12" cy="7" r="4" />
               </svg>
-              业务员 ID: <code style={{ color: 'var(--color-accent)', fontWeight: 400 }}>{userId.substring(0, 8)}...</code>
+              业务员 ID: <code style={{ color: 'rgba(255, 255, 255, 0.6)', fontWeight: 500 }}>{userId.substring(0, 8)}...</code>
             </span>
             <span style={{
-              background: 'var(--bg-sub)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
               padding: '6px 14px',
-              borderRadius: '20px',
-              color: 'var(--color-text)',
-              fontWeight: 300,
+              borderRadius: '0px',
+              color: '#ffffff',
+              fontWeight: 400,
               display: 'flex',
               alignItems: 'center',
               gap: '6px'
@@ -281,7 +322,7 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                 <path d="M7 11V7a5 5 0 0 1 9.9-1" />
               </svg>
-              剩余额度: <b style={{ color: 'var(--color-accent)', fontWeight: 500 }}>{quota}</b> 次
+              剩余额度: <b style={{ color: 'rgba(255, 255, 255, 0.6)', fontWeight: 500 }}>{quota}</b> 次
             </span>
           </div>
         </header>
@@ -291,7 +332,7 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
       <main style={{
         height: '680px',
         display: 'flex',
-        padding: '10px 40px 24px 40px',
+        padding: '90px 40px 24px 40px',
         gap: '24px',
         overflow: 'hidden',
         maxWidth: '1480px',
@@ -311,10 +352,13 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
                 justifyContent: 'space-between',
                 gap: '16px',
                 padding: '12px 24px',
-                background: 'var(--bg-sub)',
+                background: 'rgba(255, 255, 255, 0.45)',
+                backdropFilter: 'blur(15px)',
+                WebkitBackdropFilter: 'blur(15px)',
+                border: '1px solid rgba(18, 18, 18, 0.05)',
                 borderRadius: 'var(--border-radius)',
                 marginBottom: '16px',
-                boxShadow: '0 6px 20px rgba(160, 109, 68, 0.01)',
+                boxShadow: '0 6px 20px rgba(0, 0, 0, 0.01)',
                 flexWrap: 'wrap'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
@@ -325,9 +369,9 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
                       onChange={(e) => setSelectedMarket(e.target.value)}
                       style={{
                         padding: '6px 12px',
-                        borderRadius: '10px',
-                        border: 'none',
-                        background: 'var(--bg-main)',
+                        borderRadius: '0px',
+                        border: '1px solid rgba(18, 18, 18, 0.08)',
+                        background: 'rgba(255, 255, 255, 0.65)',
                         fontSize: '0.85rem',
                         outline: 'none',
                         cursor: 'pointer',
@@ -345,9 +389,9 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
                       onChange={(e) => setSelectedProduct(e.target.value)}
                       style={{
                         padding: '6px 12px',
-                        borderRadius: '10px',
-                        border: 'none',
-                        background: 'var(--bg-main)',
+                        borderRadius: '0px',
+                        border: '1px solid rgba(18, 18, 18, 0.08)',
+                        background: 'rgba(255, 255, 255, 0.65)',
                         fontSize: '0.85rem',
                         outline: 'none',
                         cursor: 'pointer',
@@ -382,7 +426,7 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
                 <div style={{
                   padding: '10px 20px',
                   background: 'rgba(255, 100, 30, 0.05)',
-                  borderRadius: '12px',
+                  borderRadius: '0px',
                   color: 'var(--color-accent)',
                   fontSize: '0.85rem',
                   marginBottom: '16px',
@@ -428,18 +472,18 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
                 position: 'absolute',
                 bottom: '20px',
                 right: '20px',
-                background: 'rgba(253, 251, 247, 0.75)',
+                background: 'rgba(246, 246, 246, 0.75)',
                 backdropFilter: 'blur(20px)',
                 WebkitBackdropFilter: 'blur(20px)',
-                borderRadius: '16px',
+                borderRadius: '0px',
                 padding: '16px',
                 width: '180px',
-                boxShadow: '0 12px 30px rgba(160, 109, 68, 0.06)',
+                boxShadow: '0 12px 30px rgba(0, 0, 0, 0.01)',
                 zIndex: 10,
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '10px',
-                border: 'none'
+                border: '1px solid rgba(18, 18, 18, 0.08)'
               }}>
                 <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-muted)', letterSpacing: '0.5px' }}>图谱样式设置</div>
                 
@@ -519,21 +563,21 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
               flexDirection: 'column',
               justifyContent: 'center',
               alignItems: 'center',
-              background: 'rgba(255, 255, 255, 0.85)',
-              borderRadius: '24px',
-              border: '1px solid rgba(15, 23, 42, 0.08)',
+              background: 'rgba(246, 246, 246, 0.85)',
+              borderRadius: '0px',
+              border: '1px solid rgba(18, 18, 18, 0.08)',
               backdropFilter: 'blur(30px)',
               padding: '40px',
               textAlign: 'center',
-              boxShadow: '0 12px 40px 0 rgba(15, 23, 42, 0.03)'
+              boxShadow: '0 12px 40px 0 rgba(0, 0, 0, 0.01)'
             }}>
               <div 
                 style={{
                   width: '72px',
                   height: '72px',
                   marginBottom: '28px',
-                  background: 'linear-gradient(135deg, var(--color-accent) 0%, #ff8c52 100%)',
-                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, var(--color-accent) 0%, #ff884d 100%)',
+                  borderRadius: '0px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -594,15 +638,15 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
         {/* 右栏：外贸便捷小工具面板 */}
         <div style={{
           width: '450px',
-          background: 'rgba(253, 251, 247, 0.75)',
-          borderRadius: '24px',
-          border: 'none',
+          background: 'rgba(255, 255, 255, 0.45)',
+          borderRadius: '0px',
+          borderLeft: '1px solid rgba(18, 18, 18, 0.05)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          boxShadow: '0 12px 30px rgba(160, 109, 68, 0.06)'
+          backdropFilter: 'blur(15px)',
+          WebkitBackdropFilter: 'blur(15px)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.01)'
         }}>
           <NodeProfilePanel
             selectedNode={selectedNode}
@@ -658,9 +702,10 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
   const cookies = parseCookies(context.req.headers.cookie);
   const cookieUserId = cookies.user_id;
   
-  const dbClient = await pool.connect();
+  let dbClient: any = null;
 
   try {
+    dbClient = await pool.connect();
     let userId: string | null = null;
     let userRole = 'guest';
     let freeQuota = 0;
@@ -723,6 +768,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       }
     };
   } finally {
-    dbClient.release();
+    if (dbClient) {
+      dbClient.release();
+    }
   }
 };
