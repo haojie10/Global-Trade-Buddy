@@ -36,6 +36,7 @@ interface HomeProps {
 export default function HomePage({ graphData, allReports, userId, userRole, freeQuota }: HomeProps) {
   const [quota, setQuota] = useState(freeQuota);
   const [reports, setReports] = useState(allReports);
+  const [showAllReports, setShowAllReports] = useState(false);
   const [emailInput, setEmailInput] = useState('');
   const [subscribed, setSubscribed] = useState(false);
 
@@ -185,7 +186,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
               }}
             >
               <GraphIcon size={14} stroke="currentColor" />
-              个人知识拓扑网图
+              个人市场图谱
             </Link>
             {userId ? (
               <>
