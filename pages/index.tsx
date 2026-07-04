@@ -398,6 +398,64 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
           </div>
         </section>
 
+        {/* 新增三大认知能力板块与认知图谱预览 */}
+        <section className="animate-on-scroll" style={{
+          padding: '60px 40px',
+          maxWidth: '1400px',
+          margin: '0 auto',
+          background: 'transparent'
+        }}>
+          <div style={{ textAlign: 'center', marginBottom: '45px' }}>
+            <span style={{ color: 'var(--color-accent)', fontSize: '0.8rem', letterSpacing: '2px', textTransform: 'uppercase' }}>Core Capabilities</span>
+            <h2 className="font-editorial" style={{ fontSize: '2.5rem', margin: '8px 0 0 0', fontWeight: 400 }}>为出海展业赋予更高的市场视野</h2>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '40px' }}>
+            {/* 卡片一 */}
+            <div className="float-on-hover" style={{ background: 'rgba(255, 255, 255, 0.45)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)', border: '1px solid rgba(18, 18, 18, 0.05)', padding: '24px', borderRadius: 'var(--border-radius)', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '12px' }}>🌌</div>
+              <h3 style={{ fontSize: '1.2rem', margin: '0 0 10px 0', color: 'var(--color-text)', fontWeight: 500 }}>拓宽视野：突破认知盲区</h3>
+              <p style={{ fontSize: '0.9rem', color: 'var(--color-muted)', lineHeight: 1.6, margin: 0, fontWeight: 300 }}>
+                通过解锁品类与渠道洞察报告，智能匹配相近的公司或关联产品。带您探索以前未曾关注的盲区市场，打破原有的信息茧房。
+              </p>
+            </div>
+
+            {/* 卡片二 */}
+            <div className="float-on-hover" style={{ background: 'rgba(255, 255, 255, 0.45)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)', border: '1px solid rgba(18, 18, 18, 0.05)', padding: '24px', borderRadius: 'var(--border-radius)', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '12px' }}>📊</div>
+              <h3 style={{ fontSize: '1.2rem', margin: '0 0 10px 0', color: 'var(--color-text)', fontWeight: 500 }}>掌握动向：全球品类洞察</h3>
+              <p style={{ fontSize: '0.9rem', color: 'var(--color-muted)', lineHeight: 1.6, margin: 0, fontWeight: 300 }}>
+                提供多维度的全球品类洞察。深度剖析海外主流零售渠道最新的渗透率与上架准入标准，结合绿色环保、锂电化等前沿变动，精准捕捉市场动向。
+              </p>
+            </div>
+
+            {/* 卡片三 */}
+            <div className="float-on-hover" style={{ background: 'rgba(255, 255, 255, 0.45)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)', border: '1px solid rgba(18, 18, 18, 0.05)', padding: '24px', borderRadius: 'var(--border-radius)', borderColor: 'var(--color-accent)', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '12px' }}>🔍</div>
+              <h3 style={{ fontSize: '1.2rem', margin: '0 0 10px 0', color: 'var(--color-text)', fontWeight: 500 }}>筛选聚焦：纵览市场全局</h3>
+              <p style={{ fontSize: '0.9rem', color: 'var(--color-muted)', lineHeight: 1.6, margin: 0, fontWeight: 300 }}>
+                支持跨行业、跨国家的精细化筛选，满足您对特定国家的关注需求。不仅能进行循线追踪，更能让您聚焦地审视整个市场的全局结构。
+              </p>
+            </div>
+          </div>
+
+          {/* 市场认知图谱配图 */}
+          <div style={{ background: 'rgba(255, 255, 255, 0.45)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)', border: '1px solid rgba(18, 18, 18, 0.05)', borderRadius: 'var(--border-radius)', padding: '30px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '40px' }}>
+            <div style={{ flex: '1 1 400px' }}>
+              <h4 style={{ fontSize: '1.2rem', color: 'var(--color-text)', margin: '0 0 10px 0', fontWeight: 500 }}>循线追踪，绘制您的专属市场认知脑图</h4>
+              <p style={{ fontSize: '0.95rem', color: 'var(--color-muted)', lineHeight: 1.6, margin: '0 0 15px 0', fontWeight: 300 }}>
+                在您的个人市场图谱中，每一份行业资讯、零售渠道、核心品类及个人笔记都被编织成清晰的知识网络。您可以通过实体之间的关联网络，向下延伸发现相近的品类或公司，向上俯瞰把握宏观结构，将市场掌握得更加透彻。
+              </p>
+              <span style={{ fontSize: '0.9rem', color: 'var(--color-accent)', borderBottom: '1px solid var(--color-accent)', paddingBottom: '2px', fontWeight: 400 }}>
+                结合报告与个人见解，沉淀专属的商业大脑 ➔
+              </span>
+            </div>
+            <div style={{ flex: '1 1 300px', maxWidth: '480px', borderRadius: 'var(--border-radius)', overflow: 'hidden', border: '1px solid rgba(18, 18, 18, 0.08)', boxShadow: '0 8px 32px rgba(0,0,0,0.02)' }}>
+              <img src="file:///Users/jason/.gemini/antigravity/brain/03a39455-5f97-4edb-8302-b81a19dc59d2/market_structure_network_1783131730691.jpg" alt="市场认知脑图" style={{ width: '100%', display: 'block' }} />
+            </div>
+          </div>
+        </section>
+
         {/* 模块三：报告市场发现大厅 */}
         <section id="insights-library" className="animate-on-scroll" style={{
           padding: '60px 40px',
