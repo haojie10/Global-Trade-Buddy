@@ -335,7 +335,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
         }}>
           {/* 移除浮动卡片 */}
 
-          <div style={{ maxWidth: '800px', zIndex: 5 }}>
+          <div style={{ maxWidth: '850px', zIndex: 5 }}>
             <span style={{
               background: 'transparent',
               border: '1px solid rgba(18, 18, 18, 0.08)',
@@ -349,27 +349,27 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
               display: 'inline-block',
               marginBottom: '24px'
             }}>
-              您的全智能出海展业伴侣
+              专为出海决策者与外贸精英量身打造的市场资讯分析与认知图谱平台
             </span>
             <h2 className="font-editorial" style={{
-              fontSize: '4.2rem',
+              fontSize: '3.8rem',
               fontWeight: 400,
-              lineHeight: 1.15,
+              lineHeight: 1.25,
               margin: '0 0 24px 0',
               color: brandWeight === 'vibrant' ? '#ffffff' : 'var(--color-text)',
               letterSpacing: '-0.02em'
             }}>
-              Your home for trade insights,<br />predictions, and tools.
+              俯瞰全球市场结构，<br />循线追踪市场盲区
             </h2>
             <p style={{
               fontSize: '1.25rem',
               color: brandWeight === 'vibrant' ? 'rgba(255, 255, 255, 0.85)' : 'var(--color-muted)',
               lineHeight: 1.6,
-              maxWidth: '620px',
+              maxWidth: '720px',
               margin: '0 auto 36px auto',
               fontWeight: 300
             }}>
-              集成海量采购商机与买家画像报告。汇聚结汇计算、HS通关、全球时区窗口，为外贸精英全面赋能。
+              告别碎片资讯与认知局限。外贸智友帮您突破原有认知边界，实现多维度的全球品类洞察。通过网状知识图谱将零碎资讯智能互联，助您在宏观的全球贸易版图中掌握更清晰的市场认知。
             </p>
             <button 
               onClick={scrollToInsights}
@@ -393,7 +393,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
                 e.currentTarget.style.color = '#000000';
               }}
             >
-              探索洞察报告库
+              立即探索洞察大厅
             </button>
           </div>
         </section>
