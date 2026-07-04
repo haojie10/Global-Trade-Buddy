@@ -464,8 +464,8 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
           background: 'transparent',
           borderRadius: '0px'
         }}>
-          <div style={{ marginBottom: '50px' }}>
-            <div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '30px', alignItems: 'center', marginBottom: '50px' }}>
+            <div style={{ flex: '1 1 500px' }}>
               <h2 className="font-editorial" style={{
                 fontSize: '2.8rem',
                 fontWeight: 400,
@@ -473,16 +473,19 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
                 color: 'var(--color-text)',
                 letterSpacing: '-0.015em'
               }}>
-                Discover, Unlock & Connect.
+                Discover & Focus
               </h2>
-              <p style={{ fontSize: '1.05rem', color: 'var(--color-muted)', margin: 0, fontWeight: 300 }}>
-                探索大厅发布了 <b style={{ color: 'var(--color-text)', fontWeight: 500 }}>{reports.length}</b> 份最具潜力的跨国采购品类与买家画像报告。
+              <p style={{ fontSize: '1.05rem', color: 'var(--color-muted)', margin: 0, fontWeight: 300, lineHeight: 1.6 }}>
+                探索大厅已发布跨国品类与渠道洞察报告，支持按行业、国家多维度筛选。帮助从业人员摆脱信息茧房，精准把握全球市场趋势与准入规则。
               </p>
+            </div>
+            <div style={{ flex: '1 1 250px', maxWidth: '360px', borderRadius: 'var(--border-radius)', overflow: 'hidden', border: '1px solid rgba(18, 18, 18, 0.08)', boxShadow: '0 8px 32px rgba(0,0,0,0.02)' }}>
+              <img src="file:///Users/jason/.gemini/antigravity/brain/03a39455-5f97-4edb-8302-b81a19dc59d2/global_trade_trends_1783131760374.jpg" alt="全球趋势洞察数据" style={{ width: '100%', display: 'block' }} />
             </div>
           </div>
 
           <ReportList
-            reports={reports}
+            reports={showAllReports ? reports : reports.slice(0, 6)}
             userId={userId}
             userRole={userRole}
             quota={quota}
@@ -491,6 +494,35 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
               setReports(prev => prev.map(r => r.id === unlockedReportId ? { ...r, isUnlocked: true } : r));
             }}
           />
+
+          {!showAllReports && reports.length > 6 && (
+            <div style={{ textAlign: 'center', marginTop: '35px' }}>
+              <button 
+                onClick={() => setShowAllReports(true)}
+                className="sand-btn"
+                style={{
+                  padding: '14px 36px',
+                  fontSize: '0.95rem',
+                  background: 'transparent',
+                  border: '1px solid rgba(18, 18, 18, 0.15)',
+                  color: '#000000',
+                  borderRadius: '0px',
+                  transition: 'all 0.2s',
+                  cursor: 'pointer'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--color-accent)';
+                  e.currentTarget.style.color = 'var(--color-accent)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(18, 18, 18, 0.15)';
+                  e.currentTarget.style.color = '#000000';
+                }}
+              >
+                查看全部报告 (包含其余 {reports.length - 6} 份) ➔
+              </button>
+            </div>
+          )}
         </section>
 
         {/* 水平轻柔分割线 */}
