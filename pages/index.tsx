@@ -673,6 +673,92 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
             )}
           </div>
 
+          {/* 新增：Call to Action (行动呼吁) 注册引导区 */}
+          <div style={{
+            background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.01) 0%, rgba(255, 255, 255, 0.04) 100%)',
+            border: '1px solid rgba(18, 18, 18, 0.05)',
+            borderRadius: 'var(--border-radius)',
+            padding: '60px 40px',
+            textAlign: 'center',
+            marginTop: '60px',
+            marginBottom: '40px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.01)'
+          }}>
+            <h2 className="font-editorial" style={{
+              fontSize: '2.2rem',
+              fontWeight: 400,
+              margin: '0 0 16px 0',
+              color: 'var(--color-text)',
+              letterSpacing: '-0.5px'
+            }}>
+              突破认知边界，即刻开启您的全球市场洞察之旅
+            </h2>
+            <p style={{ fontSize: '1rem', color: 'var(--color-muted)', maxWidth: '580px', margin: '0 auto 36px auto', fontWeight: 300, lineHeight: 1.6 }}>
+              免费注册账号，即刻获取专属初始额度。俯瞰全球品类动态，通过市场图谱实现循线追踪，解锁更清晰的出海决策力。
+            </p>
+
+            <form onSubmit={handleSubscribe} style={{
+              display: 'flex',
+              gap: '12px',
+              maxWidth: '480px',
+              margin: '0 auto',
+              position: 'relative',
+              zIndex: 5
+            }}>
+              <input 
+                type="email" 
+                required
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                placeholder="输入您的业务邮箱" 
+                style={{
+                  flex: 1,
+                  padding: '16px 24px',
+                  borderRadius: '0px',
+                  background: 'var(--bg-main)',
+                  border: '1px solid rgba(18, 18, 18, 0.15)',
+                  color: 'var(--color-text)',
+                  outline: 'none',
+                  fontSize: '0.95rem',
+                  fontWeight: 300,
+                  transition: 'box-shadow 0.2s'
+                }}
+                onFocus={(e) => e.target.style.boxShadow = '0 0 0 2px var(--color-accent)'}
+                onBlur={(e) => e.target.style.boxShadow = 'none'}
+              />
+              <button 
+                type="submit"
+                className="sand-btn"
+                style={{
+                  padding: '16px 36px',
+                  fontSize: '0.95rem',
+                  background: 'var(--color-accent)',
+                  border: 'none',
+                  color: '#ffffff',
+                  borderRadius: '0px',
+                  fontWeight: 500,
+                  transition: 'all 0.2s',
+                  cursor: 'pointer'
+                }}
+              >
+                免费注册体验
+              </button>
+            </form>
+          </div>
+
+          {/* 极简安全与合规背书 */}
+          <div style={{ 
+            textAlign: 'center', 
+            fontSize: '0.75rem', 
+            color: 'var(--color-muted)', 
+            padding: '15px 0', 
+            borderTop: '1px solid rgba(160, 109, 68, 0.08)', 
+            marginBottom: '20px', 
+            opacity: 0.8 
+          }}>
+            🔒 <b>数据合规背书：</b> 本系统采用本地化 Docker 部署开源数据库，数据均保存在国内。页面底层自动铺设专属防盗数字水印及隐形安全盲水印，严防任何机密泄漏。
+          </div>
+
           {/* 版刻 & 导航 Footer */}
           <footer style={{
             display: 'flex',
