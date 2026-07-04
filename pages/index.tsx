@@ -533,160 +533,45 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
           margin: '40px auto 20px auto'
         }} />
 
-        {/* 模块四：安全保障与个人拓扑 */}
+        {/* 模块四：拓展效能与增长工具 */}
         <section className="animate-on-scroll" style={{
-          padding: '80px 40px',
+          padding: '60px 40px',
           maxWidth: '1400px',
           margin: '0 auto',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
-          gap: '60px',
-          alignItems: 'center',
-          position: 'relative'
+          background: 'transparent'
         }}>
-          <div>
-            <span style={{
-              background: 'transparent',
-              border: '1px solid rgba(18, 18, 18, 0.08)',
-              padding: '6px 16px',
-              borderRadius: '0px',
-              color: 'var(--color-muted)',
-              fontSize: '0.85rem',
-              fontWeight: 300,
-              textTransform: 'uppercase',
-              letterSpacing: '1px',
-              display: 'inline-block',
-              marginBottom: '20px'
-            }}>
-              出海合规与安全防线
-            </span>
-            <h2 className="font-editorial" style={{
-              fontSize: '3rem',
-              fontWeight: 400,
-              margin: '0 0 24px 0',
-              color: 'var(--color-text)',
-              letterSpacing: '-0.02em',
-              lineHeight: 1.2
-            }}>
-              Controlled by you,<br />secured by us.
-            </h2>
-            <p style={{ fontSize: '1.1rem', color: 'var(--color-muted)', lineHeight: 1.7, margin: 0, fontWeight: 300, maxWidth: '480px' }}>
-              我们致力于构建最智能的数据隔离防火墙与隐私脱水管道，全力呵护您的核心买家商机与供应商脉络，规避数据二次泄露风险。
-            </p>
+          <div style={{ textAlign: 'center', marginBottom: '45px' }}>
+            <span style={{ color: 'var(--color-accent)', fontSize: '0.8rem', letterSpacing: '2px', textTransform: 'uppercase' }}>Growth & Productivity</span>
+            <h2 className="font-editorial" style={{ fontSize: '2.5rem', margin: '8px 0 0 0', fontWeight: 400 }}>更实用的出海赋能小工具</h2>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {/* 特色 1 */}
-            <div className="float-on-hover" style={{
-              background: 'rgba(255, 255, 255, 0.45)',
-              backdropFilter: 'blur(15px)',
-              WebkitBackdropFilter: 'blur(15px)',
-              border: '1px solid rgba(18, 18, 18, 0.05)',
-              borderRadius: 'var(--border-radius)',
-              padding: '24px 30px',
-              display: 'flex',
-              gap: '20px',
-              alignItems: 'flex-start',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.01)'
-            }}>
-              <div style={{
-                background: 'var(--bg-main)',
-                border: '1px solid rgba(18, 18, 18, 0.08)',
-                padding: '12px',
-                borderRadius: '0px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-              }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M4.5 16.5c-1.5 1.26-2.5 3.19-2.5 5.5h20c0-2.31-1-4.24-2.5-5.5" />
-                  <circle cx="12" cy="12" r="2" />
-                  <circle cx="12" cy="2" r="1" />
-                  <circle cx="4" cy="16" r="1" />
-                  <circle cx="20" cy="16" r="1" />
-                </svg>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '30px' }}>
+            {/* 个人笔记挂载 */}
+            <div className="float-on-hover" style={{ background: 'rgba(255, 255, 255, 0.45)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)', border: '1px solid rgba(18, 18, 18, 0.05)', padding: '24px', borderRadius: 'var(--border-radius)', display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+              <div style={{ background: 'var(--bg-main)', border: '1px solid rgba(18, 18, 18, 0.08)', padding: '12px', borderRadius: '0px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span style={{ fontSize: '1.5rem' }}>📝</span>
               </div>
               <div>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 500, margin: '0 0 8px 0', color: 'var(--color-text)' }}>
-                  个人专属知识拓扑
+                  挂载个人笔记：沉淀专属出海大脑
                 </h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)', lineHeight: 1.6, margin: 0, fontWeight: 300 }}>
-                  独创的 3D 星空网状图谱，根据您解锁的每一份国家级、品类级洞察建立深度知识链。连线高亮与节点互动助您一眼发掘隐藏的商机。
+                  支持在任何已解锁的报告或公司节点下，挂载您专属的随笔与见解。这些笔记将作为私密节点编织进图谱中，让您的个人市场图谱不断迭代成长。
                 </p>
               </div>
             </div>
 
-            {/* 特色 2 */}
-            <div className="float-on-hover" style={{
-              background: 'rgba(255, 255, 255, 0.45)',
-              backdropFilter: 'blur(15px)',
-              WebkitBackdropFilter: 'blur(15px)',
-              border: '1px solid rgba(18, 18, 18, 0.05)',
-              borderRadius: 'var(--border-radius)',
-              padding: '24px 30px',
-              display: 'flex',
-              gap: '20px',
-              alignItems: 'flex-start',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.01)'
-            }}>
-              <div style={{
-                background: 'var(--bg-main)',
-                border: '1px solid rgba(18, 18, 18, 0.08)',
-                padding: '12px',
-                borderRadius: '0px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-              }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-                </svg>
+            {/* 邀请裂变机制 */}
+            <div className="float-on-hover" style={{ background: 'rgba(255, 255, 255, 0.45)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)', border: '1px solid rgba(18, 18, 18, 0.05)', padding: '24px', borderRadius: 'var(--border-radius)', display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+              <div style={{ background: 'var(--bg-main)', border: '1px solid rgba(18, 18, 18, 0.08)', padding: '12px', borderRadius: '0px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span style={{ fontSize: '1.5rem' }}>🤝</span>
               </div>
               <div>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 500, margin: '0 0 8px 0', color: 'var(--color-text)' }}>
-                  脱水上传管道技术
+                  推荐同行加入：共同免费获取额度
                 </h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)', lineHeight: 1.6, margin: 0, fontWeight: 300 }}>
-                  行业领先的智能处理核心。提取 PDF/Doc 文件并全自动“脱水”，自动滤除敏感数据，对结构进行去标识 Base64 化转码，规避合规风险。
-                </p>
-              </div>
-            </div>
-
-            {/* 特色 3 */}
-            <div className="float-on-hover" style={{
-              background: 'rgba(255, 255, 255, 0.45)',
-              backdropFilter: 'blur(15px)',
-              WebkitBackdropFilter: 'blur(15px)',
-              border: '1px solid rgba(18, 18, 18, 0.05)',
-              borderRadius: 'var(--border-radius)',
-              padding: '24px 30px',
-              display: 'flex',
-              gap: '20px',
-              alignItems: 'flex-start',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.01)'
-            }}>
-              <div style={{
-                background: 'var(--bg-main)',
-                border: '1px solid rgba(18, 18, 18, 0.08)',
-                padding: '12px',
-                borderRadius: '0px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-              }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                </svg>
-              </div>
-              <div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 500, margin: '0 0 8px 0', color: 'var(--color-text)' }}>
-                  动态微光防盗水印
-                </h3>
-                <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)', lineHeight: 1.6, margin: 0, fontWeight: 300 }}>
-                  专为防止机密外泄设计。用户专属业务员 ID 在报告底层以 0.015 极弱光动态旋转水印展现，结合高斯模糊付费锁，强力保护核心情报不被分发盗用。
+                  通过分享您的专属邀请链接，推荐同行注册。每成功推荐一位用户，您与新注册用户均可获赠额外的免费报告解锁额度，实现双赢。
                 </p>
               </div>
             </div>
