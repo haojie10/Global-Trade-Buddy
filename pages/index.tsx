@@ -37,6 +37,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
   const [quota, setQuota] = useState(freeQuota);
   const [reports, setReports] = useState(allReports);
   const [showAllReports, setShowAllReports] = useState(false);
+  const [focusImageIndex, setFocusImageIndex] = useState(0);
   const [emailInput, setEmailInput] = useState('');
   const [subscribed, setSubscribed] = useState(false);
 
@@ -72,6 +73,14 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
     document.cookie = `user_role=; path=/; max-age=0`;
     window.location.reload();
   };
+
+  // Discover & Focus 幻灯片图谱自动切换
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setFocusImageIndex(prev => (prev + 1) % 3);
+    }, 3000);
+    return () => clearInterval(timer);
+  }, []);
 
   // 滚动进入可视区域动画监听
   useEffect(() => {
@@ -485,8 +494,94 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
                 探索大厅已发布跨国品类与渠道洞察报告，支持按行业、国家多维度筛选。帮助从业人员摆脱信息茧房，精准把握全球市场趋势与准入规则。
               </p>
             </div>
-            <div style={{ flex: '1 1 250px', maxWidth: '360px', borderRadius: 'var(--border-radius)', overflow: 'hidden', border: '1px solid rgba(18, 18, 18, 0.08)', boxShadow: '0 8px 32px rgba(0,0,0,0.02)' }}>
-              <img src="/images/global_trade_trends.jpg" alt="全球趋势洞察数据" style={{ width: '100%', display: 'block' }} />
+            <div style={{ 
+              flex: '1 1 320px', 
+              maxWidth: '480px', 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: '12px' 
+            }}>
+              <div style={{ 
+                position: 'relative',
+                width: '100%',
+                height: '240px',
+                borderRadius: 'var(--border-radius)', 
+                overflow: 'hidden', 
+                border: '1px solid rgba(18, 18, 18, 0.08)', 
+                boxShadow: '0 8px 32px rgba(0,0,0,0.02)',
+                background: '#0d1117'
+              }}>
+                {/* 第一张：全景远视图 */}
+                <img 
+                  src="/images/discover_focus_panorama.jpg" 
+                  alt="全景远视图" 
+                  style={{ 
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%', 
+                    height: '100%',
+                    objectFit: 'cover',
+                    transition: 'opacity 0.6s ease-in-out',
+                    opacity: focusImageIndex === 0 ? 1 : 0,
+                    zIndex: focusImageIndex === 0 ? 2 : 1
+                  }} 
+                />
+                {/* 第二张：选中橙色节点 */}
+                <img 
+                  src="/images/discover_focus_select_orange.jpg" 
+                  alt="选中一级二级橙色节点" 
+                  style={{ 
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%', 
+                    height: '100%',
+                    objectFit: 'cover',
+                    transition: 'opacity 0.6s ease-in-out',
+                    opacity: focusImageIndex === 1 ? 1 : 0,
+                    zIndex: focusImageIndex === 1 ? 2 : 1
+                  }} 
+                />
+                {/* 第三张：选中灰色节点 */}
+                <img 
+                  src="/images/discover_focus_select_grey.jpg" 
+                  alt="选中一级二级灰色节点" 
+                  style={{ 
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%', 
+                    height: '100%',
+                    objectFit: 'cover',
+                    transition: 'opacity 0.6s ease-in-out',
+                    opacity: focusImageIndex === 2 ? 1 : 0,
+                    zIndex: focusImageIndex === 2 ? 2 : 1
+                  }} 
+                />
+              </div>
+
+              {/* 幻灯片指示点 */}
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '4px' }}>
+                {[0, 1, 2].map((idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setFocusImageIndex(idx)}
+                    style={{
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      padding: 0,
+                      border: 'none',
+                      cursor: 'pointer',
+                      background: focusImageIndex === idx ? 'var(--color-accent)' : 'rgba(18, 18, 18, 0.15)',
+                      transition: 'background 0.3s, transform 0.2s',
+                      transform: focusImageIndex === idx ? 'scale(1.2)' : 'scale(1)'
+                    }}
+                    aria-label={`切换到图片 ${idx + 1}`}
+                  />
+                ))}
+              </div>
             </div>
           </div>
 
