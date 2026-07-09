@@ -11,6 +11,9 @@ interface NodeProfilePanelProps {
   onFetchEntityDetail: (entityId: string) => Promise<void>;
   onDeleteNodeSuccess: () => void;
   allNodes?: GraphNode[];
+  userId?: string;
+  quota?: number;
+  onQuotaChange?: (newQuota: number) => void;
 }
 
 export default function NodeProfilePanel({
@@ -21,24 +24,32 @@ export default function NodeProfilePanel({
   onNodeSelectUpdate,
   onFetchEntityDetail,
   onDeleteNodeSuccess,
-  allNodes
+  allNodes,
+  userId,
+  quota,
+  onQuotaChange
 }: NodeProfilePanelProps) {
   const [newAlias, setNewAlias] = useState('');
   const [newCompetitor, setNewCompetitor] = useState('');
   const [newSupplier, setNewSupplier] = useState('');
   const [marketRegion, setMarketRegion] = useState('');
 
-  const [newReportCompany, setNewReportCompany] = useState('');
-  const [newReportCompetitor, setNewReportCompetitor] = useState('');
-  const [newReportProduct, setNewReportProduct] = useState('');
-  const [newReportChannel, setNewReportChannel] = useState('');
-  const [newReportSupplier, setNewReportSupplier] = useState('');
-  const [newReportCustomer, setNewReportCustomer] = useState('');
+
 
   const [description, setDescription] = useState('');
   const [website, setWebsite] = useState('');
   const [headquarters, setHeadquarters] = useState('');
   const [employeeCount, setEmployeeCount] = useState('');
+
+  // 报告节点的收藏与笔记交互状态
+  const [panelIsFav, setPanelIsFav] = useState(false);
+  const [panelNoteText, setPanelNoteText] = useState('');
+  const [panelIsSavingNote, setPanelIsSavingNote] = useState(false);
+  const [panelIsUnlocked, setPanelIsUnlocked] = useState(false);
+
+  // 邀请码与测试充值状态
+  const [inviteCodeInput, setInviteCodeInput] = useState('');
+  const [isInviting, setIsInviting] = useState(false);
 
   useEffect(() => {
     if (entityDetail) {
@@ -54,19 +65,123 @@ export default function NodeProfilePanel({
     }
   }, [entityDetail]);
 
+  // 异步获取报告属性（解锁状态、收藏状态与笔记）
+  useEffect(() => {
+    const fetchReportStatus = async () => {
+      if (!selectedNode || selectedNode.node_type !== 'report' || !userId) return;
+      try {
+        const detailRes = await fetch(`/api/user/report-detail?reportId=${selectedNode.id}`);
+        if (detailRes.ok) {
+          const detail = await detailRes.json();
+          setPanelIsUnlocked(detail.isUnlocked);
+          setPanelIsFav(detail.isFavorite);
+        }
+        const noteRes = await fetch(`/api/user/note?reportId=${selectedNode.id}`);
+        if (noteRes.ok) {
+          const noteData = await noteRes.json();
+          setPanelNoteText(noteData.note?.content || '');
+        }
+      } catch (err) {
+        console.error('获取报告状态失败', err);
+      }
+    };
+    fetchReportStatus();
+  }, [selectedNode, userId]);
+
   // 监听 selectedNode 的变化，清空子组件内部输入状态
   useEffect(() => {
     setNewAlias('');
     setNewCompetitor('');
     setNewSupplier('');
     setMarketRegion('');
-    setNewReportCompany('');
-    setNewReportCompetitor('');
-    setNewReportProduct('');
-    setNewReportChannel('');
-    setNewReportSupplier('');
-    setNewReportCustomer('');
   }, [selectedNode]);
+
+  const handlePanelToggleFavorite = async () => {
+    if (!selectedNode || !userId) return;
+    try {
+      const res = await fetch('/api/user/favorite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reportId: selectedNode.id })
+      });
+      const data = await res.json();
+      if (res.ok && data.status) {
+        setPanelIsFav(data.status === 'added');
+        // 刷新图谱以应用过滤
+        await onRefreshGraph();
+      } else {
+        alert(data.error || '收藏失败');
+      }
+    } catch (err) {
+      alert('连接服务网关失败');
+    }
+  };
+
+  const handlePanelSaveNote = async () => {
+    if (!selectedNode || !userId) return;
+    setPanelIsSavingNote(true);
+    try {
+      const res = await fetch(`/api/user/note?reportId=${selectedNode.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: panelNoteText })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert('备备忘笔记保存成功！');
+      } else {
+        alert(data.error || '保存失败');
+      }
+    } catch (err) {
+      alert('连接服务网关失败');
+    } finally {
+      setPanelIsSavingNote(false);
+    }
+  };
+
+  const handleExchangeInviteCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteCodeInput.trim()) return;
+    setIsInviting(true);
+    try {
+      const res = await fetch('/api/user/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ referrerId: inviteCodeInput.trim() })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert('兑换成功！双方各获得 1 次解锁额度奖励。');
+        setInviteCodeInput('');
+        if (onQuotaChange && quota !== undefined) {
+          onQuotaChange(quota + 1);
+        }
+      } else {
+        alert(data.error || '兑换失败，请检查邀请码，或您已经兑换过。');
+      }
+    } catch (err) {
+      alert('连接服务网关失败');
+    } finally {
+      setIsInviting(false);
+    }
+  };
+
+  const handleTestRecharge = async () => {
+    try {
+      const res = await fetch('/api/user/test-recharge', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert(data.message);
+        if (onQuotaChange) {
+          onQuotaChange(data.newQuota);
+        }
+      } else {
+        alert(data.error || '充值失败');
+      }
+    } catch (err) {
+      alert('连接服务器失败');
+    }
+  };
 
   if (!selectedNode) {
     const reportNodes = allNodes ? allNodes.filter(n => n.node_type === 'report') : [];
@@ -130,6 +245,115 @@ export default function NodeProfilePanel({
         }}>
           点击左侧图谱中的任意报告节点，即可在此查看该报告的智能商业画像与核心供需实体线索。
         </p>
+
+        {/* 💡 知识拓扑管理指南 */}
+        <div style={{
+          background: 'rgba(255, 100, 30, 0.04)',
+          border: '1px dashed rgba(255, 100, 30, 0.25)',
+          borderRadius: '16px',
+          padding: '16px',
+          fontSize: '0.8rem',
+          lineHeight: 1.5,
+          color: 'var(--color-text)'
+        }}>
+          <strong style={{ color: 'var(--color-accent)', display: 'block', marginBottom: '6px' }}>💡 知识拓扑管理指南：</strong>
+          为了保持图谱结构清晰，当前的图谱节点仅针对您<strong>已收藏</strong>的报告绘制。
+          系统已在您解锁新报告时默认自动将其加入收藏。如果后续报告数量过多，您可以在列表页中取消收藏不常用的报告，它们将自动从图谱中隐藏。
+        </div>
+
+        {/* ✉️ 邀请裂变区域 */}
+        {userId && (
+          <div style={{
+            background: 'rgba(160, 109, 68, 0.03)',
+            border: '1px solid rgba(160, 109, 68, 0.08)',
+            borderRadius: '16px',
+            padding: '20px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px'
+          }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-muted)' }}>邀请好友送解锁额度</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--color-muted)' }}>
+              您的专属邀请ID（点击可复制）：
+              <code 
+                onClick={() => {
+                  navigator.clipboard.writeText(userId);
+                  alert('邀请ID已复制到剪贴板！');
+                }}
+                style={{ 
+                  display: 'block', 
+                  background: 'rgba(18, 18, 18, 0.05)', 
+                  padding: '6px', 
+                  borderRadius: '4px', 
+                  marginTop: '4px', 
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  fontFamily: 'monospace',
+                  color: 'var(--color-accent)'
+                }}
+              >
+                {userId}
+              </code>
+            </div>
+            
+            <form onSubmit={handleExchangeInviteCode} style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+              <input
+                type="text"
+                placeholder="输入好友的邀请 ID"
+                value={inviteCodeInput}
+                onChange={e => setInviteCodeInput(e.target.value)}
+                style={{
+                  flex: 1,
+                  padding: '8px 12px',
+                  fontSize: '0.8rem',
+                  border: '1px solid rgba(18, 18, 18, 0.08)',
+                  borderRadius: '8px',
+                  outline: 'none',
+                  background: '#ffffff'
+                }}
+              />
+              <button 
+                type="submit" 
+                disabled={isInviting}
+                className="sand-btn" 
+                style={{ padding: '8px 16px', fontSize: '0.8rem', cursor: 'pointer' }}
+              >
+                {isInviting ? '兑换中...' : '兑换'}
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* ⚡ 测试充值区域 */}
+        {userId && (
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '12px' }}>
+            <button
+              onClick={handleTestRecharge}
+              style={{
+                background: 'rgba(18, 18, 18, 0.05)',
+                border: '1px dashed rgba(18, 18, 18, 0.15)',
+                color: 'var(--color-muted)',
+                fontSize: '0.75rem',
+                padding: '6px 16px',
+                borderRadius: '20px',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 100, 30, 0.05)';
+                e.currentTarget.style.borderColor = 'var(--color-accent)';
+                e.currentTarget.style.color = 'var(--color-accent)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = 'rgba(18, 18, 18, 0.05)';
+                e.currentTarget.style.borderColor = 'rgba(18, 18, 18, 0.15)';
+                e.currentTarget.style.color = 'var(--color-muted)';
+              }}
+            >
+              ⚡ 开发测试专用：一键充值 10 次额度
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -219,67 +443,7 @@ export default function NodeProfilePanel({
     }
   };
 
-  const handleTagReport = async (
-    e: React.FormEvent,
-    entityType: 'company' | 'competitor' | 'product' | 'channel' | 'supplier' | 'customer'
-  ) => {
-    e.preventDefault();
-    let entityName = '';
-    if (entityType === 'company') entityName = newReportCompany;
-    else if (entityType === 'competitor') entityName = newReportCompetitor;
-    else if (entityType === 'product') entityName = newReportProduct;
-    else if (entityType === 'channel') entityName = newReportChannel;
-    else if (entityType === 'supplier') entityName = newReportSupplier;
-    else if (entityType === 'customer') entityName = newReportCustomer;
 
-    if (!entityName.trim()) return;
-
-    try {
-      const res = await fetch('/api/admin/reports/tag', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reportId: selectedNode.id,
-          entityName: entityName.trim(),
-          entityType
-        })
-      });
-
-      if (res.ok) {
-        alert('关联实体成功！');
-        if (entityType === 'company') setNewReportCompany('');
-        else if (entityType === 'competitor') setNewReportCompetitor('');
-        else if (entityType === 'product') setNewReportProduct('');
-        else if (entityType === 'channel') setNewReportChannel('');
-        else if (entityType === 'supplier') setNewReportSupplier('');
-        else if (entityType === 'customer') setNewReportCustomer('');
-
-        await onRefreshGraph();
-        
-        // 触发父级状态更新
-        const next = { ...selectedNode };
-        if (entityType === 'company') {
-          next.companies = [...(selectedNode.companies || []), entityName.trim()];
-        } else if (entityType === 'competitor') {
-          next.competitors = [...(selectedNode.competitors || []), entityName.trim()];
-        } else if (entityType === 'product') {
-          next.products = [...(selectedNode.products || []), entityName.trim()];
-        } else if (entityType === 'channel') {
-          next.channels = [...(selectedNode.channels || []), entityName.trim()];
-        } else if (entityType === 'supplier') {
-          next.suppliers = [...(selectedNode.suppliers || []), entityName.trim()];
-        } else if (entityType === 'customer') {
-          next.customers = [...(selectedNode.customers || []), entityName.trim()];
-        }
-        onNodeSelectUpdate(next);
-      } else {
-        const data = await res.json();
-        alert(data.error || '关联失败');
-      }
-    } catch (err: any) {
-      alert(err.message);
-    }
-  };
 
   const handleDeleteNode = async () => {
     const isReport = selectedNode.node_type === 'report';
@@ -670,233 +834,7 @@ export default function NodeProfilePanel({
             </h4>
           </div>
 
-          {/* 统一的 Tag 样式与类型关系逻辑 */}
-          {(() => {
-            const tagStyle: React.CSSProperties = {
-              background: 'rgba(160, 109, 68, 0.05)',
-              color: 'var(--color-text)',
-              border: '1px solid rgba(160, 109, 68, 0.15)',
-              padding: '4px 10px',
-              borderRadius: '12px',
-              fontSize: '0.75rem',
-              fontWeight: 500
-            };
-            const isProduct = selectedNode.category === 'product' || selectedNode.node_type === 'product';
 
-            return (
-              <>
-                {/* 1. 公司名称 (仅公司报告显示) */}
-                {!isProduct && (
-                  <div>
-                    <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>公司名称</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
-                      {selectedNode.companies && selectedNode.companies.length > 0 ? (
-                        selectedNode.companies.map((c, i) => (
-                          <span key={i} style={tagStyle}>
-                            {c}
-                          </span>
-                        ))
-                      ) : (
-                        <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>暂无</span>
-                      )}
-                    </div>
-                    <form onSubmit={(e) => handleTagReport(e, 'company')} style={{ display: 'flex', gap: '8px' }}>
-                      <input
-                        type="text"
-                        placeholder="关联新公司，如：Wildberries"
-                        value={newReportCompany}
-                        onChange={(e) => setNewReportCompany(e.target.value)}
-                        style={{
-                          flex: 1,
-                          padding: '6px 12px',
-                          fontSize: '0.8rem',
-                          border: '1px solid rgba(15, 23, 42, 0.1)',
-                          borderRadius: '8px',
-                          outline: 'none',
-                          background: 'rgba(255,255,255,0.8)'
-                        }}
-                      />
-                      <button type="submit" className="water-drop-btn" style={{ padding: '6px 12px', fontSize: '0.75rem', fontWeight: 600 }}>关联</button>
-                    </form>
-                  </div>
-                )}
-
-                {/* 2. 竞争对手 (仅公司报告显示) */}
-                {!isProduct && (
-                  <div>
-                    <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>竞争对手</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
-                      {selectedNode.competitors && selectedNode.competitors.length > 0 ? (
-                        selectedNode.competitors.map((comp, i) => (
-                          <span key={i} style={tagStyle}>
-                            {comp}
-                          </span>
-                        ))
-                      ) : (
-                        <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>暂无</span>
-                      )}
-                    </div>
-                    <form onSubmit={(e) => handleTagReport(e, 'competitor')} style={{ display: 'flex', gap: '8px' }}>
-                      <input
-                        type="text"
-                        placeholder="关联新竞争对手，如：Wildberries"
-                        value={newReportCompetitor}
-                        onChange={(e) => setNewReportCompetitor(e.target.value)}
-                        style={{
-                          flex: 1,
-                          padding: '6px 12px',
-                          fontSize: '0.8rem',
-                          border: '1px solid rgba(15, 23, 42, 0.1)',
-                          borderRadius: '8px',
-                          outline: 'none',
-                          background: 'rgba(255,255,255,0.8)'
-                        }}
-                      />
-                      <button type="submit" className="water-drop-btn" style={{ padding: '6px 12px', fontSize: '0.75rem', fontWeight: 600 }}>关联</button>
-                    </form>
-                  </div>
-                )}
-
-                {/* 3. 产品名称 (品类与公司报告均显示) */}
-                <div>
-                  <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>产品名称</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
-                    {selectedNode.products && selectedNode.products.length > 0 ? (
-                      selectedNode.products.map((p, i) => (
-                        <span key={i} style={tagStyle}>
-                          {p}
-                        </span>
-                      ))
-                    ) : (
-                      <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>暂无</span>
-                    )}
-                  </div>
-                  <form onSubmit={(e) => handleTagReport(e, 'product')} style={{ display: 'flex', gap: '8px' }}>
-                    <input
-                      type="text"
-                      placeholder="关联新产品，如：刹车片"
-                      value={newReportProduct}
-                      onChange={(e) => setNewReportProduct(e.target.value)}
-                      style={{
-                        flex: 1,
-                        padding: '6px 12px',
-                        fontSize: '0.8rem',
-                        border: '1px solid rgba(15, 23, 42, 0.1)',
-                        borderRadius: '8px',
-                        outline: 'none',
-                        background: 'rgba(255,255,255,0.8)'
-                      }}
-                    />
-                    <button type="submit" className="water-drop-btn" style={{ padding: '6px 12px', fontSize: '0.75rem', fontWeight: 600 }}>关联</button>
-                  </form>
-                </div>
-
-                {/* 4. 销售渠道 (品类与公司报告均显示) */}
-                <div>
-                  <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>销售渠道</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
-                    {selectedNode.channels && selectedNode.channels.length > 0 ? (
-                      selectedNode.channels.map((ch, i) => (
-                        <span key={i} style={tagStyle}>
-                          {ch}
-                        </span>
-                      ))
-                    ) : (
-                      <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>暂无</span>
-                    )}
-                  </div>
-                  <form onSubmit={(e) => handleTagReport(e, 'channel')} style={{ display: 'flex', gap: '8px' }}>
-                    <input
-                      type="text"
-                      placeholder="关联新渠道，如：配件超市"
-                      value={newReportChannel}
-                      onChange={(e) => setNewReportChannel(e.target.value)}
-                      style={{
-                        flex: 1,
-                        padding: '6px 12px',
-                        fontSize: '0.8rem',
-                        border: '1px solid rgba(15, 23, 42, 0.1)',
-                        borderRadius: '8px',
-                        outline: 'none',
-                        background: 'rgba(255,255,255,0.8)'
-                      }}
-                    />
-                    <button type="submit" className="water-drop-btn" style={{ padding: '6px 12px', fontSize: '0.75rem', fontWeight: 600 }}>关联</button>
-                  </form>
-                </div>
-
-                {/* 5. 供应商 (品类与公司报告均显示) */}
-                <div>
-                  <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>供应商</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
-                    {selectedNode.suppliers && selectedNode.suppliers.length > 0 ? (
-                      selectedNode.suppliers.map((s, i) => (
-                        <span key={i} style={tagStyle}>
-                          {s}
-                        </span>
-                      ))
-                    ) : (
-                      <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>暂无</span>
-                    )}
-                  </div>
-                  <form onSubmit={(e) => handleTagReport(e, 'supplier')} style={{ display: 'flex', gap: '8px' }}>
-                    <input
-                      type="text"
-                      placeholder="关联新供应商，如：A公司"
-                      value={newReportSupplier}
-                      onChange={(e) => setNewReportSupplier(e.target.value)}
-                      style={{
-                        flex: 1,
-                        padding: '6px 12px',
-                        fontSize: '0.8rem',
-                        border: '1px solid rgba(15, 23, 42, 0.1)',
-                        borderRadius: '8px',
-                        outline: 'none',
-                        background: 'rgba(255,255,255,0.8)'
-                      }}
-                    />
-                    <button type="submit" className="water-drop-btn" style={{ padding: '6px 12px', fontSize: '0.75rem', fontWeight: 600 }}>关联</button>
-                  </form>
-                </div>
-
-                {/* 6. 主要客户 (仅公司报告显示) */}
-                {!isProduct && (
-                  <div>
-                    <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>主要客户</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
-                      {selectedNode.customers && selectedNode.customers.length > 0 ? (
-                        selectedNode.customers.map((c, i) => (
-                          <span key={i} style={tagStyle}>
-                            {c}
-                          </span>
-                        ))
-                      ) : (
-                        <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>暂无</span>
-                      )}
-                    </div>
-                    <form onSubmit={(e) => handleTagReport(e, 'customer')} style={{ display: 'flex', gap: '8px' }}>
-                      <input
-                        type="text"
-                        placeholder="关联新客户，如：B公司"
-                        value={newReportCustomer}
-                        onChange={(e) => setNewReportCustomer(e.target.value)}
-                        style={{
-                          flex: 1,
-                          padding: '6px 12px',
-                          fontSize: '0.8rem',
-                          border: '1px solid rgba(15, 23, 42, 0.1)',
-                          borderRadius: '8px',
-                          outline: 'none',
-                          background: 'rgba(255,255,255,0.8)'
-                        }}
-                      />
-                      <button type="submit" className="water-drop-btn" style={{ padding: '6px 12px', fontSize: '0.75rem', fontWeight: 600 }}>关联</button>
-                    </form>
-                  </div>
-                )}
-              </>
-            );
-          })()}
 
           {/* 简要概述 */}
           <div style={{ borderTop: '1px solid rgba(15, 23, 42, 0.06)', paddingTop: '12px' }}>
@@ -911,6 +849,75 @@ export default function NodeProfilePanel({
               {selectedNode.summary || '暂无概述'}
             </p>
           </div>
+
+          {/* 选中报告节点时的收藏与笔记交互 */}
+          {userId && (
+            <div style={{ borderTop: '1px solid rgba(15, 23, 42, 0.06)', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>图谱与收藏控制</span>
+                <button
+                  onClick={handlePanelToggleFavorite}
+                  style={{
+                    background: 'transparent',
+                    border: panelIsFav ? '1px solid var(--color-accent)' : '1px solid rgba(18, 18, 18, 0.15)',
+                    color: panelIsFav ? 'var(--color-accent)' : 'var(--color-muted)',
+                    fontSize: '0.75rem',
+                    padding: '4px 10px',
+                    borderRadius: '0px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill={panelIsFav ? 'var(--color-accent)' : 'none'} stroke="currentColor" strokeWidth="1.5">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                  </svg>
+                  {panelIsFav ? '在图谱上显示(已收藏)' : '在图谱上隐藏(取消收藏)'}
+                </button>
+              </div>
+
+              {panelIsUnlocked && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-muted)', fontWeight: 500 }}>修改备忘笔记:</div>
+                  <textarea
+                    placeholder="在此编辑该报告的备忘笔记..."
+                    value={panelNoteText}
+                    onChange={(e) => setPanelNoteText(e.target.value)}
+                    style={{
+                      width: '100%',
+                      height: '70px',
+                      background: 'rgba(255, 255, 255, 0.8)',
+                      border: '1px solid rgba(18, 18, 18, 0.08)',
+                      borderRadius: '8px',
+                      padding: '8px 12px',
+                      fontSize: '0.8rem',
+                      color: 'var(--color-text)',
+                      outline: 'none',
+                      resize: 'none',
+                      fontFamily: 'inherit',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  <button
+                    onClick={handlePanelSaveNote}
+                    disabled={panelIsSavingNote}
+                    className="sand-btn"
+                    style={{
+                      padding: '6px 12px',
+                      fontSize: '0.75rem',
+                      alignSelf: 'flex-end',
+                      cursor: panelIsSavingNote ? 'not-allowed' : 'pointer',
+                      opacity: panelIsSavingNote ? 0.7 : 1
+                    }}
+                  >
+                    {panelIsSavingNote ? '保存中...' : '保存笔记'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           <Link
             href={`/reports/${selectedNode.id}`}

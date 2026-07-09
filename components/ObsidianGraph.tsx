@@ -246,8 +246,11 @@ export default function ObsidianGraph({
           ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
 
           const isProduct = node.category === 'product' || node.node_type === 'product';
+          const isCustomer = node.category === 'customer' || node.node_type === 'customer';
           ctx.fillStyle = isReport 
-            ? (isProduct ? `rgba(122, 117, 111, ${opacity})` : `rgba(18, 18, 18, ${opacity * 0.75})`)
+            ? (isProduct 
+                ? `rgba(122, 117, 111, ${opacity})` 
+                : (isCustomer ? `rgba(255, 100, 30, ${opacity})` : `rgba(18, 18, 18, ${opacity * 0.75})`))
             : `rgba(148, 163, 184, ${opacity})`;
           ctx.fill();
 

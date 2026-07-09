@@ -24,9 +24,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const { phone, email, password } = req.body;
-  if (!password || (!phone && !email)) {
-    return res.status(400).json({ error: '请填入必要的注册信息' });
+  const { nickname, email, password, code } = req.body;
+  if (!email || !password || !nickname) {
+    return res.status(400).json({ error: '请填入完整的注册信息（含昵称）' });
+  }
+
+  // 昵称字节长度校验：中文算2字节，英文算1字节
+  let nicknameByteLen = 0;
+  for (let i = 0; i < nickname.length; i++) {
+    nicknameByteLen += nickname.charCodeAt(i) > 255 ? 2 : 1;
+  }
+  if (nicknameByteLen > 10) {
+    return res.status(400).json({ error: '昵称不能超过 10 个字节 (5 个汉字)' });
+  }
+
+  // 昵称特殊字符校验：只允许中文、英文、数字
+  if (!/^[a-zA-Z0-9\u4e00-\u9fa5]+$/.test(nickname)) {
+    return res.status(400).json({ error: '昵称只能包含中文、英文和数字，不能带特殊符号' });
   }
 
   // 密码强度校验
@@ -38,6 +52,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const dbClient = await pool.connect();
 
   try {
+    // 邮箱验证码核验
+    if (email) {
+      if (!code) {
+        return res.status(400).json({ error: '请输入邮箱验证码' });
+      }
+      const verifyRes = await dbClient.query(
+        `SELECT code, expired_at FROM email_verifications 
+         WHERE email = $1 
+         ORDER BY created_at DESC 
+         LIMIT 1`,
+        [email]
+      );
+      if (verifyRes.rows.length === 0) {
+        return res.status(400).json({ error: '请先获取验证码' });
+      }
+      const verification = verifyRes.rows[0];
+      if (verification.code !== code) {
+        return res.status(400).json({ error: '验证码错误' });
+      }
+      if (new Date() > new Date(verification.expired_at)) {
+        return res.status(400).json({ error: '验证码已过期，请重新获取' });
+      }
+    }
     // NOTE: 角色强制为 'user'，管理员只能通过数据库手动分配，防止注册自封管理员
     const selectedRole = 'user';
     const quota = 3;
@@ -46,10 +83,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const passwordHash = await bcrypt.hash(password, 10);
 
     const signupRes = await dbClient.query(
-      `INSERT INTO users (phone_number, email, password, role, free_quota) 
+      `INSERT INTO users (email, password, role, free_quota, nickname) 
        VALUES ($1, $2, $3, $4, $5) 
-       RETURNING id, phone_number, email, role, free_quota`,
-      [phone || null, email || null, passwordHash, selectedRole, quota]
+       RETURNING id, email, role, free_quota, nickname`,
+      [email, passwordHash, selectedRole, quota, nickname]
     );
 
     const user = signupRes.rows[0];
@@ -61,15 +98,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       success: true,
       user: {
         id: user.id,
-        phoneNumber: user.phone_number,
         email: user.email,
         role: user.role,
         freeQuota: user.free_quota,
+        nickname: user.nickname
       },
     });
   } catch (err: any) {
     if (err.code === '23505') {
-      return res.status(400).json({ error: '该手机号或邮箱已被注册' });
+      return res.status(400).json({ error: '该邮箱已被注册' });
     }
     return res.status(500).json({ error: err.message });
   } finally {

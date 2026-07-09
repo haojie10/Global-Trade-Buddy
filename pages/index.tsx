@@ -1,5 +1,6 @@
 import { GetServerSideProps } from 'next';
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import pool from '../lib/db';
 import { parseCookies } from '../lib/cookies';
 import { getUserGraph, GraphNode, GraphLink } from './api/user/graph';
@@ -8,7 +9,6 @@ import dynamic from 'next/dynamic';
 const AdminPanel = dynamic(() => import('../components/AdminPanel'), { ssr: false });
 import ReportList, { PlatformReport } from '../components/ReportList';
 import AuthModal from '../components/AuthModal';
-import ThemeCustomizer from '../components/ThemeCustomizer';
 import {
   GlobeIcon,
   GraphIcon,
@@ -31,15 +31,53 @@ interface HomeProps {
   userId: string;
   userRole: string;
   freeQuota: number;
+  nickname?: string;
 }
 
-export default function HomePage({ graphData, allReports, userId, userRole, freeQuota }: HomeProps) {
+export default function HomePage({ graphData, allReports, userId, userRole, freeQuota, nickname }: HomeProps) {
   const [quota, setQuota] = useState(freeQuota);
   const [reports, setReports] = useState(allReports);
   const [showAllReports, setShowAllReports] = useState(false);
-  const [focusImageIndex, setFocusImageIndex] = useState(0);
   const [emailInput, setEmailInput] = useState('');
   const [subscribed, setSubscribed] = useState(false);
+
+  const router = useRouter();
+
+  // 1. 生命周期：捕获 URL 中的邀请人 ID 并缓存到本地
+  useEffect(() => {
+    if (router.isReady && router.query.invite) {
+      const inviteId = router.query.invite as string;
+      if (inviteId && inviteId !== userId) {
+        localStorage.setItem('gtb_referrer_id', inviteId);
+      }
+    }
+  }, [router.isReady, router.query.invite, userId]);
+
+  // 2. 生命周期：当用户成功登录且本地有邀请缓存时，自动绑定并兑换额度
+  useEffect(() => {
+    const referrerId = localStorage.getItem('gtb_referrer_id');
+    if (userId && referrerId && referrerId !== userId) {
+      fetch('/api/user/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ referrerId }),
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            alert('🎁 恭喜！接受邀请注册成功，你与邀请人均已获赠 1 次报告解锁额度！');
+            // 实时增加前台显示额度
+            setQuota(prev => prev + 1);
+          }
+          // 无论成功还是失败，均清除本地缓存，防止重复请求
+          localStorage.removeItem('gtb_referrer_id');
+        })
+        .catch(err => {
+          console.error('[ERROR] 自动绑定邀请关系失败:', err);
+          localStorage.removeItem('gtb_referrer_id');
+        });
+    }
+  }, [userId]);
 
   // 弹窗与控制面板状态
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -53,7 +91,6 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
   const [ambientScale, setAmbientScale] = useState(1.4);
   const [ambientBlendMode, setAmbientBlendMode] = useState('normal');
   const [brandWeight, setBrandWeight] = useState<'standard' | 'vibrant'>('standard');
-  const [showCustomizer, setShowCustomizer] = useState(false);
 
   // 实时同步 CSS 变量
   useEffect(() => {
@@ -74,13 +111,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
     window.location.reload();
   };
 
-  // Discover & Focus 幻灯片图谱自动切换
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setFocusImageIndex(prev => (prev + 1) % 3);
-    }, 3000);
-    return () => clearInterval(timer);
-  }, []);
+
 
   // 滚动进入可视区域动画监听
   useEffect(() => {
@@ -169,7 +200,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
               Globaltradebuddy
             </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '24px', fontSize: '0.85rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '24px', fontSize: '1rem' }}>
             <Link 
               href="/my-graph" 
               className="sand-btn"
@@ -177,33 +208,29 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
                 textDecoration: 'none',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
                 color: '#ffffff',
                 background: 'transparent',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
+                border: 'none',
                 borderRadius: '0px',
                 padding: '6px 16px',
-                transition: 'all 0.2s'
+                transition: 'all 0.2s',
+                fontSize: '1rem'
               }}
               onMouseOver={(e) => {
-                e.currentTarget.style.borderColor = 'var(--color-accent)';
                 e.currentTarget.style.color = 'var(--color-accent)';
               }}
               onMouseOut={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
                 e.currentTarget.style.color = '#ffffff';
               }}
             >
-              <GraphIcon size={14} stroke="currentColor" />
-              个人市场图谱
+              市场图谱
             </Link>
             {userId ? (
               <>
                 {userRole === 'admin' ? (
                   <>
-                    <span style={{ color: '#ffffff', fontWeight: 400, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <CrownIcon size={14} stroke="currentColor" />
-                      管理员: <code style={{ color: 'rgba(255, 255, 255, 0.6)', fontWeight: 500 }}>{userId.substring(0, 8)}...</code>
+                    <span style={{ color: '#ffffff', fontWeight: 400 }}>
+                      管理员: <span style={{ color: 'rgba(255, 255, 255, 0.6)', fontWeight: 500 }}>{userId.substring(0, 8)}...</span>
                     </span>
                     <button 
                       onClick={() => setShowUploadModal(true)}
@@ -214,18 +241,17 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
                         gap: '6px',
                         color: '#ffffff',
                         background: 'transparent',
-                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        border: 'none',
                         borderRadius: '0px',
                         padding: '6px 16px',
                         transition: 'all 0.2s',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        fontSize: '1rem'
                       }}
                       onMouseOver={(e) => {
-                        e.currentTarget.style.borderColor = 'var(--color-accent)';
                         e.currentTarget.style.color = 'var(--color-accent)';
                       }}
                       onMouseOut={(e) => {
-                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
                         e.currentTarget.style.color = '#ffffff';
                       }}
                     >
@@ -236,10 +262,10 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
                 ) : (
                   <>
                     <span style={{ color: '#ffffff', fontWeight: 400 }}>
-                      业务员 ID: <code style={{ color: 'rgba(255, 255, 255, 0.6)', fontWeight: 500 }}>{userId.substring(0, 8)}...</code>
+                      用户: <span style={{ color: 'rgba(255, 255, 255, 0.8)', fontWeight: 500 }}>{nickname || `${userId.substring(0, 8)}...`}</span>
                     </span>
                     <span style={{
-                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      border: 'none',
                       padding: '6px 14px',
                       borderRadius: '0px',
                       color: '#ffffff',
@@ -262,18 +288,17 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
                     gap: '6px',
                     color: '#ffffff',
                     background: 'transparent',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    border: 'none',
                     borderRadius: '0px',
                     padding: '6px 16px',
                     transition: 'all 0.2s',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    fontSize: '1rem'
                   }}
                   onMouseOver={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--color-accent)';
                     e.currentTarget.style.color = 'var(--color-accent)';
                   }}
                   onMouseOut={(e) => {
-                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
                     e.currentTarget.style.color = '#ffffff';
                   }}
                 >
@@ -287,10 +312,9 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
                   <UserIcon size={14} stroke="currentColor" />
                   游客模式
                 </span>
-                <button 
-                  onClick={() => {
-                    setShowAuthModal(true);
-                  }}
+                <button
+                  id="navbar-login-btn"
+                  onClick={() => setShowAuthModal(true)}
                   className="sand-btn"
                   style={{
                     display: 'flex',
@@ -298,18 +322,17 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
                     gap: '6px',
                     color: '#ffffff',
                     background: 'transparent',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    border: 'none',
                     borderRadius: '0px',
                     padding: '6px 16px',
                     transition: 'all 0.2s',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    fontSize: '1rem'
                   }}
                   onMouseOver={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--color-accent)';
                     e.currentTarget.style.color = 'var(--color-accent)';
                   }}
                   onMouseOut={(e) => {
-                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
                     e.currentTarget.style.color = '#ffffff';
                   }}
                 >
@@ -368,7 +391,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
               color: brandWeight === 'vibrant' ? '#ffffff' : 'var(--color-text)',
               letterSpacing: '-0.02em'
             }}>
-              俯瞰全球市场结构，<br />循线追踪市场盲区
+              俯瞰全球市场结构<br />循线追踪市场盲区
             </h2>
             <p style={{
               fontSize: '1.25rem',
@@ -457,6 +480,9 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
           {/* 市场认知图谱配图 */}
           <div style={{ background: 'rgba(255, 255, 255, 0.45)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)', border: '1px solid rgba(18, 18, 18, 0.05)', borderRadius: 'var(--border-radius)', padding: '30px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '40px' }}>
             <div style={{ flex: '1 1 400px' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-accent)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '8px' }}>
+                Discover & Focus
+              </div>
               <h4 style={{ fontSize: '1.2rem', color: 'var(--color-text)', margin: '0 0 10px 0', fontWeight: 500 }}>循线追踪，绘制您的专属市场认知脑图</h4>
               <p style={{ fontSize: '0.95rem', color: 'var(--color-muted)', lineHeight: 1.6, margin: '0 0 15px 0', fontWeight: 300 }}>
                 在您的个人市场图谱中，每一份行业资讯、零售渠道、核心品类及个人笔记都被编织成清晰的知识网络。您可以通过实体之间的关联网络，向下延伸发现相近的品类或公司，向上俯瞰把握宏观结构，将市场掌握得更加透彻。
@@ -466,7 +492,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
               </span>
             </div>
             <div style={{ flex: '1 1 300px', maxWidth: '480px', borderRadius: 'var(--border-radius)', overflow: 'hidden', border: '1px solid rgba(18, 18, 18, 0.08)', boxShadow: '0 8px 32px rgba(0,0,0,0.02)' }}>
-              <img src="/images/market_structure_network.jpg" alt="市场认知脑图" style={{ width: '100%', display: 'block' }} />
+              <img src="/images/discover_focus_panorama.jpg" alt="Discover & Focus" style={{ width: '100%', display: 'block' }} />
             </div>
           </div>
         </section>
@@ -479,111 +505,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
           background: 'transparent',
           borderRadius: '0px'
         }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '30px', alignItems: 'center', marginBottom: '50px' }}>
-            <div style={{ flex: '1 1 500px' }}>
-              <h2 className="font-editorial" style={{
-                fontSize: '2.8rem',
-                fontWeight: 400,
-                margin: '0 0 16px 0',
-                color: 'var(--color-text)',
-                letterSpacing: '-0.015em'
-              }}>
-                Discover & Focus
-              </h2>
-              <p style={{ fontSize: '1.05rem', color: 'var(--color-muted)', margin: 0, fontWeight: 300, lineHeight: 1.6 }}>
-                探索大厅已发布跨国品类与渠道洞察报告，支持按行业、国家多维度筛选。帮助从业人员摆脱信息茧房，精准把握全球市场趋势与准入规则。
-              </p>
-            </div>
-            <div style={{ 
-              flex: '1 1 320px', 
-              maxWidth: '480px', 
-              display: 'flex', 
-              flexDirection: 'column', 
-              gap: '12px' 
-            }}>
-              <div style={{ 
-                position: 'relative',
-                width: '100%',
-                height: '240px',
-                borderRadius: 'var(--border-radius)', 
-                overflow: 'hidden', 
-                border: '1px solid rgba(18, 18, 18, 0.08)', 
-                boxShadow: '0 8px 32px rgba(0,0,0,0.02)',
-                background: '#0d1117'
-              }}>
-                {/* 第一张：全景远视图 */}
-                <img 
-                  src="/images/discover_focus_panorama.jpg" 
-                  alt="全景远视图" 
-                  style={{ 
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%', 
-                    height: '100%',
-                    objectFit: 'cover',
-                    transition: 'opacity 0.6s ease-in-out',
-                    opacity: focusImageIndex === 0 ? 1 : 0,
-                    zIndex: focusImageIndex === 0 ? 2 : 1
-                  }} 
-                />
-                {/* 第二张：选中橙色节点 */}
-                <img 
-                  src="/images/discover_focus_select_orange.jpg" 
-                  alt="选中一级二级橙色节点" 
-                  style={{ 
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%', 
-                    height: '100%',
-                    objectFit: 'cover',
-                    transition: 'opacity 0.6s ease-in-out',
-                    opacity: focusImageIndex === 1 ? 1 : 0,
-                    zIndex: focusImageIndex === 1 ? 2 : 1
-                  }} 
-                />
-                {/* 第三张：选中灰色节点 */}
-                <img 
-                  src="/images/discover_focus_select_grey.jpg" 
-                  alt="选中一级二级灰色节点" 
-                  style={{ 
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%', 
-                    height: '100%',
-                    objectFit: 'cover',
-                    transition: 'opacity 0.6s ease-in-out',
-                    opacity: focusImageIndex === 2 ? 1 : 0,
-                    zIndex: focusImageIndex === 2 ? 2 : 1
-                  }} 
-                />
-              </div>
 
-              {/* 幻灯片指示点 */}
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '4px' }}>
-                {[0, 1, 2].map((idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setFocusImageIndex(idx)}
-                    style={{
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      padding: 0,
-                      border: 'none',
-                      cursor: 'pointer',
-                      background: focusImageIndex === idx ? 'var(--color-accent)' : 'rgba(18, 18, 18, 0.15)',
-                      transition: 'background 0.3s, transform 0.2s',
-                      transform: focusImageIndex === idx ? 'scale(1.2)' : 'scale(1)'
-                    }}
-                    aria-label={`切换到图片 ${idx + 1}`}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
 
           <ReportList
             reports={showAllReports ? reports : reports.slice(0, 6)}
@@ -593,6 +515,12 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
             onUnlockSuccess={(newQuota, unlockedReportId) => {
               setQuota(newQuota);
               setReports(prev => prev.map(r => r.id === unlockedReportId ? { ...r, isUnlocked: true } : r));
+            }}
+            onDeleteReport={(reportId) => {
+              setReports(prev => prev.filter(r => r.id !== reportId));
+            }}
+            onFavoriteToggle={(reportId, isFavorited) => {
+              setReports(prev => prev.map(r => r.id === reportId ? { ...r, isFavorited } : r));
             }}
           />
 
@@ -663,17 +591,89 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
             </div>
 
             {/* 邀请裂变机制 */}
-            <div className="float-on-hover" style={{ background: 'rgba(255, 255, 255, 0.45)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)', border: '1px solid rgba(18, 18, 18, 0.05)', padding: '24px', borderRadius: 'var(--border-radius)', display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
-              <div style={{ background: 'var(--bg-main)', border: '1px solid rgba(18, 18, 18, 0.08)', padding: '12px', borderRadius: '0px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span style={{ fontSize: '1.5rem' }}>🤝</span>
+            <div className="float-on-hover" style={{ 
+              background: 'rgba(255, 255, 255, 0.45)', 
+              backdropFilter: 'blur(15px)', 
+              WebkitBackdropFilter: 'blur(15px)', 
+              border: '1px solid rgba(18, 18, 18, 0.05)', 
+              padding: '24px', 
+              borderRadius: 'var(--border-radius)', 
+              display: 'flex', 
+              gap: '20px', 
+              alignItems: 'flex-start',
+              flexDirection: 'column'
+            }}>
+              <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+                <div style={{ background: 'var(--bg-main)', border: '1px solid rgba(18, 18, 18, 0.08)', padding: '12px', borderRadius: '0px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span style={{ fontSize: '1.5rem' }}>🤝</span>
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 500, margin: '0 0 8px 0', color: 'var(--color-text)' }}>
+                    推荐同行加入：共同免费获取额度
+                  </h3>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)', lineHeight: 1.6, margin: 0, fontWeight: 300 }}>
+                    通过分享您的专属邀请链接，推荐同行注册。每成功推荐一位用户，您与新注册用户均可获赠额外的免费报告解锁额度，实现双赢。
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 500, margin: '0 0 8px 0', color: 'var(--color-text)' }}>
-                  推荐同行加入：共同免费获取额度
-                </h3>
-                <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)', lineHeight: 1.6, margin: 0, fontWeight: 300 }}>
-                  通过分享您的专属邀请链接，推荐同行注册。每成功推荐一位用户，您与新注册用户均可获赠额外的免费报告解锁额度，实现双赢。
-                </p>
+              
+              <div style={{ width: '100%', marginTop: '8px' }}>
+                {userId ? (
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <input
+                      type="text"
+                      readOnly
+                      value={`${typeof window !== 'undefined' ? window.location.origin : ''}/?invite=${userId}`}
+                      style={{
+                        flex: 1,
+                        background: 'rgba(255, 255, 255, 0.65)',
+                        border: '1px solid rgba(18, 18, 18, 0.08)',
+                        borderRadius: '0px',
+                        padding: '8px 12px',
+                        fontSize: '0.8rem',
+                        color: 'var(--color-muted)',
+                        outline: 'none'
+                      }}
+                    />
+                    <button
+                      onClick={() => {
+                        const link = `${window.location.origin}/?invite=${userId}`;
+                        navigator.clipboard.writeText(link)
+                          .then(() => alert('🎉 专属邀请链接已复制到剪贴板！快发给同行好友吧。'))
+                          .catch(() => alert('复制失败，请手动选择输入框内容进行复制。'));
+                      }}
+                      className="sand-btn"
+                      style={{
+                        padding: '8px 16px',
+                        fontSize: '0.8rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      复制链接
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      const loginBtn = document.getElementById('navbar-login-btn');
+                      if (loginBtn) {
+                        loginBtn.click();
+                      } else {
+                        alert('请先在页面右上角登录后再生成专属邀请链接');
+                      }
+                    }}
+                    className="sand-btn"
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      textAlign: 'center'
+                    }}
+                  >
+                    🔐 登录后生成我的专属邀请链接
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -686,78 +686,80 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
           margin: '0 auto',
           borderTop: 'none'
         }}>
-          {/* 新增：Call to Action (行动呼吁) 注册引导区 */}
-          <div style={{
-            background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.01) 0%, rgba(255, 255, 255, 0.04) 100%)',
-            border: '1px solid rgba(18, 18, 18, 0.05)',
-            borderRadius: 'var(--border-radius)',
-            padding: '60px 40px',
-            textAlign: 'center',
-            marginTop: '60px',
-            marginBottom: '40px',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.01)'
-          }}>
-            <h2 className="font-editorial" style={{
-              fontSize: '2.2rem',
-              fontWeight: 400,
-              margin: '0 0 16px 0',
-              color: 'var(--color-text)',
-              letterSpacing: '-0.5px'
+          {/* 新增：Call to Action (行动呼吁) 注册引导区 - 已登录状态下自动隐藏 */}
+          {!userId && (
+            <div style={{
+              background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.01) 0%, rgba(255, 255, 255, 0.04) 100%)',
+              border: '1px solid rgba(18, 18, 18, 0.05)',
+              borderRadius: 'var(--border-radius)',
+              padding: '60px 40px',
+              textAlign: 'center',
+              marginTop: '60px',
+              marginBottom: '40px',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.01)'
             }}>
-              突破认知边界，即刻开启您的全球市场洞察之旅
-            </h2>
-            <p style={{ fontSize: '1rem', color: 'var(--color-muted)', maxWidth: '580px', margin: '0 auto 36px auto', fontWeight: 300, lineHeight: 1.6 }}>
-              免费注册账号，即刻获取专属初始额度。俯瞰全球品类动态，通过市场图谱实现循线追踪，解锁更清晰的出海决策力。
-            </p>
+              <h2 className="font-editorial" style={{
+                fontSize: '2.2rem',
+                fontWeight: 400,
+                margin: '0 0 16px 0',
+                color: 'var(--color-text)',
+                letterSpacing: '-0.5px'
+              }}>
+                突破认知边界，即刻开启您的全球市场洞察之旅
+              </h2>
+              <p style={{ fontSize: '1rem', color: 'var(--color-muted)', maxWidth: '580px', margin: '0 auto 36px auto', fontWeight: 300, lineHeight: 1.6 }}>
+                免费注册账号，即刻获取专属初始额度。俯瞰全球品类动态，通过市场图谱实现循线追踪，解锁更清晰的出海决策力。
+              </p>
 
-            <form onSubmit={handleSubscribe} style={{
-              display: 'flex',
-              gap: '12px',
-              maxWidth: '480px',
-              margin: '0 auto',
-              position: 'relative',
-              zIndex: 5
-            }}>
-              <input 
-                type="email" 
-                required
-                value={emailInput}
-                onChange={(e) => setEmailInput(e.target.value)}
-                placeholder="输入您的业务邮箱" 
-                style={{
-                  flex: 1,
-                  padding: '16px 24px',
-                  borderRadius: '0px',
-                  background: 'var(--bg-main)',
-                  border: '1px solid rgba(18, 18, 18, 0.15)',
-                  color: 'var(--color-text)',
-                  outline: 'none',
-                  fontSize: '0.95rem',
-                  fontWeight: 300,
-                  transition: 'box-shadow 0.2s'
-                }}
-                onFocus={(e) => e.target.style.boxShadow = '0 0 0 2px var(--color-accent)'}
-                onBlur={(e) => e.target.style.boxShadow = 'none'}
-              />
-              <button 
-                type="submit"
-                className="sand-btn"
-                style={{
-                  padding: '16px 36px',
-                  fontSize: '0.95rem',
-                  background: 'var(--color-accent)',
-                  border: 'none',
-                  color: '#ffffff',
-                  borderRadius: '0px',
-                  fontWeight: 500,
-                  transition: 'all 0.2s',
-                  cursor: 'pointer'
-                }}
-              >
-                免费注册体验
-              </button>
-            </form>
-          </div>
+              <form onSubmit={handleSubscribe} style={{
+                display: 'flex',
+                gap: '12px',
+                maxWidth: '480px',
+                margin: '0 auto',
+                position: 'relative',
+                zIndex: 5
+              }}>
+                <input 
+                  type="email" 
+                  required
+                  value={emailInput}
+                  onChange={(e) => setEmailInput(e.target.value)}
+                  placeholder="输入您的业务邮箱" 
+                  style={{
+                    flex: 1,
+                    padding: '16px 24px',
+                    borderRadius: '0px',
+                    background: 'var(--bg-main)',
+                    border: '1px solid rgba(18, 18, 18, 0.15)',
+                    color: 'var(--color-text)',
+                    outline: 'none',
+                    fontSize: '0.95rem',
+                    fontWeight: 300,
+                    transition: 'box-shadow 0.2s'
+                  }}
+                  onFocus={(e) => e.target.style.boxShadow = '0 0 0 2px var(--color-accent)'}
+                  onBlur={(e) => e.target.style.boxShadow = 'none'}
+                />
+                <button 
+                  type="submit"
+                  className="sand-btn"
+                  style={{
+                    padding: '16px 36px',
+                    fontSize: '0.95rem',
+                    background: 'var(--color-accent)',
+                    border: 'none',
+                    color: '#ffffff',
+                    borderRadius: '0px',
+                    fontWeight: 500,
+                    transition: 'all 0.2s',
+                    cursor: 'pointer'
+                  }}
+                >
+                  免费注册体验
+                </button>
+              </form>
+            </div>
+          )}
 
           {/* 极简安全与合规背书 */}
           <div style={{ 
@@ -812,57 +814,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
         onUploadSuccess={() => window.location.reload()} 
       />
 
-      {/* 浮动调色定制器入口 */}
-      <button
-        onClick={() => setShowCustomizer(!showCustomizer)}
-        className="accent-glow animate-pulse"
-        style={{
-          position: 'fixed',
-          bottom: '30px',
-          right: '30px',
-          zIndex: 1050,
-          width: '56px',
-          height: '56px',
-          borderRadius: '0px',
-          background: 'var(--color-accent)',
-          border: 'none',
-          cursor: 'pointer',
-          boxShadow: '0 8px 32px rgba(255, 100, 30, 0.3)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#ffffff',
-          transition: 'all 0.3s cubic-bezier(0.25, 1, 0.22, 1)'
-        }}
-        aria-label="打开调色板"
-      >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 14.7255 3.09032 17.1962 4.85857 19C5.34484 19.4863 5.34484 20.2753 4.85857 20.7616L4.70711 20.913C4.31658 21.3035 4.31658 21.9367 4.70711 22.3272C5.09763 22.7177 5.7308 22.7177 6.12132 22.3272L6.27278 22.1757C6.75905 21.6895 7.54807 21.6895 8.03434 22.1757C9.2384 22.7153 10.5843 23 12 23" />
-          <circle cx="7.5" cy="10.5" r="1.5" fill="currentColor" />
-          <circle cx="11.5" cy="7.5" r="1.5" fill="currentColor" />
-          <circle cx="16.5" cy="9.5" r="1.5" fill="currentColor" />
-          <circle cx="15.5" cy="14.5" r="1.5" fill="currentColor" />
-        </svg>
-      </button>
 
-      <ThemeCustomizer 
-        isOpen={showCustomizer}
-        onClose={() => setShowCustomizer(false)}
-        accentColor={accentColor}
-        setAccentColor={setAccentColor}
-        bgSub={bgSub}
-        setBgSub={setBgSub}
-        ambientOpacity={ambientOpacity}
-        setAmbientOpacity={setAmbientOpacity}
-        ambientBlur={ambientBlur}
-        setAmbientBlur={setAmbientBlur}
-        ambientScale={ambientScale}
-        setAmbientScale={setAmbientScale}
-        ambientBlendMode={ambientBlendMode}
-        setAmbientBlendMode={setAmbientBlendMode}
-        brandWeight={brandWeight}
-        setBrandWeight={setBrandWeight}
-      />
     </div>
   );
 }
@@ -879,13 +831,15 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     let userId: string | null = null;
     let userRole = 'guest';
     let freeQuota = 0;
+    let nickname = '';
 
     if (cookieUserId) {
-      const userRes = await dbClient.query('SELECT id, role, free_quota FROM users WHERE id = $1', [cookieUserId]);
+      const userRes = await dbClient.query('SELECT id, role, free_quota, nickname FROM users WHERE id = $1', [cookieUserId]);
       if (userRes.rows.length > 0) {
         userId = userRes.rows[0].id;
         userRole = userRes.rows[0].role;
         freeQuota = userRes.rows[0].free_quota;
+        nickname = userRes.rows[0].nickname || '';
       }
     }
 
@@ -894,7 +848,12 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
     if (userId) {
       if (userRole === 'admin') {
-        const reportsRes = await dbClient.query(`SELECT id, title, category, market_region, summary FROM reports`);
+        const reportsRes = await dbClient.query(`
+          SELECT r.id, r.title, r.category, r.market_region, r.summary,
+                 EXISTS(SELECT 1 FROM favorites f WHERE f.user_id = $1 AND f.report_id = r.id) as is_favorited
+          FROM reports r
+          ORDER BY r.created_at DESC
+        `, [userId]);
         const nodes = reportsRes.rows;
         const reportIds = nodes.map((n: any) => n.id);
         
@@ -916,14 +875,16 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
           category: row.category,
           market_region: row.market_region,
           summary: row.summary,
-          isUnlocked: true
+          isUnlocked: true,
+          isFavorited: row.is_favorited
         }));
       } else {
         graphData = await getUserGraph(userId, dbClient);
         
         const reportsRes = await dbClient.query(`
           SELECT r.id, r.title, r.category, r.market_region, r.summary,
-                 EXISTS(SELECT 1 FROM unlocks u WHERE u.user_id = $1 AND u.report_id = r.id) as is_unlocked
+                 EXISTS(SELECT 1 FROM unlocks u WHERE u.user_id = $1 AND u.report_id = r.id) as is_unlocked,
+                 EXISTS(SELECT 1 FROM favorites f WHERE f.user_id = $1 AND f.report_id = r.id) as is_favorited
           FROM reports r
           ORDER BY r.created_at DESC
           LIMIT 30
@@ -935,7 +896,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
           category: row.category,
           market_region: row.market_region,
           summary: row.summary,
-          isUnlocked: row.is_unlocked
+          isUnlocked: row.is_unlocked,
+          isFavorited: row.is_favorited
         }));
       }
     } else {
@@ -948,11 +910,12 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         category: row.category,
         market_region: row.market_region,
         summary: row.summary,
-        isUnlocked: false
+        isUnlocked: false,
+        isFavorited: false
       }));
     }
 
-    context.res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
+    context.res.setHeader('Cache-Control', 'no-store, must-revalidate');
 
     return {
       props: {
@@ -960,7 +923,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         allReports,
         userId: userId || '',
         userRole,
-        freeQuota
+        freeQuota,
+        nickname
       }
     };
   } catch (err) {
@@ -971,7 +935,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         allReports: [],
         userId: '',
         userRole: 'guest',
-        freeQuota: 0
+        freeQuota: 0,
+        nickname: ''
       }
     };
   } finally {

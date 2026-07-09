@@ -18,7 +18,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // 只用账号查询，不把密码放入 SQL 条件（防止时序攻击）
     const userRes = await dbClient.query(
-      `SELECT id, phone_number, email, role, free_quota, password 
+      `SELECT id, phone_number, email, role, free_quota, password, nickname 
        FROM users 
        WHERE phone_number = $1 OR email = $1`,
       [phoneOrEmail]
@@ -48,6 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         email: user.email,
         role: user.role,
         freeQuota: user.free_quota,
+        nickname: user.nickname
       },
     });
   } catch (err: any) {

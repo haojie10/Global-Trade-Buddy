@@ -8,6 +8,7 @@ export interface PlatformReport {
   market_region: string;
   summary: string;
   isUnlocked: boolean;
+  isFavorited?: boolean;
 }
 
 export function filterReports(
@@ -41,9 +42,11 @@ interface ReportListProps {
   userRole: string;
   quota: number;
   onUnlockSuccess: (newQuota: number, unlockedReportId: string) => void;
+  onDeleteReport?: (reportId: string) => void;
+  onFavoriteToggle?: (reportId: string, isFavorited: boolean) => void;
 }
 
-export default function ReportList({ reports, userId, userRole, quota, onUnlockSuccess }: ReportListProps) {
+export default function ReportList({ reports, userId, userRole, quota, onUnlockSuccess, onDeleteReport, onFavoriteToggle }: ReportListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedRegion, setSelectedRegion] = useState('All');
@@ -85,6 +88,59 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
       }
     } catch (err) {
       alert('连接支付网关失败');
+    }
+  };
+
+  const handleDelete = async (e: React.MouseEvent, reportId: string, reportTitle: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!window.confirm(`确定要彻底删除报告《${reportTitle}》吗？\n删除后所有用户的解锁记录和该报告的图谱拓扑关系将自动被一并清理，此操作不可撤销。`)) {
+      return;
+    }
+    try {
+      const res = await fetch('/api/admin/reports/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reportId }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert('报告删除成功！');
+        if (onDeleteReport) {
+          onDeleteReport(reportId);
+        }
+      } else {
+        alert(data.error || '删除失败，请重试');
+      }
+    } catch (err) {
+      alert('连接删除服务失败');
+    }
+  };
+
+  const handleToggleFavorite = async (e: React.MouseEvent, reportId: string, currentFav: boolean) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!userId) {
+      alert('请先登录后收藏报告');
+      return;
+    }
+    try {
+      const res = await fetch('/api/user/favorite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reportId }),
+      });
+      const data = await res.json();
+      if (res.ok && (data.status === 'added' || data.status === 'removed')) {
+        const isNowFav = data.status === 'added';
+        if (onFavoriteToggle) {
+          onFavoriteToggle(reportId, isNowFav);
+        }
+      } else {
+        alert(data.error || '收藏操作失败');
+      }
+    } catch (err) {
+      alert('连接收藏服务失败');
     }
   };
 
@@ -189,13 +245,91 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
                     }}>
                       {report.category === 'customer' ? '客户洞察' : '品类分析'}
                     </span>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--color-muted)', fontWeight: 300, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                        <circle cx="12" cy="10" r="3" />
-                      </svg>
-                      {report.market_region}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {/* 收藏按钮（星星样式） */}
+                      <button
+                        onClick={(e) => handleToggleFavorite(e, report.id, !!report.isFavorited)}
+                        title={report.isFavorited ? '取消收藏' : '收藏报告'}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          padding: '4px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: report.isFavorited ? '#eab308' : 'rgba(18, 18, 18, 0.3)',
+                          borderRadius: '4px',
+                          transition: 'all 0.2s',
+                          outline: 'none'
+                        }}
+                        onMouseOver={(e) => {
+                          if (!report.isFavorited) {
+                            e.currentTarget.style.color = '#eab308';
+                          }
+                        }}
+                        onMouseOut={(e) => {
+                          if (!report.isFavorited) {
+                            e.currentTarget.style.color = 'rgba(18, 18, 18, 0.3)';
+                          }
+                        }}
+                      >
+                        <svg 
+                          width="14" 
+                          height="14" 
+                          viewBox="0 0 24 24" 
+                          fill={report.isFavorited ? 'currentColor' : 'none'} 
+                          stroke="currentColor" 
+                          strokeWidth="1.8" 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round"
+                        >
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                      </button>
+
+                      <span style={{ fontSize: '0.8rem', color: 'var(--color-muted)', fontWeight: 300, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                          <circle cx="12" cy="10" r="3" />
+                        </svg>
+                        {report.market_region}
+                      </span>
+                      {userRole === 'admin' && (
+                        <button
+                          onClick={(e) => handleDelete(e, report.id, report.title)}
+                          title="删除此报告"
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            padding: '4px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'rgba(18, 18, 18, 0.4)',
+                            borderRadius: '4px',
+                            transition: 'all 0.2s',
+                            outline: 'none'
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.color = '#ef4444';
+                            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)';
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.color = 'rgba(18, 18, 18, 0.4)';
+                            e.currentTarget.style.background = 'none';
+                          }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            <line x1="10" y1="11" x2="10" y2="17" />
+                            <line x1="14" y1="11" x2="14" y2="17" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <h4 style={{
                     margin: '0 0 10px 0',

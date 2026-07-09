@@ -40,8 +40,9 @@ async function unlockHandler(req: NextApiRequest, res: NextApiResponse, dbClient
     await dbClient.query(`INSERT INTO relations (report_id_a, report_id_b, relation_key) VALUES ($1, $2, '铝合金轮毂')`, [id1, id3]);
     await dbClient.query(`INSERT INTO relations (report_id_a, report_id_b, relation_key) VALUES ($1, $2, '铝合金轮毂')`, [id2, id3]);
 
-    // 3. 为当前用户解锁这三篇报告
+    // 3. 为当前用户解锁这三篇报告并自动收藏以加载入图谱
     await dbClient.query(`INSERT INTO unlocks (user_id, report_id) VALUES ($1, $2), ($1, $3), ($1, $4) ON CONFLICT DO NOTHING`, [userId, id1, id2, id3]);
+    await dbClient.query(`INSERT INTO favorites (user_id, report_id) VALUES ($1, $2), ($1, $3), ($1, $4) ON CONFLICT DO NOTHING`, [userId, id1, id2, id3]);
 
     await dbClient.query('COMMIT');
     return res.status(200).json({ success: true });
@@ -67,9 +68,13 @@ async function unlockHandler(req: NextApiRequest, res: NextApiResponse, dbClient
       [userId]
     );
 
-    // 写入解锁记录
+    // 写入解锁记录并同步写入收藏表以显示在图谱中
     await dbClient.query(
       'INSERT INTO unlocks (user_id, report_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      [userId, reportId]
+    );
+    await dbClient.query(
+      'INSERT INTO favorites (user_id, report_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
       [userId, reportId]
     );
 

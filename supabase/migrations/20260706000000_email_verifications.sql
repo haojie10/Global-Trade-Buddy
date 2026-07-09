@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS email_verifications (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(100) NOT NULL,
+  code VARCHAR(6) NOT NULL,
+  expired_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);

@@ -24,6 +24,13 @@ export async function getReportDetail(userId: string, reportId: string, dbClient
 
   const isUnlocked = unlockRes.rows.length > 0;
 
+  // 查询收藏状态
+  const favRes = await dbClient.query(
+    'SELECT id FROM favorites WHERE user_id = $1 AND report_id = $2',
+    [userId, reportId]
+  );
+  const isFavorite = favRes.rows.length > 0;
+
   return {
     id: report.id,
     title: report.title,
@@ -31,6 +38,7 @@ export async function getReportDetail(userId: string, reportId: string, dbClient
     market_region: report.market_region,
     summary: report.summary,
     isUnlocked,
+    isFavorite,
     // 核心安全隔离：如果没有解锁，强制为 null，防止任何敏感字段返回给前台
     content_html: isUnlocked ? report.content_html : null,
   };

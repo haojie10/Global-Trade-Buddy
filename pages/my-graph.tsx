@@ -24,19 +24,18 @@ interface MyGraphProps {
   userRole: string;
   freeQuota: number;
   unlockedReports: any[];
+  nickname?: string;
 }
 
-export default function MyGraphPage({ graphData, userId, userRole, freeQuota, unlockedReports: initialUnlockedReports }: MyGraphProps) {
+export default function MyGraphPage({ graphData, userId, userRole, freeQuota, unlockedReports: initialUnlockedReports, nickname }: MyGraphProps) {
   const [quota, setQuota] = useState(freeQuota);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   // 演示模式及样式微调状态
   // 去掉模拟演示，默认直接加载已解锁真实数据
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [nodeSizeScale, setNodeSizeScale] = useState(0.5);
   const [lineWidthScale, setLineWidthScale] = useState(1.9);
-  const [speedScale, setSpeedScale] = useState(1.8);
+  const [speedScale, setSpeedScale] = useState(0.0);
   const [customColors, setCustomColors] = useState<Record<string, string>>({
     competitor: '#ff641e',
     supplier: '#ff641e',
@@ -115,37 +114,7 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
     );
   }
 
-  const handleInitSeedData = async () => {
-    if (loading) return;
-    setLoading(true);
-    setError('');
 
-    try {
-      const res = await fetch('/api/user/unlock-action', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId,
-          reportId: 'seed-action',
-        }),
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        // 解锁并初始化种子数据成功，重新载入页面数据以显示图谱
-        window.location.reload();
-      } else {
-        setError(data.error || '生成种子数据失败，请重试');
-      }
-    } catch (err) {
-      console.error(err);
-      setError('网络请求失败，请稍后重试');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // 1. 动态刷新图谱核心数据
   const refreshGraphData = async () => {
@@ -251,14 +220,7 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
           margin: '0 auto',
           width: '100%'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4.5 16.5c-1.5 1.26-2.5 3.19-2.5 5.5h20c0-2.31-1-4.24-2.5-5.5" />
-              <circle cx="12" cy="12" r="2" />
-              <circle cx="12" cy="2" r="1" />
-              <circle cx="4" cy="16" r="1" />
-              <circle cx="20" cy="16" r="1" />
-            </svg>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
             <span style={{
               fontSize: '1.25rem',
               fontWeight: 400,
@@ -268,7 +230,7 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
               市场图谱
             </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px', fontSize: '0.9rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px', fontSize: '1rem' }}>
 
             <Link 
               href="/" 
@@ -277,39 +239,28 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
                 textDecoration: 'none',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
                 color: '#ffffff',
                 background: 'transparent',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
+                border: 'none',
                 borderRadius: '0px',
                 padding: '6px 16px',
-                transition: 'all 0.2s'
+                transition: 'all 0.2s',
+                fontSize: '1rem'
               }}
               onMouseOver={(e) => {
-                e.currentTarget.style.borderColor = 'var(--color-accent)';
                 e.currentTarget.style.color = 'var(--color-accent)';
               }}
               onMouseOut={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
                 e.currentTarget.style.color = '#ffffff';
               }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="2" y1="12" x2="22" y2="12" />
-                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-              </svg>
-              返回平台报告大厅
+              平台主页
             </Link>
-            <span style={{ color: '#ffffff', fontWeight: 400, display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
-              业务员 ID: <code style={{ color: 'rgba(255, 255, 255, 0.6)', fontWeight: 500 }}>{userId.substring(0, 8)}...</code>
+            <span style={{ color: '#ffffff', fontWeight: 400 }}>
+              用户: <span style={{ color: 'rgba(255, 255, 255, 0.8)', fontWeight: 500 }}>{nickname || `${userId.substring(0, 8)}...`}</span>
             </span>
             <span style={{
-              border: '1px solid rgba(255, 255, 255, 0.15)',
+              border: 'none',
               padding: '6px 14px',
               borderRadius: '0px',
               color: '#ffffff',
@@ -467,94 +418,7 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
                 activeRelations={activeRelations}
               />
 
-              {/* 右下角图谱样式与颜色自定义设置面板 (Scheme B 暖乳白) */}
-              <div style={{
-                position: 'absolute',
-                bottom: '20px',
-                right: '20px',
-                background: 'rgba(246, 246, 246, 0.75)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
-                borderRadius: '0px',
-                padding: '16px',
-                width: '180px',
-                boxShadow: '0 12px 30px rgba(0, 0, 0, 0.01)',
-                zIndex: 10,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '10px',
-                border: '1px solid rgba(18, 18, 18, 0.08)'
-              }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-muted)', letterSpacing: '0.5px' }}>图谱样式设置</div>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: 'var(--color-muted)' }}>
-                    <span>节点大小</span>
-                    <span>{nodeSizeScale.toFixed(1)}x</span>
-                  </div>
-                  <input 
-                    type="range" 
-                    min="0.5" 
-                    max="2.0" 
-                    step="0.1" 
-                    value={nodeSizeScale} 
-                    onChange={e => setNodeSizeScale(parseFloat(e.target.value))}
-                    style={{ accentColor: 'var(--color-accent)', cursor: 'pointer', width: '100%' }}
-                  />
-                </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: 'var(--color-muted)' }}>
-                    <span>线缆粗细</span>
-                    <span>{lineWidthScale.toFixed(1)}x</span>
-                  </div>
-                  <input 
-                    type="range" 
-                    min="0.5" 
-                    max="2.0" 
-                    step="0.1" 
-                    value={lineWidthScale} 
-                    onChange={e => setLineWidthScale(parseFloat(e.target.value))}
-                    style={{ accentColor: 'var(--color-accent)', cursor: 'pointer', width: '100%' }}
-                  />
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: 'var(--color-muted)' }}>
-                    <span>粒子流动</span>
-                    <span>{speedScale.toFixed(1)}x</span>
-                  </div>
-                  <input 
-                    type="range" 
-                    min="0.0" 
-                    max="2.0" 
-                    step="0.2" 
-                    value={speedScale} 
-                    onChange={e => setSpeedScale(parseFloat(e.target.value))}
-                    style={{ accentColor: 'var(--color-accent)', cursor: 'pointer', width: '100%' }}
-                  />
-                </div>
-
-                <div style={{ borderTop: '1px solid rgba(160, 109, 68, 0.08)', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--color-muted)' }}>线缆颜色</div>
-                  {[
-                    { key: 'competitor', label: '竞争关系' },
-                    { key: 'supplier', label: '供销关系' },
-                    { key: 'operation', label: '经营关系' },
-                    { key: 'mention', label: '涉及关系' }
-                  ].map(item => (
-                    <div key={item.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.65rem' }}>
-                      <span style={{ color: 'var(--color-text)' }}>{item.label}</span>
-                      <input 
-                        type="color" 
-                        value={customColors[item.key]} 
-                        onChange={e => setCustomColors(prev => ({ ...prev, [item.key]: e.target.value }))}
-                        style={{ border: 'none', padding: 0, width: '18px', height: '18px', cursor: 'pointer', background: 'none' }}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
           ) : (
             <div style={{
@@ -606,31 +470,10 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
                 fontSize: '0.95rem',
                 color: '#475569',
                 lineHeight: 1.6,
-                marginBottom: '36px'
+                marginBottom: '0px'
               }}>
                 您的个人知识拓扑网络目前还是空的。在这里，您可以通过在报告大厅解锁和阅读行业客户与品类报告，自动生成互相关联的实体知识卡片网络，帮您洞察跨区域客户之间的隐藏商机。
               </p>
-              
-              <button
-                onClick={handleInitSeedData}
-                disabled={loading}
-                className="water-drop-btn"
-                style={{
-                  padding: '14px 32px',
-                  fontSize: '0.95rem',
-                  fontWeight: 500,
-                  opacity: loading ? 0.7 : 1,
-                  cursor: loading ? 'not-allowed' : 'pointer'
-                }}
-              >
-                {loading ? '正在生成专属知识节点...' : '快速生成演示图谱并解锁首批报告'}
-              </button>
-
-              {error && (
-                <div style={{ marginTop: '16px', color: '#ef4444', fontSize: '0.85rem', fontWeight: 600 }}>
-                  {error}
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -657,6 +500,9 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
             onFetchEntityDetail={fetchEntityDetail}
             onDeleteNodeSuccess={() => setSelectedNode(null)}
             allNodes={activeGraphData.nodes}
+            userId={userId}
+            quota={quota}
+            onQuotaChange={(q) => setQuota(q)}
           />
         </div>
 
@@ -690,6 +536,12 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
             userRole={userRole}
             quota={quota}
             onUnlockSuccess={() => {}}
+            onDeleteReport={(reportId) => {
+              setUnlockedReports(prev => prev.filter(r => r.id !== reportId));
+            }}
+            onFavoriteToggle={(reportId, isFavorited) => {
+              setUnlockedReports(prev => prev.map(r => r.id === reportId ? { ...r, isFavorited } : r));
+            }}
           />
         </section>
       )}
@@ -709,13 +561,15 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     let userId: string | null = null;
     let userRole = 'guest';
     let freeQuota = 0;
+    let nickname = '';
 
     if (cookieUserId) {
-      const userRes = await dbClient.query('SELECT id, role, free_quota FROM users WHERE id = $1', [cookieUserId]);
+      const userRes = await dbClient.query('SELECT id, role, free_quota, nickname FROM users WHERE id = $1', [cookieUserId]);
       if (userRes.rows.length > 0) {
         userId = userRes.rows[0].id;
         userRole = userRes.rows[0].role;
         freeQuota = userRes.rows[0].free_quota;
+        nickname = userRes.rows[0].nickname || '';
       }
     }
 
@@ -727,23 +581,42 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
       if (userRole === 'admin') {
         const reportsRes = await dbClient.query(
-          `SELECT id, title, category, market_region, summary, TRUE AS "isUnlocked" 
-           FROM reports 
-           ORDER BY created_at DESC 
-           LIMIT 10`
-        );
-        unlockedReports = reportsRes.rows;
-      } else {
-        const reportsRes = await dbClient.query(
-          `SELECT r.id, r.title, r.category, r.market_region, r.summary, TRUE AS "isUnlocked"
+          `SELECT r.id, r.title, r.category, r.market_region, r.summary, TRUE AS "isUnlocked",
+                  EXISTS(SELECT 1 FROM favorites f WHERE f.user_id = $1 AND f.report_id = r.id) as is_favorited
            FROM reports r
-           JOIN unlocks u ON r.id = u.report_id
-           WHERE u.user_id = $1
-           ORDER BY u.created_at DESC
+           ORDER BY r.created_at DESC 
            LIMIT 10`,
           [userId]
         );
-        unlockedReports = reportsRes.rows;
+        unlockedReports = reportsRes.rows.map((row: any) => ({
+          id: row.id,
+          title: row.title,
+          category: row.category,
+          market_region: row.market_region,
+          summary: row.summary,
+          isUnlocked: true,
+          isFavorited: row.is_favorited
+        }));
+      } else {
+        const reportsRes = await dbClient.query(
+          `SELECT r.id, r.title, r.category, r.market_region, r.summary, TRUE AS "isUnlocked",
+                  EXISTS(SELECT 1 FROM favorites f WHERE f.user_id = $1 AND f.report_id = r.id) as is_favorited
+           FROM reports r
+           JOIN unlocks u ON r.id = u.report_id
+           WHERE u.user_id = $1
+           ORDER BY u.unlocked_at DESC
+           LIMIT 10`,
+          [userId]
+        );
+        unlockedReports = reportsRes.rows.map((row: any) => ({
+          id: row.id,
+          title: row.title,
+          category: row.category,
+          market_region: row.market_region,
+          summary: row.summary,
+          isUnlocked: true,
+          isFavorited: row.is_favorited
+        }));
       }
     }
 
@@ -753,7 +626,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         userId: userId || '',
         userRole,
         freeQuota,
-        unlockedReports
+        unlockedReports,
+        nickname
       }
     };
   } catch (err) {
@@ -764,7 +638,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         userId: '',
         userRole: 'guest',
         freeQuota: 0,
-        unlockedReports: []
+        unlockedReports: [],
+        nickname: ''
       }
     };
   } finally {

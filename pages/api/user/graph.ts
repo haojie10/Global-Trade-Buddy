@@ -51,22 +51,15 @@ function findEntityInReport(
 
 export async function getGraphData(userId: string, userRole: string, dbClient: any) {
   let nodes: any[] = [];
-  // NOTE: 根据用户角色过滤有权限的报告，若非admin则关联 unlocks 表判定
-  if (userRole === 'admin') {
-    const res = await dbClient.query(
-      `SELECT id, title, category, market_region, summary, primary_entity_id FROM reports`
-    );
-    nodes = res.rows;
-  } else {
-    const res = await dbClient.query(
-      `SELECT r.id, r.title, r.category, r.market_region, r.summary, r.primary_entity_id 
-       FROM reports r
-       JOIN unlocks u ON r.id = u.report_id
-       WHERE u.user_id = $1`,
-      [userId]
-    );
-    nodes = res.rows;
-  }
+  // 统一逻辑：不管是普通用户还是管理员，图谱节点均取已收藏（favorites）的报告，让用户可通过收藏/取消收藏净化图谱
+  const res = await dbClient.query(
+    `SELECT r.id, r.title, r.category, r.market_region, r.summary, r.primary_entity_id 
+     FROM reports r
+     JOIN favorites f ON r.id = f.report_id
+     WHERE f.user_id = $1`,
+    [userId]
+  );
+  nodes = res.rows;
 
   if (nodes.length === 0) {
     return { nodes: [], links: [] };

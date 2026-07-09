@@ -1,4 +1,6 @@
 import { Client } from 'pg';
+import fs from 'fs';
+import path from 'path';
 
 export function createTestClient(): Client {
   return new Client({
@@ -7,6 +9,50 @@ export function createTestClient(): Client {
 }
 
 export async function cleanDatabase(client: any) {
+  // 1. 自动提取当前连接指定的 search_path，用于在云端 Supabase 支持物理 schema 隔离测试
+  const searchPathRes = await client.query('SHOW search_path');
+  const currentPath = searchPathRes.rows[0].search_path;
+  const targetSchema = currentPath.split(',')[0].trim();
+
+  // 2. 如果指定了特定的隔离 schema 且不是默认的 public/user，自动建立该隔离命名空间
+  if (targetSchema && targetSchema !== 'public' && targetSchema !== '"$user"') {
+    await client.query(`CREATE SCHEMA IF NOT EXISTS ${targetSchema}`);
+    await client.query(`SET search_path TO ${targetSchema}`);
+  }
+
+  // 3. 检测该命名空间内是否已有基本表（如 reports），若无则说明是首次使用，自动扫描 migrations 建表
+  const tableCheck = await client.query(`
+    SELECT EXISTS (
+      SELECT FROM information_schema.tables 
+      WHERE table_schema = $1 AND table_name = 'reports'
+    );
+  `, [targetSchema && targetSchema !== '"$user"' ? targetSchema : 'public']);
+
+  const tableExists = tableCheck.rows[0].exists;
+  if (!tableExists) {
+    const migrationsDir = path.join(process.cwd(), 'supabase', 'migrations');
+    if (fs.existsSync(migrationsDir)) {
+      const files = fs.readdirSync(migrationsDir)
+        .filter(f => f.endsWith('.sql'))
+        .sort(); // 按照时间戳排序
+      
+      for (const file of files) {
+        const filePath = path.join(migrationsDir, file);
+        const sql = fs.readFileSync(filePath, 'utf8');
+        try {
+          await client.query(sql);
+        } catch (err: any) {
+          // 忽略在 Supabase 云端由于非 superuser 导致无法 CREATE EXTENSION 等权限错误
+          if (!sql.includes('EXTENSION')) {
+            console.warn(`[WARN] 执行迁移 SQL 失败 (file: ${file}):`, err.message);
+          }
+        }
+      }
+    }
+  }
+
+  // 4. 重置/清空测试数据，隔离测试不影响 public 生产主表
+  await client.query('DELETE FROM email_verifications');
   await client.query('DELETE FROM notes');
   await client.query('DELETE FROM favorites');
   await client.query('DELETE FROM unlocks');
@@ -99,34 +145,36 @@ export async function createTestUser(
   client: any,
   options: {
     id?: string;
-    phoneNumber: string;
+    phoneNumber?: string;
     email?: string;
     role?: string;
     freeQuota?: number;
     password?: string;
+    nickname?: string;
   }
 ) {
   const email = options.email || null;
   const role = options.role || 'user';
   const freeQuota = options.freeQuota !== undefined ? options.freeQuota : 3;
-  const phone = options.phoneNumber;
+  const phone = options.phoneNumber || null;
   const password = options.password || null;
+  const nickname = options.nickname || '测试业务员';
 
   if (options.id) {
     const query = `
-      INSERT INTO users (id, phone_number, email, role, free_quota, password)
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING id, phone_number, email, role, free_quota
+      INSERT INTO users (id, phone_number, email, role, free_quota, password, nickname)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING id, phone_number, email, role, free_quota, nickname
     `;
-    const res = await client.query(query, [options.id, phone, email, role, freeQuota, password]);
+    const res = await client.query(query, [options.id, phone, email, role, freeQuota, password, nickname]);
     return res.rows[0];
   } else {
     const query = `
-      INSERT INTO users (phone_number, email, role, free_quota, password)
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING id, phone_number, email, role, free_quota
+      INSERT INTO users (phone_number, email, role, free_quota, password, nickname)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id, phone_number, email, role, free_quota, nickname
     `;
-    const res = await client.query(query, [phone, email, role, freeQuota, password]);
+    const res = await client.query(query, [phone, email, role, freeQuota, password, nickname]);
     return res.rows[0];
   }
 }
