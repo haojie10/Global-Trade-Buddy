@@ -1,6 +1,7 @@
 import { Client } from 'pg';
 import fs from 'fs';
 import path from 'path';
+import { encodeSession } from '../../lib/auth';
 
 export function createTestClient(): Client {
   return new Client({
@@ -17,7 +18,7 @@ export async function cleanDatabase(client: any) {
   // 2. 如果指定了特定的隔离 schema 且不是默认的 public/user，自动建立该隔离命名空间
   if (targetSchema && targetSchema !== 'public' && targetSchema !== '"$user"') {
     await client.query(`CREATE SCHEMA IF NOT EXISTS ${targetSchema}`);
-    await client.query(`SET search_path TO ${targetSchema}`);
+    await client.query(`SET search_path TO ${targetSchema}, public`);
   }
 
   // 3. 检测该命名空间内是否已有基本表（如 reports），若无则说明是首次使用，自动扫描 migrations 建表
@@ -119,7 +120,7 @@ export function mockReqRes(options: {
   } as any;
 
   if (options.session) {
-    req.cookies.gtb_session = Buffer.from(JSON.stringify(options.session)).toString('base64');
+    req.cookies.gtb_session = encodeSession(options.session);
   }
 
   let statusVal = 200;

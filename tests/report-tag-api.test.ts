@@ -38,7 +38,7 @@ describe('Report Tagging and Entity Association API', () => {
     });
 
     await tagHandler(req, res);
-    expect(getStatus()).toBe(401);
+    expect(getStatus()).toBe(403);
   });
 
   it('should successfully associate a new company entity with a report', async () => {

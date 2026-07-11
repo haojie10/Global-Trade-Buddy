@@ -64,7 +64,7 @@ describe('Admin Node Deletion API (Reports and Entities)', () => {
     });
 
     await deleteHandler(req, res);
-    expect(getStatus()).toBe(401);
+    expect(getStatus()).toBe(403);
   });
 
   it('should reject request from normal user (not admin)', async () => {

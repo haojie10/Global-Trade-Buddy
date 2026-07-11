@@ -36,7 +36,8 @@ describe('Entity Relations and Automated Inference API', () => {
         entityIdB: entBId,
         relationType: 'supplier',
         marketRegion: '俄罗斯',
-      }
+      },
+      session: { userId: '10000000-0000-0000-0000-000000000000', role: 'admin' }
     });
 
     await relationHandler(req, res);
@@ -61,7 +62,8 @@ describe('Entity Relations and Automated Inference API', () => {
           products: ['测试玩具品类'],
           regions: ['俄罗斯'],
         },
-      }
+      },
+      session: { userId: '10000000-0000-0000-0000-000000000000', role: 'admin' }
     });
 
     await uploadHandler(req, res);

@@ -57,10 +57,20 @@ describe('Graph Core API - getGraphData & Compatibility', () => {
       [reportIdA, reportIdB]
     );
 
-    // 4. 解锁信息 (普通用户仅解锁 reportIdA)
+    // 4. 解锁与收藏信息 (普通用户解锁并收藏 reportIdA)
     await dbClient.query(
       `INSERT INTO unlocks (user_id, report_id) VALUES ($1, $2)`,
       [userIdNormal, reportIdA]
+    );
+    await dbClient.query(
+      `INSERT INTO favorites (user_id, report_id) VALUES ($1, $2)`,
+      [userIdNormal, reportIdA]
+    );
+
+    // 管理员收藏所有报告以显示全量图谱
+    await dbClient.query(
+      `INSERT INTO favorites (user_id, report_id) VALUES ($1, $2), ($1, $3)`,
+      [userIdAdmin, reportIdA, reportIdB]
     );
 
     // 5. 插入实体并关联
@@ -111,8 +121,8 @@ describe('Graph Core API - getGraphData & Compatibility', () => {
   });
 
   it('should query full graph data for admin including all nodes, entities and connection attributes', async () => {
-    // 2. 管理员用户应该查到所有节点和连线，不论是否解锁
-    const data = await getGraphData('', 'admin', dbClient);
+    // 2. 管理员用户应该查到所有节点和连线，不论是否解锁（但需要先收藏）
+    const data = await getGraphData(userIdAdmin, 'admin', dbClient);
     
     const reports = data.nodes.filter(n => n.node_type === 'report');
     const entities = data.nodes.filter(n => n.node_type === 'entity');

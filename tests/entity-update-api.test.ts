@@ -64,7 +64,7 @@ describe('Entity Update and Details API', () => {
 
   it('should update entity details successfully when user is admin', async () => {
     const { req, res, getStatus, getJson } = mockReqRes({
-      cookies: { user_role: 'admin' },
+      session: { userId: '10000000-0000-0000-0000-000000000000', role: 'admin' },
       body: {
         entityId: testEntityId,
         description: '一家测试使用的编辑公司简介',

@@ -854,20 +854,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
           FROM reports r
           ORDER BY r.created_at DESC
         `, [userId]);
-        const nodes = reportsRes.rows;
-        const reportIds = nodes.map((n: any) => n.id);
-        
-        let links = [];
-        if (reportIds.length > 0) {
-          const relationsRes = await dbClient.query(
-            `SELECT report_id_a AS source, report_id_b AS target, relation_key 
-             FROM relations 
-             WHERE report_id_a = ANY($1) AND report_id_b = ANY($1)`,
-            [reportIds]
-          );
-          links = relationsRes.rows;
-        }
-        graphData = { nodes, links };
         
         allReports = reportsRes.rows.map((row: any) => ({
           id: row.id,
@@ -879,8 +865,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
           isFavorited: row.is_favorited
         }));
       } else {
-        graphData = await getUserGraph(userId, dbClient);
-        
         const reportsRes = await dbClient.query(`
           SELECT r.id, r.title, r.category, r.market_region, r.summary,
                  EXISTS(SELECT 1 FROM unlocks u WHERE u.user_id = $1 AND u.report_id = r.id) as is_unlocked,
@@ -915,7 +899,11 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       }));
     }
 
-    context.res.setHeader('Cache-Control', 'no-store, must-revalidate');
+    if (userId) {
+      context.res.setHeader('Cache-Control', 'no-store, must-revalidate');
+    } else {
+      context.res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
+    }
 
     return {
       props: {

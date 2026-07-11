@@ -52,7 +52,8 @@ describe('Entity Merge API', () => {
         sourceEntityId: entAliasId,
         targetEntityId: entMainId,
         aliasName: '儿童世界测试别名',
-      }
+      },
+      session: { userId: '10000000-0000-0000-0000-000000000000', role: 'admin' }
     });
 
     await mergeHandler(req, res);

@@ -4,12 +4,18 @@ import { createTestClient, cleanDatabase, createTestUser } from './helpers/db-te
 import checkDuplicateHandler from '../pages/api/admin/reports/check-duplicate';
 import uploadHandler from '../pages/api/admin/reports/upload';
 
+import { encodeSession } from '../lib/auth';
+
 // 模拟 Next.js NextApiRequest & NextApiResponse
-function mockRequestResponse(method: string, body: any) {
+function mockRequestResponse(method: string, body: any, session?: { userId: string, role: string }) {
   const req = {
     method,
     body,
+    cookies: {}
   } as any;
+
+  const currentSession = session || { userId: '10000000-0000-0000-0000-000000000000', role: 'admin' };
+  req.cookies.gtb_session = encodeSession(currentSession);
 
   let statusCode = 200;
   let jsonPayload: any = null;

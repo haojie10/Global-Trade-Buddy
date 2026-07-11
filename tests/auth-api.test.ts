@@ -12,6 +12,12 @@ describe('Auth API Handlers Test', () => {
     await dbClient.connect();
     // 清理测试数据库
     await cleanDatabase(dbClient);
+
+    // 写入测试邮箱验证码
+    await dbClient.query(
+      `INSERT INTO email_verifications (email, code, expired_at) 
+       VALUES ('testuser1@gtb.com', '123456', NOW() + INTERVAL '100 years')`
+    );
   });
 
   afterAll(async () => {
@@ -23,9 +29,10 @@ describe('Auth API Handlers Test', () => {
     const { req, res, getStatus, getJson } = mockReqRes({
       method: 'POST',
       body: {
-        phone: '13888880001',
+        nickname: '测试用户1',
         email: 'testuser1@gtb.com',
-        password: 'mypassword',
+        password: 'mypassword123',
+        code: '123456',
         role: 'user',
       }
     });
@@ -33,7 +40,7 @@ describe('Auth API Handlers Test', () => {
     await signupHandler(req, res);
     expect(getStatus()).toBe(200);
     expect(getJson().success).toBe(true);
-    expect(getJson().user.phoneNumber).toBe('13888880001');
+    expect(getJson().user.email).toBe('testuser1@gtb.com');
     expect(getJson().user.role).toBe('user');
   });
 
@@ -41,9 +48,10 @@ describe('Auth API Handlers Test', () => {
     const { req, res, getStatus } = mockReqRes({
       method: 'POST',
       body: {
-        phone: '13888880002',
+        nickname: '测试用户2',
         email: 'testuser1@gtb.com',
-        password: 'mypassword2',
+        password: 'mypassword123',
+        code: '123456',
         role: 'user',
       }
     });
@@ -57,7 +65,7 @@ describe('Auth API Handlers Test', () => {
       method: 'POST',
       body: {
         phoneOrEmail: 'testuser1@gtb.com',
-        password: 'mypassword',
+        password: 'mypassword123',
       }
     });
 

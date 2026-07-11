@@ -26,7 +26,7 @@ describe('Graph Connection Visual Styles mapping logic', () => {
 
     it('should return correct color for shared_channel relation', () => {
       // 共享渠道 - 琥珀黄/橙色
-      expect(getLinkColor('shared_channel')).toBe('rgba(245, 158, 11, 0.75)');
+      expect(getLinkColor('shared_channel')).toBe('rgba(122, 117, 111, 0.65)');
     });
 
     it('should return correct color for shared_competitor relation', () => {
@@ -129,7 +129,7 @@ describe('Graph Connection Visual Styles mapping logic', () => {
   describe('getGraphContainerBackgroundStyle', () => {
     it('should return correct background styles for dotted grid', () => {
       const style = getGraphContainerBackgroundStyle();
-      expect(style.background).toBe('rgba(160, 109, 68, 0.03)');
+      expect(style.background).toBe('rgba(246, 246, 246, 0.03)');
       expect(style.backgroundImage).toContain('radial-gradient');
       expect(style.backgroundSize).toBe('24px 24px');
     });

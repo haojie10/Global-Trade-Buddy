@@ -24,7 +24,7 @@ export async function setup() {
     }
 
     await client.query(`CREATE SCHEMA IF NOT EXISTS ${targetSchema}`);
-    await client.query(`SET search_path TO ${targetSchema}`);
+    await client.query(`SET search_path TO ${targetSchema}, public`);
 
     // Drop existing tables in test database to ensure clean schema setup
     await client.query(`

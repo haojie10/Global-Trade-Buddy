@@ -10,7 +10,9 @@
 DO $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'relations_unique'
+    SELECT 1 FROM pg_constraint c
+    JOIN pg_namespace n ON c.connamespace = n.oid
+    WHERE c.conname = 'relations_unique' AND n.nspname = current_schema()
   ) THEN
     ALTER TABLE relations ADD CONSTRAINT relations_unique
       UNIQUE (report_id_a, report_id_b, relation_key);
@@ -21,7 +23,9 @@ END$$;
 DO $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'notes_user_report_unique'
+    SELECT 1 FROM pg_constraint c
+    JOIN pg_namespace n ON c.connamespace = n.oid
+    WHERE c.conname = 'notes_user_report_unique' AND n.nspname = current_schema()
   ) THEN
     ALTER TABLE notes ADD CONSTRAINT notes_user_report_unique
       UNIQUE (user_id, report_id);

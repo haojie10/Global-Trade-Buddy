@@ -84,9 +84,13 @@ describe('Obsidian Graph & Safety API Test', () => {
       [reportId1, reportId2, entityId]
     );
 
-    // 4. 用户 B 解锁了 Report 1 和 Report 2；用户 A 没解锁任何报告
+    // 4. 用户 B 解锁并收藏了 Report 1 和 Report 2；用户 A 没解锁任何报告
     await dbClient.query(
       `INSERT INTO unlocks (user_id, report_id) VALUES ($1, $2), ($1, $3)`,
+      [userIdB, reportId1, reportId2]
+    );
+    await dbClient.query(
+      `INSERT INTO favorites (user_id, report_id) VALUES ($1, $2), ($1, $3)`,
       [userIdB, reportId1, reportId2]
     );
   });

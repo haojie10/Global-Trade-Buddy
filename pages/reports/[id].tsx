@@ -852,10 +852,15 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
     if (report) {
       const relatedRes = await dbClient.query(
-        `SELECT DISTINCT r.id, r.title, r.category, r.market_region, rel.relation_key
+        `SELECT r.id, r.title, r.category, r.market_region, rel.relation_key
          FROM reports r
-         JOIN relations rel ON (r.id = rel.report_id_a AND rel.report_id_b = $1) 
-                             OR (r.id = rel.report_id_b AND rel.report_id_a = $1)`,
+         JOIN relations rel ON r.id = rel.report_id_a
+         WHERE rel.report_id_b = $1
+         UNION
+         SELECT r.id, r.title, r.category, r.market_region, rel.relation_key
+         FROM reports r
+         JOIN relations rel ON r.id = rel.report_id_b
+         WHERE rel.report_id_a = $1`,
         [id]
       );
       const rawRows = relatedRes.rows;
@@ -926,7 +931,11 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       related = shuffle(selectedList);
     }
 
-    context.res.setHeader('Cache-Control', 'no-store, must-revalidate');
+    if (userId) {
+      context.res.setHeader('Cache-Control', 'no-store, must-revalidate');
+    } else {
+      context.res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=7200');
+    }
 
     return {
       props: {

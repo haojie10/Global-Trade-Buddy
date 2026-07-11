@@ -3,6 +3,7 @@ import { runDehydration, parseMetadata } from '../pages/api/admin/reports/upload
 import uploadHandler from '../pages/api/admin/reports/upload';
 import { Client } from 'pg';
 import { createTestClient, cleanDatabase } from './helpers/db-test-helper';
+import { encodeSession } from '../lib/auth';
 
 describe('Report Upload & Dehydration Pipeline Test', () => {
   let dbClient: Client;
@@ -107,6 +108,9 @@ describe('Report Upload & Dehydration Pipeline Test', () => {
     const req = {
       method: 'POST',
       body: { rawHtml: mockHtml },
+      cookies: {
+        gtb_session: encodeSession({ userId: '10000000-0000-0000-0000-000000000000', role: 'admin' })
+      }
     } as any;
     let statusVal = 200;
     let jsonVal: any = null;
@@ -208,6 +212,9 @@ describe('Report Upload & Dehydration Pipeline Test', () => {
           channels: ['一级供应链']
         }
       },
+      cookies: {
+        gtb_session: encodeSession({ userId: '10000000-0000-0000-0000-000000000000', role: 'admin' })
+      }
     } as any;
 
     let statusVal = 200;
@@ -313,6 +320,9 @@ describe('Report Upload & Dehydration Pipeline Test', () => {
           channels: ['直营']
         }
       },
+      cookies: {
+        gtb_session: encodeSession({ userId: '10000000-0000-0000-0000-000000000000', role: 'admin' })
+      }
     } as any;
 
     let statusVal = 200;
@@ -384,6 +394,9 @@ describe('Report Upload & Dehydration Pipeline Test', () => {
         summary: '这是管理员手动填写的更棒的简介内容。',
         manualTags: {}
       },
+      cookies: {
+        gtb_session: encodeSession({ userId: '10000000-0000-0000-0000-000000000000', role: 'admin' })
+      }
     } as any;
 
     let statusVal = 200;

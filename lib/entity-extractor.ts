@@ -128,6 +128,17 @@ export async function extractAndNormalizeEntities(
   }
 
   const matchedEntities = new Map<string, { id: string; canonical_name: string; entity_type: string }>();
+  const searchContent = title + ' ' + html;
+
+  // 2. 检索已知实体和别名 (扫描全文和标题，自动提取已在词库的实体和别称)
+  for (const ent of entityMap.values()) {
+    for (const matchStr of ent.matches) {
+      if (searchContent.includes(matchStr)) {
+        matchedEntities.set(ent.id, { id: ent.id, canonical_name: ent.canonical_name, entity_type: ent.entity_type });
+        break;
+      }
+    }
+  }
 
   // 3. 处理手动标记的实体 (优先级高，自动注册未知实体)
   if (manualTags) {
@@ -349,10 +360,32 @@ export async function extractAndNormalizeEntities(
         }
       }
     }
+  }  // 4. 正文和标题匹配兜底逻辑：继续在标题和正文里检索常见关键词，如果 HTML 包含它们且它们不在已提取列表中，将其作为实体提取。
+  const keywordTypeMap: Record<string, string> = {};
+  ENTITY_DEFINITIONS.forEach(def => {
+    keywordTypeMap[def.name] = def.type;
+  });
+
+  const extractedNames = new Set<string>();
+  for (const ent of matchedEntities.values()) {
+    extractedNames.add(ent.canonical_name);
   }
 
-
-
+  for (const kw of commonKeywords) {
+    if (searchContent.includes(kw) && !extractedNames.has(kw)) {
+      const type = keywordTypeMap[kw] || 'product';
+      const insertRes = await dbClient.query(
+        `INSERT INTO entities (canonical_name, entity_type) 
+         VALUES ($1, $2) 
+         ON CONFLICT (canonical_name) DO UPDATE SET entity_type = EXCLUDED.entity_type
+         RETURNING id`,
+        [kw, type]
+      );
+      const entId = insertRes.rows[0].id;
+      matchedEntities.set(entId, { id: entId, canonical_name: kw, entity_type: type });
+      extractedNames.add(kw);
+    }
+  }
   // 5. 判定实体在此报告中的具体角色 (role)
   // 获取报告研究本体的主实体 ID
   let primaryId = '';
