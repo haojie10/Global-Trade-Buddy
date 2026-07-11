@@ -157,6 +157,11 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         document.cookie = `user_id=${data.user.id}; path=/; max-age=604800`;
         document.cookie = `user_role=${data.user.role}; path=/; max-age=604800`;
         document.cookie = `user_nickname=${encodeURIComponent(data.user.nickname || '')}; path=/; max-age=604800`;
+        if (authMode === 'login') {
+          alert('登录成功！');
+        } else {
+          alert('注册成功并已自动登录！');
+        }
         window.location.reload();
       } else {
         setErrorMsg(data.error || '认证失败，请重试');

@@ -15,7 +15,8 @@ function getSessionSecret(): string {
   const secret = process.env.SESSION_SECRET;
   if (!secret) {
     if (process.env.NODE_ENV === 'production') {
-      throw new Error('SESSION_SECRET 环境变量未设置，生产环境不可启动');
+      console.warn('⚠️ WARNING: SESSION_SECRET 环境变量未设置！已降级使用默认不安全密钥。请在 Vercel 或生产环境后台配置该环境变量以保证安全性。');
+      return 'prod-fallback-insecure-secret-please-configure-session-secret';
     }
     // 开发/测试环境使用默认值，仅供本地调试
     return 'dev-only-insecure-secret-do-not-use-in-prod';

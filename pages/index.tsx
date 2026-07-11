@@ -899,11 +899,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       }));
     }
 
-    if (userId) {
-      context.res.setHeader('Cache-Control', 'no-store, must-revalidate');
-    } else {
-      context.res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
-    }
+    context.res.setHeader('Cache-Control', 'no-store, must-revalidate');
 
     return {
       props: {

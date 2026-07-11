@@ -931,11 +931,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       related = shuffle(selectedList);
     }
 
-    if (userId) {
-      context.res.setHeader('Cache-Control', 'no-store, must-revalidate');
-    } else {
-      context.res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=7200');
-    }
+    context.res.setHeader('Cache-Control', 'no-store, must-revalidate');
 
     return {
       props: {
