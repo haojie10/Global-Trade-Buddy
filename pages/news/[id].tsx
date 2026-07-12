@@ -100,6 +100,68 @@ export default function NewsDetailPage({ news, relatedReports, userId }: NewsDet
     minute: '2-digit'
   });
 
+  const renderContent = (content: string) => {
+    if (!content) return null;
+    // 1. 提取 markdown 图片 !\[(.*?)\]\((.*?)\)
+    const imgRegex = /!\[(.*?)\]\((.*?)\)/g;
+    const images: Array<{ alt: string, url: string }> = [];
+    let match;
+    while ((match = imgRegex.exec(content)) !== null) {
+      images.push({ alt: match[1], url: match[2] });
+    }
+    
+    // 移出图片标记以防它被作为文本渲染
+    let cleanText = content.replace(imgRegex, '');
+    
+    // 2. 简单的 markdown 链接解析 [文本](链接) 并防止危险的 HTML 注入
+    const linkRegex = /\[(.*?)\]\((.*?)\)/g;
+    const parts: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let linkMatch;
+    
+    while ((linkMatch = linkRegex.exec(cleanText)) !== null) {
+      const textBefore = cleanText.substring(lastIndex, linkMatch.index);
+      if (textBefore) parts.push(textBefore);
+      parts.push(
+        <a 
+          key={linkMatch.index} 
+          href={linkMatch[2]} 
+          target="_blank" 
+          rel="noreferrer" 
+          style={{ color: 'var(--color-accent)', textDecoration: 'underline', fontWeight: 500 }}
+        >
+          {linkMatch[1]}
+        </a>
+      );
+      lastIndex = linkRegex.lastIndex;
+    }
+    const remainingText = cleanText.substring(lastIndex);
+    if (remainingText) parts.push(remainingText);
+
+    return (
+      <div>
+        {images.map((img, idx) => (
+          <img 
+            key={idx} 
+            src={img.url} 
+            alt={img.alt} 
+            style={{ 
+              width: '100%', 
+              maxHeight: '420px', 
+              objectFit: 'cover', 
+              borderRadius: 'var(--border-radius)', 
+              marginBottom: '28px',
+              border: '1px solid rgba(18,18,18,0.06)'
+            }} 
+          />
+        ))}
+        <div style={{ whiteSpace: 'pre-wrap' }}>
+          {parts.length > 0 ? parts : cleanText}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <WatermarkContainer text={userId ? `GTB USER ${userId.substring(0, 8)}` : 'GTB GUEST'}>
       <div style={{
@@ -191,10 +253,9 @@ export default function NewsDetailPage({ news, relatedReports, userId }: NewsDet
             color: 'var(--color-text)',
             fontSize: '1.05rem',
             lineHeight: 1.75,
-            fontWeight: 300,
-            whiteSpace: 'pre-wrap'
+            fontWeight: 300
           }}>
-            {news.content}
+            {renderContent(news.content)}
           </div>
         </article>
 
