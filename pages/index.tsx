@@ -32,16 +32,45 @@ interface HomeProps {
   userRole: string;
   freeQuota: number;
   nickname?: string;
+  latestArticles: any[];
 }
 
-export default function HomePage({ graphData, allReports, userId, userRole, freeQuota, nickname }: HomeProps) {
+export default function HomePage({ graphData, allReports, userId, userRole, freeQuota, nickname, latestArticles = [] }: HomeProps) {
   const [quota, setQuota] = useState(freeQuota);
   const [reports, setReports] = useState(allReports);
   const [showAllReports, setShowAllReports] = useState(false);
   const [emailInput, setEmailInput] = useState('');
   const [subscribed, setSubscribed] = useState(false);
+  const [prefArticles, setPrefArticles] = useState<any[]>(latestArticles);
 
   const router = useRouter();
+
+  // 根据 localStorage 偏好设置动态过滤首页资讯
+  useEffect(() => {
+    const cacheRegion = localStorage.getItem('gtb_news_region') || 'All';
+    const cacheCountry = localStorage.getItem('gtb_news_country') || 'All';
+    const cacheIndustry = localStorage.getItem('gtb_news_industry') || 'All';
+
+    if (cacheRegion !== 'All' || cacheCountry !== 'All' || cacheIndustry !== 'All') {
+      let url = `/api/user/articles?pageSize=6`;
+      if (cacheRegion !== 'All') url += `&region=${encodeURIComponent(cacheRegion)}`;
+      if (cacheCountry !== 'All') url += `&country=${encodeURIComponent(cacheCountry)}`;
+      if (cacheIndustry !== 'All') url += `&industry=${encodeURIComponent(cacheIndustry)}`;
+
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          if (data.articles && data.articles.length > 0) {
+            setPrefArticles(data.articles);
+          } else {
+            setPrefArticles(latestArticles);
+          }
+        })
+        .catch(() => setPrefArticles(latestArticles));
+    } else {
+      setPrefArticles(latestArticles);
+    }
+  }, [latestArticles]);
 
   // 1. 生命周期：捕获 URL 中的邀请人 ID 并缓存到本地
   useEffect(() => {
@@ -201,6 +230,30 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '24px', fontSize: '1rem' }}>
+            <Link 
+              href="/news" 
+              className="sand-btn"
+              style={{
+                textDecoration: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                color: '#ffffff',
+                background: 'transparent',
+                border: 'none',
+                borderRadius: '0px',
+                padding: '6px 16px',
+                transition: 'all 0.2s',
+                fontSize: '1rem'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.color = 'var(--color-accent)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.color = '#ffffff';
+              }}
+            >
+              每日资讯
+            </Link>
             <Link 
               href="/my-graph" 
               className="sand-btn"
@@ -430,7 +483,64 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
           </div>
         </section>
 
-        {/* 新增三大认知能力板块与认知图谱预览 */}
+      {/* 每日资讯板块 */}
+      <section className="animate-on-scroll" style={{
+        padding: '60px 40px',
+        maxWidth: '1400px',
+        margin: '0 auto',
+        background: 'transparent',
+        borderBottom: '1px solid rgba(18, 18, 18, 0.05)'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '30px' }}>
+          <div>
+            <span style={{ color: 'var(--color-accent)', fontSize: '0.8rem', letterSpacing: '2px', textTransform: 'uppercase' }}>Daily News</span>
+            <h2 className="font-editorial" style={{ fontSize: '2.5rem', margin: '8px 0 0 0', fontWeight: 400 }}>每日全球行业资讯</h2>
+          </div>
+          <Link href="/news" style={{ textDecoration: 'none', color: 'var(--color-accent)', fontSize: '0.95rem', fontWeight: 500 }}>
+            进入资讯大厅 →
+          </Link>
+        </div>
+
+        {prefArticles.length === 0 ? (
+          <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-muted)', border: '1px dashed rgba(18, 18, 18, 0.08)' }}>
+            暂无符合您偏好的每日资讯
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '30px' }}>
+            {prefArticles.map((art) => (
+              <div key={art.id} className="float-on-hover" style={{ 
+                background: 'rgba(255, 255, 255, 0.45)', 
+                backdropFilter: 'blur(15px)', 
+                WebkitBackdropFilter: 'blur(15px)', 
+                border: '1px solid rgba(18, 18, 18, 0.05)', 
+                padding: '24px', 
+                borderRadius: 'var(--border-radius)',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between'
+              }}>
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--color-accent)', textTransform: 'uppercase', fontWeight: 600 }}>
+                    {art.industry || '综合'}
+                  </span>
+                  <h3 style={{ margin: '8px 0', fontSize: '1.25rem', fontWeight: 500 }}>
+                    <Link href={`/news/${art.id}`} style={{ textDecoration: 'none', color: 'var(--color-text)' }}>
+                      {art.title}
+                    </Link>
+                  </h3>
+                  <p style={{ color: 'var(--color-muted)', fontSize: '0.9rem', lineHeight: '1.5', fontWeight: 300 }}>{art.summary}</p>
+                </div>
+                <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: 'var(--color-muted)' }}>
+                  <span>{art.region} {art.country}</span>
+                  <span>{new Date(art.published_at).toLocaleDateString()}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* 新增三大认知能力板块与认知图谱预览 */}
         <section className="animate-on-scroll" style={{
           padding: '60px 40px',
           maxWidth: '1400px',
@@ -899,6 +1009,16 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       }));
     }
 
+    // 获取最新 6 条资讯数据传给主页
+    const latestArticlesRes = await dbClient.query(
+      `SELECT id, title, summary, region, country, industry, published_at 
+       FROM articles ORDER BY published_at DESC LIMIT 6`
+    );
+    const latestArticles = latestArticlesRes.rows.map((row: any) => ({
+      ...row,
+      published_at: row.published_at.toISOString()
+    }));
+
     context.res.setHeader('Cache-Control', 'no-store, must-revalidate');
 
     return {
@@ -908,7 +1028,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         userId: userId || '',
         userRole,
         freeQuota,
-        nickname
+        nickname,
+        latestArticles
       }
     };
   } catch (err) {
@@ -920,7 +1041,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         userId: '',
         userRole: 'guest',
         freeQuota: 0,
-        nickname: ''
+        nickname: '',
+        latestArticles: []
       }
     };
   } finally {
