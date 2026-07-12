@@ -25,6 +25,9 @@ async function main() {
   try {
     await client.query('BEGIN');
     
+    await client.query('TRUNCATE TABLE news CASCADE');
+    console.log('✓ Cleared old news items.');
+    
     for (const item of newsData) {
       console.log(`Importing: "${item.title}"`);
 
