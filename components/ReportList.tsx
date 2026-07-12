@@ -53,6 +53,24 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
 
   const filtered = filterReports(reports, searchQuery, selectedCategory, selectedRegion);
   
+  // 搜索日志追踪（防抖，用户停止输入 1 秒后且 query 不为空时上报）
+  React.useEffect(() => {
+    if (!searchQuery.trim()) return;
+
+    const timer = setTimeout(() => {
+      fetch('/api/track/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: searchQuery,
+          results_count: filtered.length
+        })
+      }).catch(err => console.error('Error tracking search:', err));
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, filtered.length]);
+  
   // 对地区进行分割、扁平化，过滤掉非中文并去重，对齐图谱页面
   const regions = [
     'All',

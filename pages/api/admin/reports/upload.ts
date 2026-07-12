@@ -3,6 +3,7 @@ import { PoolClient } from 'pg';
 import { withDb } from '../../../../lib/api-handler';
 import { requireAdmin } from '../../../../lib/auth';
 import { parseMetadata, runDehydration, extractAndNormalizeEntities } from '../../../../lib/entity-extractor';
+import { getStandardCategory } from '../../../../lib/category-mapper';
 
 // Re-export for compatibility with tests
 export { parseMetadata, runDehydration, extractAndNormalizeEntities } from '../../../../lib/entity-extractor';
@@ -13,7 +14,7 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
     return res.status(403).json({ error: '权限不足，仅管理员可执行此操作' });
   }
 
-  const { rawHtml, manualTags, category, summary, overwriteReportId } = req.body;
+  const { rawHtml, manualTags, category, summary, overwriteReportId, industry_ids, country_ids } = req.body;
 
   // 真实的 Supabase Storage 图片上传
   const supabaseUpload = async (buffer: Buffer, mime: string) => {
@@ -122,6 +123,68 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
       [meta.title, finalCategory, finalMarketRegion, finalSummary, cleanHtml, primaryEntityId]
     );
     newReportId = insertReportRes.rows[0].id;
+  }
+
+  // 保存行业与国家关联
+  await dbClient.query('DELETE FROM report_industries WHERE report_id = $1', [newReportId]);
+  await dbClient.query('DELETE FROM report_countries WHERE report_id = $1', [newReportId]);
+
+  if (Array.isArray(industry_ids)) {
+    for (const indId of industry_ids) {
+      if (indId) {
+        await dbClient.query(
+          'INSERT INTO report_industries (report_id, industry_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+          [newReportId, indId]
+        );
+      }
+    }
+  }
+
+  // 自动从 HTML 的 products 元数据提取行业并建立关联 (将产品名自动映射到 54 个标准大类)
+  let autoIndustries: string[] = [];
+  if (manualTags?.products && Array.isArray(manualTags.products)) {
+    autoIndustries = manualTags.products.map((p: string) => p.trim()).filter(Boolean);
+  }
+
+  for (const indName of autoIndustries) {
+    const mappedCategory = getStandardCategory(indName) || indName;
+    const indRes = await dbClient.query(
+      'INSERT INTO industries (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING id',
+      [mappedCategory]
+    );
+    const indId = indRes.rows[0].id;
+    await dbClient.query(
+      'INSERT INTO report_industries (report_id, industry_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      [newReportId, indId]
+    );
+  }
+
+  if (Array.isArray(country_ids)) {
+    for (const ctyId of country_ids) {
+      if (ctyId) {
+        await dbClient.query(
+          'INSERT INTO report_countries (report_id, country_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+          [newReportId, ctyId]
+        );
+      }
+    }
+  }
+
+  // 自动从 HTML 的 market_region 提取国家并建立关联
+  const autoCountries = finalMarketRegion.split(',').map(s => s.trim()).filter(Boolean);
+  for (const ctyName of autoCountries) {
+    let lookupName = ctyName;
+    if (ctyName.toLowerCase() === 'germany') lookupName = '德国';
+    if (ctyName.toLowerCase() === 'austria') lookupName = '奥地利';
+    
+    const ctyRes = await dbClient.query('SELECT id FROM countries WHERE name = $1 LIMIT 1', [lookupName]);
+    if (ctyRes.rows.length > 0) {
+      const ctyId = ctyRes.rows[0].id;
+      await dbClient.query(
+        'INSERT INTO report_countries (report_id, country_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+        [newReportId, ctyId]
+      );
+    }
   }
 
   // 5. 写入 report_entities 表并携带其扮演的角色 role

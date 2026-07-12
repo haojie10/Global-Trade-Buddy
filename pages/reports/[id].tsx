@@ -112,6 +112,74 @@ export default function ReportDetailPage({
     setNoteText(initialNoteContent);
   }, [report.id, report.isUnlocked, report.content_html, freeQuota, initialIsFavorite, initialNoteContent]);
 
+  // 页面浏览量与停留时间追踪
+  React.useEffect(() => {
+    let viewId: string | null = null;
+    let startTime = Date.now();
+
+    // 1. 发送初始化浏览记录
+    fetch('/api/track/pageview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content_type: 'report', content_id: report.id })
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.view_id) {
+          viewId = data.view_id;
+        }
+      })
+      .catch(err => console.error('Error tracking pageview:', err));
+
+    // 2. 页面销毁或隐藏时发送停留时长
+    const sendDuration = () => {
+      if (!viewId) return;
+      const durationSeconds = Math.round((Date.now() - startTime) / 1000);
+      if (durationSeconds <= 0) return;
+
+      const payload = JSON.stringify({ view_id: viewId, duration_seconds: durationSeconds });
+      
+      // 使用 fetch keepalive 代替 navigator.sendBeacon 以支持 Content-Type 并保证到达
+      fetch('/api/track/pageview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+        keepalive: true
+      }).catch(err => console.warn('Error sending duration:', err));
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        sendDuration();
+      } else {
+        // 重新进入页面，重置起始时间和 viewId，以记录新的会话
+        startTime = Date.now();
+        viewId = null;
+        fetch('/api/track/pageview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content_type: 'report', content_id: report.id })
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.view_id) {
+              viewId = data.view_id;
+            }
+          })
+          .catch(err => console.error('Error tracking pageview:', err));
+      }
+    };
+
+    window.addEventListener('beforeunload', sendDuration);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      sendDuration();
+      window.removeEventListener('beforeunload', sendDuration);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [report.id]);
+
   // 控制全屏时的页面滚动条锁定，防止外层和 iframe 同时滚动的糟糕体验
   React.useEffect(() => {
     if (isFullscreen) {

@@ -285,6 +285,28 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
                     <span style={{ color: '#ffffff', fontWeight: 400 }}>
                       管理员: <span style={{ color: 'rgba(255, 255, 255, 0.6)', fontWeight: 500 }}>{userId.substring(0, 8)}...</span>
                     </span>
+                    <Link
+                      href="/admin"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        color: '#ffffff',
+                        textDecoration: 'none',
+                        padding: '6px 16px',
+                        transition: 'all 0.2s',
+                        cursor: 'pointer',
+                        fontSize: '1rem'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.color = 'var(--color-accent)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.color = '#ffffff';
+                      }}
+                    >
+                      📊 管理后台
+                    </Link>
                     <button 
                       onClick={() => setShowUploadModal(true)}
                       className="sand-btn"
@@ -1011,12 +1033,17 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
     // 获取最新 6 条资讯数据传给主页
     const latestArticlesRes = await dbClient.query(
-      `SELECT id, title, summary, region, country, industry, published_at 
-       FROM articles ORDER BY published_at DESC LIMIT 6`
+      `SELECT n.id, n.title, n.summary, n.published_at,
+              (SELECT name FROM industries JOIN news_industries ON industries.id = news_industries.industry_id WHERE news_id = n.id LIMIT 1) as industry,
+              (SELECT region FROM countries JOIN news_countries ON countries.id = news_countries.country_id WHERE news_id = n.id LIMIT 1) as region,
+              (SELECT name FROM countries JOIN news_countries ON countries.id = news_countries.country_id WHERE news_id = n.id LIMIT 1) as country
+       FROM news n
+       WHERE n.status = 'published'
+       ORDER BY n.published_at DESC LIMIT 6`
     );
     const latestArticles = latestArticlesRes.rows.map((row: any) => ({
       ...row,
-      published_at: row.published_at.toISOString()
+      published_at: row.published_at ? row.published_at.toISOString() : null
     }));
 
     context.res.setHeader('Cache-Control', 'no-store, must-revalidate');
