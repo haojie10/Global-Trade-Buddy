@@ -89,7 +89,7 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
 
     const manualTags = {
       companies: metaCompanyName ? [metaCompanyName] : [],
-      companyWebsite: metaCompanyWebsite || null,
+      companyWebsite: metaCompanyWebsite || undefined,
       competitors: metaCompetitors ? metaCompetitors.split(',').map(s => s.trim()).filter(Boolean) : [],
       suppliers: metaSuppliers ? metaSuppliers.split(',').map(s => s.trim()).filter(Boolean) : [],
       customers: metaCustomers ? metaCustomers.split(',').map(s => s.trim()).filter(Boolean) : [],
