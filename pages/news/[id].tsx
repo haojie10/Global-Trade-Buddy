@@ -164,11 +164,16 @@ export default function NewsDetailPage({ news, relatedReports, userId, error }: 
               }
             }
 
+            const selfClosingTags = ['img', 'br', 'hr', 'input', 'meta', 'link'];
+            const isSelfClosing = selfClosingTags.includes(tagName);
+
             const props = attributesToProps(cleanAttribs);
             return React.createElement(
               domNode.name,
               props,
-              domNode.children ? domToReact(domNode.children as any[], parseOptions) : null
+              (!isSelfClosing && domNode.children && domNode.children.length > 0)
+                ? domToReact(domNode.children as any[], parseOptions)
+                : undefined
             );
           }
         }
