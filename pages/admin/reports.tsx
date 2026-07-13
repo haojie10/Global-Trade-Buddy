@@ -107,7 +107,11 @@ export default function AdminReportsManagement() {
   const handleDeleteReport = async (id: string) => {
     if (!confirm('你确定要删除这篇报告吗？该操作不可逆，将同时清除用户解锁记录和关系图谱边！')) return;
     try {
-      const res = await fetch(`/api/admin/reports/delete?id=${id}`, { method: 'DELETE' });
+      const res = await fetch('/api/admin/reports/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reportId: id })
+      });
       if (res.ok) {
         alert('报告删除成功');
         fetchData();
