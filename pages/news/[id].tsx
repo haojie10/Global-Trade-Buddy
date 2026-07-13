@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { GetServerSideProps } from 'next';
 import Link from 'next/link';
-import parse, { attributesToProps, domToReact, Element } from 'html-react-parser';
+import parse, { attributesToProps, domToReact } from 'html-react-parser';
 import pool from '../../lib/db';
 import { parseCookies } from '../../lib/cookies';
 import WatermarkContainer from '../../components/WatermarkContainer';
@@ -119,7 +119,7 @@ export default function NewsDetailPage({ news, relatedReports, userId }: NewsDet
     // 3. 在 React VDOM 解析时进行白名单安全净化过滤，防止 XSS 攻击（无需依靠 node 端的大型 jsdom/DOMPurify 依赖，100% 兼容 Vercel Serverless 环境）
     const parseOptions = {
       replace: (domNode: any) => {
-        if (domNode instanceof Element) {
+        if (domNode && typeof domNode.name === 'string') {
           const tagName = domNode.name.toLowerCase();
 
           // 屏蔽潜在危险或非预期的高风险标签
@@ -140,11 +140,12 @@ export default function NewsDetailPage({ news, relatedReports, userId }: NewsDet
               continue;
             }
             // 屏蔽恶意超链接和图片源
-            if ((lowerKey === 'href' || lowerKey === 'src') && value.trim().toLowerCase().startsWith('javascript:')) {
+            const valStr = String(value);
+            if ((lowerKey === 'href' || lowerKey === 'src') && valStr.trim().toLowerCase().startsWith('javascript:')) {
               continue;
             }
             if (allowedAttribs.includes(lowerKey)) {
-              cleanAttribs[key] = value;
+              cleanAttribs[key] = valStr;
             }
           }
 
