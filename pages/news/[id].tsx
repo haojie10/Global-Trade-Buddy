@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import { GetServerSideProps } from 'next';
 import Link from 'next/link';
+import parse from 'html-react-parser';
+import DOMPurify from 'isomorphic-dompurify';
 import pool from '../../lib/db';
 import { parseCookies } from '../../lib/cookies';
 import WatermarkContainer from '../../components/WatermarkContainer';
@@ -102,62 +104,28 @@ export default function NewsDetailPage({ news, relatedReports, userId }: NewsDet
 
   const renderContent = (content: string) => {
     if (!content) return null;
-    // 1. 提取 markdown 图片 !\[(.*?)\]\((.*?)\)
-    const imgRegex = /!\[(.*?)\]\((.*?)\)/g;
-    const images: Array<{ alt: string, url: string }> = [];
-    let match;
-    while ((match = imgRegex.exec(content)) !== null) {
-      images.push({ alt: match[1], url: match[2] });
-    }
-    
-    // 移出图片标记以防它被作为文本渲染
-    let cleanText = content.replace(imgRegex, '');
-    
-    // 2. 简单的 markdown 链接解析 [文本](链接) 并防止危险的 HTML 注入
-    const linkRegex = /\[(.*?)\]\((.*?)\)/g;
-    const parts: React.ReactNode[] = [];
-    let lastIndex = 0;
-    let linkMatch;
-    
-    while ((linkMatch = linkRegex.exec(cleanText)) !== null) {
-      const textBefore = cleanText.substring(lastIndex, linkMatch.index);
-      if (textBefore) parts.push(textBefore);
-      parts.push(
-        <a 
-          key={linkMatch.index} 
-          href={linkMatch[2]} 
-          target="_blank" 
-          rel="noreferrer" 
-          style={{ color: 'var(--color-accent)', textDecoration: 'underline', fontWeight: 500 }}
-        >
-          {linkMatch[1]}
-        </a>
-      );
-      lastIndex = linkRegex.lastIndex;
-    }
-    const remainingText = cleanText.substring(lastIndex);
-    if (remainingText) parts.push(remainingText);
 
+    // 1. 将 Markdown 图片语法转换为标准的 HTML <img> 标签，以便在净化和解析阶段处理
+    let htmlContent = content.replace(
+      /!\[(.*?)\]\((.*?)\)/g,
+      '<img src="$2" alt="$1" style="width: 100%; max-height: 420px; object-fit: cover; border-radius: var(--border-radius); margin-bottom: 28px; border: 1px solid rgba(18,18,18,0.06); display: block;" />'
+    );
+
+    // 2. 将 Markdown 链接语法转换为标准的 HTML <a> 标签
+    htmlContent = htmlContent.replace(
+      /\[(.*?)\]\((.*?)\)/g,
+      '<a href="$2" target="_blank" rel="noreferrer" style="color: var(--color-accent); text-decoration: underline; font-weight: 500;">$1</a>'
+    );
+
+    // 3. 使用 isomorphic-dompurify 进行同构富文本净化，防止 XSS，同时允许常用超链接及行内样式属性
+    const cleanHtml = DOMPurify.sanitize(htmlContent, {
+      ADD_ATTR: ['target', 'rel', 'style'],
+    });
+
+    // 4. 使用 html-react-parser 安全解析并转为 React 虚拟 DOM 节点渲染输出
     return (
-      <div>
-        {images.map((img, idx) => (
-          <img 
-            key={idx} 
-            src={img.url} 
-            alt={img.alt} 
-            style={{ 
-              width: '100%', 
-              maxHeight: '420px', 
-              objectFit: 'cover', 
-              borderRadius: 'var(--border-radius)', 
-              marginBottom: '28px',
-              border: '1px solid rgba(18,18,18,0.06)'
-            }} 
-          />
-        ))}
-        <div style={{ whiteSpace: 'pre-wrap' }}>
-          {parts.length > 0 ? parts : cleanText}
-        </div>
+      <div style={{ whiteSpace: 'pre-wrap' }}>
+        {parse(cleanHtml)}
       </div>
     );
   };
