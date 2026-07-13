@@ -1,8 +1,7 @@
 import React, { useEffect } from 'react';
 import { GetServerSideProps } from 'next';
 import Link from 'next/link';
-import parse from 'html-react-parser';
-import DOMPurify from 'isomorphic-dompurify';
+import parse, { attributesToProps, domToReact, Element } from 'html-react-parser';
 import pool from '../../lib/db';
 import { parseCookies } from '../../lib/cookies';
 import WatermarkContainer from '../../components/WatermarkContainer';
@@ -105,7 +104,7 @@ export default function NewsDetailPage({ news, relatedReports, userId }: NewsDet
   const renderContent = (content: string) => {
     if (!content) return null;
 
-    // 1. 将 Markdown 图片语法转换为标准的 HTML <img> 标签，以便在净化和解析阶段处理
+    // 1. 将 Markdown 图片语法转换为标准的 HTML <img> 标签，以便在解析阶段处理
     let htmlContent = content.replace(
       /!\[(.*?)\]\((.*?)\)/g,
       '<img src="$2" alt="$1" style="width: 100%; max-height: 420px; object-fit: cover; border-radius: var(--border-radius); margin-bottom: 28px; border: 1px solid rgba(18,18,18,0.06); display: block;" />'
@@ -117,15 +116,52 @@ export default function NewsDetailPage({ news, relatedReports, userId }: NewsDet
       '<a href="$2" target="_blank" rel="noreferrer" style="color: var(--color-accent); text-decoration: underline; font-weight: 500;">$1</a>'
     );
 
-    // 3. 使用 isomorphic-dompurify 进行同构富文本净化，防止 XSS，同时允许常用超链接及行内样式属性
-    const cleanHtml = DOMPurify.sanitize(htmlContent, {
-      ADD_ATTR: ['target', 'rel', 'style'],
-    });
+    // 3. 在 React VDOM 解析时进行白名单安全净化过滤，防止 XSS 攻击（无需依靠 node 端的大型 jsdom/DOMPurify 依赖，100% 兼容 Vercel Serverless 环境）
+    const parseOptions = {
+      replace: (domNode: any) => {
+        if (domNode instanceof Element) {
+          const tagName = domNode.name.toLowerCase();
 
-    // 4. 使用 html-react-parser 安全解析并转为 React 虚拟 DOM 节点渲染输出
+          // 屏蔽潜在危险或非预期的高风险标签
+          const blockedTags = ['script', 'iframe', 'object', 'embed', 'style', 'link', 'meta'];
+          if (blockedTags.includes(tagName)) {
+            return <React.Fragment />;
+          }
+
+          // 属性安全白名单清洗，剔除事件处理器与 javascript: 协议
+          const attribs = domNode.attribs || {};
+          const cleanAttribs: Record<string, string> = {};
+          const allowedAttribs = ['src', 'alt', 'href', 'target', 'rel', 'style', 'class', 'classname', 'width', 'height'];
+
+          for (const [key, value] of Object.entries(attribs)) {
+            const lowerKey = key.toLowerCase();
+            // 屏蔽任何 onerror/onload/onclick 等事件监听器
+            if (lowerKey.startsWith('on')) {
+              continue;
+            }
+            // 屏蔽恶意超链接和图片源
+            if ((lowerKey === 'href' || lowerKey === 'src') && value.trim().toLowerCase().startsWith('javascript:')) {
+              continue;
+            }
+            if (allowedAttribs.includes(lowerKey)) {
+              cleanAttribs[key] = value;
+            }
+          }
+
+          const props = attributesToProps(cleanAttribs);
+          return React.createElement(
+            domNode.name,
+            props,
+            domNode.children ? domToReact(domNode.children as any[], parseOptions) : null
+          );
+        }
+      }
+    };
+
+    // 4. 使用 html-react-parser 进行安全解析与 VDOM 渲染
     return (
       <div style={{ whiteSpace: 'pre-wrap' }}>
-        {parse(cleanHtml)}
+        {parse(htmlContent, parseOptions)}
       </div>
     );
   };
