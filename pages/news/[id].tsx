@@ -29,6 +29,74 @@ interface NewsDetailProps {
 }
 
 export default function NewsDetailPage({ news, relatedReports, userId, error }: NewsDetailProps) {
+  
+  // 1. 将 React Hook (useEffect) 严格声明在组件的最顶层（不能放在 try-catch 或条件语句内部，确保渲染链路的一致性）
+  useEffect(() => {
+    if (!news?.id) return;
+
+    let viewId: string | null = null;
+    let startTime = Date.now();
+
+    // 1. 发送初始化浏览记录
+    fetch('/api/track/pageview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content_type: 'news', content_id: news.id })
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.view_id) {
+          viewId = data.view_id;
+        }
+      })
+      .catch(err => console.error('Error tracking news pageview:', err));
+
+    // 2. 发送停留时间
+    const sendDuration = () => {
+      if (!viewId) return;
+      const durationSeconds = Math.round((Date.now() - startTime) / 1000);
+      if (durationSeconds <= 0) return;
+
+      fetch('/api/track/pageview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ view_id: viewId, duration_seconds: durationSeconds }),
+        keepalive: true
+      }).catch(err => console.warn('Error sending news duration:', err));
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        sendDuration();
+      } else {
+        startTime = Date.now();
+        viewId = null;
+        fetch('/api/track/pageview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content_type: 'news', content_id: news.id })
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.view_id) {
+              viewId = data.view_id;
+            }
+          })
+          .catch(err => console.error('Error tracking pageview:', err));
+      }
+    };
+
+    window.addEventListener('beforeunload', sendDuration);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      sendDuration();
+      window.removeEventListener('beforeunload', sendDuration);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [news?.id]);
+
+  // 2. 接收并展示 SSR 数据拉取时产生的异常
   if (error) {
     return (
       <div style={{ padding: '50px', fontFamily: 'monospace', color: '#ff3333', background: '#fafafa', borderRadius: '8px', border: '1px solid #ffcccc', margin: '40px auto', maxWidth: '800px' }}>
@@ -39,75 +107,18 @@ export default function NewsDetailPage({ news, relatedReports, userId, error }: 
     );
   }
 
+  // 3. 防御性判断 news 是否为空
   if (!news) {
-    return <div style={{ padding: '40px', textAlign: 'center' }}>无该新闻数据</div>;
+    return (
+      <div style={{ padding: '50px', fontFamily: 'monospace', color: '#ff3333', background: '#fafafa', borderRadius: '8px', border: '1px solid #ffcccc', margin: '40px auto', maxWidth: '800px', textAlign: 'center' }}>
+        <h2>⚠️ 提示</h2>
+        <p>未找到该快讯的详情数据。</p>
+      </div>
+    );
   }
 
+  // 4. 其余局部渲染逻辑使用 try-catch 防御包裹
   try {
-    // 行为追踪埋点 (资讯阅读时间)
-    useEffect(() => {
-      let viewId: string | null = null;
-      let startTime = Date.now();
-
-      // 1. 发送初始化浏览记录
-      fetch('/api/track/pageview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content_type: 'news', content_id: news.id })
-      })
-        .then(res => res.json())
-        .then(data => {
-          if (data.view_id) {
-            viewId = data.view_id;
-          }
-        })
-        .catch(err => console.error('Error tracking news pageview:', err));
-
-      // 2. 发送停留时间
-      const sendDuration = () => {
-        if (!viewId) return;
-        const durationSeconds = Math.round((Date.now() - startTime) / 1000);
-        if (durationSeconds <= 0) return;
-
-        fetch('/api/track/pageview', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ view_id: viewId, duration_seconds: durationSeconds }),
-          keepalive: true
-        }).catch(err => console.warn('Error sending news duration:', err));
-      };
-
-      const handleVisibility = () => {
-        if (document.visibilityState === 'hidden') {
-          sendDuration();
-        } else {
-          startTime = Date.now();
-          viewId = null;
-          fetch('/api/track/pageview', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content_type: 'news', content_id: news.id })
-          })
-            .then(res => res.json())
-            .then(data => {
-              if (data.view_id) {
-                viewId = data.view_id;
-              }
-            })
-            .catch(err => console.error('Error tracking pageview:', err));
-        }
-      };
-
-      window.addEventListener('beforeunload', sendDuration);
-      document.addEventListener('visibilitychange', handleVisibility);
-
-      return () => {
-        sendDuration();
-        window.removeEventListener('beforeunload', sendDuration);
-        document.removeEventListener('visibilitychange', handleVisibility);
-      };
-    }, [news.id]);
-
     const dateStr = new Date(news.published_at).toLocaleDateString('zh-CN', {
       year: 'numeric',
       month: 'long',
@@ -131,7 +142,7 @@ export default function NewsDetailPage({ news, relatedReports, userId, error }: 
         '<a href="$2" target="_blank" rel="noreferrer" style="color: var(--color-accent); text-decoration: underline; font-weight: 500;">$1</a>'
       );
 
-      // 3. 在 React VDOM 解析时进行白名单安全净化过滤，防止 XSS 攻击（无需依靠 node 端的大型 jsdom/DOMPurify 依赖，100% 兼容 Vercel Serverless 环境）
+      // 3. 在 React VDOM 解析时进行白名单安全净化过滤，防止 XSS 攻击
       const parseOptions = {
         replace: (domNode: any) => {
           if (domNode && typeof domNode.name === 'string') {
