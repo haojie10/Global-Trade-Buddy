@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { GetServerSideProps } from 'next';
 import Link from 'next/link';
-import parse, { attributesToProps, domToReact } from 'html-react-parser';
 import pool from '../../lib/db';
 import { parseCookies } from '../../lib/cookies';
 import WatermarkContainer from '../../components/WatermarkContainer';
@@ -127,6 +126,28 @@ export default function NewsDetailPage({ news, relatedReports, userId, error }: 
       minute: '2-digit'
     });
 
+    const sanitizeHtmlString = (html: string): string => {
+      if (!html) return '';
+      let sanitized = html;
+
+      // 1. 移除 script 标签及其中间的内容
+      sanitized = sanitized.replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, '');
+
+      // 2. 移除 iframe, object, embed, style, link, meta 等高危或非预期标签
+      sanitized = sanitized.replace(/<(iframe|object|embed|style|link|meta)[^>]*>([\s\S]*?)<\/\1>/gi, '');
+      sanitized = sanitized.replace(/<(iframe|object|embed|style|link|meta)[^>]*\/?>/gi, '');
+
+      // 3. 移除 HTML 标签内所有的 "on" 开头的事件处理器属性（如 onload, onerror, onclick 等）
+      sanitized = sanitized.replace(/\s+on[a-z]+\s*=\s*(["'])(.*?)\1/gi, '');
+      sanitized = sanitized.replace(/\s+on[a-z]+\s*=\s*([^\s>]+)/gi, '');
+
+      // 4. 移除 javascript: 脚本伪协议链接
+      sanitized = sanitized.replace(/href\s*=\s*(["'])javascript:(.*?)\1/gi, 'href="#"');
+      sanitized = sanitized.replace(/src\s*=\s*(["'])javascript:(.*?)\1/gi, 'src=""');
+
+      return sanitized;
+    };
+
     const renderContent = (content: string) => {
       if (!content) return null;
 
@@ -143,58 +164,14 @@ export default function NewsDetailPage({ news, relatedReports, userId, error }: 
       );
 
       // 3. 在 React VDOM 解析时进行白名单安全净化过滤，防止 XSS 攻击
-      const parseOptions = {
-        replace: (domNode: any) => {
-          if (domNode && typeof domNode.name === 'string') {
-            const tagName = domNode.name.toLowerCase();
+      const cleanHtml = sanitizeHtmlString(htmlContent);
 
-            // 屏蔽潜在危险或非预期的高风险标签
-            const blockedTags = ['script', 'iframe', 'object', 'embed', 'style', 'link', 'meta'];
-            if (blockedTags.includes(tagName)) {
-              return <React.Fragment />;
-            }
-
-            // 属性安全白名单清洗，剔除事件处理器与 javascript: 协议
-            const attribs = domNode.attribs || {};
-            const cleanAttribs: Record<string, string> = {};
-            const allowedAttribs = ['src', 'alt', 'href', 'target', 'rel', 'style', 'class', 'classname', 'width', 'height'];
-
-            for (const [key, value] of Object.entries(attribs)) {
-              const lowerKey = key.toLowerCase();
-              // 屏蔽任何 onerror/onload/onclick 等事件监听器
-              if (lowerKey.startsWith('on')) {
-                continue;
-              }
-              // 屏蔽恶意超链接和图片源
-              const valStr = String(value);
-              if ((lowerKey === 'href' || lowerKey === 'src') && valStr.trim().toLowerCase().startsWith('javascript:')) {
-                continue;
-              }
-              if (allowedAttribs.includes(lowerKey)) {
-                cleanAttribs[key] = valStr;
-              }
-            }
-
-            const selfClosingTags = ['img', 'br', 'hr', 'input', 'meta', 'link'];
-            const isSelfClosing = selfClosingTags.includes(tagName);
-
-            const props = attributesToProps(cleanAttribs);
-            return React.createElement(
-              domNode.name,
-              props,
-              (!isSelfClosing && domNode.children && domNode.children.length > 0)
-                ? domToReact(domNode.children as any[], parseOptions)
-                : undefined
-            );
-          }
-        }
-      };
-
-      // 4. 使用 html-react-parser 进行安全解析与 VDOM 渲染
+      // 4. 原生渲染，避免任何 html-react-parser 依赖产生的 ES Module 加载报错
       return (
-        <div style={{ whiteSpace: 'pre-wrap' }}>
-          {parse(htmlContent, parseOptions)}
-        </div>
+        <div 
+          style={{ whiteSpace: 'pre-wrap' }} 
+          dangerouslySetInnerHTML={{ __html: cleanHtml }}
+        />
       );
     };
 
