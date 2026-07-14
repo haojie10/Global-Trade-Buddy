@@ -380,23 +380,30 @@ export default function NewsDetailPage({ news, relatedReports, userId, error }: 
   }
 }
 export const getServerSideProps: GetServerSideProps = async (context) => {
-  const { id } = context.params || {};
-  const cookies = parseCookies(context.req.headers.cookie);
-  const userId = cookies.user_id || null;
-
-  if (!id || typeof id !== 'string') {
-    return {
-      props: {
-        error: '无效的新闻ID请求参数',
-        news: null,
-        relatedReports: [],
-        userId: null
-      }
-    };
-  }
-
   let dbClient = null;
   try {
+    const { id } = context.params || {};
+    
+    // 防御型 Cookie 解析，避免因为包含特殊字符的 malformed Cookie 抛出 URIError 崩溃
+    let userId: string | null = null;
+    try {
+      const cookies = parseCookies(context.req.headers.cookie);
+      userId = cookies.user_id || null;
+    } catch (cookieErr) {
+      console.warn('Cookie parsing failed in SSR:', cookieErr);
+    }
+
+    if (!id || typeof id !== 'string') {
+      return {
+        props: {
+          error: '无效的新闻ID请求参数',
+          news: null,
+          relatedReports: [],
+          userId: null
+        }
+      };
+    }
+
     dbClient = await pool.connect();
     
     // 1. 查询快讯详情
@@ -466,6 +473,12 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       }
     };
   } finally {
-    if (dbClient) dbClient.release();
+    if (dbClient) {
+      try {
+        dbClient.release();
+      } catch (releaseErr) {
+        console.error('Error releasing db client:', releaseErr);
+      }
+    }
   }
 };
