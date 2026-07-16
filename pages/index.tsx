@@ -220,7 +220,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
           width: '100%'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <MGLogo height={20} />
+            <MGLogo height={32} />
             <span style={{
               fontSize: '1.25rem',
               fontWeight: 400,
@@ -919,7 +919,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
             fontWeight: 300
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <MGLogo height={14} />
+              <MGLogo height={20} />
               <span style={{ fontWeight: 500, color: 'var(--color-text)' }}>Market Graphic</span>
             </div>
             <div>

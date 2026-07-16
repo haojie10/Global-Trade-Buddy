@@ -222,7 +222,7 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
           width: '100%'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <MGLogo height={20} />
+            <MGLogo height={32} />
             <span style={{
               fontSize: '1.25rem',
               fontWeight: 400,

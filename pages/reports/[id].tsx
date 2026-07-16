@@ -320,7 +320,7 @@ export default function ReportDetailPage({
             width: '100%'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <MGLogo height={20} />
+              <MGLogo height={32} />
               <span style={{
                 fontSize: '1.25rem',
                 fontWeight: 400,
