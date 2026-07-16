@@ -9,6 +9,7 @@ import dynamic from 'next/dynamic';
 const AdminPanel = dynamic(() => import('../components/AdminPanel'), { ssr: false });
 import ReportList, { PlatformReport } from '../components/ReportList';
 import AuthModal from '../components/AuthModal';
+import MGLogo from '../components/MGLogo';
 import {
   GlobeIcon,
   GraphIcon,
@@ -218,15 +219,15 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
           margin: '0 auto',
           width: '100%'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <GlobeIcon size={18} stroke="var(--color-accent)" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <MGLogo height={20} />
             <span style={{
               fontSize: '1.25rem',
               fontWeight: 400,
               color: '#ffffff',
               letterSpacing: '-0.5px'
             }}>
-              Globaltradebuddy
+              Market Graphic
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '24px', fontSize: '1rem' }}>
@@ -918,15 +919,11 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
             fontWeight: 300
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="2" y1="12" x2="22" y2="12" />
-                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-              </svg>
-              <span style={{ fontWeight: 500, color: 'var(--color-text)' }}>Globaltradebuddy</span>
+              <MGLogo height={14} />
+              <span style={{ fontWeight: 500, color: 'var(--color-text)' }}>Market Graphic</span>
             </div>
             <div>
-              &copy; {new Date().getFullYear()} Globaltradebuddy. All rights reserved.
+              &copy; {new Date().getFullYear()} Market Graphic. All rights reserved.
             </div>
           </footer>
         </section>

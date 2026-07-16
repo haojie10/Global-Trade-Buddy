@@ -5,6 +5,7 @@ import { parseCookies } from '../../lib/cookies';
 import { getReportDetail } from '../api/user/report-detail';
 import WatermarkContainer from '../../components/WatermarkContainer';
 import Link from 'next/link';
+import MGLogo from '../../components/MGLogo';
 
 interface RelatedReport {
   id: string;
@@ -318,7 +319,8 @@ export default function ReportDetailPage({
             margin: '0 auto',
             width: '100%'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <MGLogo height={20} />
               <span style={{
                 fontSize: '1.25rem',
                 fontWeight: 400,

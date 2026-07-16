@@ -16,6 +16,7 @@ describe('News API System Tests', () => {
   afterAll(async () => {
     await dbClient.query(`DELETE FROM articles WHERE title LIKE '测试资讯%'`);
     await dbClient.query(`DELETE FROM reports WHERE title LIKE '测试报告%'`);
+    await dbClient.query(`DELETE FROM news WHERE title LIKE '测试资讯%'`);
     await dbClient.end();
   });
 
@@ -33,7 +34,7 @@ describe('News API System Tests', () => {
       json: (data: any) => { jsonVal = data; }
     } as any;
 
-    await publishHandler(mockReq, mockRes, dbClient);
+    await (publishHandler as any)(mockReq, mockRes, dbClient);
     expect(statusVal).toBe(401);
   });
 
@@ -63,18 +64,20 @@ describe('News API System Tests', () => {
       json: (data: any) => { jsonVal = data; }
     } as any;
 
-    await publishHandler(mockReq, mockRes, dbClient);
+    await (publishHandler as any)(mockReq, mockRes, dbClient);
     expect(statusVal).toBe(200);
     expect(jsonVal.success).toBe(true);
     const newId = jsonVal.id;
 
     // 验证关联实体已写入
+    const artRes = await dbClient.query(`SELECT id FROM articles WHERE title = '测试资讯B-俄罗斯玩具市场' LIMIT 1`);
+    const realArticleId = artRes.rows[0].id;
     const entRes = await dbClient.query(
       `SELECT e.canonical_name 
        FROM article_entities ae 
        JOIN entities e ON ae.entity_id = e.id 
        WHERE ae.article_id = $1`,
-      [newId]
+      [realArticleId]
     );
     expect(entRes.rows.map(r => r.canonical_name)).toContain('A 公司');
 
@@ -90,7 +93,7 @@ describe('News API System Tests', () => {
       json: (data: any) => { listJson = data; }
     } as any;
 
-    await listHandler(mockListReq, mockListRes, dbClient);
+    await (listHandler as any)(mockListReq, mockListRes, dbClient);
     expect(listStatus).toBe(200);
     expect(listJson.articles.length).toBeGreaterThan(0);
     const matched = listJson.articles.find((a: any) => a.id === newId);
@@ -119,7 +122,7 @@ describe('News API System Tests', () => {
       json: (data: any) => { jsonVal = data; }
     } as any;
 
-    await publishHandler(mockReq, mockRes, dbClient);
+    await (publishHandler as any)(mockReq, mockRes, dbClient);
     expect(statusVal).toBe(200);
     expect(jsonVal.success).toBe(true);
     expect(jsonVal.type).toBe('report');

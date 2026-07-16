@@ -255,7 +255,7 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     await dbClient.query('COMMIT');
     return res.status(200).json({ success: true, id: newReportId, type: 'report' });
   } else {
-    // 写入资讯表
+    // 1. 写入原 articles 表以兼容原有数据分析逻辑
     const insertArticleRes = await dbClient.query(
       `INSERT INTO articles (title, summary, content_html, region, country, industry, source)
        VALUES ($1, $2, $3, $4, $5, $6, 'agent') RETURNING id`,
@@ -263,7 +263,7 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     );
     const newArticleId = insertArticleRes.rows[0].id;
 
-    // 提取实体与归一化
+    // 提取实体与归一化并写入 article_entities
     const resolvedEntities = await extractAndNormalizeEntities(contentHtml, title, dbClient, tags);
     for (const ent of resolvedEntities) {
       await dbClient.query(
@@ -272,8 +272,56 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
         [newArticleId, ent.id, ent.role]
       );
     }
+
+    // 2. 双写快讯资讯表 (news) 以供前台资讯大厅展示
+    const publishedAt = new Date();
+    let sourceUrl: string | null = null;
+    if (contentHtml.includes('href="')) {
+      try {
+        sourceUrl = contentHtml.split('href="')[1].split('"')[0];
+      } catch (err) {}
+    }
+
+    const insertNewsRes = await dbClient.query(
+      `INSERT INTO news (title, summary, content, source_url, status, published_at)
+       VALUES ($1, $2, $3, $4, 'published', $5) RETURNING id`,
+      [title, summary || '', cleanHtml, sourceUrl, publishedAt]
+    );
+    const newNewsId = insertNewsRes.rows[0].id;
+
+    // 关联行业 (news_industries)
+    if (industry) {
+      const mappedCategory = getStandardCategory(industry) || industry;
+      const indRes = await dbClient.query(
+        'INSERT INTO industries (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING id',
+        [mappedCategory]
+      );
+      const indId = indRes.rows[0].id;
+      await dbClient.query(
+        'INSERT INTO news_industries (news_id, industry_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+        [newNewsId, indId]
+      );
+    }
+
+    // 关联国家 (news_countries)
+    if (country) {
+      let lookupName = country;
+      if (country.toLowerCase() === 'germany') lookupName = '德国';
+      if (country.toLowerCase() === 'austria') lookupName = '奥地利';
+      if (country.toLowerCase() === 'usa' || country.toLowerCase() === 'united states') lookupName = '美国';
+
+      const ctyRes = await dbClient.query('SELECT id FROM countries WHERE name = $1 LIMIT 1', [lookupName]);
+      if (ctyRes.rows.length > 0) {
+        const ctyId = ctyRes.rows[0].id;
+        await dbClient.query(
+          'INSERT INTO news_countries (news_id, country_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+          [newNewsId, ctyId]
+        );
+      }
+    }
+
     await dbClient.query('COMMIT');
-    return res.status(200).json({ success: true, id: newArticleId, type: 'article' });
+    return res.status(200).json({ success: true, id: newNewsId, type: 'article' });
   }
 }
 

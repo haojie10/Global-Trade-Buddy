@@ -13,6 +13,7 @@ const ObsidianGraph = dynamic(() => import('../components/ObsidianGraph'), {
 const NodeProfilePanel = dynamic(() => import('../components/NodeProfilePanel'), { ssr: false });
 import ReportList from '../components/ReportList';
 import { DEMO_GRAPH_DATA } from '../lib/demo-data';
+import MGLogo from '../components/MGLogo';
 
 
 interface MyGraphProps {
@@ -220,7 +221,8 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
           margin: '0 auto',
           width: '100%'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <MGLogo height={20} />
             <span style={{
               fontSize: '1.25rem',
               fontWeight: 400,
