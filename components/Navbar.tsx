@@ -73,14 +73,6 @@ export default function Navbar({
           {/* Logo与名称整体链接：点击回主页 */}
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
             <MGLogo height={48} />
-            <span style={{
-              fontSize: '1.25rem',
-              fontWeight: 700,
-              color: 'var(--color-text)',
-              letterSpacing: '0.5px'
-            }}>
-              MARKET GRAPHIC
-            </span>
           </Link>
 
           {/* 核心功能主菜单 */}

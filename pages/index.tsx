@@ -571,7 +571,6 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <MGLogo height={30} />
-              <span style={{ fontWeight: 700, color: 'var(--color-text)', letterSpacing: '0.5px' }}>MARKET GRAPHIC</span>
             </div>
             <div>
               &copy; {new Date().getFullYear()} MARKET GRAPHIC. All rights reserved.
