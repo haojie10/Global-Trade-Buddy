@@ -299,13 +299,15 @@ export default function ReportDetailPage({
         </div>
 
         {/* 统一导航栏 */}
-        <Navbar
-          userId={userId}
-          userRole={userRole}
-          quota={quota}
-          nickname={nickname}
-          onShowAuthModal={() => setShowAuthModal(true)}
-        />
+        {!isFullscreen && (
+          <Navbar
+            userId={userId}
+            userRole={userRole}
+            quota={quota}
+            nickname={nickname}
+            onShowAuthModal={() => setShowAuthModal(true)}
+          />
+        )}
 
         <div style={{ 
           maxWidth: unlocked ? '1400px' : '900px', 
