@@ -4,6 +4,8 @@ import Link from 'next/link';
 import pool from '../../lib/db';
 import { parseCookies } from '../../lib/cookies';
 import WatermarkContainer from '../../components/WatermarkContainer';
+import Navbar from '../../components/Navbar';
+import AuthModal from '../../components/AuthModal';
 
 interface NewsListItem {
   id: string;
@@ -20,11 +22,15 @@ interface NewsPageProps {
   newsList: NewsListItem[];
   industries: Array<{ id: string; name: string }>;
   userId: string | null;
+  userRole: string;
+  quota: number;
+  nickname: string;
 }
 
-export default function PublicNewsPage({ newsList, industries, userId }: NewsPageProps) {
+export default function PublicNewsPage({ newsList, industries, userId, userRole, quota, nickname }: NewsPageProps) {
   const [selectedIndustry, setSelectedIndustry] = useState('All');
   const [selectedRegion, setSelectedRegion] = useState('All');
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   const filteredNews = newsList.filter(item => {
     const matchInd = selectedIndustry === 'All' || item.industry === selectedIndustry;
@@ -36,25 +42,19 @@ export default function PublicNewsPage({ newsList, industries, userId }: NewsPag
 
   return (
     <WatermarkContainer text={userId ? `GTB USER ${userId.substring(0, 8)}` : 'GTB GUEST'}>
+      <Navbar 
+        userId={userId} 
+        userRole={userRole} 
+        quota={quota} 
+        nickname={nickname} 
+        onShowAuthModal={() => setShowAuthModal(true)} 
+      />
       <div style={{
         maxWidth: '1200px',
-        margin: '40px auto',
+        margin: '100px auto 40px auto',
         padding: '0 20px',
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
       }}>
-        {/* 返回 */}
-        <Link href="/" style={{
-          textDecoration: 'none',
-          color: 'var(--color-muted)',
-          fontSize: '0.9rem',
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '6px',
-          marginBottom: '28px',
-          transition: 'color 0.2s'
-        }} onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-accent)'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-muted)'}>
-          ← 返回首页市场大厅
-        </Link>
 
         {/* 标题 */}
         <div style={{ marginBottom: '40px' }}>
@@ -199,6 +199,10 @@ export default function PublicNewsPage({ newsList, industries, userId }: NewsPag
             })}
           </div>
         )}
+        <AuthModal 
+          isOpen={showAuthModal} 
+          onClose={() => setShowAuthModal(false)} 
+        />
       </div>
     </WatermarkContainer>
   );
@@ -206,11 +210,26 @@ export default function PublicNewsPage({ newsList, industries, userId }: NewsPag
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const cookies = parseCookies(context.req.headers.cookie);
-  const userId = cookies.user_id || null;
+  const cookieUserId = cookies.user_id || null;
 
   let dbClient = null;
+  let userId: string | null = null;
+  let userRole = 'guest';
+  let quota = 0;
+  let nickname = '';
+
   try {
     dbClient = await pool.connect();
+
+    if (cookieUserId) {
+      const userRes = await dbClient.query('SELECT id, role, free_quota, nickname FROM users WHERE id = $1', [cookieUserId]);
+      if (userRes.rows.length > 0) {
+        userId = userRes.rows[0].id;
+        userRole = userRes.rows[0].role;
+        quota = userRes.rows[0].free_quota;
+        nickname = userRes.rows[0].nickname || '';
+      }
+    }
 
     // 1. 获取所有公开快讯
     const newsRes = await dbClient.query(
@@ -235,7 +254,10 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       props: {
         newsList,
         industries: industriesRes.rows,
-        userId
+        userId,
+        userRole,
+        quota,
+        nickname
       }
     };
   } catch (err) {
@@ -244,7 +266,10 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       props: {
         newsList: [],
         industries: [],
-        userId
+        userId,
+        userRole,
+        quota,
+        nickname
       }
     };
   } finally {

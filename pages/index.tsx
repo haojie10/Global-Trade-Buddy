@@ -9,19 +9,8 @@ import dynamic from 'next/dynamic';
 const AdminPanel = dynamic(() => import('../components/AdminPanel'), { ssr: false });
 import ReportList, { PlatformReport } from '../components/ReportList';
 import AuthModal from '../components/AuthModal';
+import Navbar from '../components/Navbar';
 import MGLogo from '../components/MGLogo';
-import {
-  GlobeIcon,
-  GraphIcon,
-  CrownIcon,
-  UploadIcon,
-  LogOutIcon,
-  UserIcon,
-  LockIcon,
-  DollarIcon,
-  TrendIcon,
-  SearchIcon
-} from '../components/Icons';
 
 interface HomeProps {
   graphData: {
@@ -176,12 +165,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
     }
   };
 
-  const scrollToInsights = () => {
-    const el = document.getElementById('insights-library');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
+
 
 
   return (
@@ -196,230 +180,15 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
         <div className="ambient-light ambient-light-1" />
       </div>
 
-      {/* 头部导航栏 - 贴顶置顶黑色样式 */}
-      <div style={{ 
-        position: 'fixed', 
-        top: 0, 
-        left: 0, 
-        right: 0, 
-        background: '#121212', 
-        zIndex: 1000, 
-        borderBottom: '1px solid rgba(255, 255, 255, 0.1)' 
-      }}>
-        <header style={{
-          background: 'transparent',
-          padding: '16px 40px',
-          borderRadius: '0px',
-          border: 'none',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          boxShadow: 'none',
-          maxWidth: '1400px',
-          margin: '0 auto',
-          width: '100%'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <MGLogo height={32} />
-            <span style={{
-              fontSize: '1.25rem',
-              fontWeight: 400,
-              color: '#ffffff',
-              letterSpacing: '-0.5px'
-            }}>
-              Market Graphic
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '24px', fontSize: '1rem' }}>
-            <Link 
-              href="/news" 
-              className="sand-btn"
-              style={{
-                textDecoration: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                color: '#ffffff',
-                background: 'transparent',
-                border: 'none',
-                borderRadius: '0px',
-                padding: '6px 16px',
-                transition: 'all 0.2s',
-                fontSize: '1rem'
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.color = 'var(--color-accent)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.color = '#ffffff';
-              }}
-            >
-              每日资讯
-            </Link>
-            <Link 
-              href="/my-graph" 
-              className="sand-btn"
-              style={{
-                textDecoration: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                color: '#ffffff',
-                background: 'transparent',
-                border: 'none',
-                borderRadius: '0px',
-                padding: '6px 16px',
-                transition: 'all 0.2s',
-                fontSize: '1rem'
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.color = 'var(--color-accent)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.color = '#ffffff';
-              }}
-            >
-              市场图谱
-            </Link>
-            {userId ? (
-              <>
-                {userRole === 'admin' ? (
-                  <>
-                    <span style={{ color: '#ffffff', fontWeight: 400 }}>
-                      管理员: <span style={{ color: 'rgba(255, 255, 255, 0.6)', fontWeight: 500 }}>{userId.substring(0, 8)}...</span>
-                    </span>
-                    <Link
-                      href="/admin"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        color: '#ffffff',
-                        textDecoration: 'none',
-                        padding: '6px 16px',
-                        transition: 'all 0.2s',
-                        cursor: 'pointer',
-                        fontSize: '1rem'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.color = 'var(--color-accent)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.color = '#ffffff';
-                      }}
-                    >
-                      📊 管理后台
-                    </Link>
-                    <button 
-                      onClick={() => setShowUploadModal(true)}
-                      className="sand-btn"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        color: '#ffffff',
-                        background: 'transparent',
-                        border: 'none',
-                        borderRadius: '0px',
-                        padding: '6px 16px',
-                        transition: 'all 0.2s',
-                        cursor: 'pointer',
-                        fontSize: '1rem'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.color = 'var(--color-accent)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.color = '#ffffff';
-                      }}
-                    >
-                      <UploadIcon size={14} stroke="currentColor" />
-                      上传新报告
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <span style={{ color: '#ffffff', fontWeight: 400 }}>
-                      用户: <span style={{ color: 'rgba(255, 255, 255, 0.8)', fontWeight: 500 }}>{nickname || `${userId.substring(0, 8)}...`}</span>
-                    </span>
-                    <span style={{
-                      border: 'none',
-                      padding: '6px 14px',
-                      borderRadius: '0px',
-                      color: '#ffffff',
-                      fontWeight: 400,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}>
-                      <LockIcon size={14} stroke="currentColor" />
-                      剩余额度: <b style={{ color: 'rgba(255, 255, 255, 0.6)', fontWeight: 500 }}>{quota}</b> 次
-                    </span>
-                  </>
-                )}
-                <button 
-                  onClick={handleLogout}
-                  className="sand-btn"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    color: '#ffffff',
-                    background: 'transparent',
-                    border: 'none',
-                    borderRadius: '0px',
-                    padding: '6px 16px',
-                    transition: 'all 0.2s',
-                    cursor: 'pointer',
-                    fontSize: '1rem'
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.color = 'var(--color-accent)';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.color = '#ffffff';
-                  }}
-                >
-                  <LogOutIcon size={14} stroke="currentColor" />
-                  退出登录
-                </button>
-              </>
-            ) : (
-              <>
-                <span style={{ color: '#ffffff', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <UserIcon size={14} stroke="currentColor" />
-                  游客模式
-                </span>
-                <button
-                  id="navbar-login-btn"
-                  onClick={() => setShowAuthModal(true)}
-                  className="sand-btn"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    color: '#ffffff',
-                    background: 'transparent',
-                    border: 'none',
-                    borderRadius: '0px',
-                    padding: '6px 16px',
-                    transition: 'all 0.2s',
-                    cursor: 'pointer',
-                    fontSize: '1rem'
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.color = 'var(--color-accent)';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.color = '#ffffff';
-                  }}
-                >
-                  <LockIcon size={14} stroke="currentColor" />
-                  登录 / 注册
-                </button>
-              </>
-            )}
-          </div>
-        </header>
-      </div>
+      {/* 统一导航栏 */}
+      <Navbar
+        userId={userId}
+        userRole={userRole}
+        quota={quota}
+        nickname={nickname}
+        onShowAuthModal={() => setShowAuthModal(true)}
+        onShowUploadModal={() => setShowUploadModal(true)}
+      />
 
       {/* 滚动大容器 */}
       <div style={{ position: 'relative', zIndex: 10, paddingTop: '80px' }}>
@@ -480,7 +249,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
               告别碎片资讯与认知局限。外贸智友帮您突破原有认知边界，实现多维度的全球品类洞察。通过网状知识图谱将零碎资讯智能互联，助您在宏观的全球贸易版图中掌握更清晰的市场认知。
             </p>
             <button 
-              onClick={scrollToInsights}
+              onClick={() => router.push('/reports')}
               className="sand-btn"
               style={{
                 padding: '16px 40px',
@@ -506,62 +275,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
           </div>
         </section>
 
-      {/* 每日资讯板块 */}
-      <section className="animate-on-scroll" style={{
-        padding: '60px 40px',
-        maxWidth: '1400px',
-        margin: '0 auto',
-        background: 'transparent',
-        borderBottom: '1px solid rgba(18, 18, 18, 0.05)'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '30px' }}>
-          <div>
-            <span style={{ color: 'var(--color-accent)', fontSize: '0.8rem', letterSpacing: '2px', textTransform: 'uppercase' }}>Daily News</span>
-            <h2 className="font-editorial" style={{ fontSize: '2.5rem', margin: '8px 0 0 0', fontWeight: 400 }}>每日全球行业资讯</h2>
-          </div>
-          <Link href="/news" style={{ textDecoration: 'none', color: 'var(--color-accent)', fontSize: '0.95rem', fontWeight: 500 }}>
-            进入资讯大厅 →
-          </Link>
-        </div>
 
-        {prefArticles.length === 0 ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-muted)', border: '1px dashed rgba(18, 18, 18, 0.08)' }}>
-            暂无符合您偏好的每日资讯
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '30px' }}>
-            {prefArticles.map((art) => (
-              <div key={art.id} className="float-on-hover" style={{ 
-                background: 'rgba(255, 255, 255, 0.45)', 
-                backdropFilter: 'blur(15px)', 
-                WebkitBackdropFilter: 'blur(15px)', 
-                border: '1px solid rgba(18, 18, 18, 0.05)', 
-                padding: '24px', 
-                borderRadius: 'var(--border-radius)',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between'
-              }}>
-                <div>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--color-accent)', textTransform: 'uppercase', fontWeight: 600 }}>
-                    {art.industry || '综合'}
-                  </span>
-                  <h3 style={{ margin: '8px 0', fontSize: '1.25rem', fontWeight: 500 }}>
-                    <Link href={`/news/${art.id}`} style={{ textDecoration: 'none', color: 'var(--color-text)' }}>
-                      {art.title}
-                    </Link>
-                  </h3>
-                  <p style={{ color: 'var(--color-muted)', fontSize: '0.9rem', lineHeight: '1.5', fontWeight: 300 }}>{art.summary}</p>
-                </div>
-                <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: 'var(--color-muted)' }}>
-                  <span>{art.region} {art.country}</span>
-                  <span>{new Date(art.published_at).toLocaleDateString()}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
 
       {/* 新增三大认知能力板块与认知图谱预览 */}
         <section className="animate-on-scroll" style={{
@@ -630,70 +344,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
           </div>
         </section>
 
-        {/* 模块三：报告市场发现大厅 */}
-        <section id="insights-library" className="animate-on-scroll" style={{
-          padding: '60px 40px',
-          maxWidth: '1400px',
-          margin: '0 auto 60px auto',
-          background: 'transparent',
-          borderRadius: '0px'
-        }}>
 
-
-          <ReportList
-            reports={showAllReports ? reports : reports.slice(0, 6)}
-            userId={userId}
-            userRole={userRole}
-            quota={quota}
-            onUnlockSuccess={(newQuota, unlockedReportId) => {
-              setQuota(newQuota);
-              setReports(prev => prev.map(r => r.id === unlockedReportId ? { ...r, isUnlocked: true } : r));
-            }}
-            onDeleteReport={(reportId) => {
-              setReports(prev => prev.filter(r => r.id !== reportId));
-            }}
-            onFavoriteToggle={(reportId, isFavorited) => {
-              setReports(prev => prev.map(r => r.id === reportId ? { ...r, isFavorited } : r));
-            }}
-          />
-
-          {!showAllReports && reports.length > 6 && (
-            <div style={{ textAlign: 'center', marginTop: '35px' }}>
-              <button 
-                onClick={() => setShowAllReports(true)}
-                className="sand-btn"
-                style={{
-                  padding: '14px 36px',
-                  fontSize: '0.95rem',
-                  background: 'transparent',
-                  border: '1px solid rgba(18, 18, 18, 0.15)',
-                  color: '#000000',
-                  borderRadius: '0px',
-                  transition: 'all 0.2s',
-                  cursor: 'pointer'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--color-accent)';
-                  e.currentTarget.style.color = 'var(--color-accent)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(18, 18, 18, 0.15)';
-                  e.currentTarget.style.color = '#000000';
-                }}
-              >
-                查看全部报告 (包含其余 {reports.length - 6} 份) ➔
-              </button>
-            </div>
-          )}
-        </section>
-
-        {/* 水平轻柔分割线 */}
-        <div style={{
-          width: '100%',
-          maxWidth: '1400px',
-          borderTop: '1px solid rgba(160, 109, 68, 0.08)',
-          margin: '40px auto 20px auto'
-        }} />
 
         {/* 模块四：拓展效能与增长工具 */}
         <section className="animate-on-scroll" style={{

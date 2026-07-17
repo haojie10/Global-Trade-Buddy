@@ -5,7 +5,8 @@ import { parseCookies } from '../../lib/cookies';
 import { getReportDetail } from '../api/user/report-detail';
 import WatermarkContainer from '../../components/WatermarkContainer';
 import Link from 'next/link';
-import MGLogo from '../../components/MGLogo';
+import Navbar from '../../components/Navbar';
+import AuthModal from '../../components/AuthModal';
 
 interface RelatedReport {
   id: string;
@@ -96,6 +97,7 @@ export default function ReportDetailPage({
   const [content, setContent] = useState(report.content_html);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [quota, setQuota] = useState(freeQuota);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   // 收藏与笔记状态
   const [isFav, setIsFav] = useState(initialIsFavorite);
@@ -296,121 +298,14 @@ export default function ReportDetailPage({
           <div className="ambient-light ambient-light-1" />
         </div>
 
-        {/* 头部导航栏 - 贴顶置顶黑色样式 */}
-        <div style={{ 
-          position: 'fixed', 
-          top: 0, 
-          left: 0, 
-          right: 0, 
-          background: '#121212', 
-          zIndex: 1000, 
-          borderBottom: '1px solid rgba(255, 255, 255, 0.1)' 
-        }}>
-          <header style={{
-            background: 'transparent',
-            padding: '16px 40px',
-            borderRadius: '0px',
-            border: 'none',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            boxShadow: 'none',
-            maxWidth: '1400px',
-            margin: '0 auto',
-            width: '100%'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <MGLogo height={32} />
-              <span style={{
-                fontSize: '1.25rem',
-                fontWeight: 400,
-                color: '#ffffff',
-                letterSpacing: '-0.5px'
-              }}>
-                报告详情
-              </span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '20px', fontSize: '1rem' }}>
-              <Link 
-                href="/" 
-                className="sand-btn"
-                style={{
-                  textDecoration: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  color: '#ffffff',
-                  background: 'transparent',
-                  border: 'none',
-                  borderRadius: '0px',
-                  padding: '6px 16px',
-                  transition: 'all 0.2s',
-                  fontSize: '1rem'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.color = 'var(--color-accent)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.color = '#ffffff';
-                }}
-              >
-                平台主页
-              </Link>
-              
-              <Link 
-                href="/my-graph" 
-                className="sand-btn"
-                style={{
-                  textDecoration: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  color: '#ffffff',
-                  background: 'transparent',
-                  border: 'none',
-                  borderRadius: '0px',
-                  padding: '6px 16px',
-                  transition: 'all 0.2s',
-                  fontSize: '1rem'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.color = 'var(--color-accent)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.color = '#ffffff';
-                }}
-              >
-                市场图谱
-              </Link>
-
-              {userId ? (
-                <>
-                  <span style={{ color: '#ffffff', fontWeight: 400 }}>
-                    用户: <span style={{ color: 'rgba(255, 255, 255, 0.8)', fontWeight: 500 }}>{nickname || `${userId.substring(0, 8)}...`}</span>
-                  </span>
-                  <span style={{
-                    border: 'none',
-                    padding: '6px 14px',
-                    borderRadius: '0px',
-                    color: '#ffffff',
-                    fontWeight: 400,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                      <path d="M7 11V7a5 5 0 0 1 9.9-1" />
-                    </svg>
-                    剩余额度: <b style={{ color: 'rgba(255, 255, 255, 0.6)', fontWeight: 500 }}>{quota}</b> 次
-                  </span>
-                </>
-              ) : (
-                <span style={{ color: '#ffffff', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  游客模式
-                </span>
-              )}
-            </div>
-          </header>
-        </div>
+        {/* 统一导航栏 */}
+        <Navbar
+          userId={userId}
+          userRole={userRole}
+          quota={quota}
+          nickname={nickname}
+          onShowAuthModal={() => setShowAuthModal(true)}
+        />
 
         <div style={{ 
           maxWidth: unlocked ? '1400px' : '900px', 
@@ -840,6 +735,10 @@ export default function ReportDetailPage({
         </div>
 
       </div>
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+      />
     </WatermarkContainer>
   );
 }

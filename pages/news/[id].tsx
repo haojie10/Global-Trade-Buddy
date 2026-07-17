@@ -1,9 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { GetServerSideProps } from 'next';
 import Link from 'next/link';
 import pool from '../../lib/db';
 import { parseCookies } from '../../lib/cookies';
 import WatermarkContainer from '../../components/WatermarkContainer';
+import Navbar from '../../components/Navbar';
+import AuthModal from '../../components/AuthModal';
 
 interface NewsDetailProps {
   error?: string | null;
@@ -25,9 +27,13 @@ interface NewsDetailProps {
     summary: string;
   }>;
   userId: string | null;
+  userRole: string;
+  quota: number;
+  nickname: string;
 }
 
-export default function NewsDetailPage({ news, relatedReports, userId, error }: NewsDetailProps) {
+export default function NewsDetailPage({ news, relatedReports, userId, userRole, quota, nickname, error }: NewsDetailProps) {
+  const [showAuthModal, setShowAuthModal] = useState(false);
   
   // 1. 将 React Hook (useEffect) 严格声明在组件的最顶层（不能放在 try-catch 或条件语句内部，确保渲染链路的一致性）
   useEffect(() => {
@@ -177,25 +183,19 @@ export default function NewsDetailPage({ news, relatedReports, userId, error }: 
 
     return (
       <WatermarkContainer text={userId ? `GTB USER ${userId.substring(0, 8)}` : 'GTB GUEST'}>
+        <Navbar 
+          userId={userId} 
+          userRole={userRole} 
+          quota={quota} 
+          nickname={nickname} 
+          onShowAuthModal={() => setShowAuthModal(true)} 
+        />
         <div style={{
           maxWidth: '800px',
-          margin: '40px auto',
+          margin: '100px auto 40px auto',
           padding: '0 20px',
           fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
         }}>
-          {/* 返回链接 */}
-          <Link href="/" style={{
-            textDecoration: 'none',
-            color: 'var(--color-muted)',
-            fontSize: '0.9rem',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            marginBottom: '24px',
-            transition: 'color 0.2s'
-          }} onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-accent)'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-muted)'}>
-            ← 返回首页市场大厅
-          </Link>
 
           {/* 资讯主内容卡片 */}
           <article style={{
@@ -343,6 +343,10 @@ export default function NewsDetailPage({ news, relatedReports, userId, error }: 
               </div>
             </section>
           )}
+          <AuthModal 
+            isOpen={showAuthModal} 
+            onClose={() => setShowAuthModal(false)} 
+          />
         </div>
       </WatermarkContainer>
     );
@@ -358,31 +362,48 @@ export default function NewsDetailPage({ news, relatedReports, userId, error }: 
 }
 export const getServerSideProps: GetServerSideProps = async (context) => {
   let dbClient = null;
+  const { id } = context.params || {};
+
+  let cookieUserId: string | null = null;
   try {
-    const { id } = context.params || {};
-    
-    // 防御型 Cookie 解析，避免因为包含特殊字符的 malformed Cookie 抛出 URIError 崩溃
-    let userId: string | null = null;
-    try {
-      const cookies = parseCookies(context.req.headers.cookie);
-      userId = cookies.user_id || null;
-    } catch (cookieErr) {
-      console.warn('Cookie parsing failed in SSR:', cookieErr);
-    }
+    const cookies = parseCookies(context.req.headers.cookie);
+    cookieUserId = cookies.user_id || null;
+  } catch (cookieErr) {
+    console.warn('Cookie parsing failed in SSR:', cookieErr);
+  }
 
-    if (!id || typeof id !== 'string') {
-      return {
-        props: {
-          error: '无效的新闻ID请求参数',
-          news: null,
-          relatedReports: [],
-          userId: null
-        }
-      };
-    }
+  let userId: string | null = null;
+  let userRole = 'guest';
+  let quota = 0;
+  let nickname = '';
 
+  if (!id || typeof id !== 'string') {
+    return {
+      props: {
+        error: '无效的新闻ID请求参数',
+        news: null,
+        relatedReports: [],
+        userId: null,
+        userRole,
+        quota,
+        nickname
+      }
+    };
+  }
+
+  try {
     dbClient = await pool.connect();
     
+    if (cookieUserId) {
+      const userRes = await dbClient.query('SELECT id, role, free_quota, nickname FROM users WHERE id = $1', [cookieUserId]);
+      if (userRes.rows.length > 0) {
+        userId = userRes.rows[0].id;
+        userRole = userRes.rows[0].role;
+        quota = userRes.rows[0].free_quota;
+        nickname = userRes.rows[0].nickname || '';
+      }
+    }
+
     // 1. 查询快讯详情
     const newsRes = await dbClient.query(
       `SELECT n.id, n.title, n.summary, n.content, n.source_url, n.published_at,
@@ -399,7 +420,10 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
           error: `未在数据库中找到 ID 为 [${id}] 且已发布的新闻资讯数据。`,
           news: null,
           relatedReports: [],
-          userId: null
+          userId: null,
+          userRole,
+          quota,
+          nickname
         }
       };
     }
@@ -436,7 +460,10 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
           published_at: published_at_str
         },
         relatedReports: relatedReportsRes.rows,
-        userId
+        userId,
+        userRole,
+        quota,
+        nickname
       }
     };
   } catch (err: any) {
@@ -446,7 +473,10 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         error: `SSR 数据提取时发生异常: ${err.message || err}\n${err.stack || ''}`,
         news: null,
         relatedReports: [],
-        userId: null
+        userId: null,
+        userRole,
+        quota,
+        nickname
       }
     };
   } finally {
