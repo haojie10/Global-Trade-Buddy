@@ -72,14 +72,14 @@ export default function Navbar({
         <div style={{ display: 'flex', alignItems: 'center', gap: '36px' }}>
           {/* Logo与名称整体链接：点击回主页 */}
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
-            <MGLogo height={32} />
+            <MGLogo height={48} />
             <span style={{
               fontSize: '1.25rem',
-              fontWeight: 500,
+              fontWeight: 700,
               color: 'var(--color-text)',
-              letterSpacing: '-0.5px'
+              letterSpacing: '0.5px'
             }}>
-              Market Graphic
+              MARKET GRAPHIC
             </span>
           </Link>
 
