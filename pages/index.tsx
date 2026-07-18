@@ -619,30 +619,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
         </div>
       </div>
 
-      {/* 4. 底部状态栏 */}
-      <div style={{
-        position: 'fixed',
-        bottom: '24px',
-        left: '24px',
-        zIndex: 100,
-        background: '#121212',
-        color: '#ffffff',
-        padding: '12px 24px',
-        borderRadius: '30px',
-        boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
-        fontSize: '0.85rem',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        border: '1px solid rgba(255,255,255,0.1)'
-      }}>
-        <span style={{ color: '#ff641e' }}>●</span>
-        <span><b>视频时间线滚动模式</b></span>
-        <span style={{ color: 'rgba(255,255,255,0.3)' }}>|</span>
-        <span style={{ color: 'rgba(255,255,255,0.7)' }}>
-          {errorMessage ? errorMessage : `滚动进度: ${(progressPercent * 100).toFixed(0)}%`}
-        </span>
-      </div>
+
 
       {/* 5. 登录/注册弹窗 & 上传管理后台 */}
       <AuthModal 
