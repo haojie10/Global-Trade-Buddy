@@ -21,6 +21,28 @@ export default function Navbar({
 }: NavbarProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('gtb_theme') as 'light' | 'dark' || 'light';
+    setTheme(savedTheme);
+    if (savedTheme === 'dark') {
+      document.body.classList.add('dark-theme');
+    } else {
+      document.body.classList.remove('dark-theme');
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const nextTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(nextTheme);
+    localStorage.setItem('gtb_theme', nextTheme);
+    if (nextTheme === 'dark') {
+      document.body.classList.add('dark-theme');
+    } else {
+      document.body.classList.remove('dark-theme');
+    }
+  };
 
   // 监听滚动事件，动态切换背景
   useEffect(() => {
@@ -50,10 +72,10 @@ export default function Navbar({
       zIndex: 1000, 
       transition: 'all 0.3s cubic-bezier(0.25, 1, 0.22, 1)',
       // 往下翻时变成跟下面报告卡片一样的磨砂背景，未翻动时完全透明
-      background: isScrolled ? 'rgba(255, 255, 255, 0.45)' : 'transparent',
+      background: isScrolled ? 'var(--navbar-bg)' : 'transparent',
       backdropFilter: isScrolled ? 'blur(15px)' : 'none',
       WebkitBackdropFilter: isScrolled ? 'blur(15px)' : 'none',
-      borderBottom: isScrolled ? '1px solid rgba(18, 18, 18, 0.05)' : 'none',
+      borderBottom: isScrolled ? '1px solid var(--card-border)' : 'none',
     }}>
       <header style={{
         background: 'transparent',
@@ -121,6 +143,27 @@ export default function Navbar({
 
         {/* 右半部分：额度及登录/账号管理（总共最多两个菜单） */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '24px', fontSize: '1rem' }}>
+          {/* 主题切换开关 */}
+          <button
+            onClick={toggleTheme}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '1.2rem',
+              padding: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--color-text)',
+              transition: 'transform 0.2s',
+              outline: 'none'
+            }}
+            title="切换主题"
+          >
+            {theme === 'light' ? '🌙' : '☀️'}
+          </button>
+
           {userId ? (
             <>
               {/* 菜单 1：额度展示（纯文本，去掉了小锁和剩余） */}
@@ -157,11 +200,11 @@ export default function Navbar({
                     position: 'absolute',
                     right: 0,
                     top: '100%',
-                    background: 'rgba(255, 255, 255, 0.95)',
+                    background: 'var(--dropdown-bg)',
                     backdropFilter: 'blur(20px)',
                     WebkitBackdropFilter: 'blur(20px)',
                     boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
-                    border: '1px solid rgba(18, 18, 18, 0.05)',
+                    border: '1px solid var(--card-border)',
                     padding: '8px 0',
                     width: '140px',
                     display: 'flex',
@@ -254,11 +297,11 @@ export default function Navbar({
                     position: 'absolute',
                     right: 0,
                     top: '100%',
-                    background: 'rgba(255, 255, 255, 0.95)',
+                    background: 'var(--dropdown-bg)',
                     backdropFilter: 'blur(20px)',
                     WebkitBackdropFilter: 'blur(20px)',
                     boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
-                    border: '1px solid rgba(18, 18, 18, 0.05)',
+                    border: '1px solid var(--card-border)',
                     padding: '8px 0',
                     width: '120px',
                     display: 'flex',

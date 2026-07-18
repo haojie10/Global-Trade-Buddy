@@ -291,7 +291,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '40px' }}>
             {/* 卡片一 */}
-            <div className="float-on-hover" style={{ background: 'rgba(255, 255, 255, 0.45)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)', border: '1px solid rgba(18, 18, 18, 0.05)', padding: '24px', borderRadius: 'var(--border-radius)', display: 'flex', flexDirection: 'column' }}>
+            <div className="float-on-hover" style={{ background: 'var(--card-bg)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)', border: '1px solid var(--card-border)', padding: '24px', borderRadius: 'var(--border-radius)', display: 'flex', flexDirection: 'column' }}>
               <div style={{ height: '140px', overflow: 'hidden', borderRadius: 'var(--border-radius)', marginBottom: '16px', border: '1px solid rgba(18, 18, 18, 0.08)', boxShadow: '0 4px 12px rgba(0,0,0,0.01)' }}>
                 <img src="/images/market_structure_network.jpg" alt="拓宽视野" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
@@ -302,7 +302,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
             </div>
 
             {/* 卡片二 */}
-            <div className="float-on-hover" style={{ background: 'rgba(255, 255, 255, 0.45)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)', border: '1px solid rgba(18, 18, 18, 0.05)', padding: '24px', borderRadius: 'var(--border-radius)', display: 'flex', flexDirection: 'column' }}>
+            <div className="float-on-hover" style={{ background: 'var(--card-bg)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)', border: '1px solid var(--card-border)', padding: '24px', borderRadius: 'var(--border-radius)', display: 'flex', flexDirection: 'column' }}>
               <div style={{ height: '140px', overflow: 'hidden', borderRadius: 'var(--border-radius)', marginBottom: '16px', border: '1px solid rgba(18, 18, 18, 0.08)', boxShadow: '0 4px 12px rgba(0,0,0,0.01)' }}>
                 <img src="/images/global_trade_trends.jpg" alt="掌握动向" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
@@ -313,7 +313,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
             </div>
 
             {/* 卡片三 */}
-            <div className="float-on-hover" style={{ background: 'rgba(255, 255, 255, 0.45)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)', border: '1px solid rgba(18, 18, 18, 0.05)', padding: '24px', borderRadius: 'var(--border-radius)', borderColor: 'var(--color-accent)', display: 'flex', flexDirection: 'column' }}>
+            <div className="float-on-hover" style={{ background: 'var(--card-bg)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)', border: '1px solid var(--card-border)', padding: '24px', borderRadius: 'var(--border-radius)', borderColor: 'var(--color-accent)', display: 'flex', flexDirection: 'column' }}>
               <div style={{ height: '140px', overflow: 'hidden', borderRadius: 'var(--border-radius)', marginBottom: '16px', border: '1px solid rgba(18, 18, 18, 0.08)', boxShadow: '0 4px 12px rgba(0,0,0,0.01)' }}>
                 <img src="/images/global_market_focus.jpg" alt="筛选聚焦" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
@@ -325,7 +325,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
           </div>
 
           {/* 市场认知图谱配图 */}
-          <div style={{ background: 'rgba(255, 255, 255, 0.45)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)', border: '1px solid rgba(18, 18, 18, 0.05)', borderRadius: 'var(--border-radius)', padding: '30px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '40px' }}>
+          <div style={{ background: 'var(--card-bg)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)', border: '1px solid var(--card-border)', borderRadius: 'var(--border-radius)', padding: '30px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '40px' }}>
             <div style={{ flex: '1 1 400px' }}>
               <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-accent)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '8px' }}>
                 Discover & Focus
@@ -360,7 +360,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '30px' }}>
             {/* 个人笔记挂载 */}
-            <div className="float-on-hover" style={{ background: 'rgba(255, 255, 255, 0.45)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)', border: '1px solid rgba(18, 18, 18, 0.05)', padding: '24px', borderRadius: 'var(--border-radius)', display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+            <div className="float-on-hover" style={{ background: 'var(--card-bg)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)', border: '1px solid var(--card-border)', padding: '24px', borderRadius: 'var(--border-radius)', display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
               <div style={{ background: 'var(--bg-main)', border: '1px solid rgba(18, 18, 18, 0.08)', padding: '12px', borderRadius: '0px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <span style={{ fontSize: '1.5rem' }}>📝</span>
               </div>
@@ -376,10 +376,10 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
 
             {/* 邀请裂变机制 */}
             <div className="float-on-hover" style={{ 
-              background: 'rgba(255, 255, 255, 0.45)', 
+              background: 'var(--card-bg)', 
               backdropFilter: 'blur(15px)', 
               WebkitBackdropFilter: 'blur(15px)', 
-              border: '1px solid rgba(18, 18, 18, 0.05)', 
+              border: '1px solid var(--card-border)', 
               padding: '24px', 
               borderRadius: 'var(--border-radius)', 
               display: 'flex', 
@@ -410,8 +410,8 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
                       value={`${typeof window !== 'undefined' ? window.location.origin : ''}/?invite=${userId}`}
                       style={{
                         flex: 1,
-                        background: 'rgba(255, 255, 255, 0.65)',
-                        border: '1px solid rgba(18, 18, 18, 0.08)',
+                        background: 'var(--input-bg)',
+                        border: '1px solid var(--card-border)',
                         borderRadius: '0px',
                         padding: '8px 12px',
                         fontSize: '0.8rem',
@@ -473,8 +473,8 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
           {/* 新增：Call to Action (行动呼吁) 注册引导区 - 已登录状态下自动隐藏 */}
           {!userId && (
             <div style={{
-              background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.01) 0%, rgba(255, 255, 255, 0.04) 100%)',
-              border: '1px solid rgba(18, 18, 18, 0.05)',
+              background: 'var(--card-bg)',
+              border: '1px solid var(--card-border)',
               borderRadius: 'var(--border-radius)',
               padding: '60px 40px',
               textAlign: 'center',
