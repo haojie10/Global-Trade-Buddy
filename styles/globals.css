@@ -31,6 +31,21 @@ body.dark-theme {
   --input-bg: rgba(255, 255, 255, 0.08);
 }
 
+/* 全局聚光灯大暗影遮罩，同步 Demo 调性 */
+body.dark-theme::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(9, 8, 8, 0.3) 0%, rgba(9, 8, 8, 0.85) 80%) !important;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* 强制弱化暗色下的橙色流光，防止过度红晕干扰 */
+body.dark-theme .ambient-light {
+  opacity: 0.1 !important;
+}
+
 :root {
   --bg-main: #f6f6f6;      /* 画廊灰白 */
   --bg-sub: #eaeaea;       /* 结构辅助色 */
