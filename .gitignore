@@ -46,3 +46,9 @@ public/uploads/
 # .antigravity/
 .superpowers/
 .worktrees/
+
+# raw large video files
+public/Intro-loop.mp4
+public/Outro-loop.mp4
+public/main.mp4
+
