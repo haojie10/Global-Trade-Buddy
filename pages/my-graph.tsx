@@ -1,4 +1,5 @@
 import { GetServerSideProps } from 'next';
+import Head from 'next/head';
 import React, { useState } from 'react';
 import pool from '../lib/db';
 import { parseCookies } from '../lib/cookies';
@@ -195,6 +196,9 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
       flexDirection: 'column',
       position: 'relative'
     }}>
+      <Head>
+        <title>个人知识图谱 | Market Graphic</title>
+      </Head>
       {/* 全局背景流光光源 */}
       <div className="ambient-glow-container">
         <div className="ambient-light ambient-light-1" />

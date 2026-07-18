@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { GetServerSideProps } from 'next';
+import Head from 'next/head';
 import Link from 'next/link';
 import pool from '../../lib/db';
 import { parseCookies } from '../../lib/cookies';
@@ -42,6 +43,9 @@ export default function PublicNewsPage({ newsList, industries, userId, userRole,
 
   return (
     <WatermarkContainer text={userId ? `GTB USER ${userId.substring(0, 8)}` : 'GTB GUEST'}>
+      <Head>
+        <title>每日资讯 | Market Graphic</title>
+      </Head>
       <Navbar 
         userId={userId} 
         userRole={userRole} 

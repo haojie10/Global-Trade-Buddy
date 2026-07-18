@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { GetServerSideProps } from 'next';
+import Head from 'next/head';
 import pool from '../../lib/db';
 import { parseCookies } from '../../lib/cookies';
 import ReportList, { PlatformReport } from '../../components/ReportList';
@@ -29,6 +30,9 @@ export default function ReportsPage({ reports: initialReports, userId, userRole,
       minHeight: '100vh',
       position: 'relative'
     }}>
+      <Head>
+        <title>报告大厅 | Market Graphic</title>
+      </Head>
       {/* 全局背景流光光源 */}
       <div className="ambient-glow-container">
         <div className="ambient-light ambient-light-1" />

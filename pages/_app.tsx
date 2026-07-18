@@ -4,6 +4,7 @@ import type { AppProps } from 'next/app';
 import { Outfit, Playfair_Display } from 'next/font/google';
 import BackgroundGraph from '../components/BackgroundGraph';
 import { useRouter } from 'next/router';
+import Head from 'next/head';
 
 const outfit = Outfit({
   subsets: ['latin'],
@@ -26,6 +27,9 @@ export default function App({ Component, pageProps }: AppProps) {
 
   return (
     <div className={`${outfit.variable} ${playfair.variable}`}>
+      <Head>
+        <title>Market Graphic - 俯瞰全球市场</title>
+      </Head>
       {!isAdmin && <BackgroundGraph />}
       <Component {...pageProps} />
     </div>
