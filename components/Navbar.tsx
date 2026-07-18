@@ -173,6 +173,33 @@ export default function Navbar({
                     flexDirection: 'column',
                     animation: 'navFadeIn 0.2s ease-out'
                   }}>
+                    {userRole === 'admin' && (
+                      <Link 
+                        href="/admin"
+                        style={{
+                          textDecoration: 'none',
+                          color: 'var(--color-text)',
+                          fontSize: '0.95rem',
+                          textAlign: 'left',
+                          padding: '10px 16px',
+                          display: 'block',
+                          width: '100%',
+                          cursor: 'pointer',
+                          transition: 'background 0.2s, color 0.2s',
+                          boxSizing: 'border-box'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.background = 'rgba(255, 100, 30, 0.08)';
+                          e.currentTarget.style.color = 'var(--color-accent)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.color = 'var(--color-text)';
+                        }}
+                      >
+                        管理后台
+                      </Link>
+                    )}
                     {userRole === 'admin' && onShowUploadModal && (
                       <button 
                         onClick={onShowUploadModal}
