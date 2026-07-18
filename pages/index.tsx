@@ -162,23 +162,36 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
       if (mainVideo) mainVideo.style.opacity = mainOpacity.toString();
       if (outroVideo) outroVideo.style.opacity = outroOpacity.toString();
 
-      // 文案浮现/渐隐及视差变换
-      const updateSection = (sec: HTMLDivElement | null, start: number, active: number, end: number, isLast = false) => {
+      // 文案浮现/渐隐及视差变换 (引入 activeStart -> activeEnd 的停留平原，加长停留时间)
+      const updateSection = (
+        sec: HTMLDivElement | null, 
+        start: number, 
+        activeStart: number, 
+        activeEnd: number, 
+        end: number, 
+        isLast = false
+      ) => {
         if (!sec) return;
         let opacity = 0;
         let translateY = 20;
 
         if (scrollPercent >= start && scrollPercent <= end) {
-          if (scrollPercent < active) {
-            const ratio = (scrollPercent - start) / (active - start);
+          if (scrollPercent < activeStart) {
+            // 淡入段
+            const ratio = (scrollPercent - start) / (activeStart - start);
             opacity = ratio;
             translateY = 20 * (1 - ratio);
+          } else if (scrollPercent >= activeStart && scrollPercent <= activeEnd) {
+            // 停留段 (保持 100% 可见)
+            opacity = 1;
+            translateY = 0;
           } else {
+            // 淡出段
             if (isLast) {
               opacity = 1;
               translateY = 0;
             } else {
-              const ratio = (scrollPercent - active) / (end - active);
+              const ratio = (scrollPercent - activeEnd) / (end - activeEnd);
               opacity = 1 - ratio;
               translateY = -20 * ratio;
             }
@@ -193,11 +206,11 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
         sec.style.display = opacity === 0 ? 'none' : 'flex';
       };
 
-      // 划分四幕文案的滚动百分比活跃区间
-      updateSection(sec1, 0.0, 0.08, 0.20);
-      updateSection(sec2, 0.22, 0.38, 0.55);
-      updateSection(sec3, 0.58, 0.70, 0.82);
-      updateSection(sec4, 0.85, 0.95, 1.00, true);
+      // 划分四幕文案的滚动百分比活跃区间 (设置平滑过渡和长停留区域)
+      updateSection(sec1, 0.0, 0.0, 0.15, 0.23);
+      updateSection(sec2, 0.23, 0.30, 0.52, 0.60);
+      updateSection(sec3, 0.60, 0.67, 0.82, 0.88);
+      updateSection(sec4, 0.88, 0.94, 1.0, 1.0, true);
 
       animationFrameId = requestAnimationFrame(renderLoop);
     };
