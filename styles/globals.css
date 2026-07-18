@@ -8,42 +8,7 @@ body {
   background-size: 100px 100%, cover;
   background-attachment: fixed;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  color: var(--color-text);
-  transition: background 0.3s ease, color 0.3s ease;
-}
-
-body.dark-theme {
-  background: 
-    linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px),
-    radial-gradient(circle at center, #1a1919 0%, #090808 100%) !important;
-  background-size: 100px 100%, cover;
-  color: #ffffff;
-  
-  --bg-main: #0c0b0b;
-  --bg-sub: #161515;
-  --color-text: #ffffff;
-  --color-muted: #a0a0a0;
-  
-  --card-bg: rgba(255, 255, 255, 0.05);
-  --card-border: rgba(255, 255, 255, 0.08);
-  --navbar-bg: rgba(9, 8, 8, 0.7);
-  --dropdown-bg: rgba(26, 25, 25, 0.95);
-  --input-bg: rgba(255, 255, 255, 0.08);
-}
-
-/* 全局聚光灯大暗影遮罩，同步 Demo 调性 */
-body.dark-theme::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: radial-gradient(circle at center, rgba(9, 8, 8, 0.3) 0%, rgba(9, 8, 8, 0.85) 80%) !important;
-  z-index: 0;
-  pointer-events: none;
-}
-
-/* 强制弱化暗色下的橙色流光，防止过度红晕干扰 */
-body.dark-theme .ambient-light {
-  opacity: 0.1 !important;
+  color: #121212;
 }
 
 :root {
@@ -52,12 +17,6 @@ body.dark-theme .ambient-light {
   --color-accent: #ff641e; /* 焦点强调色: 暖阳橘 */
   --color-text: #121212;   /* 主要文字: 极简深炭黑 */
   --color-muted: #666666;  /* 次要文字: 烟灰次要描述 */
-  
-  --card-bg: rgba(255, 255, 255, 0.45);
-  --card-border: rgba(18, 18, 18, 0.05);
-  --navbar-bg: rgba(255, 255, 255, 0.45);
-  --dropdown-bg: rgba(255, 255, 255, 0.95);
-  --input-bg: rgba(255, 255, 255, 0.65);
   
   --btn-font-weight: 400;      
   --btn-letter-spacing: 0.05em;   
@@ -370,9 +329,4 @@ h1, h2, h3, h4, h5, h6 {
 .report-card:hover .unlocked-tag {
   background: rgba(255, 255, 255, 0.2) !important;
   color: #ffffff !important;
-}
-
-body.dark-theme .report-card {
-  background: var(--card-bg) !important;
-  border-color: var(--card-border) !important;
 }

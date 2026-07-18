@@ -1,6 +1,7 @@
 import { GetServerSideProps } from 'next';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
+import Head from 'next/head';
 import pool from '../lib/db';
 import { parseCookies } from '../lib/cookies';
 import { getUserGraph, GraphNode, GraphLink } from './api/user/graph';
@@ -27,40 +28,23 @@ interface HomeProps {
 
 export default function HomePage({ graphData, allReports, userId, userRole, freeQuota, nickname, latestArticles = [] }: HomeProps) {
   const [quota, setQuota] = useState(freeQuota);
-  const [reports, setReports] = useState(allReports);
-  const [showAllReports, setShowAllReports] = useState(false);
-  const [emailInput, setEmailInput] = useState('');
-  const [subscribed, setSubscribed] = useState(false);
-  const [prefArticles, setPrefArticles] = useState<any[]>(latestArticles);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
   const router = useRouter();
 
-  // 根据 localStorage 偏好设置动态过滤首页资讯
-  useEffect(() => {
-    const cacheRegion = localStorage.getItem('gtb_news_region') || 'All';
-    const cacheCountry = localStorage.getItem('gtb_news_country') || 'All';
-    const cacheIndustry = localStorage.getItem('gtb_news_industry') || 'All';
+  // 视频与文案 DOM Refs
+  const introRef = useRef<HTMLVideoElement>(null);
+  const mainRef = useRef<HTMLVideoElement>(null);
+  const outroRef = useRef<HTMLVideoElement>(null);
 
-    if (cacheRegion !== 'All' || cacheCountry !== 'All' || cacheIndustry !== 'All') {
-      let url = `/api/user/articles?pageSize=6`;
-      if (cacheRegion !== 'All') url += `&region=${encodeURIComponent(cacheRegion)}`;
-      if (cacheCountry !== 'All') url += `&country=${encodeURIComponent(cacheCountry)}`;
-      if (cacheIndustry !== 'All') url += `&industry=${encodeURIComponent(cacheIndustry)}`;
+  const sec1Ref = useRef<HTMLDivElement>(null);
+  const sec2Ref = useRef<HTMLDivElement>(null);
+  const sec3Ref = useRef<HTMLDivElement>(null);
+  const sec4Ref = useRef<HTMLDivElement>(null);
 
-      fetch(url)
-        .then(res => res.json())
-        .then(data => {
-          if (data.articles && data.articles.length > 0) {
-            setPrefArticles(data.articles);
-          } else {
-            setPrefArticles(latestArticles);
-          }
-        })
-        .catch(() => setPrefArticles(latestArticles));
-    } else {
-      setPrefArticles(latestArticles);
-    }
-  }, [latestArticles]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [progressPercent, setProgressPercent] = useState(0);
 
   // 1. 生命周期：捕获 URL 中的邀请人 ID 并缓存到本地
   useEffect(() => {
@@ -85,10 +69,8 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
         .then(data => {
           if (data.success) {
             alert('🎁 恭喜！接受邀请注册成功，你与邀请人均已获赠 1 次报告解锁额度！');
-            // 实时增加前台显示额度
             setQuota(prev => prev + 1);
           }
-          // 无论成功还是失败，均清除本地缓存，防止重复请求
           localStorage.removeItem('gtb_referrer_id');
         })
         .catch(err => {
@@ -98,89 +80,257 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
     }
   }, [userId]);
 
-  // 弹窗与控制面板状态
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [showUploadModal, setShowUploadModal] = useState(false);
-
-  // 调色板定制状态
-  const [accentColor, setAccentColor] = useState('#ff641e');
-  const [bgSub, setBgSub] = useState('#eaeaea');
-  const [ambientOpacity, setAmbientOpacity] = useState(0.40);
-  const [ambientBlur, setAmbientBlur] = useState(30);
-  const [ambientScale, setAmbientScale] = useState(1.4);
-  const [ambientBlendMode, setAmbientBlendMode] = useState('normal');
-  const [brandWeight, setBrandWeight] = useState<'standard' | 'vibrant'>('standard');
-
-  // 实时同步 CSS 变量
+  // 3. 滚动与 rAF 帧循环逻辑
   useEffect(() => {
-    const root = document.documentElement;
-    if (root) {
-      root.style.setProperty('--color-accent', accentColor);
-      root.style.setProperty('--bg-sub', bgSub);
-      root.style.setProperty('--ambient-opacity', String(ambientOpacity));
-      root.style.setProperty('--ambient-blur', `${ambientBlur}px`);
-      root.style.setProperty('--ambient-scale', String(ambientScale));
-      root.style.setProperty('--ambient-blend-mode', ambientBlendMode);
-    }
-  }, [accentColor, bgSub, ambientOpacity, ambientBlur, ambientScale, ambientBlendMode]);
+    const introVideo = introRef.current;
+    const mainVideo = mainRef.current;
+    const outroVideo = outroRef.current;
 
-  const handleLogout = () => {
-    document.cookie = `user_id=; path=/; max-age=0`;
-    document.cookie = `user_role=; path=/; max-age=0`;
-    window.location.reload();
-  };
+    const sec1 = sec1Ref.current;
+    const sec2 = sec2Ref.current;
+    const sec3 = sec3Ref.current;
+    const sec4 = sec4Ref.current;
 
+    let targetPercent = 0;
+    let currentRenderPercent = 0;
+    let currentRenderTime = 0;
+    let animationFrameId: number;
 
+    const renderLoop = () => {
+      // Lerp 滚动进度以实现缓动阻尼感
+      currentRenderPercent += (targetPercent - currentRenderPercent) * 0.08;
+      const scrollPercent = Math.max(0, Math.min(1, currentRenderPercent));
+      setProgressPercent(scrollPercent);
 
-  // 滚动进入可视区域动画监听
-  useEffect(() => {
-    const observerOptions = {
-      root: null,
-      rootMargin: '0px',
-      threshold: 0.1,
+      let introOpacity = 0;
+      let mainOpacity = 0;
+      let outroOpacity = 0;
+
+      const mainDuration = mainVideo ? mainVideo.duration || 12 : 12;
+
+      // 视频淡入淡出及 CPU 解码资源释放优化
+      if (scrollPercent <= 0) {
+        introOpacity = 1;
+        if (introVideo && introVideo.paused) introVideo.play().catch(() => {});
+        if (mainVideo && !mainVideo.paused) mainVideo.pause();
+        if (outroVideo && !outroVideo.paused) outroVideo.pause();
+      } else if (scrollPercent > 0 && scrollPercent < 0.98) {
+        // 前 5% 粒子淡出，数据聚合淡入
+        if (scrollPercent < 0.05) {
+          const ratio = scrollPercent / 0.05;
+          introOpacity = 1 - ratio;
+          mainOpacity = ratio;
+          
+          if (introVideo && introVideo.paused) introVideo.play().catch(() => {});
+          if (mainVideo && !mainVideo.paused) mainVideo.pause();
+          if (outroVideo && !outroVideo.paused) outroVideo.pause();
+        } 
+        // 后 5% 数据淡出，自转大脑淡入
+        else if (scrollPercent > 0.93) {
+          const ratio = (scrollPercent - 0.93) / 0.05;
+          mainOpacity = 1 - ratio;
+          outroOpacity = ratio;
+          
+          if (introVideo && !introVideo.paused) introVideo.pause();
+          if (mainVideo && !mainVideo.paused) mainVideo.pause();
+          if (outroVideo && outroVideo.paused) outroVideo.play().catch(() => {});
+        } 
+        // 中间完全显示 main 视频，暂停其他视频释放资源
+        else {
+          mainOpacity = 1;
+          if (introVideo && !introVideo.paused) introVideo.pause();
+          if (outroVideo && !outroVideo.paused) outroVideo.pause();
+        }
+
+        // main 视频进度 seek 追随
+        if (mainVideo && mainVideo.readyState >= 2) {
+          const mainPercent = (scrollPercent - 0.05) / 0.88;
+          const targetTime = Math.max(0, Math.min(mainDuration - 0.05, mainPercent * mainDuration));
+          currentRenderTime += (targetTime - currentRenderTime) * 0.08;
+          mainVideo.currentTime = currentRenderTime;
+        }
+      } else {
+        // 彻底触底
+        outroOpacity = 1;
+        if (outroVideo && outroVideo.paused) outroVideo.play().catch(() => {});
+        if (introVideo && !introVideo.paused) introVideo.pause();
+        if (mainVideo && !mainVideo.paused) mainVideo.pause();
+      }
+
+      // 原生 DOM Opacity 修改，完全避开 React 重绘
+      if (introVideo) introVideo.style.opacity = introOpacity.toString();
+      if (mainVideo) mainVideo.style.opacity = mainOpacity.toString();
+      if (outroVideo) outroVideo.style.opacity = outroOpacity.toString();
+
+      // 文案浮现/渐隐及视差变换
+      const updateSection = (sec: HTMLDivElement | null, start: number, active: number, end: number, isLast = false) => {
+        if (!sec) return;
+        let opacity = 0;
+        let translateY = 20;
+
+        if (scrollPercent >= start && scrollPercent <= end) {
+          if (scrollPercent < active) {
+            const ratio = (scrollPercent - start) / (active - start);
+            opacity = ratio;
+            translateY = 20 * (1 - ratio);
+          } else {
+            if (isLast) {
+              opacity = 1;
+              translateY = 0;
+            } else {
+              const ratio = (scrollPercent - active) / (end - active);
+              opacity = 1 - ratio;
+              translateY = -20 * ratio;
+            }
+          }
+        } else if (scrollPercent > end && !isLast) {
+          opacity = 0;
+          translateY = -20;
+        }
+
+        sec.style.opacity = opacity.toString();
+        sec.style.transform = `translateY(${translateY}px)`;
+        sec.style.display = opacity === 0 ? 'none' : 'flex';
+      };
+
+      // 划分四幕文案的滚动百分比活跃区间
+      updateSection(sec1, 0.0, 0.08, 0.20);
+      updateSection(sec2, 0.22, 0.38, 0.55);
+      updateSection(sec3, 0.58, 0.70, 0.82);
+      updateSection(sec4, 0.85, 0.95, 1.00, true);
+
+      animationFrameId = requestAnimationFrame(renderLoop);
     };
 
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('in-view');
-        }
-      });
-    }, observerOptions);
+    const handleScroll = () => {
+      const scrollHeight = document.documentElement.scrollHeight;
+      const clientHeight = window.innerHeight;
+      const maxScroll = scrollHeight - clientHeight;
+      if (maxScroll <= 0) return;
+      targetPercent = window.scrollY / maxScroll;
+    };
 
-    const targets = document.querySelectorAll('.animate-on-scroll');
-    targets.forEach((target) => observer.observe(target));
+    const handleVideoError = () => {
+      setErrorMessage("视频加载失败，请确保 public 目录下有 intro_bg.mp4、main_bg.mp4 和 outro_bg.mp4。");
+    };
+
+    if (introVideo) introVideo.addEventListener('error', handleVideoError);
+    if (mainVideo) mainVideo.addEventListener('error', handleVideoError);
+    if (outroVideo) outroVideo.addEventListener('error', handleVideoError);
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    animationFrameId = requestAnimationFrame(renderLoop);
 
     return () => {
-      targets.forEach((target) => observer.unobserve(target));
+      if (introVideo) introVideo.removeEventListener('error', handleVideoError);
+      if (mainVideo) mainVideo.removeEventListener('error', handleVideoError);
+      if (outroVideo) outroVideo.removeEventListener('error', handleVideoError);
+      window.removeEventListener('scroll', handleScroll);
+      cancelAnimationFrame(animationFrameId);
     };
-  }, [reports]);
-
-  const handleSubscribe = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (emailInput.trim()) {
-      setSubscribed(true);
-      setEmailInput('');
-      setTimeout(() => setSubscribed(false), 3000);
-    }
-  };
-
-
-
+  }, []);
 
   return (
     <div style={{
-      background: 'transparent',
-      color: 'var(--color-text)',
-      minHeight: '100vh',
+      background: '#090808',
+      color: '#ffffff',
+      '--color-text': '#ffffff', // 强制子代组件继承暗色模式文字
+      '--color-muted': 'rgba(255, 255, 255, 0.6)',
+      minHeight: '450vh', // 给足滚动行程
+      fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
       position: 'relative'
-    }}>
-      {/* 全局背景流光光源 */}
-      <div className="ambient-glow-container">
-        <div className="ambient-light ambient-light-1" />
+    } as React.CSSProperties}>
+      <Head>
+        <title>Market Graphic - 俯瞰全球市场结构</title>
+      </Head>
+
+      {/* 1. 底图层: 视口固定播放器 */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        zIndex: 1,
+        pointerEvents: 'none',
+        overflow: 'hidden'
+      }}>
+        {/* 覆盖一层暗色及磨砂渐变，让文案更容易看清 */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'radial-gradient(circle at center, rgba(9, 8, 8, 0.4) 0%, rgba(9, 8, 8, 0.9) 80%)',
+          zIndex: 4,
+          pointerEvents: 'none'
+        }} />
+
+        {/* 呼吸流光粒子视频 (首屏) */}
+        <video
+          ref={introRef}
+          src="/intro_bg.mp4"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            display: 'block',
+            opacity: 1,
+            transition: 'none'
+          }}
+          muted
+          loop
+          playsInline
+          preload="auto"
+        />
+
+        {/* 数据网络交互视频 (主体滚动) */}
+        <video
+          ref={mainRef}
+          src="/main_bg.mp4"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            display: 'block',
+            opacity: 0,
+            transition: 'none'
+          }}
+          muted
+          playsInline
+          preload="auto"
+        />
+
+        {/* 商业大脑自转视频 (触底) */}
+        <video
+          ref={outroRef}
+          src="/outro_bg.mp4"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            display: 'block',
+            opacity: 0,
+            transition: 'none'
+          }}
+          muted
+          loop
+          playsInline
+          preload="auto"
+        />
       </div>
 
-      {/* 统一导航栏 */}
+      {/* 2. 动态导航栏 */}
       <Navbar
         userId={userId}
         userRole={userRole}
@@ -188,220 +338,201 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
         nickname={nickname}
         onShowAuthModal={() => setShowAuthModal(true)}
         onShowUploadModal={() => setShowUploadModal(true)}
+        dark={true} // 启用暗色配置磨砂
       />
 
-      {/* 滚动大容器 */}
-      <div style={{ position: 'relative', zIndex: 10, paddingTop: '80px' }}>
-        
-        {/* 模块一：Hero 核心引导区 */}
-        <section style={{
-          minHeight: '88vh',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          textAlign: 'center',
-          padding: brandWeight === 'vibrant' ? '80px 40px' : '40px 20px',
-          position: 'relative',
-          maxWidth: '1200px',
-          margin: brandWeight === 'vibrant' ? '40px auto' : '0 auto',
-          background: brandWeight === 'vibrant' ? 'linear-gradient(135deg, var(--color-accent) 0%, #ff884d 100%)' : 'transparent',
-          borderRadius: '0px',
-          boxShadow: brandWeight === 'vibrant' ? '0 20px 50px rgba(255, 100, 30, 0.15)' : 'none',
-          transition: 'all 0.5s ease-in-out'
-        }}>
-          {/* 移除浮动卡片 */}
-
-          <div style={{ maxWidth: '850px', zIndex: 5 }}>
-            <span style={{
-              background: 'transparent',
-              border: '1px solid rgba(18, 18, 18, 0.08)',
-              padding: '6px 16px',
-              borderRadius: '0px',
-              color: 'var(--color-muted)',
-              fontSize: '0.85rem',
-              fontWeight: 300,
-              textTransform: 'uppercase',
-              letterSpacing: '1.5px',
-              display: 'inline-block',
-              marginBottom: '24px'
-            }}>
-              专为出海决策者与外贸精英量身打造的市场资讯分析与认知图谱平台
-            </span>
-            <h2 className="font-editorial" style={{
-              fontSize: '3.8rem',
-              fontWeight: 400,
-              lineHeight: 1.25,
-              margin: '0 0 24px 0',
-              color: brandWeight === 'vibrant' ? '#ffffff' : 'var(--color-text)',
-              letterSpacing: '-0.02em'
-            }}>
-              俯瞰全球市场结构<br />循线追踪市场盲区
-            </h2>
-            <p style={{
-              fontSize: '1.25rem',
-              color: brandWeight === 'vibrant' ? 'rgba(255, 255, 255, 0.85)' : 'var(--color-muted)',
-              lineHeight: 1.6,
-              maxWidth: '720px',
-              margin: '0 auto 36px auto',
-              fontWeight: 300
-            }}>
-              告别碎片资讯与认知局限。外贸智友帮您突破原有认知边界，实现多维度的全球品类洞察。通过网状知识图谱将零碎资讯智能互联，助您在宏观的全球贸易版图中掌握更清晰的市场认知。
-            </p>
-            <button 
-              onClick={() => router.push('/reports')}
-              className="sand-btn"
-              style={{
-                padding: '16px 40px',
-                fontSize: '1rem',
-                background: 'transparent',
-                border: '1px solid rgba(18, 18, 18, 0.15)',
-                color: '#000000',
-                borderRadius: '0px',
-                transition: 'all 0.2s',
-                cursor: 'pointer'
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.borderColor = 'var(--color-accent)';
-                e.currentTarget.style.color = 'var(--color-accent)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(18, 18, 18, 0.15)';
-                e.currentTarget.style.color = '#000000';
-              }}
-            >
-              立即探索洞察大厅
-            </button>
-          </div>
-        </section>
-
-
-
-      {/* 新增三大认知能力板块与认知图谱预览 */}
-        <section className="animate-on-scroll" style={{
-          padding: '60px 40px',
-          maxWidth: '1400px',
-          margin: '0 auto',
-          background: 'transparent'
-        }}>
-          <div style={{ textAlign: 'center', marginBottom: '45px' }}>
-            <span style={{ color: 'var(--color-accent)', fontSize: '0.8rem', letterSpacing: '2px', textTransform: 'uppercase' }}>Core Capabilities</span>
-            <h2 className="font-editorial" style={{ fontSize: '2.5rem', margin: '8px 0 0 0', fontWeight: 400 }}>为出海展业赋予更高的市场视野</h2>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '40px' }}>
-            {/* 卡片一 */}
-            <div className="float-on-hover" style={{ background: 'var(--card-bg)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)', border: '1px solid var(--card-border)', padding: '24px', borderRadius: 'var(--border-radius)', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ height: '140px', overflow: 'hidden', borderRadius: 'var(--border-radius)', marginBottom: '16px', border: '1px solid rgba(18, 18, 18, 0.08)', boxShadow: '0 4px 12px rgba(0,0,0,0.01)' }}>
-                <img src="/images/market_structure_network.jpg" alt="拓宽视野" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              </div>
-              <h3 style={{ fontSize: '1.2rem', margin: '0 0 10px 0', color: 'var(--color-text)', fontWeight: 500 }}>拓宽视野：突破认知盲区</h3>
-              <p style={{ fontSize: '0.9rem', color: 'var(--color-muted)', lineHeight: 1.6, margin: 0, fontWeight: 300 }}>
-                通过解锁品类与渠道洞察报告，智能匹配相近的公司或关联产品。带您探索以前未曾关注的盲区市场，打破原有的信息茧房。
-              </p>
-            </div>
-
-            {/* 卡片二 */}
-            <div className="float-on-hover" style={{ background: 'var(--card-bg)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)', border: '1px solid var(--card-border)', padding: '24px', borderRadius: 'var(--border-radius)', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ height: '140px', overflow: 'hidden', borderRadius: 'var(--border-radius)', marginBottom: '16px', border: '1px solid rgba(18, 18, 18, 0.08)', boxShadow: '0 4px 12px rgba(0,0,0,0.01)' }}>
-                <img src="/images/global_trade_trends.jpg" alt="掌握动向" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              </div>
-              <h3 style={{ fontSize: '1.2rem', margin: '0 0 10px 0', color: 'var(--color-text)', fontWeight: 500 }}>掌握动向：全球品类洞察</h3>
-              <p style={{ fontSize: '0.9rem', color: 'var(--color-muted)', lineHeight: 1.6, margin: 0, fontWeight: 300 }}>
-                提供多维度的全球品类洞察。深度剖析海外主流零售渠道最新的渗透率与上架准入标准，结合绿色环保、锂电化等前沿变动，精准捕捉市场动向。
-              </p>
-            </div>
-
-            {/* 卡片三 */}
-            <div className="float-on-hover" style={{ background: 'var(--card-bg)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)', border: '1px solid var(--card-border)', padding: '24px', borderRadius: 'var(--border-radius)', borderColor: 'var(--color-accent)', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ height: '140px', overflow: 'hidden', borderRadius: 'var(--border-radius)', marginBottom: '16px', border: '1px solid rgba(18, 18, 18, 0.08)', boxShadow: '0 4px 12px rgba(0,0,0,0.01)' }}>
-                <img src="/images/global_market_focus.jpg" alt="筛选聚焦" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              </div>
-              <h3 style={{ fontSize: '1.2rem', margin: '0 0 10px 0', color: 'var(--color-text)', fontWeight: 500 }}>筛选聚焦：纵览市场全局</h3>
-              <p style={{ fontSize: '0.9rem', color: 'var(--color-muted)', lineHeight: 1.6, margin: 0, fontWeight: 300 }}>
-                支持跨行业、跨国家的精细化筛选，满足您对特定国家的关注需求。不仅能进行循线追踪，更能让您聚焦地审视整个市场的全局结构。
-              </p>
-            </div>
-          </div>
-
-          {/* 市场认知图谱配图 */}
-          <div style={{ background: 'var(--card-bg)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)', border: '1px solid var(--card-border)', borderRadius: 'var(--border-radius)', padding: '30px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '40px' }}>
-            <div style={{ flex: '1 1 400px' }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-accent)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '8px' }}>
-                Discover & Focus
-              </div>
-              <h4 style={{ fontSize: '1.2rem', color: 'var(--color-text)', margin: '0 0 10px 0', fontWeight: 500 }}>循线追踪，绘制您的专属市场认知脑图</h4>
-              <p style={{ fontSize: '0.95rem', color: 'var(--color-muted)', lineHeight: 1.6, margin: '0 0 15px 0', fontWeight: 300 }}>
-                在您的个人市场图谱中，每一份行业资讯、零售渠道、核心品类及个人笔记都被编织成清晰的知识网络。您可以通过实体之间的关联网络，向下延伸发现相近的品类或公司，向上俯瞰把握宏观结构，将市场掌握得更加透彻。
-              </p>
-              <span style={{ fontSize: '0.9rem', color: 'var(--color-accent)', borderBottom: '1px solid var(--color-accent)', paddingBottom: '2px', fontWeight: 400 }}>
-                结合报告与个人见解，沉淀专属的商业大脑 ➔
+      {/* 3. 固定视口沉浸式文案层 */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        zIndex: 10,
+        pointerEvents: 'none',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{ pointerEvents: 'auto', width: '100%', height: '100%', position: 'relative' }}>
+          
+          {/* 🎬 第1幕: 痛点引入 */}
+          <div ref={sec1Ref} style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '0 20px',
+            textAlign: 'center',
+            opacity: 1,
+            transform: 'translateY(0px)',
+            transition: 'none'
+          }}>
+            <div style={{ maxWidth: '850px' }}>
+              <span style={{
+                color: '#ff641e',
+                fontSize: '0.9rem',
+                letterSpacing: '4px',
+                textTransform: 'uppercase',
+                fontWeight: 600,
+                display: 'block',
+                marginBottom: '16px'
+              }}>
+                The Pain & Gap
               </span>
-            </div>
-            <div style={{ flex: '1 1 300px', maxWidth: '480px', borderRadius: 'var(--border-radius)', overflow: 'hidden', border: '1px solid rgba(18, 18, 18, 0.08)', boxShadow: '0 8px 32px rgba(0,0,0,0.02)' }}>
-              <img src="/images/discover_focus_panorama.jpg" alt="Discover & Focus" style={{ width: '100%', display: 'block' }} />
-            </div>
-          </div>
-        </section>
-
-
-
-        {/* 模块四：拓展效能与增长工具 */}
-        <section className="animate-on-scroll" style={{
-          padding: '60px 40px',
-          maxWidth: '1400px',
-          margin: '0 auto',
-          background: 'transparent'
-        }}>
-          <div style={{ textAlign: 'center', marginBottom: '45px' }}>
-            <span style={{ color: 'var(--color-accent)', fontSize: '0.8rem', letterSpacing: '2px', textTransform: 'uppercase' }}>Growth & Productivity</span>
-            <h2 className="font-editorial" style={{ fontSize: '2.5rem', margin: '8px 0 0 0', fontWeight: 400 }}>更实用的出海赋能小工具</h2>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '30px' }}>
-            {/* 个人笔记挂载 */}
-            <div className="float-on-hover" style={{ background: 'var(--card-bg)', backdropFilter: 'blur(15px)', WebkitBackdropFilter: 'blur(15px)', border: '1px solid var(--card-border)', padding: '24px', borderRadius: 'var(--border-radius)', display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
-              <div style={{ background: 'var(--bg-main)', border: '1px solid rgba(18, 18, 18, 0.08)', padding: '12px', borderRadius: '0px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span style={{ fontSize: '1.5rem' }}>📝</span>
+              <h1 style={{
+                fontSize: '3.6rem',
+                fontWeight: 400,
+                lineHeight: 1.25,
+                margin: '0 0 24px 0',
+                letterSpacing: '-0.02em',
+                color: '#ffffff'
+              }}>
+                海外找客户、看品类、听新闻，<br />
+                <span style={{ color: '#ff641e' }}>为什么你总是慢人一步？</span>
+              </h1>
+              <p style={{
+                fontSize: '1.25rem',
+                color: 'rgba(255,255,255,0.7)',
+                lineHeight: 1.7,
+                maxWidth: '680px',
+                margin: '0 auto',
+                fontWeight: 300
+              }}>
+                在出海大潮中，传统的调研被割裂在孤立的新闻、摸不透的客户底细和散落的头条中。割裂的信息只是噪音，决策慢一步，商机便差之千里。
+              </p>
+              <div style={{ marginTop: '48px', fontSize: '0.95rem', color: '#ff641e', fontWeight: 500 }}>
+                向下滚动，拉动视频进度条 ▾
               </div>
-              <div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 500, margin: '0 0 8px 0', color: 'var(--color-text)' }}>
-                  挂载个人笔记：沉淀专属出海大脑
-                </h3>
-                <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)', lineHeight: 1.6, margin: 0, fontWeight: 300 }}>
-                  支持在任何已解锁的报告或公司节点下，挂载您专属的随笔与见解。这些笔记将作为私密节点编织进图谱中，让您的个人市场图谱不断迭代成长。
+            </div>
+          </div>
+
+          {/* 🎬 第2幕: 三大关键能力 */}
+          <div ref={sec2Ref} style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'none',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '0 40px',
+            opacity: 0,
+            transform: 'translateY(20px)',
+            transition: 'none'
+          }}>
+            <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+              <span style={{ color: '#ff641e', fontSize: '0.85rem', letterSpacing: '3px', textTransform: 'uppercase', fontWeight: 600 }}>
+                Three Core Columns
+              </span>
+              <h2 style={{ fontSize: '2.8rem', margin: '8px 0 0 0', fontWeight: 400, color: '#ffffff' }}>
+                深度情报穿透力
+              </h2>
+            </div>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+              gap: '24px',
+              maxWidth: '1200px',
+              width: '100%'
+            }}>
+              {/* 卡片 1 */}
+              <div style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.1)', padding: '28px', borderRadius: '16px', backdropFilter: 'blur(10px)' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '12px' }}>📡</div>
+                <h3 style={{ fontSize: '1.25rem', color: '#ffffff', margin: '0 0 8px 0' }}>每日行业资讯 ——「动态雷达」</h3>
+                <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.9rem', lineHeight: 1.5, margin: 0, fontWeight: 300 }}>
+                  紧盯产品创新、高管变更、渠道扩张/缩小、投资扩大/收缩，以及终端用户最真实的痛点反馈。让每一次阅读都直接转化为业务预警。
+                </p>
+              </div>
+              {/* 卡片 2 */}
+              <div style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.1)', padding: '28px', borderRadius: '16px', backdropFilter: 'blur(10px)' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '12px' }}>🎯</div>
+                <h3 style={{ fontSize: '1.25rem', color: '#ffffff', margin: '0 0 8px 0' }}>公司 360° 洞察 ——「交易穿透」</h3>
+                <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.9rem', lineHeight: 1.5, margin: 0, fontWeight: 300 }}>
+                  透视零售模式（面向个人用户）或经销模式（面向企业用户）底牌，一键穿透其财务状况、组织架构和核心采购逻辑。
+                </p>
+              </div>
+              {/* 卡片 3 */}
+              <div style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.1)', padding: '28px', borderRadius: '16px', backdropFilter: 'blur(10px)' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '12px' }}>🗺️</div>
+                <h3 style={{ fontSize: '1.25rem', color: '#ffffff', margin: '0 0 8px 0' }}>品类现状剖析 ——「空白发现」</h3>
+                <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.9rem', lineHeight: 1.5, margin: 0, fontWeight: 300 }}>
+                  深度解构品类市场现状，看清渗透率与竞争格局，指导产品团队和研发团队避开红海，直击那些未被满足的市场空白点。
                 </p>
               </div>
             </div>
+          </div>
 
-            {/* 邀请裂变机制 */}
-            <div className="float-on-hover" style={{ 
-              background: 'var(--card-bg)', 
-              backdropFilter: 'blur(15px)', 
-              WebkitBackdropFilter: 'blur(15px)', 
-              border: '1px solid var(--card-border)', 
-              padding: '24px', 
-              borderRadius: 'var(--border-radius)', 
-              display: 'flex', 
-              gap: '20px', 
-              alignItems: 'flex-start',
-              flexDirection: 'column'
+          {/* 🎬 第3幕: 核心组网 */}
+          <div ref={sec3Ref} style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'none',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '0 20px',
+            opacity: 0,
+            transform: 'translateY(20px)',
+            transition: 'none'
+          }}>
+            <div style={{
+              background: 'rgba(9, 8, 8, 0.85)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              padding: '48px',
+              borderRadius: '24px',
+              maxWidth: '680px',
+              textAlign: 'center',
+              backdropFilter: 'blur(15px)',
+              boxShadow: '0 30px 60px rgba(0,0,0,0.5)'
             }}>
-              <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
-                <div style={{ background: 'var(--bg-main)', border: '1px solid rgba(18, 18, 18, 0.08)', padding: '12px', borderRadius: '0px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <span style={{ fontSize: '1.5rem' }}>🤝</span>
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 500, margin: '0 0 8px 0', color: 'var(--color-text)' }}>
-                    推荐同行加入：共同免费获取额度
-                  </h3>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)', lineHeight: 1.6, margin: 0, fontWeight: 300 }}>
-                    通过分享您的专属邀请链接，推荐同行注册。每成功推荐一位用户，您与新注册用户均可获赠额外的免费报告解锁额度，实现双赢。
-                  </p>
-                </div>
-              </div>
+              <span style={{ color: '#ff641e', fontSize: '0.8rem', letterSpacing: '2px', fontWeight: 600, textTransform: 'uppercase' }}>
+                Personal Knowledge Graph
+              </span>
+              <h3 style={{ fontSize: '2.2rem', color: '#ffffff', margin: '16px 0 16px 0', fontWeight: 400 }}>
+                这是与您业务共同进化的<br />
+                <span style={{ color: '#ff641e' }}>「私人专属商业大脑」</span>
+              </h3>
+              <p style={{ fontSize: '1.05rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.7, margin: 0, fontWeight: 300 }}>
+                在 MARKET GRAPHIC，资讯、公司和品类绝非孤立存在。每一条你关注的产品动态、每一篇留下的笔记，都会自动交织、结网生长，绘制出完全契合您业务习惯的个性化商业版图。
+              </p>
+            </div>
+          </div>
+
+          {/* 🎬 第4幕: 团队协同与裂变行动 */}
+          <div ref={sec4Ref} style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'none',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '0 20px',
+            opacity: 0,
+            transform: 'translateY(20px)',
+            transition: 'none'
+          }}>
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(255, 100, 30, 0.15) 0%, rgba(0, 0, 0, 0.8) 100%)',
+              border: '1px solid rgba(255, 100, 30, 0.25)',
+              padding: '56px 40px',
+              borderRadius: '32px',
+              maxWidth: '900px',
+              textAlign: 'center',
+              backdropFilter: 'blur(15px)',
+              boxShadow: '0 30px 60px rgba(255, 100, 30, 0.05)'
+            }}>
+              <h3 style={{ fontSize: '2.4rem', fontWeight: 400, color: '#ffffff', marginBottom: '16px' }}>
+                一份图谱，打破团队信息墙
+              </h3>
+              <p style={{ color: 'rgba(255,255,255,0.7)', maxWidth: '640px', margin: '0 auto 36px auto', lineHeight: 1.6, fontWeight: 300 }}>
+                销售沉淀的公司线索，关联研发关注的品类痛点，协助决策层总揽全局。现在邀请同行加入，你们将共同获取 **5 次** 深度品类现状剖析额度，共同探索全新商机。
+              </p>
               
-              <div style={{ width: '100%', marginTop: '8px' }}>
+              {/* 融合动态分享与注册逻辑的裂变面板 */}
+              <div style={{ width: '100%', maxWidth: '520px', margin: '0 auto' }}>
                 {userId ? (
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <input
@@ -410,12 +541,12 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
                       value={`${typeof window !== 'undefined' ? window.location.origin : ''}/?invite=${userId}`}
                       style={{
                         flex: 1,
-                        background: 'var(--input-bg)',
-                        border: '1px solid var(--card-border)',
-                        borderRadius: '0px',
-                        padding: '8px 12px',
-                        fontSize: '0.8rem',
-                        color: 'var(--color-muted)',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        borderRadius: '30px',
+                        padding: '12px 24px',
+                        fontSize: '0.85rem',
+                        color: '#ffffff',
                         outline: 'none'
                       }}
                     />
@@ -426,162 +557,81 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
                           .then(() => alert('🎉 专属邀请链接已复制到剪贴板！快发给同行好友吧。'))
                           .catch(() => alert('复制失败，请手动选择输入框内容进行复制。'));
                       }}
-                      className="sand-btn"
                       style={{
-                        padding: '8px 16px',
-                        fontSize: '0.8rem',
-                        cursor: 'pointer'
+                        background: '#ff641e',
+                        border: 'none',
+                        borderRadius: '30px',
+                        color: '#ffffff',
+                        padding: '12px 28px',
+                        fontSize: '0.85rem',
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 12px rgba(255, 100, 30, 0.2)',
+                        transition: 'all 0.2s'
                       }}
+                      onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
+                      onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
                     >
                       复制链接
                     </button>
                   </div>
                 ) : (
-                  <button
-                    onClick={() => {
-                      const loginBtn = document.getElementById('navbar-login-btn');
-                      if (loginBtn) {
-                        loginBtn.click();
-                      } else {
-                        alert('请先在页面右上角登录后再生成专属邀请链接');
-                      }
-                    }}
-                    className="sand-btn"
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      fontSize: '0.85rem',
-                      cursor: 'pointer',
-                      textAlign: 'center'
-                    }}
-                  >
-                    🔐 登录后生成我的专属邀请链接
-                  </button>
+                  <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
+                    <button
+                      onClick={() => setShowAuthModal(true)}
+                      style={{
+                        background: '#ff641e',
+                        color: '#ffffff',
+                        padding: '16px 36px',
+                        borderRadius: '30px',
+                        border: 'none',
+                        fontSize: '0.95rem',
+                        textDecoration: 'none',
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        boxShadow: '0 10px 30px rgba(255, 100, 30, 0.3)',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                      onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                    >
+                      免费注册体验 ➔
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
           </div>
-        </section>
 
-        {/* 模块五：资讯订阅与 Footer */}
-        <section className="animate-on-scroll" style={{
-          padding: '120px 40px 60px 40px',
-          maxWidth: '1440px',
-          margin: '0 auto',
-          borderTop: 'none'
-        }}>
-          {/* 新增：Call to Action (行动呼吁) 注册引导区 - 已登录状态下自动隐藏 */}
-          {!userId && (
-            <div style={{
-              background: 'var(--card-bg)',
-              border: '1px solid var(--card-border)',
-              borderRadius: 'var(--border-radius)',
-              padding: '60px 40px',
-              textAlign: 'center',
-              marginTop: '60px',
-              marginBottom: '40px',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.01)'
-            }}>
-              <h2 className="font-editorial" style={{
-                fontSize: '2.2rem',
-                fontWeight: 400,
-                margin: '0 0 16px 0',
-                color: 'var(--color-text)',
-                letterSpacing: '-0.5px'
-              }}>
-                突破认知边界，即刻开启您的全球市场洞察之旅
-              </h2>
-              <p style={{ fontSize: '1rem', color: 'var(--color-muted)', maxWidth: '580px', margin: '0 auto 36px auto', fontWeight: 300, lineHeight: 1.6 }}>
-                免费注册账号，即刻获取专属初始额度。俯瞰全球品类动态，通过市场图谱实现循线追踪，解锁更清晰的出海决策力。
-              </p>
-
-              <form onSubmit={handleSubscribe} style={{
-                display: 'flex',
-                gap: '12px',
-                maxWidth: '480px',
-                margin: '0 auto',
-                position: 'relative',
-                zIndex: 5
-              }}>
-                <input 
-                  type="email" 
-                  required
-                  value={emailInput}
-                  onChange={(e) => setEmailInput(e.target.value)}
-                  placeholder="输入您的业务邮箱" 
-                  style={{
-                    flex: 1,
-                    padding: '16px 24px',
-                    borderRadius: '0px',
-                    background: 'var(--bg-main)',
-                    border: '1px solid rgba(18, 18, 18, 0.15)',
-                    color: 'var(--color-text)',
-                    outline: 'none',
-                    fontSize: '0.95rem',
-                    fontWeight: 300,
-                    transition: 'box-shadow 0.2s'
-                  }}
-                  onFocus={(e) => e.target.style.boxShadow = '0 0 0 2px var(--color-accent)'}
-                  onBlur={(e) => e.target.style.boxShadow = 'none'}
-                />
-                <button 
-                  type="submit"
-                  className="sand-btn"
-                  style={{
-                    padding: '16px 36px',
-                    fontSize: '0.95rem',
-                    background: 'var(--color-accent)',
-                    border: 'none',
-                    color: '#ffffff',
-                    borderRadius: '0px',
-                    fontWeight: 500,
-                    transition: 'all 0.2s',
-                    cursor: 'pointer'
-                  }}
-                >
-                  免费注册体验
-                </button>
-              </form>
-            </div>
-          )}
-
-          {/* 极简安全与合规背书 */}
-          <div style={{ 
-            textAlign: 'center', 
-            fontSize: '0.75rem', 
-            color: 'var(--color-muted)', 
-            padding: '15px 0', 
-            borderTop: '1px solid rgba(160, 109, 68, 0.08)', 
-            marginBottom: '20px', 
-            opacity: 0.8 
-          }}>
-            🔒 <b>数据合规背书：</b> 本系统采用本地化 Docker 部署开源数据库，数据均保存在国内。页面底层自动铺设专属防盗数字水印及隐形安全盲水印，严防任何机密泄漏。
-          </div>
-
-          {/* 版刻 & 导航 Footer */}
-          <footer style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            color: 'var(--color-muted)',
-            fontSize: '0.85rem',
-            paddingTop: '20px',
-            borderTop: 'none',
-            fontWeight: 300
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <MGLogo height={30} />
-            </div>
-            <div>
-              &copy; {new Date().getFullYear()} MARKET GRAPHIC. All rights reserved.
-            </div>
-          </footer>
-        </section>
-
+        </div>
       </div>
 
+      {/* 4. 底部状态栏 */}
+      <div style={{
+        position: 'fixed',
+        bottom: '24px',
+        left: '24px',
+        zIndex: 100,
+        background: '#121212',
+        color: '#ffffff',
+        padding: '12px 24px',
+        borderRadius: '30px',
+        boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+        fontSize: '0.85rem',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        border: '1px solid rgba(255,255,255,0.1)'
+      }}>
+        <span style={{ color: '#ff641e' }}>●</span>
+        <span><b>视频时间线滚动模式</b></span>
+        <span style={{ color: 'rgba(255,255,255,0.3)' }}>|</span>
+        <span style={{ color: 'rgba(255,255,255,0.7)' }}>
+          {errorMessage ? errorMessage : `滚动进度: ${(progressPercent * 100).toFixed(0)}%`}
+        </span>
+      </div>
 
-      {/* 登录/注册弹窗 */}
+      {/* 5. 登录/注册弹窗 & 上传管理后台 */}
       <AuthModal 
         isOpen={showAuthModal} 
         onClose={() => setShowAuthModal(false)} 
@@ -592,13 +642,11 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
         onClose={() => setShowUploadModal(false)} 
         onUploadSuccess={() => window.location.reload()} 
       />
-
-
     </div>
   );
 }
 
-// SSR 获取初始解锁图谱数据
+// SSR 加载主页基础数据与会话验证
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const cookies = parseCookies(context.req.headers.cookie);
   const cookieUserId = cookies.user_id;
@@ -678,7 +726,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       }));
     }
 
-    // 获取最新 6 条资讯数据传给主页
+    // 获取最新 6 条资讯数据
     const latestArticlesRes = await dbClient.query(
       `SELECT n.id, n.title, n.summary, n.published_at,
               (SELECT name FROM industries JOIN news_industries ON industries.id = news_industries.industry_id WHERE news_id = n.id LIMIT 1) as industry,
