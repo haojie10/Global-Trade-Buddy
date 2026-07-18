@@ -194,8 +194,11 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         width: '90%',
         maxWidth: '420px',
         boxShadow: '0 20px 40px rgba(160, 109, 68, 0.05)',
-        position: 'relative'
-      }}>
+        position: 'relative',
+        color: '#121212',
+        '--color-text': '#121212',
+        '--color-muted': '#666666'
+      } as React.CSSProperties}>
         <button 
           onClick={onClose}
           style={{
