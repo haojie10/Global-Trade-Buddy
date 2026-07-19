@@ -20,7 +20,7 @@ const globalWithPool = global as typeof globalThis & {
 if (process.env.NODE_ENV === 'production') {
   pool = new Pool({
     connectionString,
-    max: 20,
+    max: 5,                  // Serverless 环境下每个实例的最大连接数调为 5，避免耗尽连接池
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
     ssl: sslConfig,

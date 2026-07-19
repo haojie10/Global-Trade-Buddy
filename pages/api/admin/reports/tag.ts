@@ -91,7 +91,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({ success: true, entityId });
   } catch (err: any) {
     await dbClient.query('ROLLBACK');
-    return res.status(500).json({ error: err.message });
+    const safeMsg = process.env.NODE_ENV === 'production' ? '服务器内部错误' : err.message;
+    return res.status(500).json({ error: safeMsg });
   } finally {
     dbClient.release();
   }

@@ -4,6 +4,11 @@ import { withDb } from '../../../lib/api-handler';
 import { getSession } from '../../../lib/auth';
 
 async function testRechargeHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
+  // 安全拦截: 仅开发/测试环境允许使用测试充值通道
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(404).json({ error: 'Not Found' });
+  }
+
   const session = getSession(req);
   if (!session) {
     return res.status(401).json({ error: '未登录，请先登录后操作' });

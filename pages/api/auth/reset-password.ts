@@ -42,7 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // 2. 校验邮箱验证码是否正确且未过期
     const verifyRes = await dbClient.query(
-      `SELECT code, expired_at FROM email_verifications 
+      `SELECT id, code, expired_at, attempts FROM email_verifications 
        WHERE email = $1 
        ORDER BY created_at DESC 
        LIMIT 1`,
@@ -54,7 +54,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const verification = verifyRes.rows[0];
+    if (verification.attempts >= 5) {
+      return res.status(400).json({ error: '验证码已失效（尝试次数过多），请重新获取' });
+    }
+
     if (verification.code !== code) {
+      await dbClient.query(
+        'UPDATE email_verifications SET attempts = attempts + 1 WHERE id = $1',
+        [verification.id]
+      );
       return res.status(400).json({ error: '验证码错误' });
     }
 
@@ -77,7 +85,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       message: '密码重置成功，请重新登录！'
     });
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    const safeMsg = process.env.NODE_ENV === 'production' ? '服务器内部错误' : err.message;
+    return res.status(500).json({ error: safeMsg });
   } finally {
     dbClient.release();
   }

@@ -43,8 +43,10 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
   const sec3Ref = useRef<HTMLDivElement>(null);
   const sec4Ref = useRef<HTMLDivElement>(null);
 
+  const [activeGraphData, setActiveGraphData] = useState(graphData);
+  const [currentSection, setCurrentSection] = useState(1);
+
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [progressPercent, setProgressPercent] = useState(0);
 
   // 1. 生命周期：捕获 URL 中的邀请人 ID 并缓存到本地
   useEffect(() => {
@@ -100,7 +102,6 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
       // Lerp 滚动进度以实现缓动阻尼感
       currentRenderPercent += (targetPercent - currentRenderPercent) * 0.08;
       const scrollPercent = Math.max(0, Math.min(1, currentRenderPercent));
-      setProgressPercent(scrollPercent);
 
       let introOpacity = 0;
       let mainOpacity = 0;
@@ -318,7 +319,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
           }}
           muted
           playsInline
-          preload="auto"
+          preload="metadata"
         />
 
         {/* 商业大脑自转视频 (触底) */}
@@ -339,7 +340,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
           muted
           loop
           playsInline
-          preload="auto"
+          preload="none"
         />
       </div>
 
@@ -352,6 +353,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
         onShowAuthModal={() => setShowAuthModal(true)}
         onShowUploadModal={() => setShowUploadModal(true)}
         dark={true} // 启用暗色配置磨砂
+        alwaysTransparent={true} // 主页滚动时保持背景全透明，不变成黑色
       />
 
       {/* 3. 固定视口沉浸式文案层 */}

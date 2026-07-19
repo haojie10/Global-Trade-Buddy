@@ -58,7 +58,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: '请输入邮箱验证码' });
       }
       const verifyRes = await dbClient.query(
-        `SELECT code, expired_at FROM email_verifications 
+        `SELECT id, code, expired_at, attempts FROM email_verifications 
          WHERE email = $1 
          ORDER BY created_at DESC 
          LIMIT 1`,
@@ -68,7 +68,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: '请先获取验证码' });
       }
       const verification = verifyRes.rows[0];
+      if (verification.attempts >= 5) {
+        return res.status(400).json({ error: '验证码已失效（尝试次数过多），请重新获取' });
+      }
       if (verification.code !== code) {
+        await dbClient.query(
+          'UPDATE email_verifications SET attempts = attempts + 1 WHERE id = $1',
+          [verification.id]
+        );
         return res.status(400).json({ error: '验证码错误' });
       }
       if (new Date() > new Date(verification.expired_at)) {
@@ -108,7 +115,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (err.code === '23505') {
       return res.status(400).json({ error: '该邮箱已被注册' });
     }
-    return res.status(500).json({ error: err.message });
+    const safeMsg = process.env.NODE_ENV === 'production' ? '服务器内部错误' : err.message;
+    return res.status(500).json({ error: safeMsg });
   } finally {
     dbClient.release();
   }

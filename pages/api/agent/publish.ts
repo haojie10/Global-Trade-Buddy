@@ -7,9 +7,18 @@ import { getStandardCategory } from '../../../lib/category-mapper';
 async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.split(' ')[1];
-  const expectedToken = process.env.AGENT_API_KEY || 'test_agent_secret';
+  const expectedToken = process.env.AGENT_API_KEY;
 
-  if (!token || token !== expectedToken) {
+  if (!expectedToken) {
+    if (process.env.NODE_ENV === 'production') {
+      console.error('FATAL: AGENT_API_KEY 未配置');
+      return res.status(500).json({ error: '服务配置错误' });
+    }
+    // 开发环境允许使用默认值
+    if (token !== 'test_agent_secret') {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+  } else if (!token || token !== expectedToken) {
     return res.status(401).json({ error: 'Unauthorized: Invalid Agent API Key' });
   }
 
@@ -143,45 +152,63 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     if (manualTags.products && manualTags.products.length > 0) {
       autoIndustries = [...manualTags.products];
     }
-    for (const indName of autoIndustries) {
-      const mappedCategory = getStandardCategory(indName) || indName;
-      const indRes = await dbClient.query(
-        'INSERT INTO industries (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING id',
-        [mappedCategory]
+    if (autoIndustries.length > 0) {
+      const mappedNames = autoIndustries.map(indName => getStandardCategory(indName) || indName);
+      const indIdsRes = await dbClient.query(
+        `INSERT INTO industries (name) 
+         SELECT unnest($1::text[]) 
+         ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name 
+         RETURNING id`,
+        [mappedNames]
       );
-      const indId = indRes.rows[0].id;
+      const values = indIdsRes.rows.map((r: any) => `('${newReportId}', '${r.id}')`).join(',');
       await dbClient.query(
-        'INSERT INTO report_industries (report_id, industry_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-        [newReportId, indId]
+        `INSERT INTO report_industries (report_id, industry_id) 
+         VALUES ${values} ON CONFLICT DO NOTHING`
       );
     }
 
     // 6. 保存覆盖国家关联 (写入 report_countries)
     await dbClient.query('DELETE FROM report_countries WHERE report_id = $1', [newReportId]);
     const autoCountries = finalMarketRegion.split(',').map(s => s.trim()).filter(Boolean);
-    for (const ctyName of autoCountries) {
-      let lookupName = ctyName;
-      if (ctyName.toLowerCase() === 'germany') lookupName = '德国';
-      if (ctyName.toLowerCase() === 'austria') lookupName = '奥地利';
-      if (ctyName.toLowerCase() === 'usa' || ctyName.toLowerCase() === 'united states') lookupName = '美国';
-      
-      const ctyRes = await dbClient.query('SELECT id FROM countries WHERE name = $1 LIMIT 1', [lookupName]);
+    if (autoCountries.length > 0) {
+      const mappedCountries = autoCountries.map(ctyName => {
+        let lookupName = ctyName;
+        if (ctyName.toLowerCase() === 'germany') lookupName = '德国';
+        if (ctyName.toLowerCase() === 'austria') lookupName = '奥地利';
+        if (ctyName.toLowerCase() === 'usa' || ctyName.toLowerCase() === 'united states') lookupName = '美国';
+        return lookupName;
+      });
+
+      const ctyRes = await dbClient.query(
+        'SELECT id FROM countries WHERE name = ANY($1)',
+        [mappedCountries]
+      );
+
       if (ctyRes.rows.length > 0) {
-        const ctyId = ctyRes.rows[0].id;
+        const values = ctyRes.rows.map((r: any) => `('${newReportId}', '${r.id}')`).join(',');
         await dbClient.query(
-          'INSERT INTO report_countries (report_id, country_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-          [newReportId, ctyId]
+          `INSERT INTO report_countries (report_id, country_id) 
+           VALUES ${values} ON CONFLICT DO NOTHING`
         );
       }
     }
 
     // 7. 保存实体关联角色 (写入 report_entities)
-    for (const ent of resolvedEntities) {
+    if (resolvedEntities.length > 0) {
+      const selectParts: string[] = [];
+      const queryParams: any[] = [newReportId];
+      let paramIndex = 2;
+      for (const ent of resolvedEntities) {
+        selectParts.push(`($1::uuid, $${paramIndex}::uuid, $${paramIndex + 1}::varchar)`);
+        queryParams.push(ent.id, ent.role);
+        paramIndex += 2;
+      }
       await dbClient.query(
         `INSERT INTO report_entities (report_id, entity_id, role) 
-         VALUES ($1, $2, $3) 
+         VALUES ${selectParts.join(',')} 
          ON CONFLICT (report_id, entity_id) DO UPDATE SET role = EXCLUDED.role`,
-        [newReportId, ent.id, ent.role]
+        queryParams
       );
     }
 
@@ -208,15 +235,23 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
           );
           const compIds = compRes.rows.map((r: any) => r.id);
           
+          const relationValues: string[] = [];
+          const queryParams: any[] = [finalMarketRegion || null];
+          let paramIndex = 2;
           for (let i = 0; i < compIds.length; i++) {
             for (let j = i + 1; j < compIds.length; j++) {
-              await dbClient.query(
-                `INSERT INTO entity_relations (entity_id_a, entity_id_b, relation_type, market_region)
-                 VALUES ($1, $2, 'competitor', $3)
-                 ON CONFLICT (entity_id_a, entity_id_b, relation_type, market_region) DO NOTHING`,
-                [compIds[i], compIds[j], finalMarketRegion || null]
-              );
+              relationValues.push(`($${paramIndex}::uuid, $${paramIndex + 1}::uuid, 'competitor', $1::varchar)`);
+              queryParams.push(compIds[i], compIds[j]);
+              paramIndex += 2;
             }
+          }
+          if (relationValues.length > 0) {
+            await dbClient.query(
+              `INSERT INTO entity_relations (entity_id_a, entity_id_b, relation_type, market_region)
+               VALUES ${relationValues.join(',')}
+               ON CONFLICT (entity_id_a, entity_id_b, relation_type, market_region) DO NOTHING`,
+              queryParams
+            );
           }
         }
       }
@@ -323,11 +358,6 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     await dbClient.query('COMMIT');
     return res.status(200).json({ success: true, id: newNewsId, type: 'article' });
   }
-}
-
-function market_region_helper(region?: string, country?: string) {
-  if (region && country) return `${region}, ${country}`;
-  return region || country || '全球';
 }
 
 export default withDb(publishHandler, { methods: ['POST'] });

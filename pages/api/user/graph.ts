@@ -387,7 +387,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const graphData = await getGraphData(userId, resolvedRole, dbClient);
     return res.status(200).json(graphData);
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    const safeMsg = process.env.NODE_ENV === 'production' ? '服务器内部错误' : err.message;
+    return res.status(500).json({ error: safeMsg });
   } finally {
     dbClient.release();
   }

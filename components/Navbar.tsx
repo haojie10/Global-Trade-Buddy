@@ -10,6 +10,7 @@ interface NavbarProps {
   onShowAuthModal?: () => void;
   onShowUploadModal?: () => void;
   dark?: boolean;
+  alwaysTransparent?: boolean;
 }
 
 export default function Navbar({
@@ -19,7 +20,8 @@ export default function Navbar({
   nickname,
   onShowAuthModal,
   onShowUploadModal,
-  dark = false
+  dark = false,
+  alwaysTransparent = false
 }: NavbarProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -51,14 +53,18 @@ export default function Navbar({
       right: 0, 
       zIndex: 1000, 
       transition: 'all 0.3s cubic-bezier(0.25, 1, 0.22, 1)',
-      background: isScrolled 
-        ? (dark ? 'rgba(9, 8, 8, 0.7)' : 'rgba(255, 255, 255, 0.45)') 
-        : 'transparent',
-      backdropFilter: isScrolled ? 'blur(15px)' : 'none',
-      WebkitBackdropFilter: isScrolled ? 'blur(15px)' : 'none',
-      borderBottom: isScrolled 
-        ? (dark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(18, 18, 18, 0.05)') 
-        : 'none',
+      background: alwaysTransparent
+        ? 'transparent'
+        : isScrolled 
+          ? (dark ? 'rgba(9, 8, 8, 0.7)' : 'rgba(255, 255, 255, 0.45)') 
+          : 'transparent',
+      backdropFilter: alwaysTransparent ? 'none' : (isScrolled ? 'blur(15px)' : 'none'),
+      WebkitBackdropFilter: alwaysTransparent ? 'none' : (isScrolled ? 'blur(15px)' : 'none'),
+      borderBottom: alwaysTransparent
+        ? 'none'
+        : isScrolled 
+          ? (dark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(18, 18, 18, 0.05)') 
+          : 'none',
     }}>
       <header style={{
         background: 'transparent',

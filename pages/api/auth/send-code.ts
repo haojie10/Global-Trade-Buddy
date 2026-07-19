@@ -9,6 +9,19 @@ async function sendCodeHandler(req: NextApiRequest, res: NextApiResponse, dbClie
     return res.status(400).json({ error: '请输入有效的邮箱地址' });
   }
 
+  // 频率限制: 同一邮箱 60 秒内只能发送一次验证码 (非测试环境)
+  if (process.env.NODE_ENV !== 'test') {
+    const recentRes = await dbClient.query(
+      `SELECT id FROM email_verifications 
+       WHERE email = $1 AND created_at > NOW() - INTERVAL '60 seconds' 
+       LIMIT 1`,
+      [email]
+    );
+    if (recentRes.rows.length > 0) {
+      return res.status(429).json({ error: '请求过于频繁，请 60 秒后再试' });
+    }
+  }
+
   // 1. 生成 6 位随机数字验证码
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   const expiredAt = new Date(Date.now() + 10 * 60 * 1000); // 10分钟后过期

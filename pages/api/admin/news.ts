@@ -11,14 +11,40 @@ async function newsAdminHandler(req: NextApiRequest, res: NextApiResponse, dbCli
 
   // GET: 获取资讯列表
   if (req.method === 'GET') {
-    const listRes = await dbClient.query(
-      `SELECT n.id, n.title, n.summary, n.content, n.source_url, n.status, n.published_at, n.created_at,
-              ARRAY_TO_STRING(ARRAY(SELECT name FROM industries JOIN news_industries ON industries.id = news_industries.industry_id WHERE news_id = n.id), ', ') as industries,
-              ARRAY_TO_STRING(ARRAY(SELECT name FROM countries JOIN news_countries ON countries.id = news_countries.country_id WHERE news_id = n.id), ', ') as countries
-       FROM news n
-       ORDER BY n.created_at DESC`
-    );
-    return res.status(200).json(listRes.rows);
+    const pageParam = req.query.page;
+    if (pageParam) {
+      const page = parseInt(pageParam as string, 10) || 1;
+      const pageSize = parseInt(req.query.pageSize as string, 10) || 20;
+      const offset = (page - 1) * pageSize;
+
+      const countRes = await dbClient.query('SELECT COUNT(*) FROM news');
+      const total = parseInt(countRes.rows[0].count, 10);
+
+      const listRes = await dbClient.query(
+        `SELECT n.id, n.title, n.summary, n.content, n.source_url, n.status, n.published_at, n.created_at,
+                ARRAY_TO_STRING(ARRAY(SELECT name FROM industries JOIN news_industries ON industries.id = news_industries.industry_id WHERE news_id = n.id), ', ') as industries,
+                ARRAY_TO_STRING(ARRAY(SELECT name FROM countries JOIN news_countries ON countries.id = news_countries.country_id WHERE news_id = n.id), ', ') as countries
+         FROM news n
+         ORDER BY n.created_at DESC
+         LIMIT $1 OFFSET $2`,
+        [pageSize, offset]
+      );
+      return res.status(200).json({
+        data: listRes.rows,
+        total,
+        page,
+        pageSize
+      });
+    } else {
+      const listRes = await dbClient.query(
+        `SELECT n.id, n.title, n.summary, n.content, n.source_url, n.status, n.published_at, n.created_at,
+                ARRAY_TO_STRING(ARRAY(SELECT name FROM industries JOIN news_industries ON industries.id = news_industries.industry_id WHERE news_id = n.id), ', ') as industries,
+                ARRAY_TO_STRING(ARRAY(SELECT name FROM countries JOIN news_countries ON countries.id = news_countries.country_id WHERE news_id = n.id), ', ') as countries
+         FROM news n
+         ORDER BY n.created_at DESC`
+      );
+      return res.status(200).json(listRes.rows);
+    }
   }
 
   // POST: 创建资讯

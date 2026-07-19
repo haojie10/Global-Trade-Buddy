@@ -98,7 +98,8 @@ async function deleteReportHandler(req: NextApiRequest, res: NextApiResponse, db
     });
   } catch (err: any) {
     await dbClient.query('ROLLBACK');
-    return res.status(500).json({ error: err.message });
+    const safeMsg = process.env.NODE_ENV === 'production' ? '服务器内部错误' : err.message;
+    return res.status(500).json({ error: safeMsg });
   }
 }
 
