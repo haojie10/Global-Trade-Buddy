@@ -43,8 +43,8 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
   const sec3Ref = useRef<HTMLDivElement>(null);
   const sec4Ref = useRef<HTMLDivElement>(null);
 
-  const [activeGraphData, setActiveGraphData] = useState(graphData);
   const [currentSection, setCurrentSection] = useState(1);
+  const [copied, setCopied] = useState(false);
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -398,7 +398,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
                 The Pain & Gap
               </span>
               <h1 style={{
-                fontSize: '3.6rem',
+                fontSize: 'clamp(2rem, 8vw, 3.6rem)',
                 fontWeight: 400,
                 lineHeight: 1.25,
                 margin: '0 0 24px 0',
@@ -441,14 +441,14 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
               <span style={{ color: '#ff641e', fontSize: '0.85rem', letterSpacing: '3px', textTransform: 'uppercase', fontWeight: 600 }}>
                 Three Core Columns
               </span>
-              <h2 style={{ fontSize: '2.8rem', margin: '8px 0 0 0', fontWeight: 400, color: '#ffffff' }}>
+              <h2 style={{ fontSize: 'clamp(1.8rem, 6vw, 2.8rem)', margin: '8px 0 0 0', fontWeight: 400, color: '#ffffff' }}>
                 深度情报穿透力
               </h2>
             </div>
 
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
               gap: '24px',
               maxWidth: '1200px',
               width: '100%'
@@ -506,7 +506,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
               <span style={{ color: '#ff641e', fontSize: '0.8rem', letterSpacing: '2px', fontWeight: 600, textTransform: 'uppercase' }}>
                 Personal Knowledge Graph
               </span>
-              <h3 style={{ fontSize: '2.2rem', color: '#ffffff', margin: '16px 0 16px 0', fontWeight: 400 }}>
+              <h3 style={{ fontSize: 'clamp(1.5rem, 5.5vw, 2.2rem)', color: '#ffffff', margin: '16px 0 16px 0', fontWeight: 400 }}>
                 这是与您业务共同进化的<br />
                 <span style={{ color: '#ff641e' }}>「私人专属商业大脑」</span>
               </h3>
@@ -539,7 +539,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
               backdropFilter: 'blur(15px)',
               boxShadow: '0 30px 60px rgba(255, 100, 30, 0.05)'
             }}>
-              <h3 style={{ fontSize: '2.4rem', fontWeight: 400, color: '#ffffff', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: 'clamp(1.6rem, 6vw, 2.4rem)', fontWeight: 400, color: '#ffffff', marginBottom: '16px' }}>
                 一份图谱，打破团队信息墙
               </h3>
               <p style={{ color: 'rgba(255,255,255,0.7)', maxWidth: '640px', margin: '0 auto 36px auto', lineHeight: 1.6, fontWeight: 300 }}>
@@ -549,27 +549,32 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
               {/* 融合动态分享与注册逻辑的裂变面板 */}
               <div style={{ width: '100%', maxWidth: '520px', margin: '0 auto' }}>
                 {userId ? (
-                  <div style={{ display: 'flex', gap: '10px' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
                     <input
                       type="text"
                       readOnly
                       value={`${typeof window !== 'undefined' ? window.location.origin : ''}/?invite=${userId}`}
                       style={{
-                        flex: 1,
+                        flex: '1 1 280px',
                         background: 'rgba(255, 255, 255, 0.1)',
                         border: '1px solid rgba(255, 255, 255, 0.2)',
                         borderRadius: '30px',
                         padding: '12px 24px',
                         fontSize: '0.85rem',
                         color: '#ffffff',
-                        outline: 'none'
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                        width: '100%'
                       }}
                     />
                     <button
                       onClick={() => {
                         const link = `${window.location.origin}/?invite=${userId}`;
                         navigator.clipboard.writeText(link)
-                          .then(() => alert('🎉 专属邀请链接已复制到剪贴板！快发给同行好友吧。'))
+                          .then(() => {
+                            setCopied(true);
+                            setTimeout(() => setCopied(false), 2000);
+                          })
                           .catch(() => alert('复制失败，请手动选择输入框内容进行复制。'));
                       }}
                       style={{
@@ -582,12 +587,15 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
                         fontWeight: 500,
                         cursor: 'pointer',
                         boxShadow: '0 4px 12px rgba(255, 100, 30, 0.2)',
-                        transition: 'all 0.2s'
+                        transition: 'all 0.2s',
+                        flex: '1 1 auto',
+                        width: '100%',
+                        boxSizing: 'border-box'
                       }}
                       onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
                       onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
                     >
-                      复制链接
+                      {copied ? '🎉 复制成功！' : '复制专属链接'}
                     </button>
                   </div>
                 ) : (

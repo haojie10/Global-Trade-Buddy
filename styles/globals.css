@@ -330,3 +330,70 @@ h1, h2, h3, h4, h5, h6 {
   background: rgba(255, 255, 255, 0.2) !important;
   color: #ffffff !important;
 }
+
+/* 个人图谱页面响应式布局与样式 */
+.graph-main-container {
+  min-height: 680px;
+  height: auto;
+  display: flex;
+  flex-direction: row;
+  gap: 24px;
+  padding: 90px 40px 24px 40px;
+  max-width: 1480px;
+  margin: 0 auto;
+  width: 100%;
+  z-index: 10;
+  box-sizing: border-box;
+}
+
+.graph-left-col {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.graph-right-col {
+  width: 450px;
+  background: rgba(255, 255, 255, 0.45);
+  border-left: 1px solid rgba(18, 18, 18, 0.05);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.01);
+}
+
+@keyframes navFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 1024px) {
+  .graph-main-container {
+    flex-direction: column;
+    padding: 90px 20px 24px 20px;
+    height: auto;
+  }
+  .graph-left-col {
+    height: 480px;
+    flex: none;
+    width: 100%;
+  }
+  .graph-right-col {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid rgba(18, 18, 18, 0.05);
+    padding-top: 20px;
+  }
+}
+

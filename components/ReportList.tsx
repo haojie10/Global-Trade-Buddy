@@ -228,7 +228,7 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
       </div>
 
       {/* 列表网格 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
         {filtered.length > 0 ? (
           filtered.map((report) => (
             <Link 

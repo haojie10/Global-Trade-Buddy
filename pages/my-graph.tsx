@@ -214,20 +214,9 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
       />
 
       {/* 主体内容区（分左右两栏） */}
-      <main style={{
-        height: '680px',
-        display: 'flex',
-        padding: '90px 40px 24px 40px',
-        gap: '24px',
-        overflow: 'hidden',
-        maxWidth: '1480px',
-        margin: '0 auto',
-        width: '100%',
-        zIndex: 10,
-        boxSizing: 'border-box'
-      }}>
+      <main className="graph-main-container">
         {/* 左栏：图谱面板 */}
-        <div style={{ flex: 1, minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div className="graph-left-col">
           {hasData && (
             <>
               {/* 顶部筛选栏 */}
@@ -413,18 +402,7 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
         </div>
 
         {/* 右栏：外贸便捷小工具面板 */}
-        <div style={{
-          width: '450px',
-          background: 'rgba(255, 255, 255, 0.45)',
-          borderRadius: '0px',
-          borderLeft: '1px solid rgba(18, 18, 18, 0.05)',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          backdropFilter: 'blur(15px)',
-          WebkitBackdropFilter: 'blur(15px)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.01)'
-        }}>
+        <div className="graph-right-col">
           <NodeProfilePanel
             selectedNode={selectedNode}
             userRole={userRole}

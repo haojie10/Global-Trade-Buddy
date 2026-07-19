@@ -697,7 +697,7 @@ export default function ReportDetailPage({
                 </svg>
                 延伸知识链条 (顺藤摸瓜探索更多关联报告)
               </h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
                 {related.map(item => (
                   <Link href={`/reports/${item.id}`} key={item.id} style={{ textDecoration: 'none' }}>
                   <div 
