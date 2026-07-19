@@ -14,6 +14,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [countdown, setCountdown] = useState(0);
   const [isSending, setIsSending] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
   React.useEffect(() => {
     if (countdown > 0) {
@@ -22,13 +23,14 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     }
   }, [countdown]);
 
-  // 弹窗打开、关闭或切换登录/注册模式时，立即清空所有表单项和错误提示，防止数据残留与自动填充冲突
+  // 弹窗打开、关闭或切换登录/注册模式时，立即清空所有表单项、错误提示和成功提示，防止数据残留与自动填充冲突
   React.useEffect(() => {
     setNickname('');
     setEmail('');
     setPassword('');
     setCode('');
     setErrorMsg('');
+    setSuccessMsg('');
   }, [authMode, isOpen]);
 
   if (!isOpen) return null;
@@ -82,7 +84,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       const data = await res.json();
       if (res.ok && data.success) {
         setCountdown(60);
-        alert(data.message || '验证码发送成功！');
+        setSuccessMsg(data.message || '验证码已成功发送，请检查收件箱');
       } else {
         setErrorMsg(data.error || '验证码发送失败');
       }
@@ -130,7 +132,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         });
         const data = await res.json();
         if (res.ok && data.success) {
-          alert(data.message || '重置密码成功，请重新登录！');
+          setSuccessMsg(data.message || '重置密码成功，请直接登录！');
           setAuthMode('login');
         } else {
           setErrorMsg(data.error || '重置密码失败，请重试');
@@ -157,11 +159,6 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         document.cookie = `user_id=${data.user.id}; path=/; max-age=604800`;
         document.cookie = `user_role=${data.user.role}; path=/; max-age=604800`;
         document.cookie = `user_nickname=${encodeURIComponent(data.user.nickname || '')}; path=/; max-age=604800`;
-        if (authMode === 'login') {
-          alert('登录成功！');
-        } else {
-          alert('注册成功并已自动登录！');
-        }
         window.location.reload();
       } else {
         setErrorMsg(data.error || '认证失败，请重试');
@@ -346,6 +343,11 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
           {errorMsg && (
             <div style={{ fontSize: '0.8rem', color: '#ef4444', textAlign: 'center' }}>
               {errorMsg}
+            </div>
+          )}
+          {successMsg && (
+            <div style={{ fontSize: '0.8rem', color: '#10b981', textAlign: 'center' }}>
+              {successMsg}
             </div>
           )}
           <button 
