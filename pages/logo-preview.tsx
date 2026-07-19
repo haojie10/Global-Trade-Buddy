@@ -242,42 +242,45 @@ export default function LogoPreviewPage() {
                 padding: '24px 16px',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '12px',
+                gap: '16px',
                 alignItems: 'center',
                 justifyContent: 'center',
                 border: `1px solid ${bgColor === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'}`
               }}>
-                {/* 缩写大字 Logo */}
-                <div style={{
-                  fontFamily: opt.family,
-                  fontSize: '2.5rem',
-                  color: '#ff641e',
-                  fontWeight: 800,
-                  letterSpacing: '-1px',
-                  lineHeight: 1
-                }}>
-                  {customText}
-                </div>
+                {/* 动态 SVG Logo */}
+                <svg viewBox="0 -4 120 68" width="160" height="90" fill="none" style={{ color: '#ff641e' }}>
+                  {/* 中间图谱取景框 [ • ] */}
+                  <path d="M 55,20 H 50 V 40 H 55" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+                  <path d="M 65,20 H 70 V 40 H 65" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+                  <circle cx="60" cy="30" r="3.5" fill="currentColor" />
 
-                {/* 组合 LOGO (首字母 + 细体英文) */}
+                  {/* 四角外延连接节点 */}
+                  <line x1="50" y1="20" x2="23" y2="2" stroke="currentColor" strokeWidth="1.2" opacity="0.85" />
+                  <circle cx="20" cy="0" r="3.0" fill="currentColor" />
+                  
+                  <line x1="70" y1="20" x2="97" y2="2" stroke="currentColor" strokeWidth="1.2" opacity="0.85" />
+                  <circle cx="100" cy="0" r="3.0" fill="currentColor" />
+                  
+                  <line x1="50" y1="40" x2="23" y2="58" stroke="currentColor" strokeWidth="1.2" opacity="0.85" />
+                  <circle cx="20" cy="60" r="3.0" fill="currentColor" />
+                  
+                  <line x1="70" y1="40" x2="97" y2="58" stroke="currentColor" strokeWidth="1.2" opacity="0.85" />
+                  <circle cx="100" cy="60" r="3.0" fill="currentColor" />
+                  
+                  {/* 动态 M 与 G 文本 */}
+                  <text x="22" y="30" fontFamily={opt.family} fontSize="26" fontWeight="800" textAnchor="middle" dominantBaseline="central" fill="currentColor">M</text>
+                  <text x="98" y="30" fontFamily={opt.family} fontSize="26" fontWeight="800" textAnchor="middle" dominantBaseline="central" fill="currentColor">G</text>
+                </svg>
+
+                {/* 组合名 (细体英文) */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderTop: `1px dashed ${bgColor === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`, paddingTop: '12px', width: '100%', justifyContent: 'center' }}>
                   <span style={{
-                    fontFamily: opt.family,
-                    fontSize: '1.4rem',
-                    color: '#ff641e',
-                    fontWeight: 800,
-                    lineHeight: 1
-                  }}>
-                    {customText}
-                  </span>
-                  <span style={{
-                    fontSize: '0.8rem',
+                    fontSize: '0.85rem',
                     fontWeight: 300,
                     color: bgColor === 'dark' ? '#ffffff' : '#121212',
-                    letterSpacing: '1.5px',
+                    letterSpacing: '2px',
                     textTransform: 'uppercase',
-                    lineHeight: 1,
-                    marginTop: '2px'
+                    lineHeight: 1
                   }}>
                     {customSubText}
                   </span>
@@ -289,15 +292,34 @@ export default function LogoPreviewPage() {
                 <span style={{ fontSize: '0.7rem', opacity: 0.5, display: 'block', marginBottom: '6px' }}>顶栏模拟 (Header Simulation):</span>
                 <div style={{
                   background: bgColor === 'dark' ? 'rgba(0,0,0,0.3)' : '#eaeaea',
-                  padding: '8px 12px',
+                  padding: '8px 16px',
                   borderRadius: '6px',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontFamily: opt.family, fontSize: '1rem', color: '#ff641e', fontWeight: 800 }}>{customText}</span>
-                    <span style={{ fontSize: '0.6rem', fontWeight: 300, color: bgColor === 'dark' ? '#fff' : '#121212', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{customSubText}</span>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    {/* 微缩版动态 SVG Logo */}
+                    <svg viewBox="0 -4 120 68" width="70" height="40" fill="none" style={{ color: '#ff641e' }}>
+                      <path d="M 55,20 H 50 V 40 H 55" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+                      <path d="M 65,20 H 70 V 40 H 65" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+                      <circle cx="60" cy="30" r="3.5" fill="currentColor" />
+
+                      <line x1="50" y1="20" x2="23" y2="2" stroke="currentColor" strokeWidth="1.2" opacity="0.85" />
+                      <circle cx="20" cy="0" r="3.0" fill="currentColor" />
+                      
+                      <line x1="70" y1="20" x2="97" y2="2" stroke="currentColor" strokeWidth="1.2" opacity="0.85" />
+                      <circle cx="100" cy="0" r="3.0" fill="currentColor" />
+                      
+                      <line x1="50" y1="40" x2="23" y2="58" stroke="currentColor" strokeWidth="1.2" opacity="0.85" />
+                      <circle cx="20" cy="60" r="3.0" fill="currentColor" />
+                      
+                      <line x1="70" y1="40" x2="97" y2="58" stroke="currentColor" strokeWidth="1.2" opacity="0.85" />
+                      <circle cx="100" cy="60" r="3.0" fill="currentColor" />
+                      
+                      <text x="22" y="30" fontFamily={opt.family} fontSize="26" fontWeight="800" textAnchor="middle" dominantBaseline="central" fill="currentColor">M</text>
+                      <text x="98" y="30" fontFamily={opt.family} fontSize="26" fontWeight="800" textAnchor="middle" dominantBaseline="central" fill="currentColor">G</text>
+                    </svg>
                   </div>
                   <div style={{ display: 'flex', gap: '8px', fontSize: '0.6rem', opacity: 0.6 }}>
                     <span>资讯</span>
