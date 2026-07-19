@@ -335,7 +335,7 @@ export default function ReportDetailPage({
               color: 'var(--color-muted)',
               fontSize: '0.75rem',
               padding: '4px 12px',
-              borderRadius: '0px',
+              borderRadius: 'var(--border-radius)',
               fontWeight: 300
             }}>
               {report.category === 'customer' ? '客户洞察' : '品类分析'}
@@ -346,7 +346,7 @@ export default function ReportDetailPage({
               border: '1px solid rgba(18, 18, 18, 0.08)',
               fontSize: '0.75rem',
               padding: '4px 12px',
-              borderRadius: '0px',
+              borderRadius: 'var(--border-radius)',
               fontWeight: 300
             }}>
               Target: {report.market_region}
@@ -360,7 +360,7 @@ export default function ReportDetailPage({
                   color: isFav ? 'var(--color-accent)' : 'var(--color-muted)',
                   fontSize: '0.75rem',
                   padding: '4px 12px',
-                  borderRadius: '0px',
+                  borderRadius: 'var(--border-radius)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -605,7 +605,7 @@ export default function ReportDetailPage({
                       height: '100px',
                       background: 'rgba(255, 255, 255, 0.65)',
                       border: '1px solid rgba(18, 18, 18, 0.08)',
-                      borderRadius: '0px',
+                      borderRadius: 'var(--border-radius)',
                       padding: '12px 16px',
                       fontSize: '0.85rem',
                       color: 'var(--color-text)',
@@ -716,7 +716,7 @@ export default function ReportDetailPage({
                         background: 'transparent',
                         border: '1px solid rgba(18, 18, 18, 0.08)',
                         padding: '4px 10px',
-                        borderRadius: '0px',
+                        borderRadius: 'var(--border-radius)',
                         display: 'inline-block',
                         marginBottom: '10px'
                       }}>

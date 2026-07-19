@@ -165,7 +165,7 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
   const inputStyle = {
     background: 'rgba(255, 255, 255, 0.65)',
     border: '1px solid rgba(18, 18, 18, 0.08)',
-    borderRadius: '0px',
+    borderRadius: 'var(--border-radius)',
     padding: '12px 16px',
     fontSize: '0.85rem',
     color: 'var(--color-text)',
@@ -259,7 +259,7 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
                       color: report.category === 'customer' ? 'var(--color-accent)' : 'var(--color-muted)',
                       background: report.category === 'customer' ? 'rgba(255, 100, 30, 0.05)' : 'rgba(122, 117, 111, 0.08)',
                       padding: '5px 12px',
-                      borderRadius: '0px'
+                      borderRadius: 'var(--border-radius)'
                     }}>
                       {report.category === 'customer' ? '客户洞察' : '品类分析'}
                     </span>
@@ -326,7 +326,7 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
                             alignItems: 'center',
                             justifyContent: 'center',
                             color: 'rgba(18, 18, 18, 0.4)',
-                            borderRadius: '4px',
+                            borderRadius: 'var(--border-radius)',
                             transition: 'all 0.2s',
                             outline: 'none'
                           }}
@@ -390,7 +390,7 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
                         fontSize: '0.75rem',
                         fontWeight: 300,
                         padding: '4px 10px',
-                        borderRadius: '0px',
+                        borderRadius: 'var(--border-radius)',
                         background: 'rgba(18, 18, 18, 0.05)',
                         color: '#555555',
                         display: 'flex',
@@ -418,7 +418,7 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
                           fontSize: '0.75rem',
                           fontWeight: 300,
                           padding: '4px 10px',
-                          borderRadius: '0px',
+                          borderRadius: 'var(--border-radius)',
                           cursor: 'pointer',
                           transition: 'all 0.2s',
                           display: 'flex',

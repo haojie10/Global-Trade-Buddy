@@ -97,7 +97,7 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
               background: 'transparent',
               border: '1px solid var(--color-accent)',
               color: 'var(--color-accent)',
-              borderRadius: '0px',
+              borderRadius: 'var(--border-radius)',
               transition: 'all 0.2s'
             }}
             onMouseOver={(e) => {
@@ -243,7 +243,7 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
                       onChange={(e) => setSelectedMarket(e.target.value)}
                       style={{
                         padding: '6px 12px',
-                        borderRadius: '0px',
+                        borderRadius: 'var(--border-radius)',
                         border: '1px solid rgba(18, 18, 18, 0.08)',
                         background: 'rgba(255, 255, 255, 0.65)',
                         fontSize: '0.85rem',
@@ -263,7 +263,7 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
                       onChange={(e) => setSelectedProduct(e.target.value)}
                       style={{
                         padding: '6px 12px',
-                        borderRadius: '0px',
+                        borderRadius: 'var(--border-radius)',
                         border: '1px solid rgba(18, 18, 18, 0.08)',
                         background: 'rgba(255, 255, 255, 0.65)',
                         fontSize: '0.85rem',
@@ -300,7 +300,7 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
                 <div style={{
                   padding: '10px 20px',
                   background: 'rgba(255, 100, 30, 0.05)',
-                  borderRadius: '0px',
+                  borderRadius: 'var(--border-radius)',
                   color: 'var(--color-accent)',
                   fontSize: '0.85rem',
                   marginBottom: '16px',
@@ -351,7 +351,7 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
               justifyContent: 'center',
               alignItems: 'center',
               background: 'rgba(246, 246, 246, 0.85)',
-              borderRadius: '0px',
+              borderRadius: 'var(--border-radius)',
               border: '1px solid rgba(18, 18, 18, 0.08)',
               backdropFilter: 'blur(30px)',
               padding: '40px',
@@ -364,7 +364,7 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
                   height: '72px',
                   marginBottom: '28px',
                   background: 'linear-gradient(135deg, var(--color-accent) 0%, #ff884d 100%)',
-                  borderRadius: '0px',
+                  borderRadius: 'var(--border-radius)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',

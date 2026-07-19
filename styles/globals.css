@@ -20,7 +20,7 @@ body {
   
   --btn-font-weight: 400;      
   --btn-letter-spacing: 0.05em;   
-  --border-radius: 0px;       /* 极致硬朗直角圆角 */
+  --border-radius: 12px;       /* 极致硬朗直角 ➔ 现代圆角 */
 }
 
 h1, h2, h3, h4, h5, h6 {

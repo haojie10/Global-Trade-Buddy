@@ -331,6 +331,7 @@ export default function Navbar({
         <div style={{
           background: dark ? 'rgba(9, 8, 8, 0.98)' : 'rgba(255, 255, 255, 0.98)',
           borderBottom: dark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(18, 18, 18, 0.05)',
+          borderRadius: '0 0 var(--border-radius) var(--border-radius)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
           padding: '16px 24px',
@@ -388,7 +389,7 @@ export default function Navbar({
                 color: '#ffffff',
                 border: 'none',
                 padding: '12px',
-                borderRadius: '0px',
+                borderRadius: 'var(--border-radius)',
                 cursor: 'pointer',
                 fontWeight: 500,
                 textAlign: 'center',

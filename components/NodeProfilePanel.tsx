@@ -863,7 +863,7 @@ export default function NodeProfilePanel({
                     color: panelIsFav ? 'var(--color-accent)' : 'var(--color-muted)',
                     fontSize: '0.75rem',
                     padding: '4px 10px',
-                    borderRadius: '0px',
+                    borderRadius: 'var(--border-radius)',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
