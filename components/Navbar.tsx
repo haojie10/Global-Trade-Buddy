@@ -79,7 +79,7 @@ export default function Navbar({
     }}>
       <header style={{
         background: 'transparent',
-        padding: isMobile ? '12px 20px' : '16px 40px',
+        padding: isMobile ? '12px 24px' : '16px 40px',
         borderRadius: '0px',
         border: 'none',
         display: 'flex',
@@ -113,12 +113,14 @@ export default function Navbar({
               background: 'transparent',
               border: 'none',
               color: 'var(--color-text)',
-              fontSize: '1.5rem',
+              fontSize: '1.6rem',
               cursor: 'pointer',
-              padding: '4px 8px',
+              padding: '10px 14px',
               display: 'flex',
               alignItems: 'center',
-              outline: 'none'
+              outline: 'none',
+              marginRight: '6px',
+              borderRadius: '8px'
             }}
           >
             {mobileMenuOpen ? '✕' : '☰'}
