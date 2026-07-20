@@ -6,7 +6,7 @@ const isSupabase = connectionString.includes('supabase.co') || connectionString.
 // 仅在开发环境放宽证书校验（解决 Clash 等代理引起的证书错误）；
 // 通过 ssl 选项作用于 PG 连接，不污染全局 NODE_TLS_REJECT_UNAUTHORIZED
 const sslConfig = isSupabase
-  ? { rejectUnauthorized: process.env.NODE_ENV === 'production' }
+  ? { rejectUnauthorized: false }  // Supabase Pooler 使用自签名证书，必须放宽验证
   : undefined;
 
 let pool: Pool;
