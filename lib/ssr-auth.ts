@@ -19,7 +19,14 @@ export async function resolveSsrAuth(
   context: GetServerSidePropsContext,
   dbClient: PoolClient
 ): Promise<SsrAuthResult> {
-  const session = getSession(context.req as any);
+  let session: Session | null = null;
+
+  try {
+    session = getSession(context.req as any);
+  } catch {
+    // SESSION_SECRET 未配置或签名验证失败时，静默降级为访客
+    return { userId: null, userRole: 'guest', freeQuota: 0, nickname: '', session: null };
+  }
 
   if (!session) {
     return { userId: null, userRole: 'guest', freeQuota: 0, nickname: '', session: null };
