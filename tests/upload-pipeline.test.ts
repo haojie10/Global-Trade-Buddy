@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { runDehydration, parseMetadata } from '../pages/api/admin/reports/upload';
+import { runDehydration, parseMetadata } from '../lib/entity-extractor';
 import uploadHandler from '../pages/api/admin/reports/upload';
 import { Client } from 'pg';
 import { createTestClient, cleanDatabase } from './helpers/db-test-helper';

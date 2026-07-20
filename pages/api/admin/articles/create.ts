@@ -3,6 +3,7 @@ import { PoolClient } from 'pg';
 import { withDb } from '../../../../lib/api-handler';
 import { requireAdmin } from '../../../../lib/auth';
 import { runDehydration, extractAndNormalizeEntities } from '../../../../lib/entity-extractor';
+import { uploadImage } from '../../../../lib/storage';
 
 async function createHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
   const adminSession = requireAdmin(req);
@@ -17,20 +18,7 @@ async function createHandler(req: NextApiRequest, res: NextApiResponse, dbClient
 
   await dbClient.query('BEGIN');
 
-  const mockUpload = async (buffer: Buffer, mime: string) => {
-    const ext = mime.split('/')[1] || 'png';
-    const fileName = `img_${Date.now()}_${Math.floor(Math.random() * 1000)}.${ext}`;
-    const fs = require('fs');
-    const path = require('path');
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    fs.writeFileSync(path.join(uploadDir, fileName), buffer);
-    return `/uploads/${fileName}`;
-  };
-
-  const { cleanHtml } = await runDehydration(contentHtml, mockUpload);
+  const { cleanHtml } = await runDehydration(contentHtml, uploadImage);
 
   const insertRes = await dbClient.query(
     `INSERT INTO articles (title, summary, content_html, region, country, industry, source)

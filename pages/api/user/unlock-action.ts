@@ -13,8 +13,8 @@ async function unlockHandler(req: NextApiRequest, res: NextApiResponse, dbClient
 
   await dbClient.query('BEGIN');
 
-  // 专属的一键加载种子 Demo 数据的逻辑
-  if (reportId === 'seed-action') {
+  // 专属的一键加载种子 Demo 数据的逻辑（生产环境关闭，防止被恶意刷数据）
+  if (reportId === 'seed-action' && process.env.NODE_ENV !== 'production') {
     // 1. 插入三篇测试报告
     const rep1 = await dbClient.query(
       `INSERT INTO reports (title, category, market_region, summary, content_html) 

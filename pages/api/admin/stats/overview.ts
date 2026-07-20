@@ -14,27 +14,21 @@ async function overviewHandler(req: NextApiRequest, res: NextApiResponse, dbClie
   const range = req.query.range === '30d' ? '30d' : req.query.range === '90d' ? '90d' : '7d';
   const intervalStr = range === '30d' ? '30 days' : range === '90d' ? '90 days' : '7 days';
 
-  // 2. 执行核心指标查询
-
-  // KPI 1: 总报告数
-  const totalReportsRes = await dbClient.query('SELECT COUNT(*) as count FROM reports');
-  const totalReports = parseInt(totalReportsRes.rows[0].count, 10) || 0;
-  
-  const addedReportsRes = await dbClient.query(
-    'SELECT COUNT(*) as count FROM reports WHERE created_at >= NOW() - $1::interval',
+  // 2. 并发执行核心指标查询（同一连接上的并发查询由 pg 驱动自动排队，但合并 SQL 可减少 RTT）
+  // 将总报告数、新增报告数、总用户数、新增用户数合并为一条 SQL
+  const basicKpiRes = await dbClient.query(
+    `SELECT
+       (SELECT COUNT(*) FROM reports)::int AS total_reports,
+       (SELECT COUNT(*) FROM reports WHERE created_at >= NOW() - $1::interval)::int AS added_reports,
+       (SELECT COUNT(*) FROM users)::int AS total_users,
+       (SELECT COUNT(*) FROM users WHERE created_at >= NOW() - $1::interval)::int AS added_users`,
     [intervalStr]
   );
-  const addedReports = parseInt(addedReportsRes.rows[0].count, 10) || 0;
-
-  // KPI 2: 总用户数
-  const totalUsersRes = await dbClient.query('SELECT COUNT(*) as count FROM users');
-  const totalUsers = parseInt(totalUsersRes.rows[0].count, 10) || 0;
-
-  const addedUsersRes = await dbClient.query(
-    'SELECT COUNT(*) as count FROM users WHERE created_at >= NOW() - $1::interval',
-    [intervalStr]
-  );
-  const addedUsers = parseInt(addedUsersRes.rows[0].count, 10) || 0;
+  const basicKpi = basicKpiRes.rows[0];
+  const totalReports = basicKpi.total_reports || 0;
+  const addedReports = basicKpi.added_reports || 0;
+  const totalUsers = basicKpi.total_users || 0;
+  const addedUsers = basicKpi.added_users || 0;
 
   // KPI 3: 浏览总次数
   const totalViewsRes = await dbClient.query(

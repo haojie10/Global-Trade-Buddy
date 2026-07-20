@@ -4,9 +4,7 @@ import { withDb } from '../../../../lib/api-handler';
 import { requireAdmin } from '../../../../lib/auth';
 import { parseMetadata, runDehydration, extractAndNormalizeEntities } from '../../../../lib/entity-extractor';
 import { getStandardCategory } from '../../../../lib/category-mapper';
-
-// Re-export for compatibility with tests
-export { parseMetadata, runDehydration, extractAndNormalizeEntities } from '../../../../lib/entity-extractor';
+import { uploadImage } from '../../../../lib/storage';
 
 async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
   const adminSession = requireAdmin(req);
@@ -16,49 +14,8 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
 
   const { rawHtml, manualTags, category, summary, overwriteReportId, industry_ids, country_ids } = req.body;
 
-  // 真实的 Supabase Storage 图片上传
-  const supabaseUpload = async (buffer: Buffer, mime: string) => {
-    const ext = mime.split('/')[1] || 'png';
-    const fileName = `img_${Date.now()}_${Math.floor(Math.random() * 1000)}.${ext}`;
-    
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseKey) {
-      // NOTE: 本地/开发环境降级方案：若未配置 Supabase 环境变量，图片直接保存到本地 public/uploads 目录下
-      const fs = require('fs');
-      const path = require('path');
-      const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-      fs.writeFileSync(path.join(uploadDir, fileName), buffer);
-      return `/uploads/${fileName}`;
-    }
-
-    // 1. 调用 REST API 写入 Supabase Storage
-    const uploadUrl = `${supabaseUrl}/storage/v1/object/report-images/${fileName}`;
-    const uploadRes = await fetch(uploadUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${supabaseKey}`,
-        'Content-Type': mime,
-        'x-upsert': 'true'
-      },
-      body: buffer as any
-    });
-
-    if (!uploadRes.ok) {
-      const errText = await uploadRes.text();
-      throw new Error(`Failed to upload image to Supabase Storage: ${errText}`);
-    }
-
-    // 2. 返回公共 CDN 访问链接
-    return `${supabaseUrl}/storage/v1/object/public/report-images/${fileName}`;
-  };
-
-  // 1. 脱水处理
-  const { cleanHtml, imageCount } = await runDehydration(rawHtml, supabaseUpload);
+  // 1. 脱水处理（图片统一走 lib/storage.ts）
+  const { cleanHtml, imageCount } = await runDehydration(rawHtml, uploadImage);
 
   // 2. 元数据及实体提取
   const meta = parseMetadata(rawHtml);

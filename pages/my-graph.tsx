@@ -2,8 +2,8 @@ import { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import React, { useState } from 'react';
 import pool from '../lib/db';
-import { parseCookies } from '../lib/cookies';
-import { getUserGraph, getGraphData } from './api/user/graph';
+import { resolveSsrAuth } from '../lib/ssr-auth';
+import { getGraphData } from './api/user/graph';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { filterGraphData, GraphNode, GraphLink } from '../lib/graph-helpers';
@@ -467,27 +467,15 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
 
 // SSR 加载个人知识图谱数据
 export const getServerSideProps: GetServerSideProps = async (context) => {
-  const cookies = parseCookies(context.req.headers.cookie);
-  const cookieUserId = cookies.user_id;
-  
   let dbClient: any = null;
 
   try {
     dbClient = await pool.connect();
-    let userId: string | null = null;
-    let userRole = 'guest';
-    let freeQuota = 0;
-    let nickname = '';
-
-    if (cookieUserId) {
-      const userRes = await dbClient.query('SELECT id, role, free_quota, nickname FROM users WHERE id = $1', [cookieUserId]);
-      if (userRes.rows.length > 0) {
-        userId = userRes.rows[0].id;
-        userRole = userRes.rows[0].role;
-        freeQuota = userRes.rows[0].free_quota;
-        nickname = userRes.rows[0].nickname || '';
-      }
-    }
+    const auth = await resolveSsrAuth(context, dbClient);
+    const userId = auth.userId;
+    const userRole = auth.userRole;
+    const freeQuota = auth.freeQuota;
+    const nickname = auth.nickname;
 
     let graphData: any = { nodes: [], links: [] };
     let unlockedReports: any[] = [];

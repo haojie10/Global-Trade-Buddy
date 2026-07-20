@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import pool from '../../lib/db';
-import { parseCookies } from '../../lib/cookies';
+import { resolveSsrAuth } from '../../lib/ssr-auth';
 import ReportList, { PlatformReport } from '../../components/ReportList';
 import Navbar from '../../components/Navbar';
 import AuthModal from '../../components/AuthModal';
@@ -137,30 +137,15 @@ export default function ReportsPage({ reports: initialReports, userId, userRole,
 }
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
-  const cookies = parseCookies(context.req.headers.cookie);
-  const cookieUserId = cookies.user_id;
-
   let dbClient: any = null;
-  let userId: string | null = null;
-  let userRole = 'guest';
-  let quota = 0;
-  let nickname = '';
 
   try {
     dbClient = await pool.connect();
-
-    if (cookieUserId) {
-      const userRes = await dbClient.query(
-        'SELECT id, role, free_quota, nickname FROM users WHERE id = $1',
-        [cookieUserId]
-      );
-      if (userRes.rows.length > 0) {
-        userId = userRes.rows[0].id;
-        userRole = userRes.rows[0].role;
-        quota = userRes.rows[0].free_quota;
-        nickname = userRes.rows[0].nickname || '';
-      }
-    }
+    const auth = await resolveSsrAuth(context, dbClient);
+    const userId = auth.userId;
+    const userRole = auth.userRole;
+    const quota = auth.freeQuota;
+    const nickname = auth.nickname;
 
     let allReports: PlatformReport[] = [];
 

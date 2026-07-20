@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import bcrypt from 'bcryptjs';
 import pool from '../../../lib/db';
+import { checkRateLimit } from '../../../lib/rate-limit';
 
 function validatePassword(password: string): string | null {
   if (password.length < 8) {
@@ -19,6 +20,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
+
+  // IP 级限流：1 分钟最多 5 次重置尝试
+  if (checkRateLimit(req, res, { windowMs: 60 * 1000, max: 5 })) return;
 
   const { email, password, code } = req.body;
   if (!email || !password || !code) {
@@ -40,11 +44,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: '该邮箱尚未注册' });
     }
 
-    // 2. 校验邮箱验证码是否正确且未过期
+    // 2. 按邮箱维度统计近 10 分钟失败次数（防止重新请求新码绕过单条记录 attempts 限制）
+    const failCountRes = await dbClient.query(
+      `SELECT COALESCE(SUM(attempts), 0)::int AS total_failures
+       FROM email_verifications
+       WHERE email = $1 AND created_at > NOW() - INTERVAL '10 minutes'`,
+      [email]
+    );
+    if (failCountRes.rows[0].total_failures >= 10) {
+      return res.status(429).json({ error: '尝试次数过多，请 10 分钟后再试' });
+    }
+
+    // 3. 校验邮箱验证码是否正确且未过期
     const verifyRes = await dbClient.query(
-      `SELECT id, code, expired_at, attempts FROM email_verifications 
-       WHERE email = $1 
-       ORDER BY created_at DESC 
+      `SELECT id, code, expired_at, attempts FROM email_verifications
+       WHERE email = $1
+       ORDER BY created_at DESC
        LIMIT 1`,
       [email]
     );

@@ -2,11 +2,15 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import bcrypt from 'bcryptjs';
 import pool from '../../../lib/db';
 import { setSessionCookie } from '../../../lib/auth';
+import { checkRateLimit } from '../../../lib/rate-limit';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
+
+  // IP 级限流：1 分钟最多 10 次登录尝试，防爆破
+  if (checkRateLimit(req, res, { windowMs: 60 * 1000, max: 10 })) return;
 
   const { phoneOrEmail, password } = req.body;
   if (!phoneOrEmail || !password) {

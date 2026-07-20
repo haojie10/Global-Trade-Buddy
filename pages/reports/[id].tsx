@@ -2,7 +2,7 @@ import { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import React, { useState } from 'react';
 import pool from '../../lib/db';
-import { parseCookies } from '../../lib/cookies';
+import { resolveSsrAuth } from '../../lib/ssr-auth';
 import { getReportDetail } from '../api/user/report-detail';
 import WatermarkContainer from '../../components/WatermarkContainer';
 import Link from 'next/link';
@@ -35,56 +35,7 @@ interface ReportDetailProps {
   nickname?: string;
 }
 
-if (typeof window !== 'undefined') {
-  (window as any).switchSection = (sectionId: string) => {
-    const sections = document.querySelectorAll('.report-section-content');
-    sections.forEach(sec => {
-      sec.classList.remove('active');
-    });
-
-    const targetSection = document.getElementById(sectionId);
-    if (targetSection) {
-      targetSection.classList.add('active');
-    }
-
-    const buttons = document.querySelectorAll('.nav-tab-btn');
-    buttons.forEach(btn => {
-      btn.classList.remove('active');
-    });
-
-    const activeBtn = document.getElementById('btn-' + sectionId);
-    if (activeBtn) {
-      activeBtn.classList.add('active');
-    }
-  };
-}
-
-function cleanHtmlBody(rawHtml: string): string {
-  if (!rawHtml) return '';
-  
-  // 1. 提取所有 <style> 标签内容以保留样式
-  const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi;
-  let stylesStr = '';
-  let match;
-  while ((match = styleRegex.exec(rawHtml)) !== null) {
-    stylesStr += match[0] + '\n';
-  }
-
-  // 限制样式只作用于报告容器内，防污染全局 body
-  stylesStr = stylesStr.replace(/\bbody\s*(?=[{,])/g, '.report-content-body');
-
-  // 2. 提取 <body> 内部的真实内容
-  const bodyMatch = rawHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-  let bodyContent = bodyMatch ? bodyMatch[1] : rawHtml;
-
-  // 3. 移除富文本中的所有 <script>
-  bodyContent = bodyContent.replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, '');
-
-  // 4. 基础重置样式已移至 styles/globals.css 中的 .report-content-body 规则
-  return `${stylesStr}\n${bodyContent}`;
-}
-
-export default function ReportDetailPage({ 
+export default function ReportDetailPage({
   report, 
   related, 
   userId, 
@@ -207,10 +158,6 @@ export default function ReportDetailPage({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
-
-  React.useEffect(() => {
-    // 挂载原 HTML 模板内联 onclick 所需 JavaScript 全局函数
   }, []);
 
   const handleToggleFavorite = async () => {
@@ -483,7 +430,7 @@ export default function ReportDetailPage({
                       border: 'none',
                       display: 'block'
                     }}
-                    sandbox="allow-scripts allow-same-origin allow-popups"
+                    sandbox="allow-scripts allow-popups"
                   />
 
                   {/* 智能悬浮全屏控制按钮：仅在未全屏时悬浮在报告窗口右下角 */}
@@ -751,26 +698,14 @@ export default function ReportDetailPage({
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const { id } = context.params!;
-  const cookies = parseCookies(context.req.headers.cookie);
-  const cookieUserId = cookies.user_id;
-  
   const dbClient = await pool.connect();
 
   try {
-    let userId: string | null = null;
-    let userRole = 'guest';
-
-    let freeQuota = 0;
-    let nickname = '';
-    if (cookieUserId) {
-      const userRes = await dbClient.query('SELECT id, role, free_quota, nickname FROM users WHERE id = $1', [cookieUserId]);
-      if (userRes.rows.length > 0) {
-        userId = userRes.rows[0].id;
-        userRole = userRes.rows[0].role;
-        freeQuota = userRes.rows[0].free_quota || 0;
-        nickname = userRes.rows[0].nickname || '';
-      }
-    }
+    const auth = await resolveSsrAuth(context, dbClient);
+    const userId = auth.userId;
+    const userRole = auth.userRole;
+    const freeQuota = auth.freeQuota;
+    const nickname = auth.nickname;
 
     let report: any = null;
     let related: RelatedReport[] = [];

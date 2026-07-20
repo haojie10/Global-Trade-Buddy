@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import bcrypt from 'bcryptjs';
 import pool from '../../../lib/db';
 import { setSessionCookie } from '../../../lib/auth';
+import { checkRateLimit } from '../../../lib/rate-limit';
 
 /**
  * 校验密码强度：至少 8 位，包含字母和数字
@@ -24,16 +25,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
+  // IP 级限流：1 分钟最多 5 次注册尝试
+  if (checkRateLimit(req, res, { windowMs: 60 * 1000, max: 5 })) return;
+
   const { nickname, email, password, code } = req.body;
   if (!email || !password || !nickname) {
     return res.status(400).json({ error: '请填入完整的注册信息（含昵称）' });
   }
 
-  // 昵称字节长度校验：中文算2字节，英文算1字节
-  let nicknameByteLen = 0;
-  for (let i = 0; i < nickname.length; i++) {
-    nicknameByteLen += nickname.charCodeAt(i) > 255 ? 2 : 1;
-  }
+  // 昵称字节长度校验：使用 UTF-8 真实字节数（兼容 emoji）
+  const nicknameByteLen = Buffer.byteLength(nickname, 'utf8');
   if (nicknameByteLen > 10) {
     return res.status(400).json({ error: '昵称不能超过 10 个字节 (5 个汉字)' });
   }
@@ -57,10 +58,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!code) {
         return res.status(400).json({ error: '请输入邮箱验证码' });
       }
+
+      // 按邮箱维度统计近 10 分钟失败次数（防止重新请求新码绕过单条记录 attempts 限制）
+      const failCountRes = await dbClient.query(
+        `SELECT COALESCE(SUM(attempts), 0)::int AS total_failures
+         FROM email_verifications
+         WHERE email = $1 AND created_at > NOW() - INTERVAL '10 minutes'`,
+        [email]
+      );
+      if (failCountRes.rows[0].total_failures >= 10) {
+        return res.status(429).json({ error: '尝试次数过多，请 10 分钟后再试' });
+      }
+
       const verifyRes = await dbClient.query(
-        `SELECT id, code, expired_at, attempts FROM email_verifications 
-         WHERE email = $1 
-         ORDER BY created_at DESC 
+        `SELECT id, code, expired_at, attempts FROM email_verifications
+         WHERE email = $1
+         ORDER BY created_at DESC
          LIMIT 1`,
         [email]
       );

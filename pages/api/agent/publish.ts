@@ -3,6 +3,7 @@ import { PoolClient } from 'pg';
 import { withDb } from '../../../lib/api-handler';
 import { runDehydration, extractAndNormalizeEntities, parseMetadata } from '../../../lib/entity-extractor';
 import { getStandardCategory } from '../../../lib/category-mapper';
+import { uploadImage } from '../../../lib/storage';
 
 async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
   const authHeader = req.headers.authorization;
@@ -10,15 +11,14 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
   const expectedToken = process.env.AGENT_API_KEY;
 
   if (!expectedToken) {
-    if (process.env.NODE_ENV === 'production') {
-      console.error('FATAL: AGENT_API_KEY 未配置');
-      return res.status(500).json({ error: '服务配置错误' });
-    }
-    // 开发环境允许使用默认值
-    if (token !== 'test_agent_secret') {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-  } else if (!token || token !== expectedToken) {
+    // 未配置 API Key 时一律拒绝（不论环境），防止意外暴露
+    console.error('FATAL: AGENT_API_KEY 未配置');
+    return res.status(500).json({ error: '服务配置错误' });
+  }
+  // 使用恒定时间比较防时序攻击
+  const tokenBuf = Buffer.from(token || '', 'utf8');
+  const expectedBuf = Buffer.from(expectedToken, 'utf8');
+  if (tokenBuf.length !== expectedBuf.length || !require('crypto').timingSafeEqual(tokenBuf, expectedBuf)) {
     return res.status(401).json({ error: 'Unauthorized: Invalid Agent API Key' });
   }
 
@@ -30,46 +30,7 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
 
   await dbClient.query('BEGIN');
 
-  // 优先上传至 Supabase Storage，若无配置则降级保存到本地 public/uploads 目录下
-  const mockUpload = async (buffer: Buffer, mime: string) => {
-    const ext = mime.split('/')[1] || 'png';
-    const fileName = `img_${Date.now()}_${Math.floor(Math.random() * 1000)}.${ext}`;
-    
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_ANON_KEY;
-
-    if (supabaseUrl && supabaseKey) {
-      const uploadUrl = `${supabaseUrl}/storage/v1/object/report-images/${fileName}`;
-      try {
-        const uploadRes = await fetch(uploadUrl, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${supabaseKey}`,
-            'Content-Type': mime,
-            'x-upsert': 'true'
-          },
-          body: buffer as any
-        });
-
-        if (uploadRes.ok) {
-          return `${supabaseUrl}/storage/v1/object/public/report-images/${fileName}`;
-        }
-      } catch (err) {
-        console.error('Failed to upload to Supabase, falling back to local storage:', err);
-      }
-    }
-
-    const fs = require('fs');
-    const path = require('path');
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    fs.writeFileSync(path.join(uploadDir, fileName), buffer);
-    return `/uploads/${fileName}`;
-  };
-
-  const { cleanHtml } = await runDehydration(contentHtml, mockUpload);
+  const { cleanHtml } = await runDehydration(contentHtml, uploadImage);
 
   if (type === 'report') {
     // 1. 元数据及实体提取
@@ -155,16 +116,23 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     if (autoIndustries.length > 0) {
       const mappedNames = autoIndustries.map(indName => getStandardCategory(indName) || indName);
       const indIdsRes = await dbClient.query(
-        `INSERT INTO industries (name) 
-         SELECT unnest($1::text[]) 
-         ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name 
+        `INSERT INTO industries (name)
+         SELECT unnest($1::text[])
+         ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
          RETURNING id`,
         [mappedNames]
       );
-      const values = indIdsRes.rows.map((r: any) => `('${newReportId}', '${r.id}')`).join(',');
+      // 参数化批量插入，替代原先的字符串拼接 SQL（防止注入）
+      const industryPlaceholders: string[] = [];
+      const industryParams: any[] = [];
+      indIdsRes.rows.forEach((r: any, idx: number) => {
+        industryPlaceholders.push(`($${idx * 2 + 1}::uuid, $${idx * 2 + 2}::uuid)`);
+        industryParams.push(newReportId, r.id);
+      });
       await dbClient.query(
-        `INSERT INTO report_industries (report_id, industry_id) 
-         VALUES ${values} ON CONFLICT DO NOTHING`
+        `INSERT INTO report_industries (report_id, industry_id)
+         VALUES ${industryPlaceholders.join(',')} ON CONFLICT DO NOTHING`,
+        industryParams
       );
     }
 
@@ -186,10 +154,17 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
       );
 
       if (ctyRes.rows.length > 0) {
-        const values = ctyRes.rows.map((r: any) => `('${newReportId}', '${r.id}')`).join(',');
+        // 参数化批量插入，替代原先的字符串拼接 SQL（防止注入）
+        const countryPlaceholders: string[] = [];
+        const countryParams: any[] = [];
+        ctyRes.rows.forEach((r: any, idx: number) => {
+          countryPlaceholders.push(`($${idx * 2 + 1}::uuid, $${idx * 2 + 2}::uuid)`);
+          countryParams.push(newReportId, r.id);
+        });
         await dbClient.query(
-          `INSERT INTO report_countries (report_id, country_id) 
-           VALUES ${values} ON CONFLICT DO NOTHING`
+          `INSERT INTO report_countries (report_id, country_id)
+           VALUES ${countryPlaceholders.join(',')} ON CONFLICT DO NOTHING`,
+          countryParams
         );
       }
     }

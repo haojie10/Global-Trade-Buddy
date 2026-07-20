@@ -3,13 +3,11 @@ import { Pool } from 'pg';
 const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/postgres';
 
 const isSupabase = connectionString.includes('supabase.co') || connectionString.includes('supabase.net') || connectionString.includes('pooler.supabase.com');
-const sslConfig = isSupabase ? { rejectUnauthorized: false } : undefined;
-
-// HACK: 仅在开发环境禁用 TLS 证书验证，解决 Clash 等代理工具引起的证书错误
-// 生产环境必须保留证书验证以防止中间人攻击
-if (isSupabase && process.env.NODE_ENV !== 'production') {
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-}
+// 仅在开发环境放宽证书校验（解决 Clash 等代理引起的证书错误）；
+// 通过 ssl 选项作用于 PG 连接，不污染全局 NODE_TLS_REJECT_UNAUTHORIZED
+const sslConfig = isSupabase
+  ? { rejectUnauthorized: process.env.NODE_ENV === 'production' }
+  : undefined;
 
 let pool: Pool;
 

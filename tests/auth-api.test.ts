@@ -29,7 +29,7 @@ describe('Auth API Handlers Test', () => {
     const { req, res, getStatus, getJson } = mockReqRes({
       method: 'POST',
       body: {
-        nickname: '测试用户1',
+        nickname: '测用户1',
         email: 'testuser1@gtb.com',
         password: 'mypassword123',
         code: '123456',
@@ -48,7 +48,7 @@ describe('Auth API Handlers Test', () => {
     const { req, res, getStatus } = mockReqRes({
       method: 'POST',
       body: {
-        nickname: '测试用户2',
+        nickname: '测用户2',
         email: 'testuser1@gtb.com',
         password: 'mypassword123',
         code: '123456',

@@ -15,22 +15,18 @@ async function searchTrackHandler(req: NextApiRequest, res: NextApiResponse, dbC
   const trimmedQuery = query.trim();
   const count = parseInt(results_count, 10) || 0;
 
-  // 去重判断：5秒内相同用户（或匿名用户）对相同关键词不重复记录
-  const checkRes = await dbClient.query(
-    `SELECT id FROM search_logs 
-     WHERE (user_id = $1 OR (user_id IS NULL AND $1 IS NULL)) 
-       AND query = $2 
-       AND created_at > NOW() - INTERVAL '5 seconds' 
-     LIMIT 1`,
-    [userId, trimmedQuery]
+  // 单条 SQL 完成"判重 + 插入"：5 秒内同用户/同关键词不重复记录（原子操作，省一次 RTT）
+  await dbClient.query(
+    `INSERT INTO search_logs (user_id, query, results_count)
+     SELECT $1, $2, $3
+     WHERE NOT EXISTS (
+       SELECT 1 FROM search_logs
+       WHERE (user_id = $1 OR (user_id IS NULL AND $1 IS NULL))
+         AND query = $2
+         AND created_at > NOW() - INTERVAL '5 seconds'
+     )`,
+    [userId, trimmedQuery, count]
   );
-
-  if (checkRes.rows.length === 0) {
-    await dbClient.query(
-      'INSERT INTO search_logs (user_id, query, results_count) VALUES ($1, $2, $3)',
-      [userId, trimmedQuery, count]
-    );
-  }
 
   return res.status(200).json({ ok: true });
 }

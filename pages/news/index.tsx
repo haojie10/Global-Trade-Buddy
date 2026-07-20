@@ -3,7 +3,7 @@ import { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import pool from '../../lib/db';
-import { parseCookies } from '../../lib/cookies';
+import { resolveSsrAuth } from '../../lib/ssr-auth';
 import WatermarkContainer from '../../components/WatermarkContainer';
 import Navbar from '../../components/Navbar';
 import AuthModal from '../../components/AuthModal';
@@ -213,27 +213,15 @@ export default function PublicNewsPage({ newsList, industries, userId, userRole,
 }
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
-  const cookies = parseCookies(context.req.headers.cookie);
-  const cookieUserId = cookies.user_id || null;
-
-  let dbClient = null;
-  let userId: string | null = null;
-  let userRole = 'guest';
-  let quota = 0;
-  let nickname = '';
+  let dbClient: any = null;
 
   try {
     dbClient = await pool.connect();
-
-    if (cookieUserId) {
-      const userRes = await dbClient.query('SELECT id, role, free_quota, nickname FROM users WHERE id = $1', [cookieUserId]);
-      if (userRes.rows.length > 0) {
-        userId = userRes.rows[0].id;
-        userRole = userRes.rows[0].role;
-        quota = userRes.rows[0].free_quota;
-        nickname = userRes.rows[0].nickname || '';
-      }
-    }
+    const auth = await resolveSsrAuth(context, dbClient);
+    const userId = auth.userId;
+    const userRole = auth.userRole;
+    const quota = auth.freeQuota;
+    const nickname = auth.nickname;
 
     // 1. 获取所有公开快讯
     const newsRes = await dbClient.query(
@@ -270,10 +258,10 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       props: {
         newsList: [],
         industries: [],
-        userId,
-        userRole,
-        quota,
-        nickname
+        userId: null,
+        userRole: 'guest',
+        quota: 0,
+        nickname: ''
       }
     };
   } finally {

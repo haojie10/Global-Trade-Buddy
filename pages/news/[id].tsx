@@ -3,7 +3,8 @@ import { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import pool from '../../lib/db';
-import { parseCookies } from '../../lib/cookies';
+import { resolveSsrAuth } from '../../lib/ssr-auth';
+import { sanitizeHtml } from '../../lib/sanitize';
 import WatermarkContainer from '../../components/WatermarkContainer';
 import Navbar from '../../components/Navbar';
 import AuthModal from '../../components/AuthModal';
@@ -133,27 +134,8 @@ export default function NewsDetailPage({ news, relatedReports, userId, userRole,
       minute: '2-digit'
     });
 
-    const sanitizeHtmlString = (html: string): string => {
-      if (!html) return '';
-      let sanitized = html;
-
-      // 1. 移除 script 标签及其中间的内容
-      sanitized = sanitized.replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, '');
-
-      // 2. 移除 iframe, object, embed, style, link, meta 等高危或非预期标签
-      sanitized = sanitized.replace(/<(iframe|object|embed|style|link|meta)[^>]*>([\s\S]*?)<\/\1>/gi, '');
-      sanitized = sanitized.replace(/<(iframe|object|embed|style|link|meta)[^>]*\/?>/gi, '');
-
-      // 3. 移除 HTML 标签内所有的 "on" 开头的事件处理器属性（如 onload, onerror, onclick 等）
-      sanitized = sanitized.replace(/\s+on[a-z]+\s*=\s*(["'])(.*?)\1/gi, '');
-      sanitized = sanitized.replace(/\s+on[a-z]+\s*=\s*([^\s>]+)/gi, '');
-
-      // 4. 移除 javascript: 脚本伪协议链接
-      sanitized = sanitized.replace(/href\s*=\s*(["'])javascript:(.*?)\1/gi, 'href="#"');
-      sanitized = sanitized.replace(/src\s*=\s*(["'])javascript:(.*?)\1/gi, 'src=""');
-
-      return sanitized;
-    };
+    // 使用 DOMPurify 进行富文本消毒（取代原先手写的正则过滤，安全性更高）
+    const sanitizeHtmlString = (html: string): string => sanitizeHtml(html);
 
     const renderContent = (content: string) => {
       if (!content) return null;
@@ -365,21 +347,8 @@ export default function NewsDetailPage({ news, relatedReports, userId, userRole,
   }
 }
 export const getServerSideProps: GetServerSideProps = async (context) => {
-  let dbClient = null;
+  let dbClient: any = null;
   const { id } = context.params || {};
-
-  let cookieUserId: string | null = null;
-  try {
-    const cookies = parseCookies(context.req.headers.cookie);
-    cookieUserId = cookies.user_id || null;
-  } catch (cookieErr) {
-    console.warn('Cookie parsing failed in SSR:', cookieErr);
-  }
-
-  let userId: string | null = null;
-  let userRole = 'guest';
-  let quota = 0;
-  let nickname = '';
 
   if (!id || typeof id !== 'string') {
     return {
@@ -388,25 +357,20 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         news: null,
         relatedReports: [],
         userId: null,
-        userRole,
-        quota,
-        nickname
+        userRole: 'guest',
+        quota: 0,
+        nickname: ''
       }
     };
   }
 
   try {
     dbClient = await pool.connect();
-    
-    if (cookieUserId) {
-      const userRes = await dbClient.query('SELECT id, role, free_quota, nickname FROM users WHERE id = $1', [cookieUserId]);
-      if (userRes.rows.length > 0) {
-        userId = userRes.rows[0].id;
-        userRole = userRes.rows[0].role;
-        quota = userRes.rows[0].free_quota;
-        nickname = userRes.rows[0].nickname || '';
-      }
-    }
+    const auth = await resolveSsrAuth(context, dbClient);
+    const userId = auth.userId;
+    const userRole = auth.userRole;
+    const quota = auth.freeQuota;
+    const nickname = auth.nickname;
 
     // 1. 查询快讯详情
     const newsRes = await dbClient.query(
@@ -474,13 +438,13 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     console.error('SSR error fetching news:', err);
     return {
       props: {
-        error: `SSR 数据提取时发生异常: ${err.message || err}\n${err.stack || ''}`,
+        error: `SSR 数据提取时发生异常: ${err.message || err}`,
         news: null,
         relatedReports: [],
         userId: null,
-        userRole,
-        quota,
-        nickname
+        userRole: 'guest',
+        quota: 0,
+        nickname: ''
       }
     };
   } finally {

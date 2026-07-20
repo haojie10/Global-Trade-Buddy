@@ -11,13 +11,20 @@ async function pageViewHandler(req: NextApiRequest, res: NextApiResponse, dbClie
   if (req.method === 'POST') {
     const { content_type, content_id, view_id, duration_seconds } = req.body;
 
-    // 如果提供了 view_id，说明是更新操作
+    // 如果提供了 view_id，说明是更新操作（校验归属，防越权篡改他人数据）
     if (view_id) {
       const dur = parseInt(duration_seconds, 10) || 0;
-      await dbClient.query(
-        'UPDATE page_views SET duration_seconds = $1 WHERE id = $2',
-        [dur, view_id]
+      // 匿名记录只能由匿名会话更新；登录用户的记录只能由其本人更新
+      const updateRes = await dbClient.query(
+        `UPDATE page_views SET duration_seconds = $1
+         WHERE id = $2 AND (
+           (user_id IS NULL AND $3::text IS NULL) OR user_id = $3::text
+         )`,
+        [dur, view_id, userId]
       );
+      if (updateRes.rowCount === 0) {
+        return res.status(403).json({ error: '无权更新该浏览记录' });
+      }
       return res.status(200).json({ success: true });
     }
 
@@ -42,10 +49,16 @@ async function pageViewHandler(req: NextApiRequest, res: NextApiResponse, dbClie
       return res.status(400).json({ error: 'Missing view_id' });
     }
     const dur = parseInt(duration_seconds, 10) || 0;
-    await dbClient.query(
-      'UPDATE page_views SET duration_seconds = $1 WHERE id = $2',
-      [dur, view_id]
+    const updateRes = await dbClient.query(
+      `UPDATE page_views SET duration_seconds = $1
+       WHERE id = $2 AND (
+         (user_id IS NULL AND $3::text IS NULL) OR user_id = $3::text
+       )`,
+      [dur, view_id, userId]
     );
+    if (updateRes.rowCount === 0) {
+      return res.status(403).json({ error: '无权更新该浏览记录' });
+    }
     return res.status(200).json({ success: true });
   }
 

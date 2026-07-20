@@ -66,13 +66,22 @@ async function contentStatsHandler(req: NextApiRequest, res: NextApiResponse, db
     { name: '老化 (>90天)', value: freshnessRes.rows[0].red || 0 }
   ];
 
-  // 6. 报告明细列表（支持按标签展示）
+  // 6. 报告明细列表（支持按标签展示，分页防止数据膨胀导致单请求过大）
+  const page = Math.max(1, parseInt((req.query.page as string) || '1', 10) || 1);
+  const pageSize = Math.min(200, Math.max(1, parseInt((req.query.pageSize as string) || '50', 10) || 50));
+  const offset = (page - 1) * pageSize;
+
+  const reportsCountRes = await dbClient.query('SELECT COUNT(*)::int AS total FROM reports');
+  const reportsTotal = reportsCountRes.rows[0].total;
+
   const reportsListRes = await dbClient.query(
-    `SELECT r.id, r.title, r.created_at, 
-            ARRAY_TO_STRING(ARRAY(SELECT name FROM industries JOIN report_industries ON industries.id = report_industries.industry_id WHERE report_id = r.id), ', ') as industries,
-            ARRAY_TO_STRING(ARRAY(SELECT name FROM countries JOIN report_countries ON countries.id = report_countries.country_id WHERE report_id = r.id), ', ') as countries
+    `SELECT r.id, r.title, r.created_at,
+            (SELECT STRING_AGG(name, ', ') FROM industries JOIN report_industries ON industries.id = report_industries.industry_id WHERE report_id = r.id) as industries,
+            (SELECT STRING_AGG(name, ', ') FROM countries JOIN report_countries ON countries.id = report_countries.country_id WHERE report_id = r.id) as countries
      FROM reports r
-     ORDER BY r.created_at DESC`
+     ORDER BY r.created_at DESC
+     LIMIT $1 OFFSET $2`,
+    [pageSize, offset]
   );
   const reportsList = reportsListRes.rows;
 
@@ -94,6 +103,7 @@ async function contentStatsHandler(req: NextApiRequest, res: NextApiResponse, db
     matrix,
     freshness,
     reportsList,
+    reportsPagination: { page, pageSize, total: reportsTotal },
     gaps
   });
 }

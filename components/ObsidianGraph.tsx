@@ -158,9 +158,9 @@ export default function ObsidianGraph({
     customColorsRef.current = customColors;
   }, [selectedNodeId, selectHighlightNodes, selectHighlightLinks, nodeSizeScale, lineWidthScale, speedScale, customColors]);
 
-  // 全局不间断的虚线流动与重绘动画循环
+  // 全局虚线流动动画循环（页面不可见时自动暂停，节省 CPU）
   useEffect(() => {
-    let animId: number;
+    let animId: number | null = null;
     const startTime = Date.now();
     const dashAnimateTime = 800; // 虚线流动周期：800毫秒
 
@@ -168,7 +168,7 @@ export default function ObsidianGraph({
       if (graphInstanceRef.current) {
         const elapsed = Date.now() - startTime;
         const t = (elapsed % dashAnimateTime) / dashAnimateTime;
-        
+
         const dashLen = 3.5;
         const gapLen = 3.5;
         let currentDash = [2, 2];
@@ -190,9 +190,26 @@ export default function ObsidianGraph({
       animId = requestAnimationFrame(tick);
     };
 
-    tick();
+    const start = () => {
+      if (animId === null) animId = requestAnimationFrame(tick);
+    };
+    const stop = () => {
+      if (animId !== null) {
+        cancelAnimationFrame(animId);
+        animId = null;
+      }
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') stop();
+      else start();
+    };
+
+    start();
+    document.addEventListener('visibilitychange', handleVisibility);
     return () => {
-      cancelAnimationFrame(animId);
+      stop();
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, []);
 
@@ -203,14 +220,19 @@ export default function ObsidianGraph({
     }
   }, [nodeSizeScale, lineWidthScale, speedScale, customColors]);
 
+  // 图实例只创建一次；后续数据变化通过 graphData() 增量更新，避免反复销毁重建
   useEffect(() => {
     // 只有在浏览器端才初始化 force-graph，防止 NextJS SSR 报错
     if (typeof window === 'undefined' || !containerRef.current) return;
 
+    let cancelled = false;
+    let cleanupFn: (() => void) | null = null;
+
     // 动态导入，避免编译时 window 报错
     import('force-graph').then((ForceGraphModule) => {
+      if (cancelled || !containerRef.current) return;
       const ForceGraph = ForceGraphModule.default;
-      
+
       const graph = (ForceGraph as any)()(containerRef.current!)
         .backgroundColor('rgba(0,0,0,0)')
         .graphData({
@@ -348,7 +370,7 @@ export default function ObsidianGraph({
           return getLinkLineDash(link.relation_type);
         })
         .linkLabel((link: any) => {
-          if (link.link_type === 'mention') return '提及';
+          if (link.relation_type === 'mention') return '提及';
           return `${link.relation_key} (${link.market_region || '全球'})`;
         })
         .linkDirectionalParticles((link: any) => {
@@ -452,11 +474,11 @@ export default function ObsidianGraph({
           graph.height(containerRef.current.clientHeight || 500);
         }
       };
-      
+
       window.addEventListener('resize', resizeHandler);
       resizeHandler();
 
-      return () => {
+      cleanupFn = () => {
         window.removeEventListener('resize', resizeHandler);
         if (clickTimeoutRef.current) {
           clearTimeout(clickTimeoutRef.current);
@@ -465,7 +487,23 @@ export default function ObsidianGraph({
         graphInstanceRef.current = null;
       };
     });
-  }, [visibleNodes, filteredLinksByRelations, router]);
+
+    return () => {
+      cancelled = true;
+      cleanupFn?.();
+    };
+    // 实例只在挂载时创建一次；数据更新走下面的 useEffect 增量同步
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 数据变化时增量同步到已存在的图实例，而不是销毁重建
+  useEffect(() => {
+    if (!graphInstanceRef.current) return;
+    graphInstanceRef.current.graphData({
+      nodes: visibleNodes.map(n => ({ ...n })),
+      links: filteredLinksByRelations.map(l => ({ ...l }))
+    });
+  }, [visibleNodes, filteredLinksByRelations]);
 
   return (
     <div style={{

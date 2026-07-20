@@ -1,9 +1,14 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PoolClient } from 'pg';
+import crypto from 'crypto';
 import { withDb } from '../../../lib/api-handler';
+import { checkRateLimit } from '../../../lib/rate-limit';
 import nodemailer from 'nodemailer';
 
 async function sendCodeHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
+  // IP 级限流：1 分钟最多 5 次（防止脚本批量轰炸 SMTP）
+  if (checkRateLimit(req, res, { windowMs: 60 * 1000, max: 5 })) return;
+
   const { email } = req.body;
   if (!email || !/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email)) {
     return res.status(400).json({ error: '请输入有效的邮箱地址' });
@@ -12,8 +17,8 @@ async function sendCodeHandler(req: NextApiRequest, res: NextApiResponse, dbClie
   // 频率限制: 同一邮箱 60 秒内只能发送一次验证码 (非测试环境)
   if (process.env.NODE_ENV !== 'test') {
     const recentRes = await dbClient.query(
-      `SELECT id FROM email_verifications 
-       WHERE email = $1 AND created_at > NOW() - INTERVAL '60 seconds' 
+      `SELECT id FROM email_verifications
+       WHERE email = $1 AND created_at > NOW() - INTERVAL '60 seconds'
        LIMIT 1`,
       [email]
     );
@@ -22,8 +27,8 @@ async function sendCodeHandler(req: NextApiRequest, res: NextApiResponse, dbClie
     }
   }
 
-  // 1. 生成 6 位随机数字验证码
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  // 1. 使用密码学安全随机数生成 6 位验证码（取代 Math.random）
+  const code = crypto.randomInt(100000, 1000000).toString();
   const expiredAt = new Date(Date.now() + 10 * 60 * 1000); // 10分钟后过期
 
   // 2. 存入数据库前，顺便清理数据库中所有已经过期的历史验证码（惰性自打扫机制，保持表轻量）
@@ -73,22 +78,28 @@ async function sendCodeHandler(req: NextApiRequest, res: NextApiResponse, dbClie
       await transporter.sendMail(mailOptions);
       return res.status(200).json({ success: true, message: '验证码已发送至您的邮箱' });
     } catch (err: any) {
-      console.error('发送 SMTP 邮件失败，进入备用假发信回退逻辑:', err);
-      // 降级回退到本地调试模式
-      console.log(`[SMTP FAIL BACKUP] Verification code for ${email} is: ${code}`);
-      return res.status(200).json({ 
-        success: true, 
+      console.error('发送 SMTP 邮件失败:', err.message);
+      // 生产环境严格失败，禁止把验证码打到日志；开发环境降级打印仅供本地调试
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(500).json({ error: '邮件服务暂时不可用，请稍后再试' });
+      }
+      console.log(`[DEV SMTP FALLBACK] Verification code for ${email} is: ${code}`);
+      return res.status(200).json({
+        success: true,
         message: '验证码已发送至您的邮箱（开发回退模式）',
-        devMode: true 
+        devMode: true
       });
     }
   } else {
-    // 调试模式直接打印到控制台
-    console.log(`[DEVELOPMENT ONLY] Verification code for ${email} is: ${code}`);
-    return res.status(200).json({ 
-      success: true, 
+    // 未配置 SMTP：生产环境直接失败，开发环境降级打印
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(500).json({ error: '邮件服务未配置，请联系管理员' });
+    }
+    console.log(`[DEV NO SMTP] Verification code for ${email} is: ${code}`);
+    return res.status(200).json({
+      success: true,
       message: '验证码已发送至您的邮箱（开发测试模式）',
-      devMode: true 
+      devMode: true
     });
   }
 }
