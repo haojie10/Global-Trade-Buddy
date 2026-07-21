@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { PoolClient } from 'pg';
 import { withDb } from '../../../lib/api-handler';
 import { requireAdmin } from '../../../lib/auth';
+import { deleteImagesFromContent } from '../../../lib/storage';
 
 async function deleteNodeHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
   const { id, nodeType } = req.body;
@@ -14,6 +15,15 @@ async function deleteNodeHandler(req: NextApiRequest, res: NextApiResponse, dbCl
   const adminSession = requireAdmin(req);
   if (!adminSession) {
     return res.status(403).json({ error: '权限不足，只有管理员可以执行此操作' });
+  }
+
+  // 删除前先查询 content_html，用于事务成功后清理图片
+  let contentHtml = '';
+  if (nodeType === 'report') {
+    const reportRes = await dbClient.query('SELECT content_html FROM reports WHERE id = $1', [id]);
+    if (reportRes.rows.length > 0) {
+      contentHtml = reportRes.rows[0].content_html || '';
+    }
   }
 
   await dbClient.query('BEGIN');
@@ -39,6 +49,12 @@ async function deleteNodeHandler(req: NextApiRequest, res: NextApiResponse, dbCl
   }
 
   await dbClient.query('COMMIT');
+
+  // 事务提交成功后，物理清理报告关联的图片文件
+  if (contentHtml) {
+    await deleteImagesFromContent(contentHtml);
+  }
+
   return res.status(200).json({ success: true });
 }
 
