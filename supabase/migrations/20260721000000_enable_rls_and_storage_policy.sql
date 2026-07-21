@@ -27,10 +27,17 @@ ALTER TABLE public.entity_relations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.report_entities ENABLE ROW LEVEL SECURITY;
 
 -- ==========================================
--- Part 2: 修复 report-images 存储桶列举权限
+-- Part 2: report-images 存储桶访问控制
 -- ==========================================
--- 移除允许列出所有文件的 broad SELECT 策略。
--- 图片仍可通过直接 URL（public bucket 自带）正常访问，
--- 但任何人无法通过 API 列举/遍历桶内文件。
+-- 使用 FOR ALL 单一策略统一管理权限，确保服务端
+-- ANON KEY 也能正常上传/删除（API 层已有 admin 鉴权）。
+-- 移除旧的分散策略后重建。
 
 DROP POLICY IF EXISTS "Public Read report-images" ON storage.objects;
+DROP POLICY IF EXISTS "Public Upload report-images" ON storage.objects;
+DROP POLICY IF EXISTS "Allow INSERT into report-images" ON storage.objects;
+
+CREATE POLICY "report-images_full_access"
+ON storage.objects FOR ALL
+USING (bucket_id = 'report-images')
+WITH CHECK (bucket_id = 'report-images');

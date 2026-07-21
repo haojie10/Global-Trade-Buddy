@@ -17,8 +17,8 @@ async function pageViewHandler(req: NextApiRequest, res: NextApiResponse, dbClie
       // 匿名记录只能由匿名会话更新；登录用户的记录只能由其本人更新
       const updateRes = await dbClient.query(
         `UPDATE page_views SET duration_seconds = $1
-         WHERE id = $2 AND (
-           (user_id IS NULL AND $3::text IS NULL) OR user_id = $3::text
+         WHERE id = $2::uuid AND (
+           (user_id IS NULL AND $3::uuid IS NULL) OR user_id = $3::uuid
          )`,
         [dur, view_id, userId]
       );
@@ -51,8 +51,8 @@ async function pageViewHandler(req: NextApiRequest, res: NextApiResponse, dbClie
     const dur = parseInt(duration_seconds, 10) || 0;
     const updateRes = await dbClient.query(
       `UPDATE page_views SET duration_seconds = $1
-       WHERE id = $2 AND (
-         (user_id IS NULL AND $3::text IS NULL) OR user_id = $3::text
+       WHERE id = $2::uuid AND (
+         (user_id IS NULL AND $3::uuid IS NULL) OR user_id = $3::uuid
        )`,
       [dur, view_id, userId]
     );
