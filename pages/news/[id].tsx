@@ -158,7 +158,7 @@ export default function NewsDetailPage({ news, relatedReports, userId, userRole,
       // 4. 原生渲染，避免任何 html-react-parser 依赖产生的 ES Module 加载报错
       return (
         <div 
-          style={{ whiteSpace: 'pre-wrap' }} 
+          className="news-content"
           dangerouslySetInnerHTML={{ __html: cleanHtml }}
         />
       );

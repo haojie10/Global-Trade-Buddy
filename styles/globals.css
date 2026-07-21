@@ -257,6 +257,19 @@ h1, h2, h3, h4, h5, h6 {
   margin: 20px 0;
 }
 
+.news-content img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 8px;
+  margin: 16px 0;
+}
+
+.news-content p {
+  line-height: 1.75;
+  margin-bottom: 1rem;
+}
+
 .report-content-body table {
   width: 100%;
   border-collapse: collapse;
