@@ -24,6 +24,12 @@ const XSS_OPTIONS: IFilterXSSOptions = {
   stripIgnoreTagBody: ['script', 'style'],
   allowCommentTag: false,
   css: false,
+  // 放行 img.src 和 a.href 的各类 URL（内容来自管理员后端，视为可信源）
+  // safeAttrValue 返回 string 无法做 fallback，改用 onTagAttr 前置拦截
+  onTagAttr(tag, name, value) {
+    if (tag === 'img' && name === 'src') return value;
+    if (tag === 'a' && name === 'href') return value;
+  },
 };
 
 /**
