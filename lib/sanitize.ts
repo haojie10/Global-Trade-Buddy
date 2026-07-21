@@ -25,10 +25,10 @@ const XSS_OPTIONS: IFilterXSSOptions = {
   allowCommentTag: false,
   css: false,
   // 放行 img.src 和 a.href 的各类 URL（内容来自管理员后端，视为可信源）
-  // safeAttrValue 返回 string 无法做 fallback，改用 onTagAttr 前置拦截
+  // 注意：onTagAttr 返回的是完整属性字符串 "name=value"，不只是 value
   onTagAttr(tag, name, value) {
-    if (tag === 'img' && name === 'src') return value;
-    if (tag === 'a' && name === 'href') return value;
+    if (tag === 'img' && name === 'src') return `${name}="${value}"`;
+    if (tag === 'a' && name === 'href') return `${name}="${value}"`;
   },
 };
 
