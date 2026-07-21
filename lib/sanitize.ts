@@ -1,26 +1,29 @@
-import DOMPurify from 'isomorphic-dompurify';
+import xss, { IFilterXSSOptions, IWhiteList } from 'xss';
 
 /**
  * 通用的富文本消毒配置
- * 在 SSR 和客户端共用，取代原先各页面用正则手写 sanitize 的不安全做法。
+ * 在 SSR 和客户端共用，使用纯 JS 的 xss 库（不依赖 DOM/jsdom），
+ * 避免 isomorphic-dompurify 在 Vercel Serverless 中出现 ESM require 问题。
  */
-const PURIFY_CONFIG = {
-  ALLOWED_TAGS: [
-    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-    'p', 'br', 'hr',
-    'strong', 'em', 'b', 'i', 'u', 's', 'blockquote', 'pre', 'code',
-    'ul', 'ol', 'li',
-    'table', 'thead', 'tbody', 'tr', 'th', 'td',
-    'a', 'img',
-    'div', 'span', 'section', 'article',
-    'figure', 'figcaption'
-  ],
-  ALLOWED_ATTR: [
-    'href', 'target', 'rel',
-    'src', 'alt', 'title', 'width', 'height',
-    'class', 'style'
-  ],
-  ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i
+const XSS_WHITELIST: IWhiteList = {
+  h1: [], h2: [], h3: [], h4: [], h5: [], h6: [],
+  p: [], br: [], hr: [],
+  strong: [], em: [], b: [], i: [], u: [], s: [],
+  blockquote: [], pre: [], code: [],
+  ul: [], ol: [], li: [],
+  table: [], thead: [], tbody: [], tr: [], th: [], td: [],
+  a: ['href', 'target', 'rel'],
+  img: ['src', 'alt', 'title', 'width', 'height'],
+  div: [], span: [], section: [], article: [],
+  figure: [], figcaption: [],
+};
+
+const XSS_OPTIONS: IFilterXSSOptions = {
+  whiteList: XSS_WHITELIST,
+  stripIgnoreTag: true,
+  stripIgnoreTagBody: ['script', 'style'],
+  allowCommentTag: false,
+  css: false,
 };
 
 /**
@@ -28,5 +31,5 @@ const PURIFY_CONFIG = {
  */
 export function sanitizeHtml(html: string): string {
   if (!html) return '';
-  return DOMPurify.sanitize(html, PURIFY_CONFIG) as unknown as string;
+  return xss(html, XSS_OPTIONS);
 }
