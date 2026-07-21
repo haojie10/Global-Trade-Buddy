@@ -58,7 +58,12 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
           const doc = parser.parseFromString(decodedText, 'text/html');
 
           // 报告基础信息
-          const cat = doc.querySelector('meta[name="category"]')?.getAttribute('content');
+          let cat = doc.querySelector('meta[name="category"]')?.getAttribute('content');
+          // DOMParser 失败时兜底用正则（兼容单引号/编码问题）
+          if (!cat) {
+            const catMatch = decodedText.match(/<meta[^>]*?name=["']category["'][^>]*?content=["']([^"']*)["']/i);
+            if (catMatch) cat = catMatch[1].trim();
+          }
           if (cat === 'customer' || cat === 'product') {
             setCategory(cat);
           }

@@ -3,9 +3,9 @@ import { ENTITY_DEFINITIONS, BLACKLIST, commonKeywords } from './entity-constant
 // 1. 从 HTML 字符串中提取元数据和专有名词（客户名、品类名等）
 export function parseMetadata(html: string) {
   const titleMatch = html.match(/<title>([\s\S]*?)<\/title>/i);
-  const categoryMatch = html.match(/<meta[^>]*?name="category"[^>]*?content="([^"]*?)"/i);
-  const regionMatch = html.match(/<meta[^>]*?name="market_region"[^>]*?content="([^"]*?)"/i);
-  const summaryMatch = html.match(/<meta[^>]*?name="summary"[^>]*?content="([^"]*?)"/i);
+  const categoryMatch = html.match(/<meta[^>]*?name=["']category["'][^>]*?content=["']([^"']*?)["']/i);
+  const regionMatch = html.match(/<meta[^>]*?name=["']market_region["'][^>]*?content=["']([^"']*?)["']/i);
+  const summaryMatch = html.match(/<meta[^>]*?name=["']summary["'][^>]*?content=["']([^"']*?)["']/i);
 
   const title = titleMatch ? titleMatch[1].trim() : '未命名报告';
   const category = categoryMatch ? categoryMatch[1].trim() : 'customer';
