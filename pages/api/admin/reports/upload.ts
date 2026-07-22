@@ -20,10 +20,22 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
   // 2. 元数据及实体提取
   const meta = parseMetadata(rawHtml);
 
+  // 提取兼顾 HTML head 里的 company_aliases 标记
+  const metaAliasesMatch = rawHtml.match(/<meta[^>]*?name=["']company_aliases["'][^>]*?content=["']([^"']*?)["']/i);
+  const metaAliases = metaAliasesMatch ? metaAliasesMatch[1].split(/,|，|\/|\||;|；/).map((s: string) => s.trim()).filter(Boolean) : [];
+
+  const mergedManualTags = {
+    ...manualTags,
+    companyAliases: Array.from(new Set([
+      ...(manualTags?.companyAliases || []),
+      ...metaAliases
+    ]))
+  };
+
   // 处理手动标记的地区标签
   let regionsList: string[] = [];
-  if (manualTags?.regions) {
-    regionsList = manualTags.regions.map((r: string) => r.trim()).filter(Boolean);
+  if (mergedManualTags?.regions) {
+    regionsList = mergedManualTags.regions.map((r: string) => r.trim()).filter(Boolean);
   }
   
   // 合并自动提取的地区（如果不是“全球”默认值）
@@ -49,7 +61,7 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
     rawHtml,
     meta.title,
     dbClient,
-    manualTags,
+    mergedManualTags,
     meta.primary_subject,
     finalCategory
   );

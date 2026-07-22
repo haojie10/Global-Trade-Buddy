@@ -90,6 +90,7 @@ export async function extractAndNormalizeEntities(
   dbClient: any,
   manualTags?: {
     companies?: string[];
+    companyAliases?: string[];
     companyWebsite?: string;
     competitors?: string[];
     suppliers?: string[];
@@ -190,9 +191,13 @@ export async function extractAndNormalizeEntities(
         // 记录标准实体
         matchedEntities.set(primaryEntityId, { id: primaryEntityId, canonical_name: primaryCanonicalName, entity_type: 'company' });
 
-        // 将第 2 个及以后的公司名称自动作为第一个公司的别称写入别名表
-        for (let i = 1; i < companyTags.length; i++) {
-          const aliasTag = companyTags[i];
+        // 将第 2 个及以后的公司名称以及 manualTags.companyAliases 自动作为第一个公司的别称写入别名表，并触发自动消歧合并
+        const allAliasTags = Array.from(new Set([
+          ...companyTags.slice(1),
+          ...(manualTags.companyAliases || [])
+        ])).map(s => s.trim()).filter(Boolean);
+
+        for (const aliasTag of allAliasTags) {
           let existingEntityId = '';
 
           // 检索已知实体和别称中是否已经有匹配此别名的实体
@@ -477,7 +482,11 @@ export async function extractAndNormalizeEntities(
       } else if (ent.entity_type === 'channel') {
         role = 'channel';
       } else if (ent.entity_type === 'competitor') {
-        role = 'competitor';
+        // 安全保护：若已传入 manualTags（即手工/Agent显式解析了标签），但未显式列在 competitors 列表里，
+        // 则绝不盲目因全局 entity_type 强制降级为 competitor 角色，保持为 mentioned
+        if (!manualTags) {
+          role = 'competitor';
+        }
       }
     }
 

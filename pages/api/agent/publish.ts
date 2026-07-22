@@ -48,6 +48,7 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     };
 
     const metaCompanyName = extractMeta(contentHtml, 'company_name');
+    const metaCompanyAliases = extractMeta(contentHtml, 'company_aliases');
     const metaCompanyWebsite = extractMeta(contentHtml, 'company_website');
     const metaCompetitors = extractMeta(contentHtml, 'competitors');
     const metaSuppliers = extractMeta(contentHtml, 'suppliers');
@@ -59,16 +60,21 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     const metaSummary = extractMeta(contentHtml, 'summary');
     const metaCategory = extractMeta(contentHtml, 'category');
 
+    const aliasesList = metaCompanyAliases
+      ? metaCompanyAliases.split(/,|，|\/|\||;|；/).map(s => s.trim()).filter(Boolean)
+      : [];
+
     const manualTags = {
       companies: metaCompanyName ? [metaCompanyName] : [],
+      companyAliases: aliasesList,
       companyWebsite: metaCompanyWebsite || undefined,
-      competitors: metaCompetitors ? metaCompetitors.split(',').map(s => s.trim()).filter(Boolean) : [],
-      suppliers: metaSuppliers ? metaSuppliers.split(',').map(s => s.trim()).filter(Boolean) : [],
-      customers: metaCustomers ? metaCustomers.split(',').map(s => s.trim()).filter(Boolean) : [],
-      sisters: metaSisterParents ? metaSisterParents.split(',').map(s => s.trim()).filter(Boolean) : [],
-      products: metaProducts ? metaProducts.split(',').map(s => s.trim()).filter(Boolean) : [],
-      regions: metaRegions ? metaRegions.split(',').map(s => s.trim()).filter(Boolean) : [],
-      channels: metaChannels ? metaChannels.split(',').map(s => s.trim()).filter(Boolean) : []
+      competitors: metaCompetitors ? metaCompetitors.split(/,|，/).map(s => s.trim()).filter(Boolean) : [],
+      suppliers: metaSuppliers ? metaSuppliers.split(/,|，/).map(s => s.trim()).filter(Boolean) : [],
+      customers: metaCustomers ? metaCustomers.split(/,|，/).map(s => s.trim()).filter(Boolean) : [],
+      sisters: metaSisterParents ? metaSisterParents.split(/,|，/).map(s => s.trim()).filter(Boolean) : [],
+      products: metaProducts ? metaProducts.split(/,|，/).map(s => s.trim()).filter(Boolean) : [],
+      regions: metaRegions ? metaRegions.split(/,|，/).map(s => s.trim()).filter(Boolean) : [],
+      channels: metaChannels ? metaChannels.split(/,|，/).map(s => s.trim()).filter(Boolean) : []
     };
 
     const finalCategory = metaCategory || 'customer';
