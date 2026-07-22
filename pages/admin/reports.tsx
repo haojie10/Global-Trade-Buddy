@@ -53,6 +53,19 @@ export default function AdminReportsManagement() {
   const [editingCountries, setEditingCountries] = useState<string[]>([]);
   const [savingTags, setSavingTags] = useState(false);
 
+  // GC 清理模态框状态
+  const [showGcModal, setShowGcModal] = useState(false);
+  const [gcLoading, setGcLoading] = useState(false);
+  const [gcResult, setGcResult] = useState<{
+    totalStorage: number;
+    referenced: number;
+    orphaned: number;
+    deleted: number;
+    dryRun: boolean;
+    orphanedFiles?: string[];
+    errors?: string[];
+  } | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 初始化加载
@@ -184,6 +197,32 @@ export default function AdminReportsManagement() {
       alert('保存失败');
     } finally {
       setSavingTags(false);
+    }
+  };
+
+  // 执行 GC 垃圾回收
+  const handleRunGc = async (dryRun: boolean) => {
+    if (!dryRun && !confirm('⚠️ 确定要彻底物理删除 Storage 中的所有未引用孤儿图片吗？此操作不可逆！')) {
+      return;
+    }
+
+    setGcLoading(true);
+    try {
+      const res = await fetch('/api/admin/reports/gc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dryRun })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setGcResult(data);
+      } else {
+        alert(data.error || 'GC 执行失败');
+      }
+    } catch (err: any) {
+      alert('请求失败: ' + err.message);
+    } finally {
+      setGcLoading(false);
     }
   };
 
@@ -448,7 +487,14 @@ export default function AdminReportsManagement() {
               className={`admin-btn ${activeTab === 'upload' ? '' : 'admin-btn-secondary'}`}
               onClick={() => setActiveTab('upload')}
             >
-              ＋ 上传报告
+              📥 上传脱水 HTML
+            </button>
+            <button
+              className="admin-btn admin-btn-secondary"
+              onClick={() => setShowGcModal(true)}
+              style={{ background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)', color: '#f87171' }}
+            >
+              🧹 存储清理 (GC)
             </button>
           </div>
         </div>
@@ -752,6 +798,109 @@ export default function AdminReportsManagement() {
                   onClick={handleSaveTags}
                 >
                   保存修改
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* GC 存储垃圾回收模态框 */}
+        {showGcModal && (
+          <div className="admin-modal-backdrop" onClick={() => setShowGcModal(false)}>
+            <div className="admin-modal" style={{ maxWidth: '640px' }} onClick={e => e.stopPropagation()}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h3 className="admin-card-title" style={{ margin: 0 }}>🧹 Supabase Storage 垃圾回收 (GC)</h3>
+                <button 
+                  style={{ background: 'none', border: 'none', color: 'var(--admin-text-secondary)', cursor: 'pointer', fontSize: '1.2rem' }}
+                  onClick={() => setShowGcModal(false)}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <p style={{ fontSize: '0.85rem', color: 'var(--admin-text-secondary)', marginBottom: '20px', lineHeight: 1.6 }}>
+                系统将扫描数据库中所有报告、快讯、文章的图片引用，并与 Supabase <code>report-images</code> 存储桶内的文件进行对比，物理删除不再被引用的孤儿图片。
+              </p>
+
+              <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+                <button
+                  type="button"
+                  className="admin-btn admin-btn-secondary"
+                  onClick={() => handleRunGc(true)}
+                  disabled={gcLoading}
+                  style={{ flex: 1 }}
+                >
+                  {gcLoading ? '扫描中...' : '🔍 检测孤儿图片 (Dry-Run)'}
+                </button>
+                <button
+                  type="button"
+                  className="admin-btn admin-btn-danger"
+                  onClick={() => handleRunGc(false)}
+                  disabled={gcLoading}
+                  style={{ flex: 1 }}
+                >
+                  {gcLoading ? '清理中...' : '🗑️ 一键物理清理'}
+                </button>
+              </div>
+
+              {gcResult && (
+                <div style={{
+                  background: 'rgba(0,0,0,0.2)',
+                  border: '1px solid var(--admin-border)',
+                  borderRadius: '6px',
+                  padding: '16px',
+                  fontSize: '0.85rem'
+                }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '10px', color: gcResult.dryRun ? '#60a5fa' : '#34d399' }}>
+                    {gcResult.dryRun ? '🔍 扫描完成（预览模式）' : '🎉 清理完成！'}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '12px' }}>
+                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '4px', textAlign: 'center' }}>
+                      <div style={{ color: 'var(--admin-text-secondary)', fontSize: '0.7rem' }}>Storage 总数</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{gcResult.totalStorage}</div>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '4px', textAlign: 'center' }}>
+                      <div style={{ color: 'var(--admin-text-secondary)', fontSize: '0.7rem' }}>数据库引用</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#60a5fa' }}>{gcResult.referenced}</div>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '4px', textAlign: 'center' }}>
+                      <div style={{ color: 'var(--admin-text-secondary)', fontSize: '0.7rem' }}>孤儿图片</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#f59e0b' }}>{gcResult.orphaned}</div>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '4px', textAlign: 'center' }}>
+                      <div style={{ color: 'var(--admin-text-secondary)', fontSize: '0.7rem' }}>实际删除</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#ef4444' }}>{gcResult.deleted}</div>
+                    </div>
+                  </div>
+
+                  {gcResult.orphanedFiles && gcResult.orphanedFiles.length > 0 && (
+                    <details style={{ marginTop: '8px' }}>
+                      <summary style={{ cursor: 'pointer', color: 'var(--admin-text-secondary)', fontSize: '0.8rem' }}>
+                        查看孤儿文件名列表 ({gcResult.orphanedFiles.length} 个)
+                      </summary>
+                      <ul style={{
+                        maxHeight: '140px',
+                        overflowY: 'auto',
+                        fontSize: '0.75rem',
+                        fontFamily: 'monospace',
+                        marginTop: '8px',
+                        paddingLeft: '20px'
+                      }}>
+                        {gcResult.orphanedFiles.map((file, idx) => (
+                          <li key={idx}>{file}</li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
+                <button
+                  className="admin-btn admin-btn-secondary"
+                  onClick={() => setShowGcModal(false)}
+                >
+                  关闭
                 </button>
               </div>
             </div>
