@@ -5,6 +5,7 @@ import { requireAdmin } from '../../../../lib/auth';
 import { parseMetadata, runDehydration, extractAndNormalizeEntities } from '../../../../lib/entity-extractor';
 import { getStandardCategory } from '../../../../lib/category-mapper';
 import { uploadImage, cleanOrphanedImages } from '../../../../lib/storage';
+import { RETAILER_ENTITIES } from '../../../../lib/entity-constants';
 
 async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
   const adminSession = requireAdmin(req);
@@ -223,12 +224,21 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
   if (resolvedEntities.length > 0) {
     const entityIds = resolvedEntities.map(e => e.id);
     const sharedReportsRes = await dbClient.query(
-      `SELECT DISTINCT re.report_id, e.canonical_name, e.entity_type
+      `SELECT DISTINCT 
+         re.report_id, 
+         e.canonical_name, 
+         e.entity_type,
+         r.category AS b_category,
+         ent.canonical_name AS b_primary_name
        FROM report_entities re
        JOIN entities e ON re.entity_id = e.id
+       JOIN reports r ON re.report_id = r.id
+       LEFT JOIN entities ent ON r.primary_entity_id = ent.id
        WHERE re.entity_id = ANY($1) AND re.report_id != $2`,
       [entityIds, newReportId]
     );
+
+    const primaryEntName = primaryEnt ? primaryEnt.canonical_name.toLowerCase().trim() : null;
 
     for (const row of sharedReportsRes.rows) {
       let relType = 'mention';
@@ -238,6 +248,19 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
         relType = 'competitor';
       } else if (row.entity_type === 'company') {
         relType = 'produces';
+      }
+
+      // 逻辑修正：如果双方都是公司研报 (customer)，且其中一方的主体是已知零售巨头/超市/分销商渠道
+      if (finalCategory === 'customer' && row.b_category === 'customer' && relType === 'competitor') {
+        const primaryEntNameB = row.b_primary_name ? row.b_primary_name.toLowerCase().trim() : null;
+        const hasRetailer = 
+          (primaryEntName && RETAILER_ENTITIES.has(primaryEntName)) ||
+          (primaryEntNameB && RETAILER_ENTITIES.has(primaryEntNameB));
+        
+        if (hasRetailer) {
+          // 品牌商与分销商/超市之间共享同一个竞品，只能构成渠道涉及或经营相关，绝非同业竞争对手
+          relType = 'operation';
+        }
       }
 
       await dbClient.query(

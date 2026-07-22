@@ -24,7 +24,7 @@ export const BLACKLIST = ['公司', '工厂', '超市', '产品', '客户', '供
 
 export const commonKeywords = ['A 公司', '铝合金轮毂', '刹车片', '欧美汽配', '汇率风险', '运费波动'];
 
-// 已知零售巨头与超市渠道集合，用于判断同业竞争关系
+// 已知零售巨头与超市/批发分销渠道集合，用于判断同业竞争关系
 export const RETAILER_ENTITIES = new Set([
   'x5 group', 'x5 retail', 'magnit', 'lenta', 'auchan', 'dixy',
   'detsky mir', '儿童世界', 'hoff', 'leroy merlin', 'ikea', '宜家',
@@ -34,5 +34,8 @@ export const RETAILER_ENTITIES = new Set([
   'toom', 'toom baumarkt', 'toom baumarkt gmbh',
   'hagebau', '哈格堡',
   'home depot', 'homedepot', '家得宝',
-  'lowes', 'lowe\'s', '劳氏'
+  'lowes', 'lowe\'s', '劳氏',
+  'cef', 'city electrical factors', 'city electrical factors limited', 'city electric supply',
+  'rexel', 'rexel uk', 'edmundson', 'edmundson electrical',
+  'yesss', 'yesss electrical', 'screwfix', 'toolstation'
 ]);
