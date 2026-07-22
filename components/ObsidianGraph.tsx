@@ -367,7 +367,10 @@ export default function ObsidianGraph({
           if (link.relation_type === 'supplier') {
             return animDashRef.current || [2, 2];
           }
-          return getLinkLineDash(link.relation_type);
+          if (link.relation_type === 'mention') {
+            return [3, 3]; // 只有 mention 涉及关系为虚线
+          }
+          return null; // operation (经营关系) 和 competitor (竞争关系) 100% 强制为实线！
         })
         .linkLabel((link: any) => {
           if (link.relation_type === 'mention') return '提及';
