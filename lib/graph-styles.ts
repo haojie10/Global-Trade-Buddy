@@ -76,16 +76,13 @@ export function getLinkWidth(
 export function getLinkLineDash(relationType: string): number[] | null {
   switch (relationType) {
     case 'supplier':
-      return [2, 2]; // 供销：粗虚线
+      return [2, 2]; // 供销：动画虚线
     case 'mention':
-      return [3, 3]; // 涉及关系：细虚线
-    case 'shared_channel':
-      return [4, 4]; // 渠道：稀疏虚线
-    case 'shared_competitor':
-      return [2, 2]; // 共享竞争对手：短划线
+      return [3, 3]; // 涉及关系：灰色虚线
+    case 'operation':
     case 'competitor':
     default:
-      return null; // 其他为实线
+      return null; // 经营关系与竞争关系：实线！
   }
 }
 
