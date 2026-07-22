@@ -32,5 +32,7 @@ export const RETAILER_ENTITIES = new Set([
   'bauhaus', '包豪斯', 'bauhaus ag',
   'hornbach', '霍恩巴赫', 'hornbach baumarkt ag',
   'toom', 'toom baumarkt', 'toom baumarkt gmbh',
-  'hagebau', '哈格堡'
+  'hagebau', '哈格堡',
+  'home depot', 'homedepot', '家得宝',
+  'lowes', 'lowe\'s', '劳氏'
 ]);

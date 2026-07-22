@@ -4,6 +4,7 @@ import { withDb } from '../../../lib/api-handler';
 import { runDehydration, extractAndNormalizeEntities, parseMetadata } from '../../../lib/entity-extractor';
 import { getStandardCategory } from '../../../lib/category-mapper';
 import { uploadImage } from '../../../lib/storage';
+import { RETAILER_ENTITIES } from '../../../lib/entity-constants';
 
 async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
   const authHeader = req.headers.authorization;
@@ -29,6 +30,7 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
   }
 
   await dbClient.query('BEGIN');
+  const ignoredCategories: string[] = [];
 
   const { cleanHtml } = await runDehydration(contentHtml, uploadImage);
 
@@ -99,13 +101,31 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     const primaryEnt = resolvedEntities.find(e => e.role === 'primary');
     const primaryEntityId = primaryEnt ? primaryEnt.id : null;
 
-    // 4. 插入 reports 主表
-    const insertReportRes = await dbClient.query(
-      `INSERT INTO reports (title, category, market_region, summary, content_html, primary_entity_id)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-      [meta.title || title, finalCategory, finalMarketRegion, finalSummary, cleanHtml, primaryEntityId]
+    // 4. 元数据去重检查与插入（幂等性设计）
+    const existingReport = await dbClient.query(
+      'SELECT id FROM reports WHERE title = $1',
+      [meta.title || title]
     );
-    const newReportId = insertReportRes.rows[0].id;
+
+    let newReportId: string;
+    if (existingReport.rows.length > 0) {
+      // 若相同标题的报告已存在，执行更新（Update）覆盖
+      newReportId = existingReport.rows[0].id;
+      await dbClient.query(
+        `UPDATE reports 
+         SET category = $1, market_region = $2, summary = $3, content_html = $4, primary_entity_id = $5, created_at = NOW()
+         WHERE id = $6`,
+        [finalCategory, finalMarketRegion, finalSummary, cleanHtml, primaryEntityId, newReportId]
+      );
+    } else {
+      // 若不存在，执行新建（Insert）
+      const insertReportRes = await dbClient.query(
+        `INSERT INTO reports (title, category, market_region, summary, content_html, primary_entity_id)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+        [meta.title || title, finalCategory, finalMarketRegion, finalSummary, cleanHtml, primaryEntityId]
+      );
+      newReportId = insertReportRes.rows[0].id;
+    }
 
     // 5. 保存行业与标准品类关联 (写入 report_industries)
     await dbClient.query('DELETE FROM report_industries WHERE report_id = $1', [newReportId]);
@@ -113,8 +133,16 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     if (manualTags.products && manualTags.products.length > 0) {
       autoIndustries = [...manualTags.products];
     }
-    if (autoIndustries.length > 0) {
-      const mappedNames = autoIndustries.map(indName => getStandardCategory(indName) || indName);
+    const mappedNames: string[] = [];
+    for (const indName of autoIndustries) {
+      const mapped = getStandardCategory(indName);
+      if (mapped) {
+        mappedNames.push(mapped);
+      } else {
+        ignoredCategories.push(indName);
+      }
+    }
+    if (mappedNames.length > 0) {
       const indIdsRes = await dbClient.query(
         `INSERT INTO industries (name)
          SELECT unnest($1::text[])
@@ -236,12 +264,21 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     if (resolvedEntities.length > 0) {
       const entityIds = resolvedEntities.map(e => e.id);
       const sharedReportsRes = await dbClient.query(
-        `SELECT DISTINCT re.report_id, e.canonical_name, e.entity_type
+        `SELECT DISTINCT 
+           re.report_id, 
+           e.canonical_name, 
+           e.entity_type,
+           r.category AS b_category,
+           ent.canonical_name AS b_primary_name
          FROM report_entities re
          JOIN entities e ON re.entity_id = e.id
+         JOIN reports r ON re.report_id = r.id
+         LEFT JOIN entities ent ON r.primary_entity_id = ent.id
          WHERE re.entity_id = ANY($1) AND re.report_id != $2`,
         [entityIds, newReportId]
       );
+
+      const primaryEntName = primaryEnt ? primaryEnt.canonical_name.toLowerCase().trim() : null;
 
       for (const row of sharedReportsRes.rows) {
         let relType = 'mention';
@@ -251,6 +288,19 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
           relType = 'competitor';
         } else if (row.entity_type === 'company') {
           relType = 'produces';
+        }
+
+        // 逻辑修正：如果双方都是公司研报 (customer)，且其中一方的主体是已知零售巨头/超市渠道
+        if (finalCategory === 'customer' && row.b_category === 'customer' && relType === 'competitor') {
+          const primaryEntNameB = row.b_primary_name ? row.b_primary_name.toLowerCase().trim() : null;
+          const hasRetailer = 
+            (primaryEntName && RETAILER_ENTITIES.has(primaryEntName)) ||
+            (primaryEntNameB && RETAILER_ENTITIES.has(primaryEntNameB));
+          
+          if (hasRetailer) {
+            // 品牌商与零售超市之间共享同一个竞品，只能构成渠道涉及或经营相关，绝非同业竞争对手
+            relType = 'operation';
+          }
         }
 
         await dbClient.query(
@@ -263,7 +313,7 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     }
 
     await dbClient.query('COMMIT');
-    return res.status(200).json({ success: true, id: newReportId, type: 'report' });
+    return res.status(200).json({ success: true, id: newReportId, type: 'report', ignoredCategories });
   } else {
     // 1. 写入原 articles 表以兼容原有数据分析逻辑
     const insertArticleRes = await dbClient.query(
@@ -301,16 +351,20 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
 
     // 关联行业 (news_industries)
     if (industry) {
-      const mappedCategory = getStandardCategory(industry) || industry;
-      const indRes = await dbClient.query(
-        'INSERT INTO industries (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING id',
-        [mappedCategory]
-      );
-      const indId = indRes.rows[0].id;
-      await dbClient.query(
-        'INSERT INTO news_industries (news_id, industry_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-        [newNewsId, indId]
-      );
+      const mappedCategory = getStandardCategory(industry);
+      if (mappedCategory) {
+        const indRes = await dbClient.query(
+          'INSERT INTO industries (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING id',
+          [mappedCategory]
+        );
+        const indId = indRes.rows[0].id;
+        await dbClient.query(
+          'INSERT INTO news_industries (news_id, industry_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+          [newNewsId, indId]
+        );
+      } else {
+        ignoredCategories.push(industry);
+      }
     }
 
     // 关联国家 (news_countries)
@@ -331,7 +385,7 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     }
 
     await dbClient.query('COMMIT');
-    return res.status(200).json({ success: true, id: newNewsId, type: 'article' });
+    return res.status(200).json({ success: true, id: newNewsId, type: 'article', ignoredCategories });
   }
 }
 

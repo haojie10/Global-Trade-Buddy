@@ -217,7 +217,11 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        alert(overwriteId && overwriteId !== 'force-new' ? '报告覆盖更新成功！' : '报告上传成功！');
+        let msg = overwriteId && overwriteId !== 'force-new' ? '报告覆盖更新成功！' : '报告上传成功！';
+        if (data.ignoredCategories && data.ignoredCategories.length > 0) {
+          msg += `\n\n⚠️【注意】以下产品品类未命中 GTB 标准结构表，已被系统忽略录入：\n${data.ignoredCategories.join(', ')}`;
+        }
+        alert(msg);
         setRawHtmlContent('');
         setSelectedFile(null);
         setIsDragActive(false);

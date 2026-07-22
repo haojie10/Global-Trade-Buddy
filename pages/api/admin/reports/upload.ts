@@ -103,8 +103,13 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
     autoIndustries = manualTags.products.map((p: string) => p.trim()).filter(Boolean);
   }
 
+  const ignoredCategories: string[] = [];
   for (const indName of autoIndustries) {
-    const mappedCategory = getStandardCategory(indName) || indName;
+    const mappedCategory = getStandardCategory(indName);
+    if (!mappedCategory) {
+      ignoredCategories.push(indName);
+      continue;
+    }
     const indRes = await dbClient.query(
       'INSERT INTO industries (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING id',
       [mappedCategory]
@@ -229,7 +234,8 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
     success: true,
     reportId: newReportId,
     imageCount,
-    title: meta.title
+    title: meta.title,
+    ignoredCategories
   });
 }
 
