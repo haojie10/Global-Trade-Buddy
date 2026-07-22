@@ -222,35 +222,46 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
 
   // 6. 在 relations 表中建边并携带 market_region 属性
   if (resolvedEntities.length > 0) {
-    const entityIds = resolvedEntities.map(e => e.id);
     const sharedReportsRes = await dbClient.query(
       `SELECT DISTINCT 
-         re.report_id, 
+         reB.report_id AS b_report_id, 
          e.canonical_name, 
          e.entity_type,
-         r.category AS b_category,
-         ent.canonical_name AS b_primary_name
-       FROM report_entities re
-       JOIN entities e ON re.entity_id = e.id
-       JOIN reports r ON re.report_id = r.id
-       LEFT JOIN entities ent ON r.primary_entity_id = ent.id
-       WHERE re.entity_id = ANY($1) AND re.report_id != $2`,
-      [entityIds, newReportId]
+         reA.role AS role_a,
+         reB.role AS role_b,
+         rB.category AS b_category,
+         entB.canonical_name AS b_primary_name
+       FROM report_entities reA
+       JOIN report_entities reB ON reA.entity_id = reB.entity_id AND reA.report_id != reB.report_id
+       JOIN entities e ON reA.entity_id = e.id
+       JOIN reports rB ON reB.report_id = rB.id
+       LEFT JOIN entities entB ON rB.primary_entity_id = entB.id
+       WHERE reA.report_id = $1`,
+      [newReportId]
     );
 
     const primaryEntName = primaryEnt ? primaryEnt.canonical_name.toLowerCase().trim() : null;
 
     for (const row of sharedReportsRes.rows) {
       let relType = 'mention';
-      if (row.entity_type === 'product' || row.entity_type === 'channel') {
-        relType = 'operation';
-      } else if (row.entity_type === 'competitor') {
+
+      // 核心逻辑升级：基于上下文角色判定（局部 Role 规则）
+      if (row.role_a === 'competitor' && row.role_b === 'competitor') {
+        // 只有当两篇报告都把该共享实体明确标记为各自的 competitor 时，才建立同业竞争连线
         relType = 'competitor';
+      } else if (row.role_a === 'primary' || row.role_b === 'primary') {
+        relType = 'produces';
+      } else if (
+        ['channel', 'supplier', 'customer'].includes(row.role_a) ||
+        ['channel', 'supplier', 'customer'].includes(row.role_b) ||
+        row.entity_type === 'product' || row.entity_type === 'channel'
+      ) {
+        relType = 'operation';
       } else if (row.entity_type === 'company') {
         relType = 'produces';
       }
 
-      // 逻辑修正：如果双方都是公司研报 (customer)，且其中一方的主体是已知零售巨头/超市/分销商渠道
+      // 兜底一票否决：如果双方都是公司研报 (customer)，且其中一方的主体是已知零售巨头/超市/分销商渠道
       if (finalCategory === 'customer' && row.b_category === 'customer' && relType === 'competitor') {
         const primaryEntNameB = row.b_primary_name ? row.b_primary_name.toLowerCase().trim() : null;
         const hasRetailer = 
@@ -258,7 +269,6 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
           (primaryEntNameB && RETAILER_ENTITIES.has(primaryEntNameB));
         
         if (hasRetailer) {
-          // 品牌商与分销商/超市之间共享同一个竞品，只能构成渠道涉及或经营相关，绝非同业竞争对手
           relType = 'operation';
         }
       }
@@ -267,7 +277,7 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
         `INSERT INTO relations (report_id_a, report_id_b, relation_key, market_region, relation_type) 
          VALUES ($1, $2, $3, $4, $5)
          ON CONFLICT (report_id_a, report_id_b, relation_key) DO NOTHING`,
-        [newReportId, row.report_id, row.canonical_name, finalMarketRegion, relType]
+        [newReportId, row.b_report_id, row.canonical_name, finalMarketRegion, relType]
       );
     }
   }
