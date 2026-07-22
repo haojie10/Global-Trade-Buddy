@@ -1,3 +1,5 @@
+import { getStandardCategory } from './category-mapper';
+
 export interface GraphNode {
   id: string;
   title: string;
@@ -81,8 +83,11 @@ export function filterGraphData(
     }
 
     // 产品过滤
-    if (selectedProduct !== 'All' && link.relation_key !== selectedProduct) {
-      return false;
+    if (selectedProduct !== 'All') {
+      const mappedKey = getStandardCategory(link.relation_key);
+      if (mappedKey !== selectedProduct && link.relation_key !== selectedProduct) {
+        return false;
+      }
     }
 
     return true;

@@ -76,6 +76,15 @@ export async function getGraphData(userId: string, userRole: string, dbClient: a
     [reportIds]
   );
 
+  // 1.5 一次性查询所有授权报告关联的标准行业品类 (GTB大类)
+  const industriesRes = await dbClient.query(
+    `SELECT ri.report_id, i.name AS industry_name
+     FROM report_industries ri
+     JOIN industries i ON ri.industry_id = i.id
+     WHERE ri.report_id = ANY($1)`,
+    [reportIds]
+  );
+
   // 1. 初始化报告节点，并填充 ObsidianGraph 所需的 node_type 为 'report'
   const reportNodes = nodes.map(node => ({
     ...node,
@@ -109,14 +118,18 @@ export async function getGraphData(userId: string, userRole: string, dbClient: a
       } else if (row.role === 'competitor') {
         repNode.competitors.push(row.canonical_name);
       } else if (row.role === 'product') {
-        repNode.products.push(row.canonical_name);
+        // 强关联GTB：不再推入具体物理产品，改由 2.5 填充标准大类
+        // repNode.products.push(row.canonical_name);
       } else if (row.role === 'channel') {
         repNode.channels.push(row.canonical_name);
       } else {
         // 兜底降级方案：对于 mentioned 或其它未单独标明角色的，采用 entity_type
         if (row.entity_type === 'company') repNode.companies.push(row.canonical_name);
         else if (row.entity_type === 'competitor') repNode.competitors.push(row.canonical_name);
-        else if (row.entity_type === 'product') repNode.products.push(row.canonical_name);
+        else if (row.entity_type === 'product') {
+          // 强关联GTB：不再推入具体物理产品，改由 2.5 填充标准大类
+          // repNode.products.push(row.canonical_name);
+        }
         else if (row.entity_type === 'channel') repNode.channels.push(row.canonical_name);
       }
     }
@@ -129,6 +142,16 @@ export async function getGraphData(userId: string, userRole: string, dbClient: a
       entity_type: row.entity_type,
       role: row.role
     });
+  }
+
+  // 2.5 填充标准大类至 products 数组，作为个人图谱下拉菜单的强关联标准数据源
+  for (const row of industriesRes.rows) {
+    const repNode = reportMap.get(row.report_id);
+    if (repNode) {
+      if (!repNode.products.includes(row.industry_name)) {
+        repNode.products.push(row.industry_name);
+      }
+    }
   }
 
   // NOTE: RETAILER_ENTITIES 从 lib/entity-constants.ts 导入

@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { PoolClient } from 'pg';
 import { withDb } from '../../../lib/api-handler';
 import { requireAdmin } from '../../../lib/auth';
+import { STANDARD_CATEGORIES } from '../../../lib/category-mapper';
 
 async function industriesHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
   const session = requireAdmin(req);
@@ -10,7 +11,10 @@ async function industriesHandler(req: NextApiRequest, res: NextApiResponse, dbCl
   }
 
   if (req.method === 'GET') {
-    const list = await dbClient.query('SELECT * FROM industries ORDER BY name ASC');
+    const list = await dbClient.query(
+      'SELECT * FROM industries WHERE name = ANY($1) ORDER BY name ASC',
+      [STANDARD_CATEGORIES]
+    );
     return res.status(200).json(list.rows);
   }
 
