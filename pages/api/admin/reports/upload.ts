@@ -4,7 +4,7 @@ import { withDb } from '../../../../lib/api-handler';
 import { requireAdmin } from '../../../../lib/auth';
 import { parseMetadata, runDehydration, extractAndNormalizeEntities } from '../../../../lib/entity-extractor';
 import { getStandardCategory } from '../../../../lib/category-mapper';
-import { uploadImage } from '../../../../lib/storage';
+import { uploadImage, cleanOrphanedImages } from '../../../../lib/storage';
 
 async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
   const adminSession = requireAdmin(req);
@@ -59,8 +59,17 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
   const primaryEntityId = primaryEnt ? primaryEnt.id : null;
 
   let newReportId = overwriteReportId;
+  // NOTE: 覆盖更新前需保存旧 content_html，事务后用于对比并清理孤儿图片
+  let oldContentHtmlForOverwrite: string | null = null;
 
   if (overwriteReportId) {
+    // 先查询旧的 content_html
+    const oldContentRes = await dbClient.query(
+      'SELECT content_html FROM reports WHERE id = $1',
+      [overwriteReportId]
+    );
+    oldContentHtmlForOverwrite = oldContentRes.rows[0]?.content_html || null;
+
     // 覆盖更新模式：更新报告内容，同时更新主体实体关联
     await dbClient.query(
       `UPDATE reports 
@@ -229,6 +238,13 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
   }
 
   await dbClient.query('COMMIT');
+
+  // 事务提交成功后，异步对比并清理覆盖前的孤儿图片（不阻塞响应）
+  if (oldContentHtmlForOverwrite !== null) {
+    cleanOrphanedImages(oldContentHtmlForOverwrite, cleanHtml).catch((err: any) => {
+      console.error('[WARN] upload: 孤儿图片清理失败:', err.message);
+    });
+  }
 
   return res.status(200).json({
     success: true,

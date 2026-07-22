@@ -48,6 +48,57 @@ export async function uploadImage(buffer: Buffer, mime: string): Promise<string>
 }
 
 /**
+ * 从 HTML 字符串中提取所有 report-images bucket 的文件名
+ * NOTE: 供 deleteImagesFromContent / cleanOrphanedImages / GC 脚本统一复用
+ */
+export function extractStorageFileNames(html: string): string[] {
+  const regex = /report-images\/([a-zA-Z0-9_\-\.]+)/g;
+  const files: string[] = [];
+  let match;
+  while ((match = regex.exec(html)) !== null) {
+    files.push(match[1]);
+  }
+  return files;
+}
+
+/**
+ * diff 清理：仅删除旧 HTML 中有、新 HTML 中没有的图片
+ * 供报告/资讯更新接口在 UPDATE 事务提交后调用，防止覆盖更新产生孤儿图片
+ *
+ * @param oldHtml - UPDATE 前从数据库读取的旧 content_html
+ * @param newHtml - UPDATE 后已写入数据库的新 content_html
+ */
+export async function cleanOrphanedImages(oldHtml: string, newHtml: string): Promise<void> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseKey) return;
+
+  const oldFiles = extractStorageFileNames(oldHtml);
+  if (oldFiles.length === 0) return;
+
+  const newFileSet = new Set(extractStorageFileNames(newHtml));
+  // 旧有但新无的文件才是真正的孤儿
+  const orphaned = oldFiles.filter(f => !newFileSet.has(f));
+
+  if (orphaned.length === 0) return;
+
+  try {
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: { persistSession: false }
+    });
+    const { error } = await supabase.storage.from('report-images').remove(orphaned);
+    if (error) {
+      console.error('[WARN] cleanOrphanedImages: 删除孤儿图片失败:', error.message || error);
+    } else {
+      console.log(`[INFO] cleanOrphanedImages: 已清理 ${orphaned.length} 张孤儿图片:`, orphaned);
+    }
+  } catch (err: any) {
+    console.error('[WARN] cleanOrphanedImages: 异常:', err.message);
+  }
+}
+
+/**
  * 从 content_html 中提取并物理删除所有引用的图片文件
  * 供报告删除接口在数据库事务提交后调用
  */
@@ -57,17 +108,13 @@ export async function deleteImagesFromContent(contentHtml: string): Promise<void
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 
-  // 提取 Supabase 存储桶图片文件名
-  const supabaseImgRegex = /report-images\/([a-zA-Z0-9_\-\.]+)/g;
-  const supabaseFiles: string[] = [];
-  let match;
-  while ((match = supabaseImgRegex.exec(contentHtml)) !== null) {
-    supabaseFiles.push(match[1]);
-  }
+  // 复用公共提取函数
+  const supabaseFiles = extractStorageFileNames(contentHtml);
 
   // 提取本地开发测试环境图片文件名
   const localImgRegex = /\/uploads\/([a-zA-Z0-9_\-\.]+)/g;
   const localFiles: string[] = [];
+  let match;
   while ((match = localImgRegex.exec(contentHtml)) !== null) {
     localFiles.push(match[1]);
   }

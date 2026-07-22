@@ -3,7 +3,7 @@ import { PoolClient } from 'pg';
 import { withDb } from '../../../lib/api-handler';
 import { runDehydration, extractAndNormalizeEntities, parseMetadata } from '../../../lib/entity-extractor';
 import { getStandardCategory } from '../../../lib/category-mapper';
-import { uploadImage } from '../../../lib/storage';
+import { uploadImage, cleanOrphanedImages } from '../../../lib/storage';
 import { RETAILER_ENTITIES } from '../../../lib/entity-constants';
 
 async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
@@ -108,9 +108,16 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     );
 
     let newReportId: string;
+    // NOTE: 更新模式下，需先保存旧 content_html 用于事务后清理孤儿图片
+    let oldContentHtmlForUpdate: string | null = null;
     if (existingReport.rows.length > 0) {
       // 若相同标题的报告已存在，执行更新（Update）覆盖
       newReportId = existingReport.rows[0].id;
+      const oldContentRes = await dbClient.query(
+        'SELECT content_html FROM reports WHERE id = $1',
+        [newReportId]
+      );
+      oldContentHtmlForUpdate = oldContentRes.rows[0]?.content_html || null;
       await dbClient.query(
         `UPDATE reports 
          SET category = $1, market_region = $2, summary = $3, content_html = $4, primary_entity_id = $5, created_at = NOW()
@@ -313,6 +320,14 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     }
 
     await dbClient.query('COMMIT');
+
+    // 事务提交成功后，异步清理更新前的孤儿图片（不阻塞响应）
+    if (oldContentHtmlForUpdate !== null) {
+      cleanOrphanedImages(oldContentHtmlForUpdate, cleanHtml).catch((err: any) => {
+        console.error('[WARN] publish: 孤儿图片清理失败:', err.message);
+      });
+    }
+
     return res.status(200).json({ success: true, id: newReportId, type: 'report', ignoredCategories });
   } else {
     // 1. 写入原 articles 表以兼容原有数据分析逻辑

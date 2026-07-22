@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { PoolClient } from 'pg';
 import { withDb } from '../../../lib/api-handler';
 import { requireAdmin } from '../../../lib/auth';
+import { deleteImagesFromContent } from '../../../lib/storage';
 
 async function newsAdminHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
   const session = requireAdmin(req);
@@ -162,7 +163,19 @@ async function newsAdminHandler(req: NextApiRequest, res: NextApiResponse, dbCli
     if (!id) {
       return res.status(400).json({ error: 'Missing id' });
     }
+    // 删除前先查询 content，事务后用于清理关联图片
+    const newsContentRes = await dbClient.query('SELECT content FROM news WHERE id = $1', [id]);
+    const newsContent = newsContentRes.rows[0]?.content || '';
+
     await dbClient.query('DELETE FROM news WHERE id = $1', [id]);
+
+    // 删除成功后异步清理关联图片
+    if (newsContent) {
+      deleteImagesFromContent(newsContent).catch((err: any) => {
+        console.error('[WARN] news DELETE: 图片清理失败:', err.message);
+      });
+    }
+
     return res.status(200).json({ success: true });
   }
 
