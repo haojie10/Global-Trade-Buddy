@@ -399,7 +399,7 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
         const isOneProductOneCompany = (finalCategory === 'product' && bCategory === 'customer') || 
                                        (finalCategory === 'customer' && bCategory === 'product');
         if (isOneProductOneCompany) {
-          const prodTitle = finalCategory === 'product' ? cleanTitle : otherRep.b_title;
+          const prodTitle = finalCategory === 'product' ? (title || '') : otherRep.b_title;
           let hasProductOverlap = false;
           for (const [entIdA] of currentEntMap.entries()) {
             if (entMapB.has(entIdA)) {
@@ -408,7 +408,7 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
             }
           }
           if (hasProductOverlap) {
-            const { getStandardCategory } = require('../../lib/category-mapper');
+            const { getStandardCategory } = require('../../../lib/category-mapper');
             finalRelType = 'operation';
             finalRelKey = getStandardCategory(prodTitle) || '品类经营';
             if (finalCategory === 'customer') {
