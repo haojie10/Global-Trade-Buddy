@@ -80,7 +80,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 将此报告和具有相同实体的其他报告连起来
     await dbClient.query(
       `INSERT INTO relations (report_id_a, report_id_b, relation_key, market_region, relation_type)
-       SELECT DISTINCT $1::UUID AS report_id_a, re.report_id AS report_id_b, $2 AS relation_key, $3 AS market_region, 'produces' AS relation_type
+       SELECT DISTINCT $1::UUID AS report_id_a, re.report_id AS report_id_b, $2 AS relation_key, $3 AS market_region, 'supplier' AS relation_type
        FROM report_entities re
        WHERE re.entity_id = $4::UUID AND re.report_id != $1::UUID
        ON CONFLICT (report_id_a, report_id_b, relation_key) DO NOTHING`,

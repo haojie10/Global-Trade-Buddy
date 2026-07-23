@@ -172,11 +172,12 @@ export async function getGraphData(userId: string, userRole: string, dbClient: a
       const uniqueKey = `${row.report_id_a}-${row.report_id_b}-${row.relation_key}`;
       if (!seenKeys.has(uniqueKey)) {
         seenKeys.add(uniqueKey);
+        const relType = row.relation_type === 'produces' ? 'supplier' : row.relation_type;
         links.push({
           source: row.report_id_a,
           target: row.report_id_b,
           relation_key: row.relation_key,
-          relation_type: row.relation_type,
+          relation_type: relType,
           market_region: row.market_region || '全球'
         });
       }

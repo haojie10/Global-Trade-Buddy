@@ -173,10 +173,10 @@ async function updateEntitiesHandler(req: NextApiRequest, res: NextApiResponse, 
           ['customer', 'channel'].includes(currentEntMap.get(bPrimaryId)!.role);
 
         if (aHasBAsSupplier || bHasAAsCustomerOrChannel) {
-          finalRelType = 'produces';
+          finalRelType = 'supplier';
           finalRelKey = otherRep.b_primary_name || '供销渠道';
         } else if (bHasAAsSupplier || aHasBAsCustomerOrChannel) {
-          finalRelType = 'produces';
+          finalRelType = 'supplier';
           finalRelKey = primaryEnt ? primaryEnt.canonical_name : '供销渠道';
         }
       }
