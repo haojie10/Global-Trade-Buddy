@@ -342,28 +342,43 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
     // ---- 优先级 3: 经营关系 (Operation) ----
     // 仅存在于【品类报告】与【公司报告】之间！
     // 规则：公司报告 (经营主体) ===> 品类报告 (被经营品类)
+    // 且必须满足：【品类报告】的标准大类 包含在【公司报告】在后台关联的行业/主营品类列表中！
     if (!finalRelType) {
       const isOneProductOneCompany = (finalCategory === 'product' && bCategory === 'customer') || 
                                      (finalCategory === 'customer' && bCategory === 'product');
       if (isOneProductOneCompany) {
         const prodTitle = finalCategory === 'product' ? (meta.title || '') : otherRep.b_title;
-        let hasProductOverlap = false;
-        for (const [entIdA] of currentEntMap.entries()) {
-          if (entMapB.has(entIdA)) {
-            hasProductOverlap = true;
-            break;
+        const { getStandardCategory } = require('../../../../lib/category-mapper');
+        const prodStandardCat = getStandardCategory(prodTitle);
+
+        const GENERIC_KEYWORDS = new Set([
+          '工具', '五金', '食品', '代理商', '分销商', '渠道商', '供应商', '客户',
+          '紧固件', '建筑及装饰材料', '家居用品', '家具'
+        ]);
+
+        if (prodStandardCat && !GENERIC_KEYWORDS.has(prodStandardCat)) {
+          const compEntMap = finalCategory === 'customer' ? currentEntMap : entMapB;
+
+          let companyOperatesCategory = false;
+          for (const item of compEntMap.values()) {
+            if (item.role === 'product' || item.entity_type === 'product') {
+              if (item.canonical_name === prodStandardCat || getStandardCategory(item.canonical_name) === prodStandardCat) {
+                companyOperatesCategory = true;
+                break;
+              }
+            }
           }
-        }
-        if (hasProductOverlap) {
-          const { getStandardCategory } = require('../../../../lib/category-mapper');
-          finalRelType = 'operation';
-          finalRelKey = getStandardCategory(prodTitle) || '品类经营';
-          if (finalCategory === 'customer') {
-            sourceReportId = newReportId;
-            targetReportId = bReportId;
-          } else {
-            sourceReportId = bReportId;
-            targetReportId = newReportId;
+
+          if (companyOperatesCategory) {
+            finalRelType = 'operation';
+            finalRelKey = prodStandardCat;
+            if (finalCategory === 'customer') {
+              sourceReportId = newReportId;
+              targetReportId = bReportId;
+            } else {
+              sourceReportId = bReportId;
+              targetReportId = newReportId;
+            }
           }
         }
       }
@@ -382,16 +397,25 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
           targetReportId = newReportId;
         }
       } else {
-        // 共享 GTB 标准大品类 (products)
+        // 共享 GTB 标准大品类
+        const GENERIC_KEYWORDS = new Set([
+          '工具', '五金', '食品', '代理商', '分销商', '渠道商', '供应商', '客户',
+          '紧固件', '建筑及装饰材料', '家居用品', '家具'
+        ]);
+        const { getStandardCategory } = require('../../../../lib/category-mapper');
+
         for (const [entIdA, dataA] of currentEntMap.entries()) {
           if (dataA.role === 'product' && entMapB.has(entIdA) && entMapB.get(entIdA)!.role === 'product') {
-            finalRelType = 'mention';
-            finalRelKey = dataA.canonical_name;
-            if (newReportId > bReportId) {
-              sourceReportId = bReportId;
-              targetReportId = newReportId;
+            const stdCat = getStandardCategory(dataA.canonical_name) || dataA.canonical_name;
+            if (stdCat && !GENERIC_KEYWORDS.has(stdCat)) {
+              finalRelType = 'mention';
+              finalRelKey = stdCat;
+              if (newReportId > bReportId) {
+                sourceReportId = bReportId;
+                targetReportId = newReportId;
+              }
+              break;
             }
-            break;
           }
         }
       }
