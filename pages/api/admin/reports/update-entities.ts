@@ -140,12 +140,8 @@ async function updateEntitiesHandler(req: NextApiRequest, res: NextApiResponse, 
       const bReportId = otherRep.b_report_id;
       const bCategory = otherRep.b_category;
       const bPrimaryId = otherRep.b_primary_id;
-      const bPrimaryName = otherRep.b_primary_name ? otherRep.b_primary_name.toLowerCase().trim() : '';
-
-      const entMapB = otherRepEntMap.get(bReportId) || new Map();
-
-      let finalRelType: string | null = null;
-      let finalRelKey: string = '';
+      const bPrimaryName = otherRep.b_primary_name ? otherRep.b_primary_name.toLowerCase().trim() : '      let sourceReportId = reportId;
+      let targetReportId = bReportId;
 
       // 优先级 1: 竞争关系 (competitor)
       const aHasBAsComp = bPrimaryId && currentEntMap.has(bPrimaryId) && currentEntMap.get(bPrimaryId)!.role === 'competitor';
@@ -160,9 +156,13 @@ async function updateEntitiesHandler(req: NextApiRequest, res: NextApiResponse, 
         finalRelKey = aHasBAsComp
           ? (otherRep.b_primary_name || '同业竞争')
           : (primaryEnt ? primaryEnt.canonical_name : '同业竞争');
+        if (reportId > bReportId) {
+          sourceReportId = bReportId;
+          targetReportId = reportId;
+        }
       }
 
-      // 优先级 2: 供销关系 (produces)
+      // 优先级 2: 供销关系 (supplier)
       if (!finalRelType) {
         const aHasBAsSupplier = bPrimaryId && currentEntMap.has(bPrimaryId) && currentEntMap.get(bPrimaryId)!.role === 'supplier';
         const bHasAAsCustomerOrChannel = primaryEntityId && entMapB.has(primaryEntityId) &&
@@ -173,11 +173,17 @@ async function updateEntitiesHandler(req: NextApiRequest, res: NextApiResponse, 
           ['customer', 'channel'].includes(currentEntMap.get(bPrimaryId)!.role);
 
         if (aHasBAsSupplier || bHasAAsCustomerOrChannel) {
+          // B 是供应商，A 是客户/渠道 => 流向是 B (供应商) -> A (渠道)
           finalRelType = 'supplier';
           finalRelKey = otherRep.b_primary_name || '供销渠道';
+          sourceReportId = bReportId;
+          targetReportId = reportId;
         } else if (bHasAAsSupplier || aHasBAsCustomerOrChannel) {
+          // A 是供应商，B 是客户/渠道 => 流向是 A (供应商) -> B (渠道)
           finalRelType = 'supplier';
           finalRelKey = primaryEnt ? primaryEnt.canonical_name : '供销渠道';
+          sourceReportId = reportId;
+          targetReportId = bReportId;
         }
       }
 
@@ -190,6 +196,13 @@ async function updateEntitiesHandler(req: NextApiRequest, res: NextApiResponse, 
             if (dataA.role === 'product' && entMapB.has(entIdA)) {
               finalRelType = 'operation';
               finalRelKey = dataA.canonical_name;
+              if (category === 'customer') {
+                sourceReportId = reportId;
+                targetReportId = bReportId;
+              } else {
+                sourceReportId = bReportId;
+                targetReportId = reportId;
+              }
               break;
             }
           }
@@ -204,11 +217,19 @@ async function updateEntitiesHandler(req: NextApiRequest, res: NextApiResponse, 
         if (aHasBAsSister || bHasAAsSister) {
           finalRelType = 'mention';
           finalRelKey = '关联/姐妹公司';
+          if (reportId > bReportId) {
+            sourceReportId = bReportId;
+            targetReportId = reportId;
+          }
         } else {
           for (const [entIdA, dataA] of currentEntMap.entries()) {
             if (dataA.role === 'product' && entMapB.has(entIdA) && entMapB.get(entIdA)!.role === 'product') {
               finalRelType = 'mention';
               finalRelKey = dataA.canonical_name;
+              if (reportId > bReportId) {
+                sourceReportId = bReportId;
+                targetReportId = reportId;
+              }
               break;
             }
           }
@@ -220,7 +241,7 @@ async function updateEntitiesHandler(req: NextApiRequest, res: NextApiResponse, 
           `INSERT INTO relations (report_id_a, report_id_b, relation_key, market_region, relation_type)
            VALUES ($1, $2, $3, $4, $5)
            ON CONFLICT (report_id_a, report_id_b, relation_key) DO UPDATE SET relation_type = EXCLUDED.relation_type`,
-          [reportId, bReportId, finalRelKey, marketRegion, finalRelType]
+          [sourceReportId, targetReportId, finalRelKey, market_region, finalRelType]
         );
       }
     }
