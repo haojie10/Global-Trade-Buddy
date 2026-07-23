@@ -502,9 +502,12 @@ export function getStandardCategory(term: string): string | null {
   if (!term) return null;
   const cleanTerm = term.trim();
 
-  // 1. 精确匹配大类名称
+  // 1. 精确匹配或前缀匹配大类名称 (例如 "个人护理用具-充电式声波洁面仪..." -> "个人护理用具")
   const exactMatch = STANDARD_CATEGORIES.find(c => c.toLowerCase() === cleanTerm.toLowerCase());
   if (exactMatch) return exactMatch;
+
+  const prefixMatch = STANDARD_CATEGORIES.find(c => cleanTerm.startsWith(c) || cleanTerm.startsWith(`${c}-`) || cleanTerm.startsWith(`${c}_`));
+  if (prefixMatch) return prefixMatch;
 
   // 2. 查找关键字完全匹配
   for (const [cat, keywords] of Object.entries(CATEGORY_KEYWORDS_MAP)) {
@@ -514,7 +517,6 @@ export function getStandardCategory(term: string): string | null {
   }
 
   // 3. 模糊包含匹配 (例如 "LED投光灯" 包含 "灯" 或者包含关键词)
-  // 如果 term 包含某个关键字，或者关键字包含 term
   for (const [cat, keywords] of Object.entries(CATEGORY_KEYWORDS_MAP)) {
     for (const kw of keywords) {
       if (cleanTerm.includes(kw) || kw.includes(cleanTerm)) {
@@ -523,9 +525,12 @@ export function getStandardCategory(term: string): string | null {
     }
   }
 
-  // 4. 特殊行业归纳模糊匹配 (如："投光灯" -> "照明产品")
+  // 4. 特殊行业归纳模糊匹配 (如："投光灯" -> "照明产品", "洁面仪" -> "个人护理用具")
   if (cleanTerm.includes('灯') || cleanTerm.includes('照明') || cleanTerm.includes('Licht') || cleanTerm.includes('Leuchten') || cleanTerm.includes('Lighting')) {
     return '照明产品';
+  }
+  if (cleanTerm.includes('洁面') || cleanTerm.includes('美容') || cleanTerm.includes('生发') || cleanTerm.includes('剃须') || cleanTerm.includes('吹风') || cleanTerm.includes('个人护理')) {
+    return '个人护理用具';
   }
   if (cleanTerm.includes('汽车') || cleanTerm.includes('车配件') || cleanTerm.includes('轮毂') || cleanTerm.includes('车桥')) {
     return '汽车配件';
@@ -536,7 +541,7 @@ export function getStandardCategory(term: string): string | null {
   if (cleanTerm.includes('工具') || cleanTerm.includes('扳手') || cleanTerm.includes('螺丝刀')) {
     return '工具';
   }
-  if (cleanTerm.includes('卫浴') || cleanTerm.includes('花洒') || cleanTerm.includes('水龙头') || cleanTerm.includes('马桶') || cleanTerm.includes('镜')) {
+  if (cleanTerm.includes('卫浴') || cleanTerm.includes('花洒') || cleanTerm.includes('水龙头') || cleanTerm.includes('马桶') || cleanTerm.includes('美妆镜') || cleanTerm.includes('化妆镜')) {
     return '卫浴设备';
   }
 
