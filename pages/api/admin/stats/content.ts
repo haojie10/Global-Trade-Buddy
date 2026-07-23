@@ -91,7 +91,8 @@ async function contentStatsHandler(req: NextApiRequest, res: NextApiResponse, db
 
     const [entitiesRes, edgesRes] = await Promise.all([
       dbClient.query(
-        `SELECT re.report_id, e.canonical_name, e.entity_type, re.role
+        `SELECT re.report_id, e.id as entity_id, e.canonical_name, e.entity_type, re.role,
+                (SELECT STRING_AGG(ea.alias_name, '|||') FROM entity_aliases ea WHERE ea.entity_id = e.id) as aliases
          FROM report_entities re
          JOIN entities e ON re.entity_id = e.id
          WHERE re.report_id = ANY($1)`,
@@ -109,6 +110,7 @@ async function contentStatsHandler(req: NextApiRequest, res: NextApiResponse, db
 
     const entityMap = new Map<string, {
       primary_company: string;
+      company_aliases: string[];
       competitors: string[];
       suppliers: string[];
       customers: string[];
@@ -121,6 +123,7 @@ async function contentStatsHandler(req: NextApiRequest, res: NextApiResponse, db
       if (!entityMap.has(row.report_id)) {
         entityMap.set(row.report_id, {
           primary_company: '',
+          company_aliases: [],
           competitors: [],
           suppliers: [],
           customers: [],
@@ -135,6 +138,10 @@ async function contentStatsHandler(req: NextApiRequest, res: NextApiResponse, db
 
       if (role === 'primary') {
         item.primary_company = name;
+        if (row.aliases) {
+          const aliasList = row.aliases.split('|||').map((s: string) => s.trim()).filter(Boolean);
+          item.company_aliases = Array.from(new Set([...item.company_aliases, ...aliasList]));
+        }
       } else if (role === 'competitor') {
         if (!item.competitors.includes(name)) item.competitors.push(name);
       } else if (role === 'supplier') {
@@ -158,6 +165,7 @@ async function contentStatsHandler(req: NextApiRequest, res: NextApiResponse, db
     for (const r of reportsList) {
       const ents = entityMap.get(r.id) || {
         primary_company: '',
+        company_aliases: [],
         competitors: [],
         suppliers: [],
         customers: [],
@@ -166,6 +174,7 @@ async function contentStatsHandler(req: NextApiRequest, res: NextApiResponse, db
         products: []
       };
       r.primary_company = ents.primary_company;
+      r.company_aliases = ents.company_aliases;
       r.competitors = ents.competitors;
       r.suppliers = ents.suppliers;
       r.customers = ents.customers;

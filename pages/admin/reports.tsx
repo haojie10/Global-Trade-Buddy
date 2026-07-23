@@ -13,6 +13,7 @@ interface ReportListItem {
   countries: string;       // 逗号分隔的国家名称
   country_ids: string[];   // 关联的国家 ID 数组
   primary_company?: string;
+  company_aliases?: string[];
   competitors?: string[];
   suppliers?: string[];
   customers?: string[];
@@ -40,7 +41,7 @@ export default function AdminReportsManagement() {
 
   // 编辑关系实体模态框状态
   const [editingEntitiesReport, setEditingEntitiesReport] = useState<ReportListItem | null>(null);
-  const [editPrimaryCompany, setEditPrimaryCompany] = useState('');
+  const [editCompanies, setEditCompanies] = useState<string[]>(['']);
   const [editCompetitors, setEditCompetitors] = useState<string[]>(['']);
   const [editSuppliers, setEditSuppliers] = useState<string[]>(['']);
   const [editCustomers, setEditCustomers] = useState<string[]>(['']);
@@ -115,6 +116,7 @@ export default function AdminReportsManagement() {
             countries: r.countries || '',
             country_ids: r.country_ids || [],
             primary_company: r.primary_company || '',
+            company_aliases: r.company_aliases || [],
             competitors: r.competitors || [],
             suppliers: r.suppliers || [],
             customers: r.customers || [],
@@ -233,7 +235,8 @@ export default function AdminReportsManagement() {
   // 打开编辑关系实体模态框
   const openEditEntitiesModal = (report: ReportListItem) => {
     setEditingEntitiesReport(report);
-    setEditPrimaryCompany(report.primary_company || '');
+    const compList = [report.primary_company, ...(report.company_aliases || [])].filter(Boolean) as string[];
+    setEditCompanies(compList.length > 0 ? compList : ['']);
     setEditCompetitors(report.competitors && report.competitors.length > 0 ? [...report.competitors] : ['']);
     setEditSuppliers(report.suppliers && report.suppliers.length > 0 ? [...report.suppliers] : ['']);
     setEditCustomers(report.customers && report.customers.length > 0 ? [...report.customers] : ['']);
@@ -252,7 +255,7 @@ export default function AdminReportsManagement() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           reportId: editingEntitiesReport.id,
-          primaryCompany: editPrimaryCompany,
+          companies: editCompanies.filter(Boolean),
           competitors: editCompetitors.filter(Boolean),
           suppliers: editSuppliers.filter(Boolean),
           customers: editCustomers.filter(Boolean),
@@ -694,12 +697,19 @@ export default function AdminReportsManagement() {
 
                                 {hasEntities ? (
                                   <div className="report-entity-grid">
-                                    {/* 🏢 主体公司 */}
+                                    {/* 🏢 主体公司及别名 */}
                                     <div className="entity-group-item">
                                       <span className="entity-group-label">🏢 主体公司</span>
                                       <div className="entity-group-tags">
                                         {rep.primary_company ? (
-                                          <span className="admin-badge admin-badge-primary">{rep.primary_company}</span>
+                                          <>
+                                            <span className="admin-badge admin-badge-primary">{rep.primary_company}</span>
+                                            {rep.company_aliases && rep.company_aliases.length > 0 && rep.company_aliases.map((alias, i) => (
+                                              <span key={i} className="admin-badge admin-badge-secondary" title="公司别名">
+                                                别名: {alias}
+                                              </span>
+                                            ))}
+                                          </>
                                         ) : (
                                           <span style={{ color: 'var(--admin-text-secondary)' }}>-</span>
                                         )}
@@ -1076,18 +1086,8 @@ export default function AdminReportsManagement() {
                 💡 修改关系关键词保存后，系统会自动更新该报告的实体索引并<strong>重新计算图谱物理连线</strong>。
               </div>
 
-              <div className="admin-form-group">
-                <label className="admin-label">🏢 主体公司名称</label>
-                <input
-                  type="text"
-                  value={editPrimaryCompany}
-                  onChange={(e) => setEditPrimaryCompany(e.target.value)}
-                  placeholder="例如: 飞利浦 / Signify"
-                  className="admin-input"
-                />
-              </div>
-
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+                {renderTagListInput('🏢 主体公司及别名', editCompanies, setEditCompanies, '首个为主名称，其余为别名')}
                 {renderTagListInput('⚔️ 竞争对手', editCompetitors, setEditCompetitors, '例如: 欧司朗')}
                 {renderTagListInput('📦 关联产品类别', editProducts, setEditProducts, '例如: LED 灯泡')}
                 {renderTagListInput('🛒 销售渠道 / 超市', editChannels, setEditChannels, '例如: 家得宝 / Home Depot')}

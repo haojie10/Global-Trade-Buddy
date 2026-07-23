@@ -19,6 +19,7 @@ async function updateEntitiesHandler(req: NextApiRequest, res: NextApiResponse, 
   const {
     reportId,
     primaryCompany,
+    companies = [],
     competitors = [],
     suppliers = [],
     customers = [],
@@ -48,9 +49,17 @@ async function updateEntitiesHandler(req: NextApiRequest, res: NextApiResponse, 
     const category = report.category || 'customer';
     const marketRegion = report.market_region || '全球';
 
+    // 2. 组装 companies 数组（第一个为主名称，其余为别称）
+    let companyList: string[] = [];
+    if (Array.isArray(companies) && companies.length > 0) {
+      companyList = companies.map((s: string) => s.trim()).filter(Boolean);
+    } else if (primaryCompany) {
+      companyList = [primaryCompany.trim()];
+    }
+
     // 2. 组装 manualTags
     const manualTags = {
-      companies: primaryCompany ? [primaryCompany.trim()] : [],
+      companies: companyList,
       competitors: Array.isArray(competitors) ? competitors.map((s: string) => s.trim()).filter(Boolean) : [],
       suppliers: Array.isArray(suppliers) ? suppliers.map((s: string) => s.trim()).filter(Boolean) : [],
       customers: Array.isArray(customers) ? customers.map((s: string) => s.trim()).filter(Boolean) : [],
