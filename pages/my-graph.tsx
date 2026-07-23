@@ -7,6 +7,7 @@ import { getGraphData } from './api/user/graph';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { filterGraphData, GraphNode, GraphLink } from '../lib/graph-helpers';
+import { getStandardCategory } from '../lib/category-mapper';
 const ObsidianGraph = dynamic(() => import('../components/ObsidianGraph'), {
   ssr: false,
   loading: () => <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-muted)' }}>图谱加载中...</div>
@@ -174,7 +175,21 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
         )
       ] 
     : ['All'];
-  const products = hasData ? ['All', ...Array.from(new Set(activeGraphData.nodes.flatMap(n => n.products || []).filter(Boolean)))] : ['All'];
+  const products = hasData 
+    ? [
+        'All', 
+        ...Array.from(
+          new Set(
+            activeGraphData.nodes.flatMap(n => {
+              const rawProds = n.products || [];
+              const mappedProds = rawProds.map(p => getStandardCategory(p) || p);
+              const titleCat = getStandardCategory(n.title);
+              return [...rawProds, ...mappedProds, titleCat].filter(Boolean) as string[];
+            })
+          )
+        )
+      ] 
+    : ['All'];
 
   // 过滤数据
   const filteredGraphData = hasData ? filterGraphData(

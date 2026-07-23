@@ -55,10 +55,10 @@ export function filterGraphData(
         return false;
       }
     }
-    // 产品品类过滤
+    // 产品品类过滤（通过标签归一化与标题语义增强匹配）
     if (selectedProduct !== 'All') {
-      const hasProduct = node.products?.includes(selectedProduct);
-      const titleMatches = node.category !== 'customer' && node.title.includes(selectedProduct);
+      const hasProduct = node.products?.some(p => p === selectedProduct || getStandardCategory(p) === selectedProduct);
+      const titleMatches = node.title && (node.title.includes(selectedProduct) || getStandardCategory(node.title) === selectedProduct);
       if (!hasProduct && !titleMatches) {
         return false;
       }
@@ -72,20 +72,31 @@ export function filterGraphData(
 
   const filteredNodeIds = new Set(filteredNodes.map(n => n.id));
 
-  // 3. 过滤 links
+  // 3. 过滤 links（建立真正的品类主题子图）
   const filteredLinks = links.filter(link => {
     const srcId = typeof link.source === 'object' ? link.source.id : link.source;
     const tgtId = typeof link.target === 'object' ? link.target.id : link.target;
 
-    // 两端都必须在过滤后的节点列表中
+    // 两端节点必须都属于过滤后的品类赛道节点
     if (!filteredNodeIds.has(srcId) || !filteredNodeIds.has(tgtId)) {
       return false;
     }
 
-    // 产品过滤
+    // 产品品类主题过滤
     if (selectedProduct !== 'All') {
-      const mappedKey = getStandardCategory(link.relation_key);
-      if (mappedKey !== selectedProduct && link.relation_key !== selectedProduct) {
+      const relType = link.relation_type || '';
+
+      // 供销关系 (supplier) 与 竞争关系 (competitor)：
+      // 只要两端报告/公司节点都在当前品类圈子内，其供销关系与同行竞争关系均完整保留呈呈！
+      if (['supplier', 'competitor'].includes(relType)) {
+        return true;
+      }
+
+      // 经营关系 (operation) 与 提及关系 (mention)：
+      // 要求 relation_key 精确或模糊匹配 selectedProduct（例如关系主题为“照明产品”或“投光灯”）
+      const keyCat = getStandardCategory(link.relation_key);
+      const keyMatches = link.relation_key === selectedProduct || keyCat === selectedProduct || link.relation_key.includes(selectedProduct);
+      if (!keyMatches) {
         return false;
       }
     }
