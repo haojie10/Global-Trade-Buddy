@@ -159,7 +159,6 @@ export async function getGraphData(userId: string, userRole: string, dbClient: a
   const links: any[] = [];
 
   // 3. 从 relations 物理表中直接读取由全库算法计算好的关系线条
-  const reportIds = reportNodes.map(n => n.id);
   if (reportIds.length > 0) {
     const relationsRes = await dbClient.query(
       `SELECT report_id_a, report_id_b, relation_key, market_region, relation_type

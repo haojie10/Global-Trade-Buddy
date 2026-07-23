@@ -85,6 +85,97 @@ async function contentStatsHandler(req: NextApiRequest, res: NextApiResponse, db
   );
   const reportsList = reportsListRes.rows;
 
+  // 6.1 获取这些报告的实体关联与图谱连线数
+  if (reportsList.length > 0) {
+    const reportIds = reportsList.map((r: any) => r.id);
+
+    const [entitiesRes, edgesRes] = await Promise.all([
+      dbClient.query(
+        `SELECT re.report_id, e.canonical_name, e.entity_type, re.role
+         FROM report_entities re
+         JOIN entities e ON re.entity_id = e.id
+         WHERE re.report_id = ANY($1)`,
+        [reportIds]
+      ),
+      dbClient.query(
+        `SELECT report_id, COUNT(*)::int as edge_count FROM (
+           SELECT report_id_a as report_id FROM relations WHERE report_id_a = ANY($1)
+           UNION ALL
+           SELECT report_id_b as report_id FROM relations WHERE report_id_b = ANY($1)
+         ) sub GROUP BY report_id`,
+        [reportIds]
+      )
+    ]);
+
+    const entityMap = new Map<string, {
+      primary_company: string;
+      competitors: string[];
+      suppliers: string[];
+      customers: string[];
+      channels: string[];
+      sisters: string[];
+      products: string[];
+    }>();
+
+    for (const row of entitiesRes.rows) {
+      if (!entityMap.has(row.report_id)) {
+        entityMap.set(row.report_id, {
+          primary_company: '',
+          competitors: [],
+          suppliers: [],
+          customers: [],
+          channels: [],
+          sisters: [],
+          products: []
+        });
+      }
+      const item = entityMap.get(row.report_id)!;
+      const role = row.role;
+      const name = row.canonical_name;
+
+      if (role === 'primary') {
+        item.primary_company = name;
+      } else if (role === 'competitor') {
+        if (!item.competitors.includes(name)) item.competitors.push(name);
+      } else if (role === 'supplier') {
+        if (!item.suppliers.includes(name)) item.suppliers.push(name);
+      } else if (role === 'customer') {
+        if (!item.customers.includes(name)) item.customers.push(name);
+      } else if (role === 'channel') {
+        if (!item.channels.includes(name)) item.channels.push(name);
+      } else if (role === 'sister_parent') {
+        if (!item.sisters.includes(name)) item.sisters.push(name);
+      } else if (role === 'product') {
+        if (!item.products.includes(name)) item.products.push(name);
+      }
+    }
+
+    const edgeMap = new Map<string, number>();
+    for (const row of edgesRes.rows) {
+      edgeMap.set(row.report_id, row.edge_count);
+    }
+
+    for (const r of reportsList) {
+      const ents = entityMap.get(r.id) || {
+        primary_company: '',
+        competitors: [],
+        suppliers: [],
+        customers: [],
+        channels: [],
+        sisters: [],
+        products: []
+      };
+      r.primary_company = ents.primary_company;
+      r.competitors = ents.competitors;
+      r.suppliers = ents.suppliers;
+      r.customers = ents.customers;
+      r.channels = ents.channels;
+      r.sisters = ents.sisters;
+      r.products = ents.products;
+      r.edge_count = edgeMap.get(r.id) || 0;
+    }
+  }
+
   // 7. 内容缺口建议 (最近30天未命中搜索)
   const gapsRes = await dbClient.query(
     `SELECT query as name, COUNT(*)::int as count

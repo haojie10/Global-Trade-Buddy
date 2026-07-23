@@ -12,6 +12,14 @@ interface ReportListItem {
   industry_ids: string[];  // 关联的行业 ID 数组
   countries: string;       // 逗号分隔的国家名称
   country_ids: string[];   // 关联的国家 ID 数组
+  primary_company?: string;
+  competitors?: string[];
+  suppliers?: string[];
+  customers?: string[];
+  channels?: string[];
+  sisters?: string[];
+  products?: string[];
+  edge_count?: number;
 }
 
 interface TagOption {
@@ -26,6 +34,20 @@ export default function AdminReportsManagement() {
   const [industries, setIndustries] = useState<TagOption[]>([]);
   const [countries, setCountries] = useState<TagOption[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // 展开的关系实体面板 ID
+  const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
+
+  // 编辑关系实体模态框状态
+  const [editingEntitiesReport, setEditingEntitiesReport] = useState<ReportListItem | null>(null);
+  const [editPrimaryCompany, setEditPrimaryCompany] = useState('');
+  const [editCompetitors, setEditCompetitors] = useState<string[]>(['']);
+  const [editSuppliers, setEditSuppliers] = useState<string[]>(['']);
+  const [editCustomers, setEditCustomers] = useState<string[]>(['']);
+  const [editChannels, setEditChannels] = useState<string[]>(['']);
+  const [editSisters, setEditSisters] = useState<string[]>(['']);
+  const [editProducts, setEditProducts] = useState<string[]>(['']);
+  const [savingEntities, setSavingEntities] = useState(false);
 
   // 上传表单状态
   const [rawHtmlContent, setRawHtmlContent] = useState('');
@@ -76,7 +98,7 @@ export default function AdminReportsManagement() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // 1. 获取报告列表 (包含标签)
+      // 1. 获取报告列表 (包含标签与实体)
       const repRes = await fetch('/api/admin/stats/content');
       if (repRes.ok) {
         const repData = await repRes.json();
@@ -91,7 +113,15 @@ export default function AdminReportsManagement() {
             industries: r.industries || '',
             industry_ids: r.industry_ids || [],
             countries: r.countries || '',
-            country_ids: r.country_ids || []
+            country_ids: r.country_ids || [],
+            primary_company: r.primary_company || '',
+            competitors: r.competitors || [],
+            suppliers: r.suppliers || [],
+            customers: r.customers || [],
+            channels: r.channels || [],
+            sisters: r.sisters || [],
+            products: r.products || [],
+            edge_count: r.edge_count || 0
           };
         });
         setReports(list);
@@ -197,6 +227,52 @@ export default function AdminReportsManagement() {
       alert('保存失败');
     } finally {
       setSavingTags(false);
+    }
+  };
+
+  // 打开编辑关系实体模态框
+  const openEditEntitiesModal = (report: ReportListItem) => {
+    setEditingEntitiesReport(report);
+    setEditPrimaryCompany(report.primary_company || '');
+    setEditCompetitors(report.competitors && report.competitors.length > 0 ? [...report.competitors] : ['']);
+    setEditSuppliers(report.suppliers && report.suppliers.length > 0 ? [...report.suppliers] : ['']);
+    setEditCustomers(report.customers && report.customers.length > 0 ? [...report.customers] : ['']);
+    setEditChannels(report.channels && report.channels.length > 0 ? [...report.channels] : ['']);
+    setEditSisters(report.sisters && report.sisters.length > 0 ? [...report.sisters] : ['']);
+    setEditProducts(report.products && report.products.length > 0 ? [...report.products] : ['']);
+  };
+
+  // 保存关系实体编辑并重算图谱连线
+  const handleSaveEntities = async () => {
+    if (!editingEntitiesReport) return;
+    setSavingEntities(true);
+    try {
+      const res = await fetch('/api/admin/reports/update-entities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reportId: editingEntitiesReport.id,
+          primaryCompany: editPrimaryCompany,
+          competitors: editCompetitors.filter(Boolean),
+          suppliers: editSuppliers.filter(Boolean),
+          customers: editCustomers.filter(Boolean),
+          channels: editChannels.filter(Boolean),
+          sisters: editSisters.filter(Boolean),
+          products: editProducts.filter(Boolean)
+        })
+      });
+      if (res.ok) {
+        alert('🎉 关系实体及图谱连线重新计算并更新成功！');
+        setEditingEntitiesReport(null);
+        fetchData();
+      } else {
+        const data = await res.json();
+        alert(data.error || '保存失败');
+      }
+    } catch (err) {
+      alert('保存实体失败');
+    } finally {
+      setSavingEntities(false);
     }
   };
 
@@ -515,6 +591,7 @@ export default function AdminReportsManagement() {
                     <th>报告类别</th>
                     <th>关联行业</th>
                     <th>覆盖国家</th>
+                    <th>🔗 图谱连线</th>
                     <th>上传日期</th>
                     <th style={{ textAlign: 'right' }}>操作</th>
                   </tr>
@@ -522,58 +599,219 @@ export default function AdminReportsManagement() {
                 <tbody>
                   {reports.map(rep => {
                     const dateStr = new Date(rep.created_at).toLocaleDateString('zh-CN');
+                    const isExpanded = expandedReportId === rep.id;
+                    const hasEntities = rep.primary_company || 
+                      (rep.competitors && rep.competitors.length > 0) ||
+                      (rep.suppliers && rep.suppliers.length > 0) ||
+                      (rep.customers && rep.customers.length > 0) ||
+                      (rep.channels && rep.channels.length > 0) ||
+                      (rep.sisters && rep.sisters.length > 0) ||
+                      (rep.products && rep.products.length > 0);
+
                     return (
-                      <tr key={rep.id}>
-                        <td style={{ fontWeight: '500' }}>
-                          <a href={`/reports/${rep.id}`} target="_blank" rel="noreferrer" style={{ color: 'var(--admin-text)', textDecoration: 'none' }}>
-                            {rep.title}
-                          </a>
-                        </td>
-                        <td>
-                          <span className={`admin-badge ${rep.category === 'customer' ? 'admin-badge-success' : 'admin-badge-info'}`}>
-                            {rep.category === 'customer' ? '客户研报' : '品类分析'}
-                          </span>
-                        </td>
-                        <td>
-                          {rep.industries ? (
-                            rep.industries.split(', ').map((ind, i) => (
-                              <span key={i} className="admin-badge admin-badge-info" style={{ marginRight: '4px', marginBottom: '4px' }}>
-                                {ind}
-                              </span>
-                            ))
-                          ) : (
-                            <span style={{ color: 'var(--admin-text-secondary)' }}>未打行业标签</span>
-                          )}
-                        </td>
-                        <td>
-                          {rep.countries ? (
-                            rep.countries.split(', ').map((cty, i) => (
-                              <span key={i} className="admin-badge admin-badge-warning" style={{ marginRight: '4px', marginBottom: '4px' }}>
-                                {cty}
-                              </span>
-                            ))
-                          ) : (
-                            <span style={{ color: 'var(--admin-text-secondary)' }}>未关联国家</span>
-                          )}
-                        </td>
-                        <td>{dateStr}</td>
-                        <td style={{ textAlign: 'right' }}>
-                          <button 
-                            className="admin-btn admin-btn-secondary" 
-                            style={{ padding: '4px 10px', fontSize: '0.75rem', marginRight: '6px' }}
-                            onClick={() => openEditTagsModal(rep)}
-                          >
-                            🏷️ 编辑标签
-                          </button>
-                          <button 
-                            className="admin-btn admin-btn-danger" 
-                            style={{ padding: '4px 10px', fontSize: '0.75rem' }}
-                            onClick={() => handleDeleteReport(rep.id)}
-                          >
-                            🗑️ 删除
-                          </button>
-                        </td>
-                      </tr>
+                      <React.Fragment key={rep.id}>
+                        <tr>
+                          <td style={{ fontWeight: '500' }}>
+                            <a href={`/reports/${rep.id}`} target="_blank" rel="noreferrer" style={{ color: 'var(--admin-text)', textDecoration: 'none' }}>
+                              {rep.title}
+                            </a>
+                          </td>
+                          <td>
+                            <span className={`admin-badge ${rep.category === 'customer' ? 'admin-badge-success' : 'admin-badge-info'}`}>
+                              {rep.category === 'customer' ? '客户研报' : '品类分析'}
+                            </span>
+                          </td>
+                          <td>
+                            {rep.industries ? (
+                              rep.industries.split(', ').map((ind, i) => (
+                                <span key={i} className="admin-badge admin-badge-info" style={{ marginRight: '4px', marginBottom: '4px' }}>
+                                  {ind}
+                                </span>
+                              ))
+                            ) : (
+                              <span style={{ color: 'var(--admin-text-secondary)' }}>未打行业标签</span>
+                            )}
+                          </td>
+                          <td>
+                            {rep.countries ? (
+                              rep.countries.split(', ').map((cty, i) => (
+                                <span key={i} className="admin-badge admin-badge-warning" style={{ marginRight: '4px', marginBottom: '4px' }}>
+                                  {cty}
+                                </span>
+                              ))
+                            ) : (
+                              <span style={{ color: 'var(--admin-text-secondary)' }}>未关联国家</span>
+                            )}
+                          </td>
+                          <td>
+                            <span className="admin-badge admin-badge-edge" title="在个人图谱中产生的关联边条数">
+                              🔗 {rep.edge_count || 0} 条连线
+                            </span>
+                          </td>
+                          <td>{dateStr}</td>
+                          <td style={{ textAlign: 'right' }}>
+                            <button
+                              className="admin-btn admin-btn-secondary"
+                              style={{ padding: '4px 10px', fontSize: '0.75rem', marginRight: '6px' }}
+                              onClick={() => setExpandedReportId(isExpanded ? null : rep.id)}
+                            >
+                              {isExpanded ? '▲ 收起' : '🔍 关系关键词'}
+                            </button>
+                            <button 
+                              className="admin-btn admin-btn-secondary" 
+                              style={{ padding: '4px 10px', fontSize: '0.75rem', marginRight: '6px' }}
+                              onClick={() => openEditTagsModal(rep)}
+                            >
+                              🏷️ 标签
+                            </button>
+                            <button 
+                              className="admin-btn admin-btn-danger" 
+                              style={{ padding: '4px 10px', fontSize: '0.75rem' }}
+                              onClick={() => handleDeleteReport(rep.id)}
+                            >
+                              🗑️ 删除
+                            </button>
+                          </td>
+                        </tr>
+
+                        {/* 展开的关系实体面板 */}
+                        {isExpanded && (
+                          <tr className="report-entity-row">
+                            <td colSpan={7} style={{ padding: 0 }}>
+                              <div className="report-entity-panel">
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <div style={{ fontWeight: 600, color: '#ffffff', fontSize: '0.85rem' }}>
+                                    🕸️ 关系关键词明细（图谱线条自动推导源）
+                                  </div>
+                                  <button
+                                    className="admin-btn admin-btn-secondary"
+                                    style={{ padding: '3px 8px', fontSize: '0.75rem' }}
+                                    onClick={() => openEditEntitiesModal(rep)}
+                                  >
+                                    ✏️ 编辑关系实体
+                                  </button>
+                                </div>
+
+                                {hasEntities ? (
+                                  <div className="report-entity-grid">
+                                    {/* 🏢 主体公司 */}
+                                    <div className="entity-group-item">
+                                      <span className="entity-group-label">🏢 主体公司</span>
+                                      <div className="entity-group-tags">
+                                        {rep.primary_company ? (
+                                          <span className="admin-badge admin-badge-primary">{rep.primary_company}</span>
+                                        ) : (
+                                          <span style={{ color: 'var(--admin-text-secondary)' }}>-</span>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* ⚔️ 竞争对手 */}
+                                    <div className="entity-group-item">
+                                      <span className="entity-group-label">⚔️ 竞争对手</span>
+                                      <div className="entity-group-tags">
+                                        {rep.competitors && rep.competitors.length > 0 ? (
+                                          rep.competitors.map((c, i) => (
+                                            <span key={i} className="admin-badge admin-badge-danger">{c}</span>
+                                          ))
+                                        ) : (
+                                          <span style={{ color: 'var(--admin-text-secondary)' }}>未提取到</span>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* 🏭 供应商 */}
+                                    <div className="entity-group-item">
+                                      <span className="entity-group-label">🏭 供应商</span>
+                                      <div className="entity-group-tags">
+                                        {rep.suppliers && rep.suppliers.length > 0 ? (
+                                          rep.suppliers.map((s, i) => (
+                                            <span key={i} className="admin-badge admin-badge-purple">{s}</span>
+                                          ))
+                                        ) : (
+                                          <span style={{ color: 'var(--admin-text-secondary)' }}>未提取到</span>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* 👤 核心客户 */}
+                                    <div className="entity-group-item">
+                                      <span className="entity-group-label">👤 核心客户</span>
+                                      <div className="entity-group-tags">
+                                        {rep.customers && rep.customers.length > 0 ? (
+                                          rep.customers.map((c, i) => (
+                                            <span key={i} className="admin-badge admin-badge-success">{c}</span>
+                                          ))
+                                        ) : (
+                                          <span style={{ color: 'var(--admin-text-secondary)' }}>未提取到</span>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* 🛒 销售渠道 */}
+                                    <div className="entity-group-item">
+                                      <span className="entity-group-label">🛒 销售渠道</span>
+                                      <div className="entity-group-tags">
+                                        {rep.channels && rep.channels.length > 0 ? (
+                                          rep.channels.map((ch, i) => (
+                                            <span key={i} className="admin-badge admin-badge-warning">{ch}</span>
+                                          ))
+                                        ) : (
+                                          <span style={{ color: 'var(--admin-text-secondary)' }}>未提取到</span>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* 🤝 姐妹公司 */}
+                                    <div className="entity-group-item">
+                                      <span className="entity-group-label">🤝 姐妹公司</span>
+                                      <div className="entity-group-tags">
+                                        {rep.sisters && rep.sisters.length > 0 ? (
+                                          rep.sisters.map((sis, i) => (
+                                            <span key={i} className="admin-badge admin-badge-secondary">{sis}</span>
+                                          ))
+                                        ) : (
+                                          <span style={{ color: 'var(--admin-text-secondary)' }}>未提取到</span>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* 📦 关联产品 */}
+                                    <div className="entity-group-item">
+                                      <span className="entity-group-label">📦 关联产品</span>
+                                      <div className="entity-group-tags">
+                                        {rep.products && rep.products.length > 0 ? (
+                                          rep.products.map((p, i) => (
+                                            <span key={i} className="admin-badge admin-badge-info">{p}</span>
+                                          ))
+                                        ) : (
+                                          <span style={{ color: 'var(--admin-text-secondary)' }}>未提取到</span>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* 🌍 覆盖区域 */}
+                                    <div className="entity-group-item">
+                                      <span className="entity-group-label">🌍 覆盖区域</span>
+                                      <div className="entity-group-tags">
+                                        <span className="admin-badge admin-badge-warning">{rep.market_region}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div style={{ color: 'var(--admin-text-secondary)', padding: '8px 0' }}>
+                                    暂无提取到的关系关键词。点击右上角“编辑关系实体”手动添加。
+                                  </div>
+                                )}
+
+                                <div style={{ fontSize: '0.75rem', color: 'var(--admin-text-secondary)', background: 'rgba(0,0,0,0.2)', padding: '6px 10px', borderRadius: '4px' }}>
+                                  💡 图谱关联提示：个人图谱将根据以上关键词在各报告间自动计算物理连线。线条规则为【同业竞争】(红色)、【供销渠道】(紫色)、【经营产品】(青色)及【关联公司】(灰色)。当前报告包含 <strong>{rep.edge_count || 0}</strong> 条关联连线。
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
@@ -798,6 +1036,79 @@ export default function AdminReportsManagement() {
                   onClick={handleSaveTags}
                 >
                   保存修改
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 编辑关系实体模态框 */}
+        {editingEntitiesReport && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(5px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}>
+            <div className="admin-card" style={{ width: '720px', border: '1px solid var(--admin-accent)', maxHeight: '90vh', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <h3 className="admin-card-title" style={{ margin: 0 }}>🕸️ 编辑关系实体关键词</h3>
+                <button 
+                  style={{ background: 'none', border: 'none', color: 'var(--admin-text-secondary)', cursor: 'pointer', fontSize: '1.2rem' }}
+                  onClick={() => setEditingEntitiesReport(null)}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <p style={{ fontSize: '0.85rem', color: 'var(--admin-text-secondary)', marginBottom: '16px' }}>
+                编辑报告: <strong>{editingEntitiesReport.title}</strong>
+              </p>
+
+              <div style={{ fontSize: '0.78rem', color: 'var(--admin-accent-light)', background: 'rgba(124, 111, 255, 0.1)', padding: '8px 12px', borderRadius: '6px', marginBottom: '16px' }}>
+                💡 修改关系关键词保存后，系统会自动更新该报告的实体索引并<strong>重新计算图谱物理连线</strong>。
+              </div>
+
+              <div className="admin-form-group">
+                <label className="admin-label">🏢 主体公司名称</label>
+                <input
+                  type="text"
+                  value={editPrimaryCompany}
+                  onChange={(e) => setEditPrimaryCompany(e.target.value)}
+                  placeholder="例如: 飞利浦 / Signify"
+                  className="admin-input"
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+                {renderTagListInput('⚔️ 竞争对手', editCompetitors, setEditCompetitors, '例如: 欧司朗')}
+                {renderTagListInput('📦 关联产品类别', editProducts, setEditProducts, '例如: LED 灯泡')}
+                {renderTagListInput('🛒 销售渠道 / 超市', editChannels, setEditChannels, '例如: 家得宝 / Home Depot')}
+                {renderTagListInput('🏭 关键供应商', editSuppliers, setEditSuppliers, '例如: 晶元光电')}
+                {renderTagListInput('👤 核心客户群', editCustomers, setEditCustomers, '例如: 建筑商客户')}
+                {renderTagListInput('🤝 姐妹 / 关联公司', editSisters, setEditSisters, '例如: 昕诺飞')}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button 
+                  className="admin-btn admin-btn-secondary"
+                  onClick={() => setEditingEntitiesReport(null)}
+                >
+                  取消
+                </button>
+                <button 
+                  className="admin-btn"
+                  onClick={handleSaveEntities}
+                  disabled={savingEntities}
+                >
+                  {savingEntities ? '正在保存并重算连线...' : '💾 保存修改并重算图谱'}
                 </button>
               </div>
             </div>

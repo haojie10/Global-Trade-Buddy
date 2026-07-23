@@ -303,6 +303,80 @@
   color: var(--admin-info);
 }
 
+.admin-badge-primary {
+  background-color: rgba(124, 111, 255, 0.2);
+  color: #a78bfa;
+  border: 1px solid rgba(124, 111, 255, 0.3);
+}
+
+.admin-badge-purple {
+  background-color: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+}
+
+.admin-badge-secondary {
+  background-color: rgba(156, 163, 175, 0.15);
+  color: #d1d5db;
+}
+
+.admin-badge-danger {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+}
+
+.admin-badge-edge {
+  background-color: rgba(124, 111, 255, 0.15);
+  color: var(--admin-accent-light);
+  border-radius: 12px;
+  padding: 2px 10px;
+  font-weight: 600;
+}
+
+/* 报告详情折叠面板 */
+.report-entity-row {
+  background-color: rgba(18, 18, 42, 0.7);
+}
+
+.report-entity-panel {
+  padding: 16px 20px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 0.82rem;
+}
+
+.report-entity-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.entity-group-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.entity-group-label {
+  font-weight: 600;
+  color: var(--admin-text-secondary);
+  white-space: nowrap;
+  font-size: 0.78rem;
+  min-width: 75px;
+}
+
+.entity-group-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
 /* 表单输入与按钮 */
 .admin-form-group {
   margin-bottom: 16px;
