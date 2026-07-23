@@ -297,9 +297,9 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
 
     const isRetailerA = RETAILER_ENTITIES.has(primaryEntNameA);
     const isRetailerB = RETAILER_ENTITIES.has(bPrimaryName);
-    const isRetailerInvolved = isRetailerA || isRetailerB;
+    const isCrossRetailerBrand = (isRetailerA !== isRetailerB);
 
-    if ((aHasBAsComp || bHasAAsComp) && !isRetailerInvolved) {
+    if ((aHasBAsComp || bHasAAsComp) && !isCrossRetailerBrand) {
       finalRelType = 'competitor';
       finalRelKey = aHasBAsComp 
         ? (otherRep.b_primary_name || '同业竞争') 
