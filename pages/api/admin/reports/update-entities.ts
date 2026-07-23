@@ -176,7 +176,9 @@ async function updateEntitiesHandler(req: NextApiRequest, res: NextApiResponse, 
       }
 
       // 优先级 2: 供销关系 (supplier)
-      if (!finalRelType) {
+      const isBothCompanyRep = (category === 'customer' && bCategory === 'customer');
+
+      if (!finalRelType && isBothCompanyRep) {
         const aHasBAsSupplier = bPrimaryId && currentEntMap.has(bPrimaryId) && currentEntMap.get(bPrimaryId)!.role === 'supplier';
         const bHasAAsCustomerOrChannel = primaryEntityId && entMapB.has(primaryEntityId) &&
           ['customer', 'channel'].includes(entMapB.get(primaryEntityId)!.role);
@@ -205,18 +207,24 @@ async function updateEntitiesHandler(req: NextApiRequest, res: NextApiResponse, 
         const isOneProductOneCompany = (category === 'product' && bCategory === 'customer') ||
                                        (category === 'customer' && bCategory === 'product');
         if (isOneProductOneCompany) {
-          for (const [entIdA, dataA] of currentEntMap.entries()) {
-            if (dataA.role === 'product' && entMapB.has(entIdA)) {
-              finalRelType = 'operation';
-              finalRelKey = dataA.canonical_name;
-              if (category === 'customer') {
-                sourceReportId = reportId;
-                targetReportId = bReportId;
-              } else {
-                sourceReportId = bReportId;
-                targetReportId = reportId;
-              }
+          const prodTitle = category === 'product' ? title : otherRep.b_title;
+          let hasProductOverlap = false;
+          for (const [entIdA] of currentEntMap.entries()) {
+            if (entMapB.has(entIdA)) {
+              hasProductOverlap = true;
               break;
+            }
+          }
+          if (hasProductOverlap) {
+            const { getStandardCategory } = require('../../../../lib/category-mapper');
+            finalRelType = 'operation';
+            finalRelKey = getStandardCategory(prodTitle) || '品类经营';
+            if (category === 'customer') {
+              sourceReportId = reportId;
+              targetReportId = bReportId;
+            } else {
+              sourceReportId = bReportId;
+              targetReportId = reportId;
             }
           }
         }

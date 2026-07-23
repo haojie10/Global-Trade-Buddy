@@ -364,8 +364,11 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
       }
 
       // ---- 优先级 2: 供销关系 (Supplier) ----
-      // 规则：必须 从 供货方(供应商)  ===>  流向  采购方(客户/渠道)
-      if (!finalRelType) {
+      // 规则 1：必须 从 供货方(供应商)  ===>  流向  采购方(客户/渠道)
+      // 规则 2：仅限【公司报告】与【公司报告】之间！品类报告绝不能作为供销连线实体。
+      const isBothCompanyRep = (finalCategory === 'customer' && bCategory === 'customer');
+
+      if (!finalRelType && isBothCompanyRep) {
         const aHasBAsSupplier = bPrimaryId && currentEntMap.has(bPrimaryId) && currentEntMap.get(bPrimaryId)!.role === 'supplier';
         const bHasAAsCustomerOrChannel = primaryEntityId && entMapB.has(primaryEntityId) && 
           ['customer', 'channel'].includes(entMapB.get(primaryEntityId)!.role);
@@ -396,18 +399,24 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
         const isOneProductOneCompany = (finalCategory === 'product' && bCategory === 'customer') || 
                                        (finalCategory === 'customer' && bCategory === 'product');
         if (isOneProductOneCompany) {
-          for (const [entIdA, dataA] of currentEntMap.entries()) {
-            if (dataA.role === 'product' && entMapB.has(entIdA)) {
-              finalRelType = 'operation';
-              finalRelKey = dataA.canonical_name;
-              if (finalCategory === 'customer') {
-                sourceReportId = newReportId;
-                targetReportId = bReportId;
-              } else {
-                sourceReportId = bReportId;
-                targetReportId = newReportId;
-              }
+          const prodTitle = finalCategory === 'product' ? cleanTitle : otherRep.b_title;
+          let hasProductOverlap = false;
+          for (const [entIdA] of currentEntMap.entries()) {
+            if (entMapB.has(entIdA)) {
+              hasProductOverlap = true;
               break;
+            }
+          }
+          if (hasProductOverlap) {
+            const { getStandardCategory } = require('../../lib/category-mapper');
+            finalRelType = 'operation';
+            finalRelKey = getStandardCategory(prodTitle) || '品类经营';
+            if (finalCategory === 'customer') {
+              sourceReportId = newReportId;
+              targetReportId = bReportId;
+            } else {
+              sourceReportId = bReportId;
+              targetReportId = newReportId;
             }
           }
         }
