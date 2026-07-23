@@ -140,7 +140,11 @@ async function updateEntitiesHandler(req: NextApiRequest, res: NextApiResponse, 
       const bReportId = otherRep.b_report_id;
       const bCategory = otherRep.b_category;
       const bPrimaryId = otherRep.b_primary_id;
-      const bPrimaryName = otherRep.b_primary_name ? otherRep.b_primary_name.toLowerCase().trim() : '      let sourceReportId = reportId;
+      const bPrimaryName = otherRep.b_primary_name ? otherRep.b_primary_name.toLowerCase().trim() : '';
+      const entMapB = otherRepEntMap.get(bReportId) || new Map();
+      let finalRelType: string | null = null;
+      let finalRelKey: string = '';
+      let sourceReportId = reportId;
       let targetReportId = bReportId;
 
       // 优先级 1: 竞争关系 (competitor)
@@ -241,7 +245,7 @@ async function updateEntitiesHandler(req: NextApiRequest, res: NextApiResponse, 
           `INSERT INTO relations (report_id_a, report_id_b, relation_key, market_region, relation_type)
            VALUES ($1, $2, $3, $4, $5)
            ON CONFLICT (report_id_a, report_id_b, relation_key) DO UPDATE SET relation_type = EXCLUDED.relation_type`,
-          [sourceReportId, targetReportId, finalRelKey, market_region, finalRelType]
+           [sourceReportId, targetReportId, finalRelKey, marketRegion, finalRelType]
         );
       }
     }
