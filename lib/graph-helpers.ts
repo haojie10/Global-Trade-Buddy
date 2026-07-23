@@ -24,6 +24,24 @@ export interface GraphLink {
   relation_type?: string;
 }
 
+// 辅助函数：判断节点在后台关联行业/品类中是否包含指定的 selectedProduct
+const isNodeMatchingProduct = (node: GraphNode, prod: string): boolean => {
+  if (prod === 'All') return true;
+
+  // 1) 检查 node.products 数组中是否有完全相等或归一化匹配的品类
+  const hasInProducts = node.products?.some(p => p === prod || getStandardCategory(p) === prod);
+  if (hasInProducts) return true;
+
+  // 2) 检查标题/品类属性中是否包含该品类关键字或归一化匹配
+  if (node.title) {
+    if (node.title.includes(prod) || getStandardCategory(node.title) === prod) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
 export function filterGraphData(
   nodes: GraphNode[],
   links: GraphLink[],
@@ -46,7 +64,7 @@ export function filterGraphData(
     }
   }
 
-  // 2. 过滤 nodes
+  // 2. 过滤 nodes：提取后台关联行业中包含当前选定品类的报告节点
   const filteredNodes = nodes.filter(node => {
     // 国家/市场过滤
     if (selectedMarket !== 'All') {
@@ -55,14 +73,14 @@ export function filterGraphData(
         return false;
       }
     }
-    // 产品品类过滤（通过标签归一化与标题语义增强匹配）
+
+    // 产品品类过滤
     if (selectedProduct !== 'All') {
-      const hasProduct = node.products?.some(p => p === selectedProduct || getStandardCategory(p) === selectedProduct);
-      const titleMatches = node.title && (node.title.includes(selectedProduct) || getStandardCategory(node.title) === selectedProduct);
-      if (!hasProduct && !titleMatches) {
+      if (!isNodeMatchingProduct(node, selectedProduct)) {
         return false;
       }
     }
+
     // 聚焦过滤
     if (focusNodeId && !adjIds.has(node.id)) {
       return false;
@@ -72,35 +90,17 @@ export function filterGraphData(
 
   const filteredNodeIds = new Set(filteredNodes.map(n => n.id));
 
-  // 3. 过滤 links（建立真正的品类主题子图）
+  // 3. 过滤 links：只要两端报告节点在后台关联行业中均包含当前选定品类，其所有关系线条（供销、竞争、经营、提及）均全部成立！
   const filteredLinks = links.filter(link => {
     const srcId = typeof link.source === 'object' ? link.source.id : link.source;
     const tgtId = typeof link.target === 'object' ? link.target.id : link.target;
 
-    // 两端节点必须都属于过滤后的品类赛道节点
+    // 两端节点必须都属于当前筛选切面品类
     if (!filteredNodeIds.has(srcId) || !filteredNodeIds.has(tgtId)) {
       return false;
     }
 
-    // 产品品类主题过滤
-    if (selectedProduct !== 'All') {
-      const relType = link.relation_type || '';
-
-      // 供销关系 (supplier) 与 竞争关系 (competitor)：
-      // 只要两端报告/公司节点都在当前品类圈子内，其供销关系与同行竞争关系均完整保留呈呈！
-      if (['supplier', 'competitor'].includes(relType)) {
-        return true;
-      }
-
-      // 经营关系 (operation) 与 提及关系 (mention)：
-      // 要求 relation_key 精确或模糊匹配 selectedProduct（例如关系主题为“照明产品”或“投光灯”）
-      const keyCat = getStandardCategory(link.relation_key);
-      const keyMatches = link.relation_key === selectedProduct || keyCat === selectedProduct || link.relation_key.includes(selectedProduct);
-      if (!keyMatches) {
-        return false;
-      }
-    }
-
+    // 只要两端报告都在当前品类切面圈子中，所有的连线关系统统成立！
     return true;
   });
 
