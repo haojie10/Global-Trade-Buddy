@@ -25,7 +25,8 @@ async function updateEntitiesHandler(req: NextApiRequest, res: NextApiResponse, 
     customers = [],
     channels = [],
     sisters = [],
-    products = []
+    products = [],
+    marketRegion: inputMarketRegion
   } = req.body;
 
   if (!reportId) {
@@ -47,7 +48,9 @@ async function updateEntitiesHandler(req: NextApiRequest, res: NextApiResponse, 
     const contentHtml = report.content_html || '';
     const title = report.title || '';
     const category = report.category || 'customer';
-    const marketRegion = report.market_region || '全球';
+    const marketRegion = (inputMarketRegion && typeof inputMarketRegion === 'string' && inputMarketRegion.trim())
+      ? inputMarketRegion.trim()
+      : (report.market_region || '全球');
 
     // 2. 组装 companies 数组（第一个为主名称，其余为别称）
     let companyList: string[] = [];
@@ -91,12 +94,12 @@ async function updateEntitiesHandler(req: NextApiRequest, res: NextApiResponse, 
       );
     }
 
-    // 5. 更新 reports 主体公司关联
+    // 5. 更新 reports 主体公司关联与覆盖区域
     const primaryEnt = resolvedEntities.find(e => e.role === 'primary');
     const primaryEntityId = primaryEnt ? primaryEnt.id : null;
     await dbClient.query(
-      'UPDATE reports SET primary_entity_id = $1 WHERE id = $2',
-      [primaryEntityId, reportId]
+      'UPDATE reports SET primary_entity_id = $1, market_region = $2 WHERE id = $3',
+      [primaryEntityId, marketRegion, reportId]
     );
 
     // 6. 重算该报告相关的 relations 图谱连线

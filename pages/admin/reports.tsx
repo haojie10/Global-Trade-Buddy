@@ -36,11 +36,18 @@ export default function AdminReportsManagement() {
   const [countries, setCountries] = useState<TagOption[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // 分页状态
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const [totalReports, setTotalReports] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
   // 展开的关系实体面板 ID
   const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
 
   // 编辑关系实体模态框状态
   const [editingEntitiesReport, setEditingEntitiesReport] = useState<ReportListItem | null>(null);
+  const [editMarketRegion, setEditMarketRegion] = useState('全球');
   const [editCompanies, setEditCompanies] = useState<string[]>(['']);
   const [editCompetitors, setEditCompetitors] = useState<string[]>(['']);
   const [editSuppliers, setEditSuppliers] = useState<string[]>(['']);
@@ -93,14 +100,14 @@ export default function AdminReportsManagement() {
 
   // 初始化加载
   useEffect(() => {
-    fetchData();
+    fetchData(1);
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = async (targetPage = currentPage) => {
     setLoading(true);
     try {
-      // 1. 获取报告列表 (包含标签与实体)
-      const repRes = await fetch('/api/admin/stats/content');
+      // 1. 获取报告列表 (包含标签与实体及分页)
+      const repRes = await fetch(`/api/admin/stats/content?page=${targetPage}&pageSize=${pageSize}`);
       if (repRes.ok) {
         const repData = await repRes.json();
         // 对齐数据格式
@@ -127,6 +134,12 @@ export default function AdminReportsManagement() {
           };
         });
         setReports(list);
+
+        if (repData.reportsPagination) {
+          setCurrentPage(repData.reportsPagination.page);
+          setTotalReports(repData.reportsPagination.total);
+          setTotalPages(Math.ceil(repData.reportsPagination.total / repData.reportsPagination.pageSize) || 1);
+        }
       }
 
       // 2. 获取标签选项
@@ -235,6 +248,7 @@ export default function AdminReportsManagement() {
   // 打开编辑关系实体模态框
   const openEditEntitiesModal = (report: ReportListItem) => {
     setEditingEntitiesReport(report);
+    setEditMarketRegion(report.market_region || '全球');
     const compList = [report.primary_company, ...(report.company_aliases || [])].filter(Boolean) as string[];
     setEditCompanies(compList.length > 0 ? compList : ['']);
     setEditCompetitors(report.competitors && report.competitors.length > 0 ? [...report.competitors] : ['']);
@@ -255,6 +269,7 @@ export default function AdminReportsManagement() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           reportId: editingEntitiesReport.id,
+          marketRegion: editMarketRegion,
           companies: editCompanies.filter(Boolean),
           competitors: editCompetitors.filter(Boolean),
           suppliers: editSuppliers.filter(Boolean),
@@ -827,6 +842,56 @@ export default function AdminReportsManagement() {
                 </tbody>
               </table>
             </div>
+
+            {/* 分页组件 */}
+            {totalPages > 1 && (
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginTop: '16px',
+                paddingTop: '16px',
+                borderTop: '1px solid var(--admin-border)',
+                fontSize: '0.85rem',
+                color: 'var(--admin-text-secondary)'
+              }}>
+                <div>
+                  显示第 <strong>{(currentPage - 1) * pageSize + 1}</strong> 到 <strong>{Math.min(currentPage * pageSize, totalReports)}</strong> 条，共 <strong>{totalReports}</strong> 篇报告
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    type="button"
+                    className="admin-btn admin-btn-secondary"
+                    style={{ padding: '4px 12px', fontSize: '0.8rem' }}
+                    disabled={currentPage <= 1 || loading}
+                    onClick={() => {
+                      const newP = currentPage - 1;
+                      fetchData(newP);
+                    }}
+                  >
+                    ◀ 上一页
+                  </button>
+
+                  <div style={{ padding: '0 8px', fontWeight: 600, color: '#ffffff' }}>
+                    {currentPage} / {totalPages} 页
+                  </div>
+
+                  <button
+                    type="button"
+                    className="admin-btn admin-btn-secondary"
+                    style={{ padding: '4px 12px', fontSize: '0.8rem' }}
+                    disabled={currentPage >= totalPages || loading}
+                    onClick={() => {
+                      const newP = currentPage + 1;
+                      fetchData(newP);
+                    }}
+                  >
+                    下一页 ▶
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           /* 上传新报告 */
@@ -1082,8 +1147,38 @@ export default function AdminReportsManagement() {
                 编辑报告: <strong>{editingEntitiesReport.title}</strong>
               </p>
 
-              <div style={{ fontSize: '0.78rem', color: 'var(--admin-accent-light)', background: 'rgba(124, 111, 255, 0.1)', padding: '8px 12px', borderRadius: '6px', marginBottom: '16px' }}>
-                💡 修改关系关键词保存后，系统会自动更新该报告的实体索引并<strong>重新计算图谱物理连线</strong>。
+              <div className="admin-form-group" style={{ marginBottom: '16px', background: 'rgba(255,255,255,0.01)', padding: '12px', border: '1px solid var(--admin-border)', borderRadius: '6px' }}>
+                <label className="admin-label" style={{ fontWeight: 600, color: 'var(--admin-accent-light)' }}>
+                  🌍 覆盖区域 / 目标市场 (Market Region)
+                </label>
+                <input
+                  type="text"
+                  value={editMarketRegion}
+                  onChange={(e) => setEditMarketRegion(e.target.value)}
+                  placeholder="例如: 全球, 北美洲, 欧洲, 东南亚"
+                  className="admin-input"
+                  style={{ marginBottom: '8px' }}
+                />
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  {['全球', '北美洲', '欧洲', '亚洲', '东南亚', '中东', '南美洲', '大洋洲', '非洲'].map(region => (
+                    <button
+                      key={region}
+                      type="button"
+                      onClick={() => setEditMarketRegion(region)}
+                      style={{
+                        padding: '2px 8px',
+                        fontSize: '0.75rem',
+                        borderRadius: '4px',
+                        border: '1px solid var(--admin-border)',
+                        background: editMarketRegion === region ? 'var(--admin-accent)' : 'rgba(255,255,255,0.04)',
+                        color: editMarketRegion === region ? '#fff' : 'var(--admin-text-secondary)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {region}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
