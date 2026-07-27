@@ -657,6 +657,12 @@ export default function AdminReportsManagement() {
                                   {cty}
                                 </span>
                               ))
+                            ) : rep.market_region ? (
+                              rep.market_region.split(', ').map((reg, i) => (
+                                <span key={i} className="admin-badge admin-badge-warning" style={{ marginRight: '4px', marginBottom: '4px' }}>
+                                  {reg}
+                                </span>
+                              ))
                             ) : (
                               <span style={{ color: 'var(--admin-text-secondary)' }}>未关联国家</span>
                             )}

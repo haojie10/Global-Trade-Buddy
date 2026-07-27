@@ -102,6 +102,31 @@ async function updateEntitiesHandler(req: NextApiRequest, res: NextApiResponse, 
       [primaryEntityId, marketRegion, reportId]
     );
 
+    // 5.1 根据 marketRegion 智能识别并自动关联 report_countries 国家标签
+    if (marketRegion) {
+      const allCountriesRes = await dbClient.query('SELECT id, name, region FROM countries');
+      const searchLower = marketRegion.toLowerCase();
+      const matchedCtyIds = new Set<string>();
+
+      for (const cty of allCountriesRes.rows) {
+        const cName = cty.name.toLowerCase();
+        const cRegion = cty.region.toLowerCase();
+        if (searchLower.includes(cName) || searchLower.includes(cRegion)) {
+          matchedCtyIds.add(cty.id);
+        }
+      }
+
+      if (matchedCtyIds.size > 0) {
+        await dbClient.query('DELETE FROM report_countries WHERE report_id = $1', [reportId]);
+        for (const ctyId of Array.from(matchedCtyIds)) {
+          await dbClient.query(
+            'INSERT INTO report_countries (report_id, country_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+            [reportId, ctyId]
+          );
+        }
+      }
+    }
+
     // 6. 重算该报告相关的 relations 图谱连线
     await dbClient.query('DELETE FROM relations WHERE report_id_a = $1 OR report_id_b = $1', [reportId]);
 
