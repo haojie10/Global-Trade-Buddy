@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.env
+.env.local
+.env.*.local
+.vercel
+docs
+scratch
+tests
+UI
+*.md
+docker-compose.yml
+Dockerfile*
+npm-debug.log*

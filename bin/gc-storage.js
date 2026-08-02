@@ -9,19 +9,23 @@
  *   1. Mark 阶段：全量扫描数据库中所有包含图片引用的字段
  *      (reports.content_html / news.content / articles.content_html)
  *      汇总出所有"被引用"的文件名集合 referencedSet
- *   2. Sweep 阶段：分页列举 Supabase Storage report-images 桶中的所有文件
+ *   2. Sweep 阶段：列举存储桶中的所有文件（CloudBase 或 Supabase）
  *      找出不在 referencedSet 中的孤儿文件
  *   3. Delete 阶段：批量删除孤儿文件（--dry-run 时仅打印不删除）
+ *
+ * 存储提供方自动识别：
+ *   - 配置了 TCB_ENV_ID + TCB_SECRET_ID + TCB_SECRET_KEY → CloudBase 云存储
+ *   - 否则配置了 NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY → Supabase Storage
  */
 
-const { createClient } = require('@supabase/supabase-js');
 const { Pool } = require('pg');
 require('dotenv').config();
 
 const isDryRun = process.argv.includes('--dry-run');
 
 // ============================================================
-// 从 HTML 字符串中提取所有 report-images bucket 的文件名
+// 从 HTML 字符串中提取所有 report-images 的文件名
+// CloudBase 与 Supabase 的图片 URL 均包含 report-images/ 路径段，正则通用
 // ============================================================
 function extractStorageFileNames(html) {
   if (!html) return [];
@@ -34,13 +38,125 @@ function extractStorageFileNames(html) {
   return files;
 }
 
+function resolveProvider() {
+  if (process.env.TCB_ENV_ID && process.env.TCB_SECRET_ID && process.env.TCB_SECRET_KEY) {
+    return 'cloudbase';
+  }
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return 'supabase';
+  }
+  return null;
+}
+
+// ============================================================
+// CloudBase 存储操作（通过 manager-node SDK）
+// ============================================================
+async function cloudbaseListAllFiles() {
+  const CloudBase = require('@cloudbase/manager-node');
+  const { storage } = new CloudBase({
+    secretId: process.env.TCB_SECRET_ID,
+    secretKey: process.env.TCB_SECRET_KEY,
+    envId: process.env.TCB_ENV_ID,
+  });
+  const items = await storage.listDirectoryFiles('report-images');
+  const names = [];
+  for (const item of items || []) {
+    const key = item.Key || item.key || item.cloudPath || item.name;
+    if (key && key.startsWith('report-images/')) {
+      names.push(key.slice('report-images/'.length));
+    }
+  }
+  return names;
+}
+
+async function cloudbaseDeleteFiles(fileNames) {
+  const CloudBase = require('@cloudbase/manager-node');
+  const { storage } = new CloudBase({
+    secretId: process.env.TCB_SECRET_ID,
+    secretKey: process.env.TCB_SECRET_KEY,
+    envId: process.env.TCB_ENV_ID,
+  });
+  const BATCH_SIZE = 100;
+  let deletedCount = 0;
+  for (let i = 0; i < fileNames.length; i += BATCH_SIZE) {
+    const batch = fileNames.slice(i, i + BATCH_SIZE).map(f => `report-images/${f}`);
+    try {
+      await storage.deleteFile(batch);
+      deletedCount += batch.length;
+      console.log(`   ✅ 第 ${Math.floor(i / BATCH_SIZE) + 1} 批 ${batch.length} 张已删除`);
+    } catch (err) {
+      console.error(`   ❌ 第 ${Math.floor(i / BATCH_SIZE) + 1} 批删除失败: ${err.message}`);
+    }
+  }
+  return deletedCount;
+}
+
+// ============================================================
+// Supabase 存储操作
+// ============================================================
+function getSupabaseClient() {
+  const { createClient } = require('@supabase/supabase-js');
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    { auth: { persistSession: false } }
+  );
+}
+
+async function supabaseListAllFiles() {
+  const supabase = getSupabaseClient();
+  const allFiles = [];
+  let offset = 0;
+  const pageSize = 100;
+
+  while (true) {
+    const { data: files, error: listError } = await supabase
+      .storage
+      .from('report-images')
+      .list('', { limit: pageSize, offset, sortBy: { column: 'name', order: 'asc' } });
+
+    if (listError) {
+      throw new Error(`列举 Storage 文件失败: ${listError.message}`);
+    }
+    if (!files || files.length === 0) break;
+
+    allFiles.push(...files.map(f => f.name).filter(Boolean));
+    if (files.length < pageSize) break;
+    offset += pageSize;
+  }
+  return allFiles;
+}
+
+async function supabaseDeleteFiles(fileNames) {
+  const supabase = getSupabaseClient();
+  let deletedCount = 0;
+  const BATCH_SIZE = 100;
+
+  for (let i = 0; i < fileNames.length; i += BATCH_SIZE) {
+    const batch = fileNames.slice(i, i + BATCH_SIZE);
+    const { error: removeError } = await supabase
+      .storage
+      .from('report-images')
+      .remove(batch);
+
+    if (removeError) {
+      console.error(`   ❌ 第 ${Math.floor(i / BATCH_SIZE) + 1} 批删除失败: ${removeError.message}`);
+    } else {
+      deletedCount += batch.length;
+      console.log(`   ✅ 第 ${Math.floor(i / BATCH_SIZE) + 1} 批 ${batch.length} 张已删除`);
+    }
+  }
+  return deletedCount;
+}
+
 async function main() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+  const provider = resolveProvider();
   const dbUrl = process.env.DATABASE_URL;
 
-  if (!supabaseUrl || !supabaseKey) {
-    console.error('❌ 缺少 Supabase 环境变量 (NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)');
+  if (!provider) {
+    console.error('❌ 缺少存储环境变量。请配置其一：');
+    console.error('   - CloudBase: TCB_ENV_ID / TCB_SECRET_ID / TCB_SECRET_KEY');
+    console.error('   - Supabase : NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY');
     process.exit(1);
   }
   if (!dbUrl) {
@@ -51,6 +167,7 @@ async function main() {
   console.log('');
   console.log('╔══════════════════════════════════════════════════════╗');
   console.log('║       Storage GC — 孤儿图片垃圾回收脚本              ║');
+  console.log(`║       存储提供方: ${provider === 'cloudbase' ? 'CloudBase' : 'Supabase'}                         ║`);
   console.log(`║       模式: ${isDryRun ? '🔍 DRY-RUN（仅预览）           ' : '🗑️  LIVE（正式删除）             '}║`);
   console.log('╚══════════════════════════════════════════════════════╝');
   console.log('');
@@ -59,10 +176,6 @@ async function main() {
     connectionString: dbUrl,
     ssl: { rejectUnauthorized: false },
     max: 1,
-  });
-
-  const supabase = createClient(supabaseUrl, supabaseKey, {
-    auth: { persistSession: false }
   });
 
   let dbClient;
@@ -111,30 +224,14 @@ async function main() {
     console.log(`\n   📌 数据库中被引用的图片总计: ${referencedSet.size} 张\n`);
 
     // ====================================================
-    // Phase 2: SWEEP — 分页列举 Storage 桶中的所有文件
+    // Phase 2: SWEEP — 枚举 Storage 桶中的所有文件
     // ====================================================
-    console.log('📦 Phase 2: SWEEP — 枚举 Storage 桶文件...');
-    const allStorageFiles = [];
-    let offset = 0;
-    const pageSize = 100;
+    console.log('📦 Phase 2: SWEEP — 枚举 Storage 文件...');
+    const allStorageFiles = provider === 'cloudbase'
+      ? await cloudbaseListAllFiles()
+      : await supabaseListAllFiles();
 
-    while (true) {
-      const { data: files, error: listError } = await supabase
-        .storage
-        .from('report-images')
-        .list('', { limit: pageSize, offset, sortBy: { column: 'name', order: 'asc' } });
-
-      if (listError) {
-        throw new Error(`列举 Storage 文件失败: ${listError.message}`);
-      }
-      if (!files || files.length === 0) break;
-
-      allStorageFiles.push(...files.map(f => f.name).filter(Boolean));
-      if (files.length < pageSize) break;
-      offset += pageSize;
-    }
-
-    console.log(`   ✅ Storage 桶中文件总计: ${allStorageFiles.length} 张\n`);
+    console.log(`   ✅ Storage 中文件总计: ${allStorageFiles.length} 张\n`);
 
     // ====================================================
     // Phase 3: 找出孤儿文件
@@ -143,13 +240,13 @@ async function main() {
     const kept = allStorageFiles.length - orphaned.length;
 
     console.log('📋 扫描结果汇总:');
-    console.log(`   Storage 桶总文件数   : ${allStorageFiles.length}`);
+    console.log(`   Storage 总文件数     : ${allStorageFiles.length}`);
     console.log(`   数据库有引用         : ${kept}`);
     console.log(`   孤儿文件（待清理）   : ${orphaned.length}`);
     console.log('');
 
     if (orphaned.length === 0) {
-      console.log('🎉 太棒了！Storage 桶中没有孤儿图片，无需清理。');
+      console.log('🎉 太棒了！Storage 中没有孤儿图片，无需清理。');
       return;
     }
 
@@ -165,26 +262,12 @@ async function main() {
     }
 
     // ====================================================
-    // Phase 4: DELETE — 分批删除孤儿文件（每批最多 100 个）
+    // Phase 4: DELETE — 分批删除孤儿文件
     // ====================================================
     console.log('🗑️  Phase 4: DELETE — 开始删除孤儿文件...');
-    let deletedCount = 0;
-    const BATCH_SIZE = 100;
-
-    for (let i = 0; i < orphaned.length; i += BATCH_SIZE) {
-      const batch = orphaned.slice(i, i + BATCH_SIZE);
-      const { error: removeError } = await supabase
-        .storage
-        .from('report-images')
-        .remove(batch);
-
-      if (removeError) {
-        console.error(`   ❌ 第 ${Math.floor(i / BATCH_SIZE) + 1} 批删除失败: ${removeError.message}`);
-      } else {
-        deletedCount += batch.length;
-        console.log(`   ✅ 第 ${Math.floor(i / BATCH_SIZE) + 1} 批 ${batch.length} 张已删除`);
-      }
-    }
+    const deletedCount = provider === 'cloudbase'
+      ? await cloudbaseDeleteFiles(orphaned)
+      : await supabaseDeleteFiles(orphaned);
 
     console.log('');
     console.log(`🎉 GC 完成！共清理孤儿图片 ${deletedCount} / ${orphaned.length} 张`);

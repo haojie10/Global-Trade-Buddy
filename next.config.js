@@ -3,7 +3,9 @@ const nextConfig = {
   compress: true,
   reactStrictMode: true,
   poweredByHeader: false,
-  
+  // CloudBase CloudRun 容器化部署使用 standalone 输出，镜像更小
+  output: 'standalone',
+
   async headers() {
     return [
       {
@@ -27,7 +29,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: blob: https:",
-              "connect-src 'self' https://*.supabase.co https://*.supabase.net ws: wss:",
+              "connect-src 'self' https://*.supabase.co https://*.supabase.net https://*.tcb.qcloud.la https://*.tcloudbaseapp.com ws: wss:",
               "frame-ancestors 'none'",
             ].join('; '),
           },
