@@ -17,9 +17,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: '请输入账号和密码' });
   }
 
-  const dbClient = await pool.connect();
-
+  let dbClient;
   try {
+    dbClient = await pool.connect();
     // 只用账号查询，不把密码放入 SQL 条件（防止时序攻击）
     const userRes = await dbClient.query(
       `SELECT id, phone_number, email, role, free_quota, password, nickname 
@@ -56,9 +56,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
     });
   } catch (err: any) {
-    const safeMsg = process.env.NODE_ENV === 'production' ? '服务器内部错误' : err.message;
-    return res.status(500).json({ error: safeMsg });
+    console.error("Login Handler Error:", err);
+    // 返回具体错误信息便于排查（包含数据库连通性、表缺失或密钥问题）
+    return res.status(500).json({ 
+      error: '服务器内部错误', 
+      details: err.message,
+      code: err.code || null 
+    });
   } finally {
-    dbClient.release();
+    if (dbClient) {
+      dbClient.release();
+    }
   }
 }
