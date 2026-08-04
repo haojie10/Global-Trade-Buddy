@@ -104,11 +104,26 @@ async function overviewHandler(req: NextApiRequest, res: NextApiResponse, dbClie
   );
   const expiredCount = parseInt(expiredCountRes.rows[0].count, 10) || 0;
 
-  // 3. 浏览趋势（按日统计）
+  // 3. 浏览趋势（按日统计：融合实时日志与归档聚合表）
   const viewsTrendRes = await dbClient.query(
-    `SELECT TO_CHAR(created_at, 'YYYY-MM-DD') as name, COUNT(*)::int as value
-     FROM page_views
-     WHERE created_at >= NOW() - $1::interval
+    `WITH raw_pv AS (
+       SELECT TO_CHAR(created_at, 'YYYY-MM-DD') as name, COUNT(*)::int as value
+       FROM page_views
+       WHERE created_at >= NOW() - $1::interval
+       GROUP BY name
+     ),
+     archived_pv AS (
+       SELECT TO_CHAR(date, 'YYYY-MM-DD') as name, total_pv as value
+       FROM daily_stats_summary
+       WHERE date >= (NOW() - $1::interval)::date
+     )
+     SELECT name, SUM(value)::int as value
+     FROM (
+       SELECT name, value FROM raw_pv
+       UNION ALL
+       SELECT name, value FROM archived_pv
+       WHERE name NOT IN (SELECT name FROM raw_pv)
+     ) combined
      GROUP BY name
      ORDER BY name ASC`,
     [intervalStr]

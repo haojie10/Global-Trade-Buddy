@@ -41,6 +41,13 @@ export function withDb(handler: DbHandler, options?: WithDbOptions) {
 
     // 4. 获取数据库连接并执行 handler
     const dbClient = await pool.connect();
+    if (process.env.NODE_ENV === 'test') {
+      const connStr = process.env.TEST_DATABASE_URL || '';
+      const match = connStr.match(/search_path%3D([a-zA-Z0-9_]+)/i) || connStr.match(/search_path=([a-zA-Z0-9_]+)/i);
+      if (match && match[1]) {
+        await dbClient.query(`SET search_path TO ${match[1]}, public`);
+      }
+    }
     try {
       await handler(req, res, dbClient);
     } catch (err: any) {

@@ -16,6 +16,7 @@ import graphHandler from '../pages/api/user/graph';
 import testRechargeHandler from '../pages/api/user/test-recharge';
 import resetPasswordHandler from '../pages/api/auth/reset-password';
 import deleteReportHandler from '../pages/api/admin/reports/delete';
+import changePasswordHandler from '../pages/api/user/change-password';
 
 describe('User Entire Workflow Integration Test', () => {
   let dbClient: Client;
@@ -444,5 +445,64 @@ describe('User Entire Workflow Integration Test', () => {
     // 12.4 验证级联删除：该报告在 unlocks 表中的关联记录也被自动 CASCADE 物理删除！
     const unlockDbRes = await dbClient.query('SELECT COUNT(*) FROM unlocks WHERE report_id = $1', [reportId1]);
     expect(unlockDbRes.rows[0].count).toBe('0');
+  });
+
+  // 13. 测试已登录用户修改密码功能
+  it('13. should allow logged-in users to change password and enforce security constraints', async () => {
+    // 13.1 未登录状态访问，预期拦截 401
+    const { req: unauthReq, res: unauthRes, getStatus: unauthStatus, getJson: unauthJson } = mockReqRes({
+      method: 'POST',
+      body: { oldPassword: 'NewPassword777', newPassword: 'AnotherPassword888' }
+    });
+    await changePasswordHandler(unauthReq, unauthRes);
+    expect(unauthStatus()).toBe(401);
+    expect(unauthJson().error).toContain('未登录');
+
+    // 13.2 登录状态输入错误的旧密码，预期拦截 400
+    const { req: wrongOldReq, res: wrongOldRes, getStatus: wrongOldStatus, getJson: wrongOldJson } = mockReqRes({
+      method: 'POST',
+      body: { oldPassword: 'WrongOldPassword', newPassword: 'AnotherPassword888' },
+      cookies: { gtb_session: testSessionCookie }
+    });
+    await changePasswordHandler(wrongOldReq, wrongOldRes);
+    expect(wrongOldStatus()).toBe(400);
+    expect(wrongOldJson().error).toContain('旧密码错误');
+
+    // 13.3 新密码强度不足（比如太短），预期拦截 400
+    const { req: weakReq, res: weakRes, getStatus: weakStatus, getJson: weakJson } = mockReqRes({
+      method: 'POST',
+      body: { oldPassword: 'NewPassword777', newPassword: 'short' },
+      cookies: { gtb_session: testSessionCookie }
+    });
+    await changePasswordHandler(weakReq, weakRes);
+    expect(weakStatus()).toBe(400);
+    expect(weakJson().error).toContain('密码长度至少 8 位');
+
+    // 13.4 正确流程成功修改密码，预期返回 200
+    const { req: okReq, res: okRes, getStatus: okStatus, getJson: okJson } = mockReqRes({
+      method: 'POST',
+      body: { oldPassword: 'NewPassword777', newPassword: 'AnotherPassword888' },
+      cookies: { gtb_session: testSessionCookie }
+    });
+    await changePasswordHandler(okReq, okRes);
+    expect(okStatus()).toBe(200);
+    expect(okJson().success).toBe(true);
+
+    // 13.5 用旧密码重新登录，预期失败
+    const { req: failLoginReq, res: failLoginRes, getStatus: failLoginStatus } = mockReqRes({
+      method: 'POST',
+      body: { phoneOrEmail: 'workflow_test@gtb.com', password: 'NewPassword777' }
+    });
+    await loginHandler(failLoginReq, failLoginRes);
+    expect(failLoginStatus()).toBe(401);
+
+    // 13.6 用新密码重新登录，预期成功
+    const { req: newLoginReq, res: newLoginRes, getStatus: newLoginStatus, getJson: newLoginJson } = mockReqRes({
+      method: 'POST',
+      body: { phoneOrEmail: 'workflow_test@gtb.com', password: 'AnotherPassword888' }
+    });
+    await loginHandler(newLoginReq, newLoginRes);
+    expect(newLoginStatus()).toBe(200);
+    expect(newLoginJson().success).toBe(true);
   });
 });

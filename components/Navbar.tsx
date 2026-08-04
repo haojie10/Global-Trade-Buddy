@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import MGLogo from './MGLogo';
+import ChangePasswordModal from './ChangePasswordModal';
 
 interface NavbarProps {
   userId?: string | null;
@@ -27,6 +28,7 @@ export default function Navbar({
   const [showDropdown, setShowDropdown] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -226,6 +228,30 @@ export default function Navbar({
                         </button>
                       )}
                       <button 
+                        onClick={() => { setShowDropdown(false); setShowChangePassword(true); }}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: 'var(--color-text)',
+                          fontSize: '0.95rem',
+                          textAlign: 'left',
+                          padding: '10px 16px',
+                          width: '100%',
+                          cursor: 'pointer',
+                          transition: 'background 0.2s, color 0.2s'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.background = 'rgba(255, 100, 30, 0.08)';
+                          e.currentTarget.style.color = 'var(--color-accent)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.color = 'var(--color-text)';
+                        }}
+                      >
+                        修改密码
+                      </button>
+                      <button 
                         onClick={handleLogout}
                         style={{
                           background: 'transparent',
@@ -375,6 +401,12 @@ export default function Navbar({
                 </button>
               )}
               <button 
+                onClick={() => { setMobileMenuOpen(false); setShowChangePassword(true); }}
+                style={{ background: 'transparent', border: 'none', color: 'var(--color-text)', fontSize: '1.1rem', fontWeight: 400, padding: '8px 0', width: '100%', textAlign: 'left', cursor: 'pointer' }}
+              >
+                修改密码
+              </button>
+              <button 
                 onClick={() => { setMobileMenuOpen(false); handleLogout(); }}
                 style={{ background: 'transparent', border: 'none', color: '#ef4444', fontSize: '1.1rem', fontWeight: 400, padding: '8px 0', width: '100%', textAlign: 'left', cursor: 'pointer' }}
               >
@@ -402,7 +434,11 @@ export default function Navbar({
           )}
         </div>
       )}
-      
+      <ChangePasswordModal 
+        isOpen={showChangePassword}
+        onClose={() => setShowChangePassword(false)}
+      />
+
       {/* 注入淡入动画关键帧 */}
       <style jsx global>{`
         @keyframes navFadeIn {

@@ -10,13 +10,19 @@ export function createTestClient(): Client {
 }
 
 export async function cleanDatabase(client: any) {
-  // 1. 自动提取当前连接指定的 search_path，用于在云端 Supabase 支持物理 schema 隔离测试
-  const searchPathRes = await client.query('SHOW search_path');
-  const currentPath = searchPathRes.rows[0].search_path;
-  const targetSchema = currentPath.split(',')[0].trim();
+  const connectionString = process.env.TEST_DATABASE_URL || '';
+  let targetSchema = '';
+  const urlMatch = connectionString.match(/search_path%3D([a-zA-Z0-9_]+)/i) || connectionString.match(/search_path=([a-zA-Z0-9_]+)/i);
+  if (urlMatch && urlMatch[1]) {
+    targetSchema = urlMatch[1];
+  } else {
+    const searchPathRes = await client.query('SHOW search_path');
+    const currentPath = searchPathRes.rows[0].search_path;
+    targetSchema = currentPath.split(',')[0].trim().replace(/"/g, '');
+  }
 
   // 2. 如果指定了特定的隔离 schema 且不是默认的 public/user，自动建立该隔离命名空间
-  if (targetSchema && targetSchema !== 'public' && targetSchema !== '"$user"') {
+  if (targetSchema && targetSchema !== 'public' && targetSchema !== '"$user"' && targetSchema !== '$user') {
     await client.query(`CREATE SCHEMA IF NOT EXISTS ${targetSchema}`);
     await client.query(`SET search_path TO ${targetSchema}, public`);
   }
@@ -54,6 +60,9 @@ export async function cleanDatabase(client: any) {
 
   // 4. 重置/清空测试数据，隔离测试不影响 public 生产主表
   await client.query('DELETE FROM email_verifications');
+  await client.query('DELETE FROM page_views');
+  await client.query('DELETE FROM search_logs');
+  await client.query('DELETE FROM daily_stats_summary');
   await client.query('DELETE FROM notes');
   await client.query('DELETE FROM favorites');
   await client.query('DELETE FROM unlocks');

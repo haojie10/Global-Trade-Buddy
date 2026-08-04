@@ -13,13 +13,18 @@ export async function setup() {
   try {
     console.log('Initializing test database schema...');
     
-    // 自动建立并切入隔离的 schema 命名空间以防报错
-    const searchPathRes = await client.query('SHOW search_path');
-    const currentPath = searchPathRes.rows[0].search_path;
-    const targetSchema = currentPath.split(',')[0].trim();
+    let targetSchema = '';
+    const urlMatch = connectionString.match(/search_path%3D([a-zA-Z0-9_]+)/i) || connectionString.match(/search_path=([a-zA-Z0-9_]+)/i);
+    if (urlMatch && urlMatch[1]) {
+      targetSchema = urlMatch[1];
+    } else {
+      const searchPathRes = await client.query('SHOW search_path');
+      const currentPath = searchPathRes.rows[0].search_path;
+      targetSchema = currentPath.split(',')[0].trim().replace(/"/g, '');
+    }
 
     // 强熔断安全拦截：为了保障用户生产数据安全，严禁直接在 public 空间上运行 DROP 和重建逻辑！
-    if (!targetSchema || targetSchema === 'public' || targetSchema === '"$user"' || !targetSchema.includes('test')) {
+    if (!targetSchema || targetSchema === 'public' || targetSchema === '$user' || !targetSchema.includes('test')) {
       throw new Error('【数据安全强拦截】检测到集成测试正试图直接指向生产主空间(public)！为了保障你的真实账号和业务数据不被重置清空，系统已自动拦截测试。请确保你的 .env 里的 TEST_DATABASE_URL 后方附加了 ?options=-csearch_path%3Dtest_schema 参数！');
     }
 
@@ -52,6 +57,7 @@ export async function setup() {
       const sqlPath = path.join(migrationsDir, file);
       const sql = fs.readFileSync(sqlPath, 'utf8');
       try {
+        await client.query(`SET search_path TO ${targetSchema}, public`);
         await client.query(sql);
       } catch (err: any) {
         if (!sql.includes('EXTENSION')) {

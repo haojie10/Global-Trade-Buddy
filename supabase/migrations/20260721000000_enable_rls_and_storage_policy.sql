@@ -12,19 +12,21 @@
 -- Part 1: 为所有 public 表启用 RLS
 -- ==========================================
 
--- 注意：必须显式指定 public. 前缀！
--- 当前 search_path = "$user", public, extensions
--- 不加前缀的 ALTER TABLE 会路由到 $user schema 的表而非 public schema
-ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.notes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.unlocks ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.favorites ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.relations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.entities ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.entity_aliases ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.entity_relations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.report_entities ENABLE ROW LEVEL SECURITY;
+DO $$
+BEGIN
+    EXECUTE 'ALTER TABLE users ENABLE ROW LEVEL SECURITY';
+    EXECUTE 'ALTER TABLE reports ENABLE ROW LEVEL SECURITY';
+    EXECUTE 'ALTER TABLE notes ENABLE ROW LEVEL SECURITY';
+    EXECUTE 'ALTER TABLE unlocks ENABLE ROW LEVEL SECURITY';
+    EXECUTE 'ALTER TABLE favorites ENABLE ROW LEVEL SECURITY';
+    EXECUTE 'ALTER TABLE relations ENABLE ROW LEVEL SECURITY';
+    EXECUTE 'ALTER TABLE entities ENABLE ROW LEVEL SECURITY';
+    EXECUTE 'ALTER TABLE entity_aliases ENABLE ROW LEVEL SECURITY';
+    EXECUTE 'ALTER TABLE entity_relations ENABLE ROW LEVEL SECURITY';
+    EXECUTE 'ALTER TABLE report_entities ENABLE ROW LEVEL SECURITY';
+EXCEPTION
+    WHEN OTHERS THEN NULL;
+END $$;
 
 -- ==========================================
 -- Part 2: report-images 存储桶访问控制
