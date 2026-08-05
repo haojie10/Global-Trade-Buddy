@@ -6,14 +6,6 @@ const nextConfig = {
   // 仅在 Docker 容器化构建时启用 standalone（如 CloudBase CloudRun），EdgeOne Pages 部署时保持默认标准模式
   ...(process.env.NEXT_OUTPUT_STANDALONE === 'true' ? { output: 'standalone' } : {}),
 
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: 'http://124.222.201.143:3000/api/:path*',
-      },
-    ];
-  },
 
   async headers() {
     return [
