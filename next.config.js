@@ -3,8 +3,8 @@ const nextConfig = {
   compress: true,
   reactStrictMode: true,
   poweredByHeader: false,
-  // CloudBase CloudRun 容器化部署使用 standalone 输出，镜像更小
-  output: 'standalone',
+  // 仅在 Docker 容器化构建时启用 standalone（如 CloudBase CloudRun），EdgeOne Pages 部署时保持默认标准模式
+  ...(process.env.NEXT_OUTPUT_STANDALONE === 'true' ? { output: 'standalone' } : {}),
 
   async headers() {
     return [
