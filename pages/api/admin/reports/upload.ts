@@ -6,6 +6,7 @@ import { parseMetadata, runDehydration, extractAndNormalizeEntities } from '../.
 import { getStandardCategory } from '../../../../lib/category-mapper';
 import { uploadImage, cleanOrphanedImages } from '../../../../lib/storage';
 import { RETAILER_ENTITIES } from '../../../../lib/entity-constants';
+import { computeRelationsForReport, ReportEntityItem } from '../../../../lib/relation-calculator';
 
 async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
   const adminSession = requireAdmin(req);
@@ -220,216 +221,27 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
     }
   }
 
-  // 6. 在 relations 表中建边并携带 market_region 属性
-  // 遵循用户定义逻辑：
-  // 1. 竞争: A 显式提及 B 为 competitor (或反之)，且剔除渠道商/超市
-  // 2. 供销: A 提及 B 为 supplier (或 B 提及 A 为 customer/channel)
-  // 3. 经营: 仅存在于【品类报告】与【公司报告】之间
-  // 4. 提及: 姐妹公司 或 共享 GTB 大品类
-  // 优先级: 竞争 > 供销 > 经营 > 提及
-  
-  // 获取当前报告 A 所有的实体及其 role
-  const currentRepEntities = await dbClient.query(
-    `SELECT re.entity_id, re.role, e.canonical_name, e.entity_type
-     FROM report_entities re
-     JOIN entities e ON re.entity_id = e.id
-     WHERE re.report_id = $1`,
-    [newReportId]
-  );
-
-  // 查询所有其他报告 B 及其主体实体
-  const otherReportsRes = await dbClient.query(
-    `SELECT r.id AS b_report_id, r.title AS b_title, r.category AS b_category, r.primary_entity_id AS b_primary_id,
-            e.canonical_name AS b_primary_name
-     FROM reports r
-     LEFT JOIN entities e ON r.primary_entity_id = e.id
-     WHERE r.id != $1`,
-    [newReportId]
-  );
-
-  // 获取所有报告关联的实体角色组合
-  const allRepEntitiesRes = await dbClient.query(
-    `SELECT re.report_id, re.entity_id, re.role, e.canonical_name, e.entity_type
-     FROM report_entities re
-     JOIN entities e ON re.entity_id = e.id`
-  );
-
-  const otherRepEntMap = new Map<string, Map<string, { role: string; canonical_name: string; entity_type: string }>>();
-  for (const row of allRepEntitiesRes.rows) {
-    if (!otherRepEntMap.has(row.report_id)) {
-      otherRepEntMap.set(row.report_id, new Map());
-    }
-    otherRepEntMap.get(row.report_id)!.set(row.entity_id, {
-      role: row.role,
-      canonical_name: row.canonical_name,
-      entity_type: row.entity_type
-    });
-  }
-
-  const currentEntMap = new Map<string, { role: string; canonical_name: string; entity_type: string }>();
-  for (const row of currentRepEntities.rows) {
-    currentEntMap.set(row.entity_id, {
-      role: row.role,
-      canonical_name: row.canonical_name,
-      entity_type: row.entity_type
+  // 6. 调用共享模块重算与该报告相关的图谱关系
+  const currentEntMap = new Map<string, ReportEntityItem>();
+  for (const ent of resolvedEntities) {
+    currentEntMap.set(ent.id, {
+      role: ent.role,
+      canonical_name: ent.canonical_name
     });
   }
 
   const primaryEntNameA = primaryEnt ? primaryEnt.canonical_name.toLowerCase().trim() : '';
+  const primaryEntityIdA = primaryEnt ? primaryEnt.id : null;
 
-  for (const otherRep of otherReportsRes.rows) {
-    const bReportId = otherRep.b_report_id;
-    const bCategory = otherRep.b_category;
-    const bPrimaryId = otherRep.b_primary_id;
-    const bPrimaryName = otherRep.b_primary_name ? otherRep.b_primary_name.toLowerCase().trim() : '';
-
-    const entMapB = otherRepEntMap.get(bReportId) || new Map();
-
-    let finalRelType: string | null = null;
-    let finalRelKey: string = '';
-
-    let sourceReportId = newReportId;
-    let targetReportId = bReportId;
-
-    // ---- 优先级 1: 竞争关系 (Competitor) ----
-    const aHasBAsComp = bPrimaryId && currentEntMap.has(bPrimaryId) && currentEntMap.get(bPrimaryId)!.role === 'competitor';
-    const bHasAAsComp = primaryEntityId && entMapB.has(primaryEntityId) && entMapB.get(primaryEntityId)!.role === 'competitor';
-
-    const isRetailerA = RETAILER_ENTITIES.has(primaryEntNameA);
-    const isRetailerB = RETAILER_ENTITIES.has(bPrimaryName);
-    const isCrossRetailerBrand = (isRetailerA !== isRetailerB);
-
-    if ((aHasBAsComp || bHasAAsComp) && !isCrossRetailerBrand) {
-      finalRelType = 'competitor';
-      finalRelKey = aHasBAsComp 
-        ? (otherRep.b_primary_name || '同业竞争') 
-        : (primaryEnt ? primaryEnt.canonical_name : '同业竞争');
-      if (newReportId > bReportId) {
-        sourceReportId = bReportId;
-        targetReportId = newReportId;
-      }
-    }
-
-    // ---- 优先级 2: 供销关系 (Supplier) ----
-    // 规则 1：必须 从 供货方(供应商)  ===>  流向  采购方(客户/渠道)
-    // 规则 2：仅限【公司报告】与【公司报告】之间！品类报告绝不能作为供销连线实体。
-    const isBothCompanyRep = (finalCategory === 'customer' && bCategory === 'customer');
-
-    if (!finalRelType && isBothCompanyRep) {
-      const aHasBAsSupplier = bPrimaryId && currentEntMap.has(bPrimaryId) && currentEntMap.get(bPrimaryId)!.role === 'supplier';
-      const bHasAAsCustomerOrChannel = primaryEntityId && entMapB.has(primaryEntityId) && 
-        ['customer', 'channel'].includes(entMapB.get(primaryEntityId)!.role);
-
-      const bHasAAsSupplier = primaryEntityId && entMapB.has(primaryEntityId) && entMapB.get(primaryEntityId)!.role === 'supplier';
-      const aHasBAsCustomerOrChannel = bPrimaryId && currentEntMap.has(bPrimaryId) && 
-        ['customer', 'channel'].includes(currentEntMap.get(bPrimaryId)!.role);
-
-      if (aHasBAsSupplier || bHasAAsCustomerOrChannel) {
-        // B 是供应商，A 是客户/渠道 => 流向是 B (供应商) -> A (渠道)
-        finalRelType = 'supplier';
-        finalRelKey = otherRep.b_primary_name || '供销渠道';
-        sourceReportId = bReportId;
-        targetReportId = newReportId;
-      } else if (bHasAAsSupplier || aHasBAsCustomerOrChannel) {
-        // A 是供应商，B 是客户/渠道 => 流向是 A (供应商) -> B (渠道)
-        finalRelType = 'supplier';
-        finalRelKey = primaryEnt ? primaryEnt.canonical_name : '供销渠道';
-        sourceReportId = newReportId;
-        targetReportId = bReportId;
-      }
-    }
-
-    // ---- 优先级 3: 经营关系 (Operation) ----
-    // 仅存在于【品类报告】与【公司报告】之间！
-    // 规则：公司报告 (经营主体) ===> 品类报告 (被经营品类)
-    // 且必须满足：【品类报告】的标准大类 包含在【公司报告】在后台关联的行业/主营品类列表中！
-    if (!finalRelType) {
-      const isOneProductOneCompany = (finalCategory === 'product' && bCategory === 'customer') || 
-                                     (finalCategory === 'customer' && bCategory === 'product');
-      if (isOneProductOneCompany) {
-        const prodTitle = finalCategory === 'product' ? (meta.title || '') : otherRep.b_title;
-        const { getStandardCategory } = require('../../../../lib/category-mapper');
-        const prodStandardCat = getStandardCategory(prodTitle);
-
-        const GENERIC_KEYWORDS = new Set([
-          '工具', '五金', '食品', '代理商', '分销商', '渠道商', '供应商', '客户',
-          '紧固件', '建筑及装饰材料', '家居用品', '家具'
-        ]);
-
-        if (prodStandardCat && !GENERIC_KEYWORDS.has(prodStandardCat)) {
-          const compEntMap = finalCategory === 'customer' ? currentEntMap : entMapB;
-
-          let companyOperatesCategory = false;
-          for (const item of compEntMap.values()) {
-            if (item.role === 'product' || item.entity_type === 'product') {
-              if (item.canonical_name === prodStandardCat || getStandardCategory(item.canonical_name) === prodStandardCat) {
-                companyOperatesCategory = true;
-                break;
-              }
-            }
-          }
-
-          if (companyOperatesCategory) {
-            finalRelType = 'operation';
-            finalRelKey = prodStandardCat;
-            if (finalCategory === 'customer') {
-              sourceReportId = newReportId;
-              targetReportId = bReportId;
-            } else {
-              sourceReportId = bReportId;
-              targetReportId = newReportId;
-            }
-          }
-        }
-      }
-    }
-
-    // ---- 优先级 4: 提及关系 (Mention) ----
-    if (!finalRelType) {
-      const aHasBAsSister = bPrimaryId && currentEntMap.has(bPrimaryId) && currentEntMap.get(bPrimaryId)!.role === 'sister_parent';
-      const bHasAAsSister = primaryEntityId && entMapB.has(primaryEntityId) && entMapB.get(primaryEntityId)!.role === 'sister_parent';
-
-      if (aHasBAsSister || bHasAAsSister) {
-        finalRelType = 'mention';
-        finalRelKey = '关联/姐妹公司';
-        if (newReportId > bReportId) {
-          sourceReportId = bReportId;
-          targetReportId = newReportId;
-        }
-      } else {
-        // 共享 GTB 标准大品类
-        const GENERIC_KEYWORDS = new Set([
-          '工具', '五金', '食品', '代理商', '分销商', '渠道商', '供应商', '客户',
-          '紧固件', '建筑及装饰材料', '家居用品', '家具'
-        ]);
-        const { getStandardCategory } = require('../../../../lib/category-mapper');
-
-        for (const [entIdA, dataA] of currentEntMap.entries()) {
-          if (dataA.role === 'product' && entMapB.has(entIdA) && entMapB.get(entIdA)!.role === 'product') {
-            const stdCat = getStandardCategory(dataA.canonical_name) || dataA.canonical_name;
-            if (stdCat && !GENERIC_KEYWORDS.has(stdCat)) {
-              finalRelType = 'mention';
-              finalRelKey = stdCat;
-              if (newReportId > bReportId) {
-                sourceReportId = bReportId;
-                targetReportId = newReportId;
-              }
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    if (finalRelType) {
-      await dbClient.query(
-        `INSERT INTO relations (report_id_a, report_id_b, relation_key, market_region, relation_type) 
-         VALUES ($1, $2, $3, $4, $5)
-         ON CONFLICT (report_id_a, report_id_b, relation_key) DO UPDATE SET relation_type = EXCLUDED.relation_type`,
-        [sourceReportId, targetReportId, finalRelKey, finalMarketRegion, finalRelType]
-      );
-    }
-  }
+  await computeRelationsForReport(
+    newReportId,
+    finalCategory,
+    meta.market_region || '全球',
+    currentEntMap,
+    primaryEntNameA,
+    primaryEntityIdA,
+    dbClient
+  );
 
   await dbClient.query('COMMIT');
 

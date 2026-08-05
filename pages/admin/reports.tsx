@@ -20,6 +20,8 @@ interface ReportListItem {
   channels?: string[];
   sisters?: string[];
   products?: string[];
+  mentioned?: string[];
+  entitySources?: Record<string, 'manual' | 'auto'>;
   edge_count?: number;
 }
 
@@ -56,6 +58,29 @@ export default function AdminReportsManagement() {
   const [editSisters, setEditSisters] = useState<string[]>(['']);
   const [editProducts, setEditProducts] = useState<string[]>(['']);
   const [savingEntities, setSavingEntities] = useState(false);
+  const [recalculating, setRecalculating] = useState(false);
+
+  // 触发全量图谱连线重算
+  const handleRecalculateAll = async () => {
+    if (!confirm('确认执行全量图谱连线重算？系统将根据最新的关系规则与市场重合限制，重算库中所有报告之间的图谱连线。')) {
+      return;
+    }
+    setRecalculating(true);
+    try {
+      const res = await fetch('/api/admin/reports/recalculate-relations', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message || '🎉 全量图谱连线重算成功！');
+        fetchData(currentPage);
+      } else {
+        alert('❌ 重算失败: ' + (data.error || '未知错误'));
+      }
+    } catch (err: any) {
+      alert('❌ 网络错误，全量重算失败: ' + err.message);
+    } finally {
+      setRecalculating(false);
+    }
+  };
 
   // 上传表单状态
   const [rawHtmlContent, setRawHtmlContent] = useState('');
@@ -585,6 +610,14 @@ export default function AdminReportsManagement() {
             </button>
             <button
               className="admin-btn admin-btn-secondary"
+              onClick={handleRecalculateAll}
+              disabled={recalculating}
+              style={{ background: 'rgba(59, 130, 246, 0.1)', borderColor: 'rgba(59, 130, 246, 0.3)', color: '#60a5fa' }}
+            >
+              {recalculating ? '🔄 重算中...' : '🔄 全量重算图谱'}
+            </button>
+            <button
+              className="admin-btn admin-btn-secondary"
               onClick={() => setShowGcModal(true)}
               style={{ background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)', color: '#f87171' }}
             >
@@ -724,7 +757,10 @@ export default function AdminReportsManagement() {
                                       <div className="entity-group-tags">
                                         {rep.primary_company ? (
                                           <>
-                                            <span className="admin-badge admin-badge-primary">{rep.primary_company}</span>
+                                            <span className="admin-badge admin-badge-primary">
+                                              {rep.primary_company}
+                                              {rep.entitySources?.[rep.primary_company] === 'auto' && <span style={{ fontSize: '0.65rem', marginLeft: '3px', opacity: 0.8 }} title="自动匹配提取">⚡</span>}
+                                            </span>
                                             {rep.company_aliases && rep.company_aliases.length > 0 && rep.company_aliases.map((alias, i) => (
                                               <span key={i} className="admin-badge admin-badge-secondary" title="公司别名">
                                                 别名: {alias}
@@ -743,7 +779,10 @@ export default function AdminReportsManagement() {
                                       <div className="entity-group-tags">
                                         {rep.competitors && rep.competitors.length > 0 ? (
                                           rep.competitors.map((c, i) => (
-                                            <span key={i} className="admin-badge admin-badge-danger">{c}</span>
+                                            <span key={i} className="admin-badge admin-badge-danger">
+                                              {c}
+                                              {rep.entitySources?.[c] === 'auto' && <span style={{ fontSize: '0.65rem', marginLeft: '3px', opacity: 0.8 }} title="正文自动提取">⚡</span>}
+                                            </span>
                                           ))
                                         ) : (
                                           <span style={{ color: 'var(--admin-text-secondary)' }}>未提取到</span>
@@ -757,7 +796,10 @@ export default function AdminReportsManagement() {
                                       <div className="entity-group-tags">
                                         {rep.suppliers && rep.suppliers.length > 0 ? (
                                           rep.suppliers.map((s, i) => (
-                                            <span key={i} className="admin-badge admin-badge-purple">{s}</span>
+                                            <span key={i} className="admin-badge admin-badge-purple">
+                                              {s}
+                                              {rep.entitySources?.[s] === 'auto' && <span style={{ fontSize: '0.65rem', marginLeft: '3px', opacity: 0.8 }} title="正文自动提取">⚡</span>}
+                                            </span>
                                           ))
                                         ) : (
                                           <span style={{ color: 'var(--admin-text-secondary)' }}>未提取到</span>
@@ -771,7 +813,10 @@ export default function AdminReportsManagement() {
                                       <div className="entity-group-tags">
                                         {rep.customers && rep.customers.length > 0 ? (
                                           rep.customers.map((c, i) => (
-                                            <span key={i} className="admin-badge admin-badge-success">{c}</span>
+                                            <span key={i} className="admin-badge admin-badge-success">
+                                              {c}
+                                              {rep.entitySources?.[c] === 'auto' && <span style={{ fontSize: '0.65rem', marginLeft: '3px', opacity: 0.8 }} title="正文自动提取">⚡</span>}
+                                            </span>
                                           ))
                                         ) : (
                                           <span style={{ color: 'var(--admin-text-secondary)' }}>未提取到</span>
@@ -785,7 +830,10 @@ export default function AdminReportsManagement() {
                                       <div className="entity-group-tags">
                                         {rep.channels && rep.channels.length > 0 ? (
                                           rep.channels.map((ch, i) => (
-                                            <span key={i} className="admin-badge admin-badge-warning">{ch}</span>
+                                            <span key={i} className="admin-badge admin-badge-warning">
+                                              {ch}
+                                              {rep.entitySources?.[ch] === 'auto' && <span style={{ fontSize: '0.65rem', marginLeft: '3px', opacity: 0.8 }} title="正文自动提取">⚡</span>}
+                                            </span>
                                           ))
                                         ) : (
                                           <span style={{ color: 'var(--admin-text-secondary)' }}>未提取到</span>
@@ -799,7 +847,10 @@ export default function AdminReportsManagement() {
                                       <div className="entity-group-tags">
                                         {rep.sisters && rep.sisters.length > 0 ? (
                                           rep.sisters.map((sis, i) => (
-                                            <span key={i} className="admin-badge admin-badge-secondary">{sis}</span>
+                                            <span key={i} className="admin-badge admin-badge-secondary">
+                                              {sis}
+                                              {rep.entitySources?.[sis] === 'auto' && <span style={{ fontSize: '0.65rem', marginLeft: '3px', opacity: 0.8 }} title="正文自动提取">⚡</span>}
+                                            </span>
                                           ))
                                         ) : (
                                           <span style={{ color: 'var(--admin-text-secondary)' }}>未提取到</span>
@@ -813,10 +864,30 @@ export default function AdminReportsManagement() {
                                       <div className="entity-group-tags">
                                         {rep.products && rep.products.length > 0 ? (
                                           rep.products.map((p, i) => (
-                                            <span key={i} className="admin-badge admin-badge-info">{p}</span>
+                                            <span key={i} className="admin-badge admin-badge-info">
+                                              {p}
+                                              {rep.entitySources?.[p] === 'auto' && <span style={{ fontSize: '0.65rem', marginLeft: '3px', opacity: 0.8 }} title="正文自动提取">⚡</span>}
+                                            </span>
                                           ))
                                         ) : (
                                           <span style={{ color: 'var(--admin-text-secondary)' }}>未提取到</span>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* 💬 其他提及 */}
+                                    <div className="entity-group-item">
+                                      <span className="entity-group-label">💬 其他提及</span>
+                                      <div className="entity-group-tags">
+                                        {rep.mentioned && rep.mentioned.length > 0 ? (
+                                          rep.mentioned.map((m, i) => (
+                                            <span key={i} className="admin-badge admin-badge-secondary" style={{ opacity: 0.85 }}>
+                                              {m}
+                                              <span style={{ fontSize: '0.65rem', marginLeft: '3px', opacity: 0.8 }} title="正文自动匹配">⚡</span>
+                                            </span>
+                                          ))
+                                        ) : (
+                                          <span style={{ color: 'var(--admin-text-secondary)' }}>未提及其他已知实体</span>
                                         )}
                                       </div>
                                     </div>

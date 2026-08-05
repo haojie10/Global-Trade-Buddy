@@ -91,12 +91,10 @@ export function getLinkLineDash(relationType: string): number[] | null {
  */
 export function getLinkParticles(relationType: string): number {
   switch (relationType) {
-    case 'competitor':
-      return 2; // 竞争对手流动粒子
-    case 'shared_product':
-      return 1; // 共享产品流动粒子
+    case 'supplier':
+      return 2; // 供销关系流动粒子流光
     default:
-      return 0; // 其他无粒子
+      return 0; // 竞争对手、经营关系、涉及关系均无粒子
   }
 }
 

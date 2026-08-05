@@ -102,7 +102,7 @@ export async function extractAndNormalizeEntities(
   },
   primarySubject?: string,
   category?: string
-): Promise<{ id: string; canonical_name: string; role: string }[]> {
+): Promise<{ id: string; canonical_name: string; role: string; source: 'manual' | 'auto' }[]> {
   // 1. 从 entities 和 entity_aliases 表读取所有已知的实体名和别名
   const entitiesRes = await dbClient.query(`
     SELECT e.id, e.canonical_name, e.entity_type, ea.alias_name
@@ -437,7 +437,7 @@ export async function extractAndNormalizeEntities(
     }
   }
 
-  const result: { id: string; canonical_name: string; role: string }[] = [];
+  const result: { id: string; canonical_name: string; role: string; source: 'manual' | 'auto' }[] = [];
   for (const ent of matchedEntities.values()) {
     if (BLACKLIST.includes(ent.canonical_name)) {
       continue;
@@ -490,12 +490,42 @@ export async function extractAndNormalizeEntities(
       }
     }
 
+    let source: 'manual' | 'auto' = 'auto';
+    if (ent.id === primaryId && manualTags?.companies && manualTags.companies.length > 0) {
+      source = 'manual';
+    } else if (manualTags) {
+      const cachedEnt = entityMap.get(ent.id);
+      const matchesLower = cachedEnt 
+        ? Array.from(cachedEnt.matches).map(x => x.toLowerCase())
+        : [ent.canonical_name.toLowerCase()];
+
+      const hasMatchInManual = (tagsList?: string[]) => {
+        if (!tagsList) return false;
+        const lowerTags = tagsList.map(x => x.toLowerCase().trim()).filter(Boolean);
+        return matchesLower.some(m => lowerTags.includes(m));
+      };
+
+      if (
+        hasMatchInManual(manualTags.companies) ||
+        hasMatchInManual(manualTags.competitors) ||
+        hasMatchInManual(manualTags.suppliers) ||
+        hasMatchInManual(manualTags.customers) ||
+        hasMatchInManual(manualTags.sisters) ||
+        hasMatchInManual(manualTags.products) ||
+        hasMatchInManual(manualTags.channels)
+      ) {
+        source = 'manual';
+      }
+    }
+
     result.push({
       id: ent.id,
       canonical_name: ent.canonical_name,
-      role
+      role,
+      source
     });
   }
 
   return result;
 }
+

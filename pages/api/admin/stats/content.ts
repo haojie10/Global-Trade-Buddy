@@ -91,7 +91,7 @@ async function contentStatsHandler(req: NextApiRequest, res: NextApiResponse, db
 
     const [entitiesRes, edgesRes] = await Promise.all([
       dbClient.query(
-        `SELECT re.report_id, e.id as entity_id, e.canonical_name, e.entity_type, re.role,
+        `SELECT re.report_id, e.id as entity_id, e.canonical_name, e.entity_type, re.role, re.source,
                 (SELECT STRING_AGG(ea.alias_name, '|||') FROM entity_aliases ea WHERE ea.entity_id = e.id) as aliases
          FROM report_entities re
          JOIN entities e ON re.entity_id = e.id
@@ -117,6 +117,8 @@ async function contentStatsHandler(req: NextApiRequest, res: NextApiResponse, db
       channels: string[];
       sisters: string[];
       products: string[];
+      mentioned: string[];
+      entitySources: Record<string, 'manual' | 'auto'>;
     }>();
 
     for (const row of entitiesRes.rows) {
@@ -129,12 +131,17 @@ async function contentStatsHandler(req: NextApiRequest, res: NextApiResponse, db
           customers: [],
           channels: [],
           sisters: [],
-          products: []
+          products: [],
+          mentioned: [],
+          entitySources: {}
         });
       }
       const item = entityMap.get(row.report_id)!;
       const role = row.role;
       const name = row.canonical_name;
+      const source = row.source || 'auto';
+
+      item.entitySources[name] = source;
 
       if (role === 'primary') {
         item.primary_company = name;
@@ -154,6 +161,8 @@ async function contentStatsHandler(req: NextApiRequest, res: NextApiResponse, db
         if (!item.sisters.includes(name)) item.sisters.push(name);
       } else if (role === 'product') {
         if (!item.products.includes(name)) item.products.push(name);
+      } else if (role === 'mentioned') {
+        if (!item.mentioned.includes(name)) item.mentioned.push(name);
       }
     }
 
@@ -171,7 +180,9 @@ async function contentStatsHandler(req: NextApiRequest, res: NextApiResponse, db
         customers: [],
         channels: [],
         sisters: [],
-        products: []
+        products: [],
+        mentioned: [],
+        entitySources: {}
       };
       r.primary_company = ents.primary_company;
       r.company_aliases = ents.company_aliases;
@@ -181,6 +192,8 @@ async function contentStatsHandler(req: NextApiRequest, res: NextApiResponse, db
       r.channels = ents.channels;
       r.sisters = ents.sisters;
       r.products = ents.products;
+      r.mentioned = ents.mentioned;
+      r.entitySources = ents.entitySources;
       r.edge_count = edgeMap.get(r.id) || 0;
     }
   }
