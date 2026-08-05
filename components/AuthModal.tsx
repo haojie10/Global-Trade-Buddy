@@ -218,6 +218,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
           {authMode === 'signup' ? (
             <>
               <input 
+                id="auth-nickname"
+                name="nickname"
                 type="text" 
                 placeholder="昵称 (限5个汉字/10字节)" 
                 value={nickname}
@@ -227,6 +229,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 required
               />
               <input 
+                id="auth-email"
+                name="email"
                 type="email" 
                 placeholder="邮箱" 
                 value={email}
@@ -238,6 +242,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               {email && (
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <input 
+                    id="auth-code"
+                    name="code"
                     type="text" 
                     placeholder="验证码" 
                     value={code}
@@ -270,6 +276,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
           ) : authMode === 'forgot' ? (
             <>
               <input 
+                id="auth-email-forgot"
+                name="email"
                 type="email" 
                 placeholder="注册邮箱" 
                 value={email}
@@ -281,6 +289,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               {email && (
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <input 
+                    id="auth-code-forgot"
+                    name="code"
                     type="text" 
                     placeholder="验证码" 
                     value={code}
@@ -312,6 +322,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             </>
           ) : (
             <input 
+              id="auth-email-login"
+              name="email"
               type="email" 
               placeholder="邮箱" 
               value={email}
@@ -322,6 +334,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             />
           )}
           <input 
+            id="auth-password"
+            name="password"
             type="password" 
             placeholder={authMode === 'forgot' ? '输入新密码' : '密码'} 
             value={password}
