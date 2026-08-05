@@ -7,6 +7,15 @@ const nextConfig = {
   ...(process.env.NEXT_OUTPUT_STANDALONE === 'true' ? { output: 'standalone' } : {}),
 
 
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://124.222.201.143/api/:path*',
+      },
+    ];
+  },
+
   async headers() {
     return [
       {
