@@ -20,18 +20,24 @@ export default function MultiSelectDropdown({
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // 监听点击外部收起下拉框
+  // 监听点击外部收起下拉框 (使用 capture 捕获阶段，防止事件在 Canvas 被拦截)
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: MouseEvent | PointerEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
+
+    if (isOpen) {
+      document.addEventListener('pointerdown', handleClickOutside, true);
+      document.addEventListener('click', handleClickOutside, true);
+    }
+
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('pointerdown', handleClickOutside, true);
+      document.removeEventListener('click', handleClickOutside, true);
     };
-  }, []);
+  }, [isOpen]);
 
   const isAllSelected = selected.length === 0 || selected.includes(allOptionLabel) || selected.length === options.length;
 

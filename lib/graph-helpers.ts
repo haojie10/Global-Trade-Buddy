@@ -24,7 +24,7 @@ export interface GraphLink {
   relation_type?: string;
 }
 
-import { isNodeInRegion, getRegionByCountryName } from './region-country-mapper';
+import { isNodeInRegion, getRegionByCountryName, normalizeRegionName } from './region-country-mapper';
 
 // 辅助函数：判断节点在后台关联行业/品类中是否包含指定的 selectedProduct
 const isNodeMatchingProduct = (node: GraphNode, prod: string): boolean => {
@@ -55,19 +55,26 @@ const isNodeMatchingCountries = (node: GraphNode, selectedCountries: string[]): 
   const nodeRegions = node.market_region.split(',').map(r => r.trim()).filter(Boolean);
 
   for (const reg of nodeRegions) {
-    // 全球默认包含
+    // 1. 全球默认包含
     if (reg === '全球') return true;
 
-    // 直接与选择的国家名字相同
+    // 2. 节点的地区字段包含用户选中的具体国家名称（如 reg="德国"，selectedCountries包含"德国"）
     if (selectedCountries.includes(reg)) return true;
 
-    // 如果节点的 market_region 填的是大洲（如 "北美" 或 "欧洲"），判断选择的国家中是否有属于该大洲的国家
-    const nodeRegionCategory = getRegionByCountryName(reg) || reg;
-    const hasMatchingCountryInRegion = selectedCountries.some(cty => {
+    // 3. 检查 reg 是否为具体的国家名称（如 "英国"）
+    const countryRegion = getRegionByCountryName(reg);
+    if (countryRegion) {
+      // reg 是具体国家（例如 "英国"），但在 step 2 中未包含在用户已勾选国家中，因此直接排查跳过！
+      continue;
+    }
+
+    // 4. reg 不是具体国家名，而是泛大洲名称（如 "欧洲"、"北美"）
+    const normReg = normalizeRegionName(reg);
+    const hasMatchingRegion = selectedCountries.some(cty => {
       const ctyRegion = getRegionByCountryName(cty);
-      return ctyRegion === nodeRegionCategory || reg.includes(ctyRegion || '');
+      return ctyRegion && normalizeRegionName(ctyRegion) === normReg;
     });
-    if (hasMatchingCountryInRegion) return true;
+    if (hasMatchingRegion) return true;
   }
 
   return false;
