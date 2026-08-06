@@ -481,8 +481,19 @@ export default function ObsidianGraph({
       window.addEventListener('resize', resizeHandler);
       resizeHandler();
 
+      let resizeObserver: ResizeObserver | null = null;
+      if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
+        resizeObserver = new ResizeObserver(() => {
+          resizeHandler();
+        });
+        resizeObserver.observe(containerRef.current);
+      }
+
       cleanupFn = () => {
         window.removeEventListener('resize', resizeHandler);
+        if (resizeObserver) {
+          resizeObserver.disconnect();
+        }
         if (clickTimeoutRef.current) {
           clearTimeout(clickTimeoutRef.current);
         }
@@ -511,7 +522,7 @@ export default function ObsidianGraph({
   return (
     <div style={{
       width: '100%',
-      height: '100%',
+      aspectRatio: '16 / 9',
       background: 'rgba(255, 255, 255, 0.75)',
       borderRadius: '24px',
       overflow: 'hidden',

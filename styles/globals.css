@@ -362,7 +362,7 @@ h1, h2, h3, h4, h5, h6 {
 .graph-left-col {
   flex: 1;
   min-width: 0;
-  height: 100%;
+  height: auto;
   display: flex;
   flex-direction: column;
   overflow: visible;
@@ -398,7 +398,7 @@ h1, h2, h3, h4, h5, h6 {
     height: auto;
   }
   .graph-left-col {
-    height: 480px;
+    height: auto;
     flex: none;
     width: 100%;
   }

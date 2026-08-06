@@ -359,7 +359,7 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
           )}
 
           {hasData ? (
-            <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+            <div style={{ width: '100%', aspectRatio: '16 / 9', position: 'relative' }}>
               <ObsidianGraph
                 data={filteredGraphData}
                 onNodeSelect={(node) => {
