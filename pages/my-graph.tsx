@@ -19,6 +19,9 @@ import Navbar from '../components/Navbar';
 import AuthModal from '../components/AuthModal';
 
 
+import MultiSelectDropdown from '../components/MultiSelectDropdown';
+import { ADMIN_REGIONS, ADMIN_STANDARD_COUNTRIES, getRegionByCountryName, normalizeRegionName } from '../lib/region-country-mapper';
+
 interface MyGraphProps {
   graphData: {
     nodes: GraphNode[];
@@ -50,8 +53,9 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
   const [activeRelations, setActiveRelations] = useState<string[]>(['competitor', 'supplier', 'operation', 'mention']);
 
   // 筛选与画像状态管理
-  const [selectedMarket, setSelectedMarket] = useState('All');
-  const [selectedProduct, setSelectedProduct] = useState('All');
+  const [selectedRegion, setSelectedRegion] = useState('All');
+  const [selectedCountries, setSelectedCountries] = useState<string[]>(['All']);
+  const [selectedProducts, setSelectedProducts] = useState<string[]>(['All']);
   const [focusNodeId, setFocusNodeId] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
 
@@ -119,8 +123,6 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
     );
   }
 
-
-
   // 1. 动态刷新图谱核心数据
   const refreshGraphData = async () => {
     try {
@@ -159,44 +161,50 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
   const activeGraphData = isDemoMode ? DEMO_GRAPH_DATA : currentGraphData;
   const hasData = activeGraphData.nodes && activeGraphData.nodes.length > 0;
 
-  // 动态提取筛选选项
-  // 动态提取筛选选项：对地区按逗号分割、扁平化提取，并过滤掉英文，只保留纯中文国家/地区选项
-  const markets = hasData 
-    ? [
-        'All', 
-        ...Array.from(
-          new Set(
-            activeGraphData.nodes
-              .map(n => n.market_region)
-              .filter(Boolean)
-              .flatMap(rStr => rStr.split(',').map(r => r.trim()).filter(Boolean))
-              .filter(region => /^[\u4e00-\u9fa5]+$/.test(region))
-          )
+  // 动态提取全部在图中出现的具体国家名
+  const allRawCountries = hasData
+    ? Array.from(
+        new Set(
+          activeGraphData.nodes
+            .map(n => n.market_region)
+            .filter(Boolean)
+            .flatMap(rStr => rStr.split(',').map(r => r.trim()).filter(Boolean))
+            .filter(region => /^[\u4e00-\u9fa5]+$/.test(region) && !['全球', '北美', '北美洲', '南美', '南美洲', '欧洲', '亚洲', '大洋洲', '非洲', '中东', '东南亚'].includes(region))
         )
-      ] 
-    : ['All'];
-  const products = hasData 
-    ? [
-        'All', 
-        ...Array.from(
-          new Set(
-            activeGraphData.nodes.flatMap(n => {
-              const rawProds = n.products || [];
-              const mappedProds = rawProds.map(p => getStandardCategory(p) || p);
-              const titleCat = getStandardCategory(n.title);
-              return [...rawProds, ...mappedProds, titleCat].filter(Boolean) as string[];
-            })
-          )
+      )
+    : [];
+
+  // 根据选定的区域 selectedRegion 动态过滤国家列表
+  const availableCountries = hasData
+    ? (selectedRegion === 'All'
+        ? allRawCountries
+        : allRawCountries.filter(c => {
+            const r = getRegionByCountryName(c);
+            return r && normalizeRegionName(r) === normalizeRegionName(selectedRegion);
+          }))
+    : [];
+
+  // 动态提取全部在图中出现的标准产品品类
+  const availableProducts = hasData
+    ? Array.from(
+        new Set(
+          activeGraphData.nodes.flatMap(n => {
+            const rawProds = n.products || [];
+            const mappedProds = rawProds.map(p => getStandardCategory(p) || p);
+            const titleCat = getStandardCategory(n.title);
+            return [...rawProds, ...mappedProds, titleCat].filter(Boolean) as string[];
+          })
         )
-      ] 
-    : ['All'];
+      )
+    : [];
 
   // 过滤数据
   const filteredGraphData = hasData ? filterGraphData(
     activeGraphData.nodes,
     activeGraphData.links,
-    selectedMarket,
-    selectedProduct,
+    selectedRegion,
+    selectedCountries,
+    selectedProducts,
     focusNodeId
   ) : { nodes: [], links: [] };
 
@@ -250,12 +258,18 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
                 boxShadow: '0 6px 20px rgba(0, 0, 0, 0.01)',
                 flexWrap: 'wrap'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+                  {/* 1. 区域选择 (单选) */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--color-muted)', fontWeight: 500 }}>国家/市场</span>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--color-muted)', fontWeight: 500 }}>区域市场</span>
                     <select
-                      value={selectedMarket}
-                      onChange={(e) => setSelectedMarket(e.target.value)}
+                      value={selectedRegion}
+                      onChange={(e) => {
+                        const newReg = e.target.value;
+                        setSelectedRegion(newReg);
+                        // 当切换区域时，复位国家筛选为全选
+                        setSelectedCountries(['All']);
+                      }}
                       style={{
                         padding: '6px 12px',
                         borderRadius: 'var(--border-radius)',
@@ -267,35 +281,38 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
                         color: 'var(--color-text)'
                       }}
                     >
-                      {markets.map(m => <option key={m} value={m}>{m}</option>)}
+                      {ADMIN_REGIONS.map(r => (
+                        <option key={r} value={r}>
+                          {r === 'All' ? '全部区域' : r}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--color-muted)', fontWeight: 500 }}>产品品类</span>
-                    <select
-                      value={selectedProduct}
-                      onChange={(e) => setSelectedProduct(e.target.value)}
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: 'var(--border-radius)',
-                        border: '1px solid rgba(18, 18, 18, 0.08)',
-                        background: 'rgba(255, 255, 255, 0.65)',
-                        fontSize: '0.85rem',
-                        outline: 'none',
-                        cursor: 'pointer',
-                        color: 'var(--color-text)'
-                      }}
-                    >
-                      {products.map(p => <option key={p} value={p}>{p}</option>)}
-                    </select>
-                  </div>
+                  {/* 2. 国家选择 (多选) */}
+                  <MultiSelectDropdown
+                    label="国家"
+                    options={availableCountries}
+                    selected={selectedCountries}
+                    onChange={setSelectedCountries}
+                    allOptionLabel="All"
+                  />
+
+                  {/* 3. 产品品类 (多选) */}
+                  <MultiSelectDropdown
+                    label="产品品类"
+                    options={availableProducts}
+                    selected={selectedProducts}
+                    onChange={setSelectedProducts}
+                    allOptionLabel="All"
+                  />
                 </div>
 
                 <button
                   onClick={() => {
-                    setSelectedMarket('All');
-                    setSelectedProduct('All');
+                    setSelectedRegion('All');
+                    setSelectedCountries(['All']);
+                    setSelectedProducts(['All']);
                     setFocusNodeId(null);
                     setSelectedNode(null);
                   }}

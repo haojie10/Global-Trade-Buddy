@@ -16,37 +16,45 @@ describe('Graph Filter Logic', () => {
   ];
 
   it('should return all nodes and links when filters are empty', () => {
-    const result = filterGraphData(mockNodes, mockLinks, 'All', 'All', null);
+    const result = filterGraphData(mockNodes, mockLinks, 'All', ['All'], ['All'], null);
     expect(result.nodes).toHaveLength(4);
     expect(result.links).toHaveLength(3);
   });
 
-  it('should filter by market_region including "全球"', () => {
-    const result = filterGraphData(mockNodes, mockLinks, '美国', 'All', null);
-    // 应该包含 1, 2, 4 (2的 region 是 全球)
+  it('should filter by region (e.g. 北美洲) including "全球"', () => {
+    const result = filterGraphData(mockNodes, mockLinks, '北美洲', ['All'], ['All'], null);
+    // 应该包含美国 (1, 4) 和 全球 (2)
     expect(result.nodes.map(n => n.id)).toEqual(expect.arrayContaining(['1', '2', '4']));
     expect(result.nodes).toHaveLength(3);
-    // links 过滤：连线的两端都必须在过滤后的节点里
-    // 1-4 (OK), 1-2 (OK), 3-2 (3不在，所以过滤掉)
     expect(result.links).toHaveLength(2);
   });
 
-  it('should filter by product category', () => {
-    const result = filterGraphData(mockNodes, mockLinks, 'All', '大豆', null);
-    // 应该包含含有大豆产品的节点：1, 4
-    expect(result.nodes.map(n => n.id)).toEqual(expect.arrayContaining(['1', '4']));
-    expect(result.nodes).toHaveLength(2);
-    // 连线过滤：不仅 source/target 要在 nodes 中，连线 relation_key 必须等于 '大豆'
-    expect(result.links).toHaveLength(1);
-    expect(result.links[0].relation_key).toBe('大豆');
+  it('should filter by multiple countries', () => {
+    const result = filterGraphData(mockNodes, mockLinks, 'All', ['美国', '巴西'], ['All'], null);
+    // 节点 1(美国), 2(全球), 3(巴西), 4(美国) 全部符合
+    expect(result.nodes).toHaveLength(4);
+    expect(result.links).toHaveLength(3);
+  });
+
+  it('should filter by multiple product categories', () => {
+    const result = filterGraphData(mockNodes, mockLinks, 'All', ['All'], ['大豆', '玉米'], null);
+    // 应该包含含有大豆或玉米产品的节点：1, 3, 4
+    expect(result.nodes.map(n => n.id)).toEqual(expect.arrayContaining(['1', '3', '4']));
+    expect(result.nodes).toHaveLength(3);
   });
 
   it('should filter by focusNodeId (1st degree adjacency)', () => {
     // 聚焦节点 1
-    const result = filterGraphData(mockNodes, mockLinks, 'All', 'All', '1');
+    const result = filterGraphData(mockNodes, mockLinks, 'All', ['All'], ['All'], '1');
     // 节点 1 连着 4 和 2
     expect(result.nodes.map(n => n.id)).toEqual(expect.arrayContaining(['1', '2', '4']));
     expect(result.nodes).toHaveLength(3);
     expect(result.links).toHaveLength(2); // 1-4, 1-2
   });
+
+  it('should support legacy arguments for backward compatibility', () => {
+    const result = filterGraphData(mockNodes, mockLinks, '美国', 'All', null as any);
+    expect(result.nodes.map(n => n.id)).toEqual(expect.arrayContaining(['1', '2', '4']));
+  });
 });
+

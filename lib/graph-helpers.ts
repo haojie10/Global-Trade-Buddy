@@ -24,6 +24,8 @@ export interface GraphLink {
   relation_type?: string;
 }
 
+import { isNodeInRegion, getRegionByCountryName } from './region-country-mapper';
+
 // 辅助函数：判断节点在后台关联行业/品类中是否包含指定的 selectedProduct
 const isNodeMatchingProduct = (node: GraphNode, prod: string): boolean => {
   if (prod === 'All') return true;
@@ -42,47 +44,95 @@ const isNodeMatchingProduct = (node: GraphNode, prod: string): boolean => {
   return false;
 };
 
+// 辅助函数：判断节点是否匹配选择的国家列表
+const isNodeMatchingCountries = (node: GraphNode, selectedCountries: string[]): boolean => {
+  if (selectedCountries.length === 0 || selectedCountries.includes('All')) {
+    return true;
+  }
+
+  if (!node.market_region) return false;
+
+  const nodeRegions = node.market_region.split(',').map(r => r.trim()).filter(Boolean);
+
+  for (const reg of nodeRegions) {
+    // 全球默认包含
+    if (reg === '全球') return true;
+
+    // 直接与选择的国家名字相同
+    if (selectedCountries.includes(reg)) return true;
+
+    // 如果节点的 market_region 填的是大洲（如 "北美" 或 "欧洲"），判断选择的国家中是否有属于该大洲的国家
+    const nodeRegionCategory = getRegionByCountryName(reg) || reg;
+    const hasMatchingCountryInRegion = selectedCountries.some(cty => {
+      const ctyRegion = getRegionByCountryName(cty);
+      return ctyRegion === nodeRegionCategory || reg.includes(ctyRegion || '');
+    });
+    if (hasMatchingCountryInRegion) return true;
+  }
+
+  return false;
+};
+
 export function filterGraphData(
   nodes: GraphNode[],
   links: GraphLink[],
-  selectedMarket: string,
-  selectedProduct: string,
-  focusNodeId: string | null
+  selectedRegion: string,
+  selectedCountries: string[] | string,
+  selectedProducts: string[] | string | null,
+  focusNodeId: string | null = null
 ): { nodes: GraphNode[]; links: GraphLink[] } {
+  // 向后兼容旧签名: (nodes, links, selectedMarket, selectedProduct, focusNodeId)
+  let regionArg = selectedRegion;
+  let countriesArg: string[] = [];
+  let productsArg: string[] = [];
+  let realFocusNodeId = focusNodeId;
+
+  if (typeof selectedCountries === 'string') {
+    // 旧参数：selectedMarket = selectedRegion, selectedProduct = selectedCountries, focusNodeId = selectedProducts
+    regionArg = 'All';
+    countriesArg = [selectedRegion];
+    productsArg = [selectedCountries];
+    realFocusNodeId = selectedProducts as string | null;
+  } else {
+    countriesArg = selectedCountries;
+    productsArg = Array.isArray(selectedProducts) ? selectedProducts : selectedProducts ? [selectedProducts] : ['All'];
+  }
+
   // 1. 计算邻接节点（一阶）以原始 links 为基准
   const adjIds = new Set<string>();
-  if (focusNodeId) {
-    adjIds.add(focusNodeId);
+  if (realFocusNodeId) {
+    adjIds.add(realFocusNodeId);
     for (const link of links) {
       const srcId = typeof link.source === 'object' ? link.source.id : link.source;
       const tgtId = typeof link.target === 'object' ? link.target.id : link.target;
-      if (srcId === focusNodeId) {
+      if (srcId === realFocusNodeId) {
         adjIds.add(tgtId);
-      } else if (tgtId === focusNodeId) {
+      } else if (tgtId === realFocusNodeId) {
         adjIds.add(srcId);
       }
     }
   }
 
-  // 2. 过滤 nodes：提取后台关联行业中包含当前选定品类的报告节点
+  // 2. 过滤 nodes：提取匹配区域、国家列表和产品品类列表的报告节点
   const filteredNodes = nodes.filter(node => {
-    // 国家/市场过滤
-    if (selectedMarket !== 'All') {
-      const regions = node.market_region ? node.market_region.split(',').map(r => r.trim()) : [];
-      if (!regions.includes(selectedMarket) && !regions.includes('全球')) {
-        return false;
-      }
+    // 区域过滤
+    if (regionArg !== 'All' && !isNodeInRegion(node.market_region, regionArg)) {
+      return false;
     }
 
-    // 产品品类过滤
-    if (selectedProduct !== 'All') {
-      if (!isNodeMatchingProduct(node, selectedProduct)) {
-        return false;
-      }
+    // 国家过滤 (多选)
+    if (!isNodeMatchingCountries(node, countriesArg)) {
+      return false;
+    }
+
+    // 产品品类过滤 (多选)
+    if (productsArg.length > 0 && !productsArg.includes('All')) {
+      const isMatched = productsArg.some(p => isNodeMatchingProduct(node, p));
+      if (!isMatched) return false;
     }
 
     // 聚焦过滤
-    if (focusNodeId && !adjIds.has(node.id)) {
+    if (realFocusNodeId && !adjIds.has(node.id)) {
       return false;
     }
     return true;
@@ -90,22 +140,22 @@ export function filterGraphData(
 
   const filteredNodeIds = new Set(filteredNodes.map(n => n.id));
 
-  // 3. 过滤 links：只要两端报告节点在后台关联行业中均包含当前选定品类，其所有关系线条（供销、竞争、经营、提及）均全部成立！
+  // 3. 过滤 links
   const filteredLinks = links.filter(link => {
     const srcId = typeof link.source === 'object' ? link.source.id : link.source;
     const tgtId = typeof link.target === 'object' ? link.target.id : link.target;
 
-    // 两端节点必须都属于当前筛选切面品类
+    // 两端节点必须都属于当前筛选切面
     if (!filteredNodeIds.has(srcId) || !filteredNodeIds.has(tgtId)) {
       return false;
     }
 
-    // 只要两端报告都在当前品类切面圈子中，所有的连线关系统统成立！
     return true;
   });
 
   return { nodes: filteredNodes, links: filteredLinks };
 }
+
 
 export function computeTwoHopHighlight(
   selectedNodeId: string | null,
