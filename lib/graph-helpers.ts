@@ -58,25 +58,11 @@ const isNodeMatchingCountries = (node: GraphNode, selectedCountries: string[]): 
     // 1. 全球默认包含
     if (reg === '全球') return true;
 
-    // 2. 节点的地区字段包含用户选中的具体国家名称（如 reg="德国"，selectedCountries包含"德国"）
+    // 2. 节点的地区字段包含用户选中的具体国家名称（如 reg="瑞士"，selectedCountries包含"瑞士"）
     if (selectedCountries.includes(reg)) return true;
-
-    // 3. 检查 reg 是否为具体的国家名称（如 "英国"）
-    const countryRegion = getRegionByCountryName(reg);
-    if (countryRegion) {
-      // reg 是具体国家（例如 "英国"），但在 step 2 中未包含在用户已勾选国家中，因此直接排查跳过！
-      continue;
-    }
-
-    // 4. reg 不是具体国家名，而是泛大洲名称（如 "欧洲"、"北美"）
-    const normReg = normalizeRegionName(reg);
-    const hasMatchingRegion = selectedCountries.some(cty => {
-      const ctyRegion = getRegionByCountryName(cty);
-      return ctyRegion && normalizeRegionName(ctyRegion) === normReg;
-    });
-    if (hasMatchingRegion) return true;
   }
 
+  // 当用户已显式挑选具体国家（如 ['瑞士']）时，未明确标注该国家或全球的报告/节点坚决排除
   return false;
 };
 

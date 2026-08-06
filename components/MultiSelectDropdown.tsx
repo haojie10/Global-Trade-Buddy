@@ -115,24 +115,38 @@ export default function MultiSelectDropdown({
       </div>
 
       {isOpen && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 6px)',
-            left: 0,
-            zIndex: 9999,
-            minWidth: '200px',
-            maxHeight: '280px',
-            overflowY: 'auto',
-            background: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            border: '1px solid rgba(18, 18, 18, 0.1)',
-            borderRadius: 'var(--border-radius)',
-            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.08)',
-            padding: '8px 0'
-          }}
-        >
+        <>
+          {/* 隐形全屏遮罩：保证点击页面或 Canvas 任何位置瞬间优雅收起 */}
+          <div
+            onClick={() => setIsOpen(false)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 9990,
+              background: 'transparent'
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              top: 'calc(100% + 6px)',
+              left: 0,
+              zIndex: 9999,
+              minWidth: '200px',
+              maxHeight: '280px',
+              overflowY: 'auto',
+              background: 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              border: '1px solid rgba(18, 18, 18, 0.1)',
+              borderRadius: 'var(--border-radius)',
+              boxShadow: '0 10px 30px rgba(0, 0, 0, 0.08)',
+              padding: '8px 0'
+            }}
+          >
           {/* 顶栏控制按钮 */}
           <div
             style={{
@@ -204,6 +218,7 @@ export default function MultiSelectDropdown({
             })}
           </div>
         </div>
+        </>
       )}
     </div>
   );
