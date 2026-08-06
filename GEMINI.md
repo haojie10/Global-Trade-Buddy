@@ -1,19 +1,49 @@
 @.antigravity/skills/using-superpowers/SKILL.md
 @.antigravity/skills/using-superpowers/references/gemini-tools.md
 
+# GlobalTradeBuddy 项目指南与架构规范
 
-# Superpowers-ZH 中文增强版 (Antigravity 2.0)
+## ⚠️ 系统架构统一约定 (System Architecture Consensus)
+
+> **重要架构声明**：本项目已完成架构迭代收敛，全量部署整合于 **腾讯云轻量应用服务器（Single-Server All-in-One）**。
+> 所有 AI Agent 在处理项目任务、编写代码、配置环境变量或运行调试脚本时，必须遵循以下确切的架构选型：
+
+1. **部署与运行环境 (Hosting & Runtime)**
+   - **生产运行平台**：腾讯云轻量应用服务器（IP: `124.222.201.143`）
+   - **进程守护**：使用 PM2 守护运行 Next.js 生产应用进程（`gtb-backend`）
+   - **废弃平台说明**：⛔ **已彻底废弃 Vercel、CloudBase (云开发) 与 EdgeOne Pages 部署**，请勿针对这些废弃平台编写部署规则或配置文件。
+
+2. **数据库选型 (Database)**
+   - **主数据库**：轻量服务器自建 PostgreSQL
+   - **连接地址**：
+     - 服务器内部通信：`postgresql://postgres:***@127.0.0.1:5432/postgres`
+     - 本地开发/Agent 远程运维：`postgresql://postgres:***@124.222.201.143:5432/postgres`
+   - **废弃服务说明**：⛔ **已彻底废弃 Supabase PostgreSQL 数据库**。
+
+3. **对象存储 (Object Storage)**
+   - **云存储选型**：独立的 **腾讯云 COS 对象存储桶**
+   - **存储桶参数**：`COS_BUCKET=marketgraphic-image-1302276463` | `COS_REGION=ap-shanghai`
+   - **文件路径**：`report-images/`
+   - **访问域名**：`https://marketgraphic-image-1302276463.cos.ap-shanghai.myqcloud.com/report-images/...`
+   - **废弃存储说明**：⛔ **已彻底废弃 CloudBase 存储桶与 Supabase Storage**。
+
+4. **数据备份机制 (Backup)**
+   - 每日凌晨 3:00 通过 `bin/backup-db-to-cos.js` 自动导出全量数据库镜像并压缩加密保存至 COS `database-backups/` 目录。
+
+---
+
+## Superpowers-ZH 中文增强版 (Antigravity 2.0)
 
 本项目已手动安装 superpowers-zh 技能框架（共 20 个 skills）。
 
-## 核心规则
+### 核心规则
 
 1. **收到任务时，先检查是否有匹配的 skill** — 哪怕只有 1% 的可能性也要检查
 2. **设计先于编码** — 收到功能需求时，先用 brainstorming skill 做需求分析
 3. **测试先于实现** — 写代码前先写测试（TDD）
 4. **验证先于完成** — 声称完成前必须运行验证命令
 
-## 可用 Skills
+### 可用 Skills
 
 Skills 位于 `.antigravity/skills/` 目录，每个 skill 有独立的 `SKILL.md` 文件。
 
@@ -38,6 +68,6 @@ Skills 位于 `.antigravity/skills/` 目录，每个 skill 有独立的 `SKILL.m
 - **writing-plans**: 当你有规格说明或需求用于多步骤任务时使用，在动手写代码之前
 - **writing-skills**: 当创建新技能、编辑现有技能或在部署前验证技能是否有效时使用
 
-## 如何使用
+### 如何使用
 
 当任务匹配某个 skill 时，读取对应的 `.antigravity/skills/<skill-name>/SKILL.md` 并严格遵循其流程。
