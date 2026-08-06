@@ -79,11 +79,13 @@ export function encodeSession(session: Session): string {
 // 设置登录 Cookie
 export function setSessionCookie(res: NextApiResponse, session: Session): void {
   const value = encodeSession(session);
+  // 只有在显式环境变量开启或明确配置时才启用 secure 标记，防止 HTTP 访问时 Cookie 被浏览器强行拒收
+  const isSecure = process.env.ENABLE_SECURE_COOKIE === 'true';
   res.setHeader(
     'Set-Cookie',
     serialize('gtb_session', value, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isSecure,
       sameSite: 'lax',
       path: '/',
       maxAge: 60 * 60 * 24 * 7, // 7 天
@@ -93,11 +95,12 @@ export function setSessionCookie(res: NextApiResponse, session: Session): void {
 
 // 清除登录 Cookie
 export function clearSessionCookie(res: NextApiResponse): void {
+  const isSecure = process.env.ENABLE_SECURE_COOKIE === 'true';
   res.setHeader(
     'Set-Cookie',
     serialize('gtb_session', '', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isSecure,
       sameSite: 'lax',
       path: '/',
       maxAge: 0,
