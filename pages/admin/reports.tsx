@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import AdminLayout from '../../components/admin/AdminLayout';
 import { detectAndDecodeHtml } from '../../lib/encoding';
+import { getStandardCategory } from '../../lib/category-mapper';
 
 interface ReportListItem {
   id: string;
@@ -127,6 +128,48 @@ export default function AdminReportsManagement() {
   useEffect(() => {
     fetchData(1);
   }, []);
+
+  // 联动根据 manualProducts 自动选择关联行业复选框
+  useEffect(() => {
+    if (manualProducts.length > 0 && industries.length > 0) {
+      const autoIndIds = new Set<string>(selectedUploadIndustries);
+      let changed = false;
+      for (const p of manualProducts) {
+        if (!p.trim()) continue;
+        const stdCat = getStandardCategory(p) || p.trim();
+        const matchedInd = industries.find(ind => ind.name === stdCat || p.includes(ind.name) || ind.name.includes(p));
+        if (matchedInd && !autoIndIds.has(matchedInd.id)) {
+          autoIndIds.add(matchedInd.id);
+          changed = true;
+        }
+      }
+      if (changed) {
+        setSelectedUploadIndustries(Array.from(autoIndIds));
+      }
+    }
+  }, [manualProducts, industries]);
+
+  // 联动根据 manualRegions 自动选择覆盖国家复选框
+  useEffect(() => {
+    if (manualRegions.length > 0 && countries.length > 0) {
+      const autoCtyIds = new Set<string>(selectedUploadCountries);
+      let changed = false;
+      const searchStr = manualRegions.join(' ').toLowerCase();
+      for (const cty of countries) {
+        const cName = cty.name.toLowerCase();
+        const cRegion = (cty.region || '').toLowerCase();
+        if (searchStr.includes(cName) || (cRegion && searchStr.includes(cRegion))) {
+          if (!autoCtyIds.has(cty.id)) {
+            autoCtyIds.add(cty.id);
+            changed = true;
+          }
+        }
+      }
+      if (changed) {
+        setSelectedUploadCountries(Array.from(autoCtyIds));
+      }
+    }
+  }, [manualRegions, countries]);
 
   const fetchData = async (targetPage = currentPage) => {
     setLoading(true);
@@ -394,12 +437,41 @@ export default function AdminReportsManagement() {
 
         const products = doc.querySelector('meta[name="products"]')?.getAttribute('content');
         if (products) {
-          setManualProducts(products.split(',').map(s => s.trim()).filter(Boolean));
+          const prodList = products.split(',').map(s => s.trim()).filter(Boolean);
+          setManualProducts(prodList);
+
+          // 自动匹配并勾选行业复选框
+          const autoIndIds = new Set<string>();
+          for (const p of prodList) {
+            const stdCat = getStandardCategory(p) || p;
+            const matchedInd = industries.find(ind => ind.name === stdCat || p.includes(ind.name) || ind.name.includes(p));
+            if (matchedInd) {
+              autoIndIds.add(matchedInd.id);
+            }
+          }
+          if (autoIndIds.size > 0) {
+            setSelectedUploadIndustries(Array.from(autoIndIds));
+          }
         }
 
         const regions = doc.querySelector('meta[name="regions"]')?.getAttribute('content');
         if (regions) {
-          setManualRegions(regions.split(',').map(s => s.trim()).filter(Boolean));
+          const regList = regions.split(',').map(s => s.trim()).filter(Boolean);
+          setManualRegions(regList);
+
+          // 自动匹配并勾选国家复选框
+          const autoCtyIds = new Set<string>();
+          const searchStr = regList.join(' ').toLowerCase();
+          for (const cty of countries) {
+            const cName = cty.name.toLowerCase();
+            const cRegion = (cty.region || '').toLowerCase();
+            if (searchStr.includes(cName) || (cRegion && searchStr.includes(cRegion))) {
+              autoCtyIds.add(cty.id);
+            }
+          }
+          if (autoCtyIds.size > 0) {
+            setSelectedUploadCountries(Array.from(autoCtyIds));
+          }
         }
 
         const channels = doc.querySelector('meta[name="channels"]')?.getAttribute('content');
