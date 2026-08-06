@@ -2,6 +2,24 @@ import { PoolClient } from 'pg';
 import { RETAILER_ENTITIES } from './entity-constants';
 
 /**
+ * 校验实体名是否为已知的大型零售商/渠道商/超市
+ */
+export function isRetailerEntity(name?: string | null): boolean {
+  if (!name) return false;
+  const norm = name.toLowerCase().trim();
+  if (RETAILER_ENTITIES.has(norm)) return true;
+
+  // 模糊/子串匹配（忽略常见后缀如 limited, inc, corp, stores, group）
+  const cleanName = norm.replace(/\b(limited|ltd|inc|corp|corporation|group|stores|retail|co|kgaa|gmbh|ag)\b/gi, '').trim();
+  for (const r of Array.from(RETAILER_ENTITIES)) {
+    if (norm === r || cleanName === r || (r.length >= 3 && norm.includes(r))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * 校验两篇报告是否处于同一市场（或具备全球兜底能力）
  */
 export function isSameMarket(marketA?: string | null, marketB?: string | null): boolean {
@@ -231,8 +249,8 @@ export async function computeRelationsForReport(
         return false;
       });
 
-      const isRetailerA = RETAILER_ENTITIES.has(primaryEntNameA);
-      const isRetailerB = RETAILER_ENTITIES.has(bPrimaryName);
+      const isRetailerA = isRetailerEntity(primaryEntNameA);
+      const isRetailerB = isRetailerEntity(bPrimaryName);
       const isCrossRetailerBrand = (isRetailerA !== isRetailerB);
 
       if ((aHasBAsComp || bHasAAsComp || hasSharedChannel) && !isCrossRetailerBrand) {
@@ -246,8 +264,7 @@ export async function computeRelationsForReport(
 
       // 优先级 2: 供销关系 (supplier) — 优先级第二！不受市场限制
       if (!finalRelType) {
-        const isBothRetailers = (primaryEntNameA && RETAILER_ENTITIES.has(primaryEntNameA)) &&
-                                (bPrimaryName && RETAILER_ENTITIES.has(bPrimaryName));
+        const isBothRetailers = isRetailerA && isRetailerB;
 
         if (!isBothRetailers) {
           let isASupplierOfB = false;
@@ -260,7 +277,7 @@ export async function computeRelationsForReport(
                 isBSupplierOfA = true;
               } else if (entInA.role === 'customer') {
                 isASupplierOfB = true;
-              } else if (entInA.role === 'channel' && bPrimaryName && RETAILER_ENTITIES.has(bPrimaryName)) {
+              } else if (entInA.role === 'channel' && isRetailerB) {
                 isASupplierOfB = true;
               }
             }
@@ -273,7 +290,7 @@ export async function computeRelationsForReport(
                 isASupplierOfB = true;
               } else if (entInB.role === 'customer') {
                 isBSupplierOfA = true;
-              } else if (entInB.role === 'channel' && primaryEntNameA && RETAILER_ENTITIES.has(primaryEntNameA)) {
+              } else if (entInB.role === 'channel' && isRetailerA) {
                 isBSupplierOfA = true;
               }
             }
@@ -312,7 +329,7 @@ export async function computeRelationsForReport(
       }
     }
 
-    // 如果生成了有效的关系，写入数据库 relations 表，并自动将对应关系实体补写入 report_entities 表中
+    // 如果生成了有效的关系，写入数据库 relations 表
     if (finalRelType) {
       await dbClient.query(
         `INSERT INTO relations (report_id_a, report_id_b, relation_key, market_region, relation_type)
@@ -320,79 +337,6 @@ export async function computeRelationsForReport(
          ON CONFLICT (report_id_a, report_id_b, relation_key) DO UPDATE SET relation_type = EXCLUDED.relation_type`,
         [sourceReportId, targetReportIdCol, finalRelKey, targetMarketRegion || '全球', finalRelType]
       );
-
-      // 自动双向补充实体关键词到 report_entities 表中，确保关系实体界面完全覆盖
-      if (finalRelType === 'competitor') {
-        if (bPrimaryId) {
-          await dbClient.query(
-            `INSERT INTO report_entities (report_id, entity_id, role, source)
-             VALUES ($1, $2, 'competitor', 'auto') ON CONFLICT (report_id, entity_id) DO NOTHING`,
-            [targetReportId, bPrimaryId]
-          );
-        }
-        if (primaryEntityIdA) {
-          await dbClient.query(
-            `INSERT INTO report_entities (report_id, entity_id, role, source)
-             VALUES ($1, $2, 'competitor', 'auto') ON CONFLICT (report_id, entity_id) DO NOTHING`,
-            [bReportId, primaryEntityIdA]
-          );
-        }
-      } else if (finalRelType === 'supplier') {
-        // sourceReportId 为供方，targetReportIdCol 为销方/渠道
-        if (primaryEntityIdA && bPrimaryId) {
-          const isAProducer = (sourceReportId === targetReportId);
-          const supplierRepId = isAProducer ? targetReportId : bReportId;
-          const channelRepId = isAProducer ? bReportId : targetReportId;
-          const supplierEntId = isAProducer ? primaryEntityIdA : bPrimaryId;
-          const channelEntId = isAProducer ? bPrimaryId : primaryEntityIdA;
-
-          await dbClient.query(
-            `INSERT INTO report_entities (report_id, entity_id, role, source)
-             VALUES ($1, $2, 'channel', 'auto') ON CONFLICT (report_id, entity_id) DO NOTHING`,
-            [supplierRepId, channelEntId]
-          );
-          await dbClient.query(
-            `INSERT INTO report_entities (report_id, entity_id, role, source)
-             VALUES ($1, $2, 'supplier', 'auto') ON CONFLICT (report_id, entity_id) DO NOTHING`,
-            [channelRepId, supplierEntId]
-          );
-        }
-      } else if (finalRelType === 'operation') {
-        const prodReportId = (targetCategory === 'product') ? targetReportId : bReportId;
-        const custReportId = (targetCategory === 'customer') ? targetReportId : bReportId;
-        const prodEntId = (targetCategory === 'product') ? primaryEntityIdA : bPrimaryId;
-        const custEntId = (targetCategory === 'customer') ? primaryEntityIdA : bPrimaryId;
-
-        if (prodEntId && custReportId) {
-          await dbClient.query(
-            `INSERT INTO report_entities (report_id, entity_id, role, source)
-             VALUES ($1, $2, 'product', 'auto') ON CONFLICT (report_id, entity_id) DO NOTHING`,
-            [custReportId, prodEntId]
-          );
-        }
-        if (custEntId && prodReportId) {
-          await dbClient.query(
-            `INSERT INTO report_entities (report_id, entity_id, role, source)
-             VALUES ($1, $2, 'channel', 'auto') ON CONFLICT (report_id, entity_id) DO NOTHING`,
-            [prodReportId, custEntId]
-          );
-        }
-      } else if (finalRelType === 'mention') {
-        if (bPrimaryId) {
-          await dbClient.query(
-            `INSERT INTO report_entities (report_id, entity_id, role, source)
-             VALUES ($1, $2, 'mentioned', 'auto') ON CONFLICT (report_id, entity_id) DO NOTHING`,
-            [targetReportId, bPrimaryId]
-          );
-        }
-        if (primaryEntityIdA) {
-          await dbClient.query(
-            `INSERT INTO report_entities (report_id, entity_id, role, source)
-             VALUES ($1, $2, 'mentioned', 'auto') ON CONFLICT (report_id, entity_id) DO NOTHING`,
-            [bReportId, primaryEntityIdA]
-          );
-        }
-      }
     }
   }
 }
@@ -401,7 +345,6 @@ export async function computeRelationsForReport(
  * 全量重算图谱中所有报告的关系
  */
 export async function recalculateAllRelations(dbClient: PoolClient): Promise<{ totalReports: number; totalRelations: number }> {
-  await dbClient.query('BEGIN');
   try {
     // 1. 清空 relations 表
     await dbClient.query('TRUNCATE TABLE relations');
@@ -415,7 +358,6 @@ export async function recalculateAllRelations(dbClient: PoolClient): Promise<{ t
 
     const reports = reportsRes.rows;
     if (reports.length === 0) {
-      await dbClient.query('COMMIT');
       return { totalReports: 0, totalRelations: 0 };
     }
 
@@ -462,10 +404,8 @@ export async function recalculateAllRelations(dbClient: PoolClient): Promise<{ t
     const countRes = await dbClient.query('SELECT COUNT(*)::int as count FROM relations');
     const totalRelations = countRes.rows[0].count;
 
-    await dbClient.query('COMMIT');
     return { totalReports: reports.length, totalRelations };
   } catch (err) {
-    await dbClient.query('ROLLBACK');
     throw err;
   }
 }
