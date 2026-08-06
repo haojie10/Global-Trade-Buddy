@@ -114,7 +114,7 @@ export default function MultiSelectDropdown({
             position: 'absolute',
             top: 'calc(100% + 6px)',
             left: 0,
-            zIndex: 100,
+            zIndex: 9999,
             minWidth: '200px',
             maxHeight: '280px',
             overflowY: 'auto',

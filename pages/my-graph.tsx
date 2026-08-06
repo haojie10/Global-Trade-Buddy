@@ -256,7 +256,9 @@ export default function MyGraphPage({ graphData, userId, userRole, freeQuota, un
                 borderRadius: 'var(--border-radius)',
                 marginBottom: '16px',
                 boxShadow: '0 6px 20px rgba(0, 0, 0, 0.01)',
-                flexWrap: 'wrap'
+                flexWrap: 'wrap',
+                position: 'relative',
+                zIndex: 100
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
                   {/* 1. 区域选择 (单选) */}
