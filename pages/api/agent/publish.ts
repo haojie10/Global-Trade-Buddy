@@ -107,17 +107,28 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     const primaryEnt = resolvedEntities.find(e => e.role === 'primary');
     const primaryEntityId = primaryEnt ? primaryEnt.id : null;
 
-    // 4. 元数据去重检查与插入（幂等性设计）
-    const existingReport = await dbClient.query(
-      'SELECT id FROM reports WHERE title = $1',
-      [meta.title || title]
-    );
+    // 4. 元数据去重检查与插入（智能幂等与主体覆盖设计）
+    let existingReport;
+    if (finalCategory === 'customer' && primaryEntityId) {
+      // 企业洞察报告：优先根据主体公司 ID (primary_entity_id) 查重，保证同一家企业的报告始终平滑覆盖更新，继承原 Report ID
+      existingReport = await dbClient.query(
+        'SELECT id FROM reports WHERE category = $1 AND primary_entity_id = $2',
+        ['customer', primaryEntityId]
+      );
+    }
+    if (!existingReport || existingReport.rows.length === 0) {
+      // 兜底查重：根据报告标题精确匹配
+      existingReport = await dbClient.query(
+        'SELECT id FROM reports WHERE title = $1',
+        [meta.title || title]
+      );
+    }
 
     let newReportId: string;
     // NOTE: 更新模式下，需先保存旧 content_html 用于事务后清理孤儿图片
     let oldContentHtmlForUpdate: string | null = null;
     if (existingReport.rows.length > 0) {
-      // 若相同标题的报告已存在，执行更新（Update）覆盖
+      // 若已存在属于同一企业或同标题的报告，执行更新（Update）覆盖
       newReportId = existingReport.rows[0].id;
       const oldContentRes = await dbClient.query(
         'SELECT content_html FROM reports WHERE id = $1',
@@ -126,9 +137,9 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
       oldContentHtmlForUpdate = oldContentRes.rows[0]?.content_html || null;
       await dbClient.query(
         `UPDATE reports 
-         SET category = $1, market_region = $2, summary = $3, content_html = $4, primary_entity_id = $5, created_at = NOW()
-         WHERE id = $6`,
-        [finalCategory, finalMarketRegion, finalSummary, cleanHtml, primaryEntityId, newReportId]
+         SET title = $1, category = $2, market_region = $3, summary = $4, content_html = $5, primary_entity_id = $6, created_at = NOW()
+         WHERE id = $7`,
+        [meta.title || title, finalCategory, finalMarketRegion, finalSummary, cleanHtml, primaryEntityId, newReportId]
       );
     } else {
       // 若不存在，执行新建（Insert）
