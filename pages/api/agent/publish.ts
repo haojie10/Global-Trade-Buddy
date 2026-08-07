@@ -211,6 +211,7 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     }
 
     // 7. 保存实体关联角色 (写入 report_entities)
+    await dbClient.query('DELETE FROM report_entities WHERE report_id = $1', [newReportId]);
     if (resolvedEntities.length > 0) {
       const selectParts: string[] = [];
       const queryParams: any[] = [newReportId];

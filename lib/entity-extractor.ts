@@ -129,21 +129,10 @@ export async function extractAndNormalizeEntities(
   }
 
   const matchedEntities = new Map<string, { id: string; canonical_name: string; entity_type: string }>();
-  const searchContent = title + ' ' + html;
 
-  // 2. 检索已知实体和别名 (扫描全文和标题，自动提取已在词库的实体和别称)
-  for (const ent of entityMap.values()) {
-    for (const matchStr of ent.matches) {
-      if (searchContent.includes(matchStr)) {
-        matchedEntities.set(ent.id, { id: ent.id, canonical_name: ent.canonical_name, entity_type: ent.entity_type });
-        break;
-      }
-    }
-  }
-
-  // 3. 处理手动标记的实体 (优先级高，自动注册未知实体)
+  // 2. 处理手动标记的实体 (以 Meta 标签为唯一权威来源，支持简称 -> 标准名映射)
   if (manualTags) {
-    // 3.1 特殊处理公司标签：如果有多个公司标签，则取第一个作为标准名称，其余全部自动作为其别称并入数据库别称表，不在图上显示多个圆点
+    // 2.1 特殊处理公司标签：如果有多个公司标签，则取第一个作为标准名称，其余全部自动作为其别称并入数据库别称表，不在图上显示多个圆点
     if (manualTags.companies && manualTags.companies.length > 0) {
       const companyTags = manualTags.companies.map((c: string) => c.trim()).filter(Boolean);
       if (companyTags.length > 0) {
@@ -315,7 +304,7 @@ export async function extractAndNormalizeEntities(
       }
     }
 
-    // 3.2 正常处理产品、渠道、竞争对手、供应商、客户和姐妹公司标签
+    // 2.2 正常处理产品、渠道、竞争对手、供应商、客户和姐妹公司标签 (支持简称 -> 数据库标准全称映射)
     const otherCategories = [
       { tags: manualTags.competitors, type: 'competitor' },
       { tags: manualTags.suppliers, type: 'company' }, // 手动供应商作为 company
@@ -331,7 +320,7 @@ export async function extractAndNormalizeEntities(
         const tag = rawTag.trim();
         if (!tag) continue;
 
-        // 查找是否已存在于已知实体或别名中
+        // 查找是否已存在于已知实体或别名中 (匹配简称 -> 标准全称)
         let foundEntity: { id: string; canonical_name: string; entity_type: string } | null = null;
         for (const ent of entityMap.values()) {
           if (ent.matches.has(tag)) {
@@ -365,33 +354,9 @@ export async function extractAndNormalizeEntities(
         }
       }
     }
-  }  // 4. 正文和标题匹配兜底逻辑：继续在标题和正文里检索常见关键词，如果 HTML 包含它们且它们不在已提取列表中，将其作为实体提取。
-  const keywordTypeMap: Record<string, string> = {};
-  ENTITY_DEFINITIONS.forEach(def => {
-    keywordTypeMap[def.name] = def.type;
-  });
-
-  const extractedNames = new Set<string>();
-  for (const ent of matchedEntities.values()) {
-    extractedNames.add(ent.canonical_name);
   }
 
-  for (const kw of commonKeywords) {
-    if (searchContent.includes(kw) && !extractedNames.has(kw)) {
-      const type = keywordTypeMap[kw] || 'product';
-      const insertRes = await dbClient.query(
-        `INSERT INTO entities (canonical_name, entity_type) 
-         VALUES ($1, $2) 
-         ON CONFLICT (canonical_name) DO UPDATE SET entity_type = EXCLUDED.entity_type
-         RETURNING id`,
-        [kw, type]
-      );
-      const entId = insertRes.rows[0].id;
-      matchedEntities.set(entId, { id: entId, canonical_name: kw, entity_type: type });
-      extractedNames.add(kw);
-    }
-  }
-  // 5. 判定实体在此报告中的具体角色 (role)
+  // 3. 判定实体在此报告中的具体角色 (role)
   // 获取报告研究本体的主实体 ID
   let primaryId = '';
   if (category === 'customer' && primarySubject) {
@@ -414,28 +379,7 @@ export async function extractAndNormalizeEntities(
     }
   }
 
-  // 如果匹配成功，但标题简称 primarySubject 还不在别名表中，自动为其建立别名绑定
-  if (primaryId && primarySubject) {
-    const cachedEnt = entityMap.get(primaryId);
-    if (cachedEnt && !cachedEnt.matches.has(primarySubject)) {
-      // 检测是否与其他主名或别名冲突，防止唯一性键冲突
-      let isConflict = false;
-      for (const ent of entityMap.values()) {
-        if (ent.matches.has(primarySubject)) {
-          isConflict = true;
-          break;
-        }
-      }
-      if (!isConflict) {
-        await dbClient.query(
-          `INSERT INTO entity_aliases (entity_id, alias_name) VALUES ($1, $2) ON CONFLICT (alias_name) DO NOTHING`,
-          [primaryId, primarySubject]
-        );
-        cachedEnt.matches.add(primarySubject);
-        console.log(`Auto bound title subject "${primarySubject}" as alias to entity "${cachedEnt.canonical_name}"`);
-      }
-    }
-  }
+
 
   const result: { id: string; canonical_name: string; role: string; source: 'manual' | 'auto' }[] = [];
   for (const ent of matchedEntities.values()) {
