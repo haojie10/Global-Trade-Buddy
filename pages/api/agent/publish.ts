@@ -110,16 +110,16 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     // 4. 元数据去重检查与插入（智能幂等与主体覆盖设计）
     let existingReport;
     if (finalCategory === 'customer' && primaryEntityId) {
-      // 企业洞察报告：优先根据主体公司 ID (primary_entity_id) 查重，保证同一家企业的报告始终平滑覆盖更新，继承原 Report ID
+      // 企业洞察报告：优先根据主体公司 ID (primary_entity_id) 查重，永远锁定最早产生的第一版原始 Report ID
       existingReport = await dbClient.query(
-        'SELECT id FROM reports WHERE category = $1 AND primary_entity_id = $2',
+        'SELECT id FROM reports WHERE category = $1 AND primary_entity_id = $2 ORDER BY created_at ASC LIMIT 1',
         ['customer', primaryEntityId]
       );
     }
     if (!existingReport || existingReport.rows.length === 0) {
-      // 兜底查重：根据报告标题精确匹配
+      // 兜底查重：根据报告标题匹配最早产生的记录
       existingReport = await dbClient.query(
-        'SELECT id FROM reports WHERE title = $1',
+        'SELECT id FROM reports WHERE title = $1 ORDER BY created_at ASC LIMIT 1',
         [meta.title || title]
       );
     }
@@ -141,6 +141,23 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
          WHERE id = $7`,
         [meta.title || title, finalCategory, finalMarketRegion, finalSummary, cleanHtml, primaryEntityId, newReportId]
       );
+
+      // 自愈修复：若历史数据库中因旧代码遗留了属于同一企业/同标题的多余重复报告，自动进行物理删除清理
+      if (finalCategory === 'customer' && primaryEntityId) {
+        const dupRes = await dbClient.query(
+          'SELECT id FROM reports WHERE category = $1 AND primary_entity_id = $2 AND id != $3',
+          ['customer', primaryEntityId, newReportId]
+        );
+        for (const dupRow of dupRes.rows) {
+          const dupId = dupRow.id;
+          await dbClient.query('DELETE FROM report_entities WHERE report_id = $1', [dupId]);
+          await dbClient.query('DELETE FROM report_industries WHERE report_id = $1', [dupId]);
+          await dbClient.query('DELETE FROM report_countries WHERE report_id = $1', [dupId]);
+          await dbClient.query('DELETE FROM relations WHERE report_id_a = $1 OR report_id_b = $1', [dupId]);
+          await dbClient.query('DELETE FROM reports WHERE id = $1', [dupId]);
+          console.log(`Auto healed and removed history redundant report: ${dupId}`);
+        }
+      }
     } else {
       // 若不存在，执行新建（Insert）
       const insertReportRes = await dbClient.query(
