@@ -3,10 +3,12 @@
 
 # GlobalTradeBuddy 项目指南与架构规范
 
+> 详细的系统架构说明文档请查阅：[ARCHITECTURE.md](file:///Users/jason/Documents/Antigravity/Project/Globaltradebuddy/ARCHITECTURE.md)
+
 ## ⚠️ 系统架构统一约定 (System Architecture Consensus)
 
-> **重要架构声明**：本项目已完成架构迭代收敛，全量部署整合于 **腾讯云轻量应用服务器（Single-Server All-in-One）**。
-> 所有 AI Agent 在处理项目任务、编写代码、配置环境变量或运行调试脚本时，必须遵循以下确切的架构选型：
+> **重要架构声明**：本项目经历了从 **Vercel + Supabase** 到 **腾讯云 CloudBase (云开发)**，最终收敛并全量部署于 **腾讯云轻量应用服务器（Single-Server All-in-One）** 的演进过程。
+> 所有 AI Agent 在处理项目任务、编写代码、配置环境变量或运行调试脚本时，必须遵循以下确切的最终架构选型：
 
 1. **部署与运行环境 (Hosting & Runtime)**
    - **生产运行平台**：腾讯云轻量应用服务器（IP: `124.222.201.143`）
