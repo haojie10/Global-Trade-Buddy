@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import pool from '../../lib/db';
 import { resolveSsrAuth } from '../../lib/ssr-auth';
 import { getReportDetail } from '../api/user/report-detail';
+import { localizeReportHtml } from '../../lib/localize-report-assets';
 import WatermarkContainer from '../../components/WatermarkContainer';
 import Link from 'next/link';
 import Navbar from '../../components/Navbar';
@@ -761,7 +762,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
           market_region: rep.market_region,
           summary: rep.summary,
           isUnlocked: true,
-          content_html: rep.content_html
+          content_html: localizeReportHtml(rep.content_html)
         };
       } else {
         report = await getReportDetail(userId, id as string, dbClient);

@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { PoolClient } from 'pg';
 import { withDb } from '../../../lib/api-handler';
 import { getSession } from '../../../lib/auth';
+import { localizeReportHtml } from '../../../lib/localize-report-assets';
 
 async function unlockHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
   const session = getSession(req);
@@ -88,7 +89,7 @@ async function unlockHandler(req: NextApiRequest, res: NextApiResponse, dbClient
 
     return res.status(200).json({
       success: true,
-      content_html: reportRes.rows[0]?.content_html || ''
+      content_html: localizeReportHtml(reportRes.rows[0]?.content_html) || ''
     });
   } else {
     await dbClient.query('ROLLBACK');

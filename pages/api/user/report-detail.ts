@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import pool from '../../../lib/db';
 import { getSession } from '../../../lib/auth';
+import { localizeReportHtml } from '../../../lib/localize-report-assets';
 
 // 核心安全详情读取逻辑（供 API 和单元测试调用）
 export async function getReportDetail(userId: string, reportId: string, dbClient: any) {
@@ -40,7 +41,7 @@ export async function getReportDetail(userId: string, reportId: string, dbClient
     isUnlocked,
     isFavorite,
     // 核心安全隔离：如果没有解锁，强制为 null，防止任何敏感字段返回给前台
-    content_html: isUnlocked ? report.content_html : null,
+    content_html: isUnlocked ? localizeReportHtml(report.content_html) : null,
   };
 }
 
