@@ -23,7 +23,7 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     return res.status(401).json({ error: 'Unauthorized: Invalid Agent API Key' });
   }
 
-  const { type, title, summary, contentHtml, region, country, industry, tags } = req.body;
+  const { type, title, summary, contentHtml, region, country, industry, industries, tags } = req.body;
 
   if (!title || !contentHtml) {
     return res.status(400).json({ error: 'Missing title or contentHtml' });
@@ -558,9 +558,13 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     );
     const newNewsId = insertNewsRes.rows[0].id;
 
-    // 关联行业 (news_industries)
-    if (industry) {
-      const mappedCategory = getStandardCategory(industry);
+    // 关联行业 (news_industries) —— 支持多标签数组，无上限关联全部 54 标准品类
+    // industries: 完整多标签数组（优先）；industry: 单品类兜底兼容
+    const industryList = Array.isArray(industries) && industries.length > 0
+      ? industries
+      : (industry ? [industry] : []);
+    for (const indName of industryList) {
+      const mappedCategory = getStandardCategory(indName);
       if (mappedCategory) {
         const indRes = await dbClient.query(
           'INSERT INTO industries (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING id',
@@ -572,7 +576,7 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
           [newNewsId, indId]
         );
       } else {
-        ignoredCategories.push(industry);
+        ignoredCategories.push(indName);
       }
     }
 

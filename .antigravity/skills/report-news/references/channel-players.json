@@ -1,0 +1,3167 @@
+{
+  "version": "1.0",
+  "generated": "2026-08-09",
+  "description": "GTB 54品类海外销售渠道代表玩家与资讯来源图谱（供资讯引擎检索词增强 & 收藏夹订阅源）",
+  "clusters": [
+    {
+      "id": "electronics_mobility",
+      "name": "电子家电与智能出行",
+      "categories": [
+        {
+          "name": "家用电器",
+          "en": "Home Appliances",
+          "players": [
+            "Whirlpool",
+            "Samsung",
+            "LG Electronics",
+            "Electrolux",
+            "GE Appliances",
+            "Bosch",
+            "Siemens",
+            "Dyson",
+            "De'Longhi",
+            "Philips",
+            "Kenmore",
+            "Frigidaire",
+            "Miele",
+            "Beko",
+            "Ariston",
+            "Smeg",
+            "Consul"
+          ],
+          "retailers": [
+            "Best Buy",
+            "Currys",
+            "MediaMarkt",
+            "Walmart",
+            "Costco",
+            "Argos",
+            "Wayfair",
+            "Amazon"
+          ],
+          "associations": [
+            "AHAM",
+            "CTA"
+          ],
+          "media": [
+            {
+              "name": "AHAM 美国家电制造商协会",
+              "url": "https://www.aham.org/"
+            },
+            {
+              "name": "TWICE (Consumer Electronics)",
+              "url": "https://www.twice.com/"
+            },
+            {
+              "name": "Appliance Retailer (澳洲家电)",
+              "url": "https://www.applianceretailer.com.au/"
+            },
+            {
+              "name": "Elektro Retail Magazine (荷兰电子零售)",
+              "url": "https://elektroretailmagazine.nl/"
+            },
+            {
+              "name": "Daily Trend (韩国零售)",
+              "url": "https://www.dailytrend.co.kr/"
+            }
+          ]
+        },
+        {
+          "name": "电子消费品及信息产品",
+          "en": "Consumer Electronics & IT",
+          "players": [
+            "Apple",
+            "Samsung",
+            "Sony",
+            "LG",
+            "HP",
+            "Dell",
+            "ASUS",
+            "Acer",
+            "Microsoft",
+            "Amazon",
+            "Google",
+            "Belkin",
+            "JBL",
+            "Bose",
+            "Sonos",
+            "Logitech",
+            "Razer",
+            "Bang & Olufsen",
+            "Sennheiser",
+            "Nokia",
+            "Positivo",
+            "Multilaser",
+            "DNS",
+            "M.Video",
+            "Eldorado",
+            "Citilink"
+          ],
+          "retailers": [
+            "Best Buy",
+            "MediaMarkt",
+            "Currys",
+            "Amazon",
+            "Walmart",
+            "Temu",
+            "Shein"
+          ],
+          "associations": [
+            "CTA",
+            "GSMA"
+          ],
+          "media": [
+            {
+              "name": "The Verge",
+              "url": "https://www.theverge.com/"
+            },
+            {
+              "name": "TWICE",
+              "url": "https://www.twice.com/"
+            },
+            {
+              "name": "Appliance Retailer (澳洲家电)",
+              "url": "https://www.applianceretailer.com.au/"
+            },
+            {
+              "name": "Elektro Retail Magazine (荷兰电子零售)",
+              "url": "https://elektroretailmagazine.nl/"
+            },
+            {
+              "name": "Daily Trend (韩国零售)",
+              "url": "https://www.dailytrend.co.kr/"
+            },
+            {
+              "name": "ILACAD World Retail (拉美)",
+              "url": "https://www.ilacad.com/"
+            }
+          ]
+        },
+        {
+          "name": "电子电气产品",
+          "en": "Electronic & Electrical Products",
+          "players": [
+            "ABB",
+            "Schneider Electric",
+            "Siemens",
+            "Legrand",
+            "Eaton",
+            "Hager",
+            "Panasonic",
+            "Leviton",
+            "Lutron",
+            "Honeywell",
+            "Rittal",
+            "Phoenix Contact",
+            "Prysmian"
+          ],
+          "retailers": [
+            "Sonepar",
+            "Rexel",
+            "WESCO",
+            "Graybar",
+            "Home Depot",
+            "Lowe's",
+            "Amazon"
+          ],
+          "associations": [
+            "EDA",
+            "EUEW",
+            "NEMA"
+          ],
+          "media": [
+            {
+              "name": "Electrical Wholesaling",
+              "url": "https://www.ewweb.com/"
+            },
+            {
+              "name": "Electrical Trade Magazine",
+              "url": "https://www.electricaltrademagazine.co.uk/"
+            },
+            {
+              "name": "EDA 英国电气分销协会",
+              "url": "https://www.eda.org.uk/"
+            },
+            {
+              "name": "EUEW 欧洲电气批发联盟",
+              "url": "https://www.euew.org/"
+            },
+            {
+              "name": "日刊工業新聞 Newswitch (日本)",
+              "url": "https://newswitch.jp/"
+            },
+            {
+              "name": "ILACAD World Retail (拉美)",
+              "url": "https://www.ilacad.com/"
+            }
+          ]
+        },
+        {
+          "name": "照明产品",
+          "en": "Lighting Products",
+          "players": [
+            "Signify",
+            "ams OSRAM",
+            "Acuity Brands",
+            "Lutron",
+            "GE Lighting",
+            "LEDVANCE",
+            "Zumtobel",
+            "Trilux",
+            "Regent",
+            "Toshiba",
+            "Philips",
+            "iGuzzini",
+            "Fagerhult",
+            "Artemide",
+            "Intral",
+            "Lorenzetto"
+          ],
+          "retailers": [
+            "Sonepar",
+            "Rexel",
+            "CED",
+            "WESCO",
+            "Graybar",
+            "Home Depot",
+            "Lowe's",
+            "Amazon",
+            "Wayfair"
+          ],
+          "associations": [
+            "IES",
+            "Lighting Europe",
+            "NEMA"
+          ],
+          "media": [
+            {
+              "name": "IES Illuminating Engineering Society",
+              "url": "https://www.ies.org/"
+            },
+            {
+              "name": "LD+A Magazine",
+              "url": "https://www.ies.org/lda/"
+            },
+            {
+              "name": "LED Professional",
+              "url": "https://www.led-professional.com/"
+            },
+            {
+              "name": "PLD Magazine",
+              "url": "https://pld-m.com/en/"
+            },
+            {
+              "name": "日刊工業新聞 Newswitch (日本)",
+              "url": "https://newswitch.jp/"
+            },
+            {
+              "name": "Lighting Council Australia (澳洲)",
+              "url": "https://www.lightingcouncil.com.au/"
+            },
+            {
+              "name": "ILACAD World Retail (拉美)",
+              "url": "https://www.ilacad.com/"
+            }
+          ]
+        },
+        {
+          "name": "新能源汽车及智慧出行",
+          "en": "NEV & Smart Mobility",
+          "players": [
+            "Tesla",
+            "GM",
+            "Ford",
+            "Volkswagen",
+            "BMW",
+            "Mercedes-Benz",
+            "Toyota",
+            "Honda",
+            "Hyundai",
+            "Kia",
+            "ChargePoint",
+            "EVgo",
+            "Wallbox",
+            "Rad Power Bikes",
+            "Aventon",
+            "Renault",
+            "Volvo",
+            "Porsche",
+            "Audi"
+          ],
+          "retailers": [
+            "直营门店",
+            "授权经销商",
+            "充电运营商网络"
+          ],
+          "associations": [
+            "SAE",
+            "EV Association"
+          ],
+          "media": [
+            {
+              "name": "Automotive News",
+              "url": "https://www.autonews.com/"
+            },
+            {
+              "name": "Bloomberg NEF",
+              "url": "https://about.bnef.com/"
+            },
+            {
+              "name": "日经中文网 Nikkei (日本)",
+              "url": "https://cn.nikkei.com/"
+            },
+            {
+              "name": "Daily Trend (韩国零售)",
+              "url": "https://www.dailytrend.co.kr/"
+            }
+          ]
+        },
+        {
+          "name": "车辆",
+          "en": "Vehicles",
+          "players": [
+            "Toyota",
+            "Volkswagen",
+            "GM",
+            "Ford",
+            "BMW",
+            "Mercedes-Benz",
+            "Honda",
+            "Hyundai",
+            "Stellantis",
+            "Nissan",
+            "Kia",
+            "Tesla",
+            "Renault",
+            "Audi",
+            "Skoda",
+            "Alpine"
+          ],
+          "retailers": [
+            "授权经销商",
+            "Ritchie Bros 拍卖",
+            "车队采购"
+          ],
+          "associations": [
+            "NADA",
+            "ACEA"
+          ],
+          "media": [
+            {
+              "name": "Automotive News",
+              "url": "https://www.autonews.com/"
+            },
+            {
+              "name": "NADA",
+              "url": "https://www.nada.org/"
+            },
+            {
+              "name": "日经中文网 Nikkei (日本)",
+              "url": "https://cn.nikkei.com/"
+            },
+            {
+              "name": "Daily Trend (韩国零售)",
+              "url": "https://www.dailytrend.co.kr/"
+            }
+          ]
+        },
+        {
+          "name": "汽车配件",
+          "en": "Auto Parts & Accessories",
+          "players": [
+            "AutoZone",
+            "O'Reilly",
+            "Advance Auto Parts",
+            "NAPA",
+            "Pep Boys",
+            "Dorman",
+            "Bosch",
+            "Continental",
+            "Bridgestone",
+            "Goodyear",
+            "Michelin",
+            "ACDelco",
+            "Monroe",
+            "KYB",
+            "Valeo",
+            "ZF",
+            "Brembo",
+            "Metal Leve"
+          ],
+          "retailers": [
+            "AutoZone",
+            "O'Reilly",
+            "Advance Auto Parts",
+            "NAPA",
+            "RockAuto",
+            "Amazon"
+          ],
+          "associations": [
+            "SEMA",
+            "Auto Care Association",
+            "MEMA"
+          ],
+          "media": [
+            {
+              "name": "SEMA",
+              "url": "https://www.sema.org/"
+            },
+            {
+              "name": "Automotive Aftermarket News",
+              "url": "https://www.automotiveaftermarketnews.com/"
+            },
+            {
+              "name": "E-handel (北欧)",
+              "url": "https://ehandel.com/"
+            },
+            {
+              "name": "Daily Trend (韩国零售)",
+              "url": "https://www.dailytrend.co.kr/"
+            }
+          ]
+        },
+        {
+          "name": "摩托车",
+          "en": "Motorcycles",
+          "players": [
+            "Harley-Davidson",
+            "Yamaha",
+            "Honda",
+            "Kawasaki",
+            "Suzuki",
+            "KTM",
+            "Ducati",
+            "BMW Motorrad",
+            "Royal Enfield",
+            "Bajaj",
+            "Triumph",
+            "Aprilia",
+            "Piaggio"
+          ],
+          "retailers": [
+            "授权经销商",
+            "Cycle Gear",
+            "RevZilla"
+          ],
+          "associations": [
+            "MIC"
+          ],
+          "media": [
+            {
+              "name": "Powersports Business",
+              "url": "https://www.powersportsbusiness.com/"
+            },
+            {
+              "name": "BikeBiz (英国)",
+              "url": "https://bikebiz.com/"
+            },
+            {
+              "name": "Daily Trend (韩国零售)",
+              "url": "https://www.dailytrend.co.kr/"
+            }
+          ]
+        },
+        {
+          "name": "自行车",
+          "en": "Bicycles",
+          "players": [
+            "Giant",
+            "Trek",
+            "Specialized",
+            "Cannondale",
+            "Canyon",
+            "Shimano",
+            "SRAM",
+            "Brompton",
+            "Rad Power Bikes",
+            "Aventon",
+            "Bosch eBike",
+            "Decathlon",
+            "Bianchi",
+            "Cube",
+            "Orbea"
+          ],
+          "retailers": [
+            "独立车店 IBD",
+            "Walmart",
+            "Chain Reaction",
+            "Canyon DTC"
+          ],
+          "associations": [
+            "NBDA"
+          ],
+          "media": [
+            {
+              "name": "Bicycle Retailer BRAIN",
+              "url": "https://www.bicycleretailer.com/"
+            },
+            {
+              "name": "Bike Europe",
+              "url": "https://www.bike-eu.com/"
+            },
+            {
+              "name": "Cycling Industry News",
+              "url": "https://cyclingindustry.news/"
+            },
+            {
+              "name": "BikeBiz (英国)",
+              "url": "https://bikebiz.com/"
+            },
+            {
+              "name": "Daily Trend (韩国零售)",
+              "url": "https://www.dailytrend.co.kr/"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hardware_machinery_building",
+      "name": "五金工具与机械建材",
+      "categories": [
+        {
+          "name": "动力、电力设备",
+          "en": "Power & Electrical Equipment",
+          "players": [
+            "Generac",
+            "Cummins",
+            "Kohler",
+            "Caterpillar",
+            "Yamaha",
+            "Honda",
+            "WEG",
+            "ABB",
+            "Siemens",
+            "GE Vernova",
+            "Franklin Electric",
+            "Grundfos",
+            "Wilo",
+            "Danfoss",
+            "KSB",
+            "SDMO"
+          ],
+          "retailers": [
+            "电气分销商",
+            "工业分销商",
+            "MRO",
+            "工程项目"
+          ],
+          "associations": [
+            "NEMA",
+            "EGSA"
+          ],
+          "media": [
+            {
+              "name": "Electrical Wholesaling",
+              "url": "https://www.ewweb.com/"
+            },
+            {
+              "name": "Power Magazine",
+              "url": "https://www.powermag.com/"
+            },
+            {
+              "name": "日刊工業新聞 Newswitch (日本)",
+              "url": "https://newswitch.jp/"
+            },
+            {
+              "name": "Manufacturers' Monthly (澳洲)",
+              "url": "https://www.manmonthly.com.au/"
+            }
+          ]
+        },
+        {
+          "name": "通用机械及机械基础件",
+          "en": "General Machinery & Parts",
+          "players": [
+            "SKF",
+            "Schaeffler",
+            "Timken",
+            "NSK",
+            "NTN",
+            "Bosch Rexroth",
+            "Gates",
+            "Parker",
+            "Fastenal",
+            "Grainger",
+            "Motion Industries",
+            "RS Components",
+            "McMaster-Carr",
+            "Würth",
+            "Festo",
+            "igus",
+            "HARTING"
+          ],
+          "retailers": [
+            "工业分销商",
+            "OEM 配套"
+          ],
+          "associations": [
+            "PTDA",
+            "NAW"
+          ],
+          "media": [
+            {
+              "name": "Machine Design",
+              "url": "https://www.machinedesign.com/"
+            },
+            {
+              "name": "日刊工業新聞 Newswitch (日本)",
+              "url": "https://newswitch.jp/"
+            },
+            {
+              "name": "Manufacturers' Monthly (澳洲)",
+              "url": "https://www.manmonthly.com.au/"
+            }
+          ]
+        },
+        {
+          "name": "加工机械设备",
+          "en": "Processing Machinery",
+          "players": [
+            "Haas",
+            "DMG MORI",
+            "Mazak",
+            "Fanuc",
+            "Trumpf",
+            "Amada",
+            "Mitsubishi Electric",
+            "Husqvarna",
+            "Bosch",
+            "Makita",
+            "SCM Group",
+            "Biesse",
+            "Homag",
+            "Starrag"
+          ],
+          "retailers": [
+            "直销 + 海外代理",
+            "展会成交"
+          ],
+          "associations": [
+            "AMT",
+            "VDMA"
+          ],
+          "media": [
+            {
+              "name": "Modern Machine Shop",
+              "url": "https://www.mmsonline.com/"
+            },
+            {
+              "name": "AMT",
+              "url": "https://www.amtonline.org/"
+            },
+            {
+              "name": "EMO Hannover",
+              "url": "https://emo-hannover.com/"
+            },
+            {
+              "name": "日刊工業新聞 Newswitch (日本)",
+              "url": "https://newswitch.jp/"
+            },
+            {
+              "name": "Australian Manufacturing (澳洲)",
+              "url": "https://www.australianmanufacturing.com.au/"
+            }
+          ]
+        },
+        {
+          "name": "工程机械（室内/室外）",
+          "en": "Construction Machinery",
+          "players": [
+            "Caterpillar",
+            "Komatsu",
+            "Hitachi",
+            "Volvo CE",
+            "JCB",
+            "Deere",
+            "Case",
+            "Kubota",
+            "Bobcat",
+            "Liebherr",
+            "Manitou",
+            "Wacker Neuson",
+            "Bomag"
+          ],
+          "retailers": [
+            "授权经销商",
+            "United Rentals",
+            "Herc",
+            "Ritchie Bros"
+          ],
+          "associations": [
+            "AEM"
+          ],
+          "media": [
+            {
+              "name": "Equipment World",
+              "url": "https://www.equipmentworld.com/"
+            },
+            {
+              "name": "Construction Equipment",
+              "url": "https://www.constructionequipment.com/"
+            },
+            {
+              "name": "日刊工業新聞 Newswitch (日本)",
+              "url": "https://newswitch.jp/"
+            },
+            {
+              "name": "Manufacturers' Monthly (澳洲)",
+              "url": "https://www.manmonthly.com.au/"
+            }
+          ]
+        },
+        {
+          "name": "农业机械（室内/室外）",
+          "en": "Agricultural Machinery",
+          "players": [
+            "John Deere",
+            "CNH",
+            "AGCO",
+            "Kubota",
+            "Yanmar",
+            "CLAAS",
+            "Mahindra",
+            "Sonalika",
+            "Fendt",
+            "Same Deutz-Fahr",
+            "Kuhn"
+          ],
+          "retailers": [
+            "授权经销商",
+            "农资店",
+            "租赁"
+          ],
+          "associations": [
+            "AEM",
+            "AFT"
+          ],
+          "media": [
+            {
+              "name": "Farm Equipment",
+              "url": "https://www.farm-equipment.com/"
+            },
+            {
+              "name": "日刊工業新聞 Newswitch (日本)",
+              "url": "https://newswitch.jp/"
+            },
+            {
+              "name": "Manufacturers' Monthly (澳洲)",
+              "url": "https://www.manmonthly.com.au/"
+            }
+          ]
+        },
+        {
+          "name": "工业自动化及智能制造",
+          "en": "Industrial Automation",
+          "players": [
+            "Siemens",
+            "ABB",
+            "Rockwell",
+            "Emerson",
+            "Honeywell",
+            "Mitsubishi Electric",
+            "Omron",
+            "KUKA",
+            "Yaskawa",
+            "Universal Robots",
+            "Beckhoff",
+            "SICK",
+            "Keyence",
+            "B&R",
+            "SEW-Eurodrive",
+            "Pilz"
+          ],
+          "retailers": [
+            "直销 + 系统集成商",
+            "RS",
+            "Mouser",
+            "Digi-Key"
+          ],
+          "associations": [
+            "A3",
+            "VDMA"
+          ],
+          "media": [
+            {
+              "name": "Automation World",
+              "url": "https://www.automationworld.com/"
+            },
+            {
+              "name": "Control Engineering",
+              "url": "https://www.controleng.com/"
+            },
+            {
+              "name": "Hannover Messe",
+              "url": "https://www.hannovermesse.de/"
+            },
+            {
+              "name": "日刊工業新聞 Newswitch (日本)",
+              "url": "https://newswitch.jp/"
+            },
+            {
+              "name": "Australian Manufacturing (澳洲)",
+              "url": "https://www.australianmanufacturing.com.au/"
+            }
+          ]
+        },
+        {
+          "name": "五金",
+          "en": "Hardware",
+          "players": [
+            "Home Depot",
+            "Lowe's",
+            "Kingfisher",
+            "Leroy Merlin",
+            "Bauhaus",
+            "OBI",
+            "Hornbach",
+            "Würth",
+            "Fastenal",
+            "Moen",
+            "Schlage",
+            "Assa Abloy",
+            "Häfele",
+            "Screwfix",
+            "Castorama",
+            "toom",
+            "Dexter",
+            "Petrovich",
+            "Stroiland"
+          ],
+          "retailers": [
+            "Home Depot",
+            "Lowe's",
+            "Kingfisher",
+            "Leroy Merlin",
+            "Bauhaus",
+            "OBI",
+            "Hornbach"
+          ],
+          "associations": [
+            "NRHA",
+            "EDRA/GHIN"
+          ],
+          "media": [
+            {
+              "name": "Hardware Retailing (NRHA)",
+              "url": "https://hardwareretailing.com/"
+            },
+            {
+              "name": "DIY International",
+              "url": "https://www.diyinternational.com/"
+            },
+            {
+              "name": "Do It Yourself Retailer",
+              "url": "https://www.diyretailer.com/"
+            },
+            {
+              "name": "Eisenwarenmesse 科隆五金展",
+              "url": "https://www.eisenwarenmesse.com/"
+            },
+            {
+              "name": "ANZ Hardware Journal (澳洲五金)",
+              "url": "https://www.anzhardware.com.au/"
+            },
+            {
+              "name": "ILACAD World Retail (拉美)",
+              "url": "https://www.ilacad.com/"
+            },
+            {
+              "name": "Daily Trend (韩国零售)",
+              "url": "https://www.dailytrend.co.kr/"
+            }
+          ]
+        },
+        {
+          "name": "工具",
+          "en": "Tools",
+          "players": [
+            "Stanley Black & Decker",
+            "DeWalt",
+            "TTI",
+            "Milwaukee",
+            "Ryobi",
+            "Bosch",
+            "Makita",
+            "Hilti",
+            "Metabo",
+            "Festool",
+            "Snap-on",
+            "Wera",
+            "Knipex",
+            "Wiha",
+            "Bahco",
+            "Dexter"
+          ],
+          "retailers": [
+            "Screwfix",
+            "Toolstation",
+            "Tractor Supply",
+            "Grainger",
+            "Amazon"
+          ],
+          "associations": [
+            "NRHA",
+            "PTDA"
+          ],
+          "media": [
+            {
+              "name": "Hardware Retailing",
+              "url": "https://hardwareretailing.com/"
+            },
+            {
+              "name": "DIY Week",
+              "url": "https://www.diyweek.net/"
+            },
+            {
+              "name": "E-handel (北欧)",
+              "url": "https://ehandel.com/"
+            },
+            {
+              "name": "Daily Trend (韩国零售)",
+              "url": "https://www.dailytrend.co.kr/"
+            }
+          ]
+        },
+        {
+          "name": "新材料及化工产品",
+          "en": "New Materials & Chemicals",
+          "players": [
+            "Dow",
+            "BASF",
+            "DuPont",
+            "3M",
+            "SABIC",
+            "Covestro",
+            "Lubrizol",
+            "Sika",
+            "Henkel",
+            "AkzoNobel",
+            "PPG",
+            "Sherwin-Williams",
+            "Evonik",
+            "Wacker",
+            "Clariant"
+          ],
+          "retailers": [
+            "B2B 直销",
+            "Brenntag",
+            "Univar"
+          ],
+          "associations": [
+            "ACC",
+            "CEFIC"
+          ],
+          "media": [
+            {
+              "name": "ICIS",
+              "url": "https://www.icis.com/"
+            },
+            {
+              "name": "Chemical Week",
+              "url": "https://chemweek.com/"
+            },
+            {
+              "name": "Chemical & Engineering News",
+              "url": "https://cen.acs.org/"
+            },
+            {
+              "name": "日刊工業新聞 Newswitch (日本)",
+              "url": "https://newswitch.jp/"
+            }
+          ]
+        },
+        {
+          "name": "新能源",
+          "en": "New Energy",
+          "players": [
+            "Canadian Solar",
+            "First Solar",
+            "Tesla Energy",
+            "Enphase",
+            "SolarEdge",
+            "LG Energy Solution",
+            "SMA Solar",
+            "Fronius",
+            "Vestas"
+          ],
+          "retailers": [
+            "EPC",
+            "光伏分销商",
+            "安装商",
+            "户储经销"
+          ],
+          "associations": [
+            "SEIA",
+            "SolarPower Europe"
+          ],
+          "media": [
+            {
+              "name": "pv-magazine",
+              "url": "https://www.pv-magazine.com/"
+            },
+            {
+              "name": "Solar Power World",
+              "url": "https://www.solarpowerworldonline.com/"
+            },
+            {
+              "name": "Energy Storage News",
+              "url": "https://www.energy-storage.news/"
+            },
+            {
+              "name": "日刊工業新聞 Newswitch (日本)",
+              "url": "https://newswitch.jp/"
+            }
+          ]
+        },
+        {
+          "name": "建筑及装饰材料",
+          "en": "Building & Decorative Materials",
+          "players": [
+            "Saint-Gobain",
+            "CRH",
+            "LafargeHolcim",
+            "James Hardie",
+            "Georgia-Pacific",
+            "Masco",
+            "Tarkett",
+            "Armstrong",
+            "Mohawk",
+            "Travis Perkins",
+            "Ferguson",
+            "Grafton",
+            "Knauf",
+            "Wienerberger",
+            "Velux"
+          ],
+          "retailers": [
+            "Travis Perkins",
+            "Wolseley",
+            "Grafton",
+            "Home Depot",
+            "Lowe's",
+            "Leroy Merlin"
+          ],
+          "associations": [
+            "NAHB",
+            "CPA"
+          ],
+          "media": [
+            {
+              "name": "Construction Dive",
+              "url": "https://www.constructiondive.com/"
+            },
+            {
+              "name": "Construction Week",
+              "url": "https://www.constructionweekonline.com/"
+            },
+            {
+              "name": "Le Moniteur (法国建材)",
+              "url": "https://www.lemoniteur.fr/"
+            },
+            {
+              "name": "日刊工業新聞 Newswitch (日本)",
+              "url": "https://newswitch.jp/"
+            },
+            {
+              "name": "ILACAD World Retail (拉美)",
+              "url": "https://www.ilacad.com/"
+            }
+          ]
+        },
+        {
+          "name": "卫浴设备",
+          "en": "Sanitary & Bathroom Equipment",
+          "players": [
+            "Kohler",
+            "Moen",
+            "American Standard",
+            "TOTO",
+            "Grohe",
+            "Hansgrohe",
+            "Duravit",
+            "Villeroy & Boch",
+            "Roca",
+            "Delta",
+            "Geberit",
+            "Kaldewei",
+            "Laufen",
+            "Ideal Standard",
+            "Deca"
+          ],
+          "retailers": [
+            "Home Depot",
+            "Lowe's",
+            "Bathstore",
+            "Wayfair",
+            "卫浴批发商"
+          ],
+          "associations": [
+            "KCMA",
+            "PHCC"
+          ],
+          "media": [
+            {
+              "name": "KBB Kitchen & Bath Business",
+              "url": "https://www.kbbonline.com/"
+            },
+            {
+              "name": "Supply House Times",
+              "url": "https://www.supplyht.com/"
+            },
+            {
+              "name": "日刊工業新聞 Newswitch (日本)",
+              "url": "https://newswitch.jp/"
+            },
+            {
+              "name": "Daily Trend (韩国零售)",
+              "url": "https://www.dailytrend.co.kr/"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "daily_goods_tableware",
+      "name": "日用百货与餐厨陶瓷",
+      "categories": [
+        {
+          "name": "日用陶瓷",
+          "en": "Ceramics for Daily Use",
+          "players": [
+            "Corelle",
+            "Lenox",
+            "Noritake",
+            "Villeroy & Boch",
+            "Rosenthal",
+            "Wedgwood",
+            "Portmeirion",
+            "Denby",
+            "Churchill",
+            "Libbey",
+            "Ikea",
+            "Target",
+            "Walmart",
+            "Bernardaud",
+            "Royal Copenhagen",
+            "Vista Alegre"
+          ],
+          "retailers": [
+            "Target",
+            "Walmart",
+            "TJX",
+            "Williams Sonoma",
+            "Amazon",
+            "Wayfair"
+          ],
+          "associations": [
+            "IHA",
+            "TIA"
+          ],
+          "media": [
+            {
+              "name": "Tableware International",
+              "url": "https://www.tablewareinternational.com/"
+            },
+            {
+              "name": "IHA Inspired Home Show",
+              "url": "https://www.theinspiredhome.com/"
+            },
+            {
+              "name": "Home & Textiles Today",
+              "url": "https://www.hometextilestoday.com/"
+            },
+            {
+              "name": "Diamond Retail Media (日本)",
+              "url": "https://diamond-rm.net/"
+            },
+            {
+              "name": "ILACAD World Retail (拉美)",
+              "url": "https://www.ilacad.com/"
+            }
+          ]
+        },
+        {
+          "name": "餐厨器皿",
+          "en": "Kitchenware & Tableware",
+          "players": [
+            "Zwilling",
+            "WMF",
+            "Fissler",
+            "Le Creuset",
+            "Staub",
+            "KitchenAid",
+            "OXO",
+            "Tramontina",
+            "Calphalon",
+            "Cuisinart",
+            "Instant Pot",
+            "Morphy Richards",
+            "Tefal",
+            "Joseph Joseph",
+            "Alessi"
+          ],
+          "retailers": [
+            "Williams Sonoma",
+            "Sur La Table",
+            "Tesco",
+            "Target",
+            "Amazon",
+            "Wayfair"
+          ],
+          "associations": [
+            "IHA"
+          ],
+          "media": [
+            {
+              "name": "IHA Inspired Home Show",
+              "url": "https://www.theinspiredhome.com/"
+            },
+            {
+              "name": "HomeWorld Business",
+              "url": "https://www.homeworldbusiness.com/"
+            },
+            {
+              "name": "Diamond Retail Media (日本)",
+              "url": "https://diamond-rm.net/"
+            },
+            {
+              "name": "ILACAD World Retail (拉美)",
+              "url": "https://www.ilacad.com/"
+            }
+          ]
+        },
+        {
+          "name": "家居用品",
+          "en": "Household Items",
+          "players": [
+            "Walmart",
+            "Target",
+            "Tesco",
+            "Carrefour",
+            "Aldi",
+            "Lidl",
+            "Action",
+            "B&M",
+            "Poundland",
+            "Dollarama",
+            "Dollar General",
+            "Dollar Tree",
+            "TJX",
+            "Big Lots",
+            "Costco",
+            "Auchan",
+            "Edeka",
+            "Mercadona",
+            "Magazine Luiza",
+            "Falabella",
+            "Magnit",
+            "X5 Retail",
+            "Lenta",
+            "Ozon",
+            "Wildberries",
+            "Migros"
+          ],
+          "retailers": [
+            "Walmart",
+            "Target",
+            "Tesco",
+            "Carrefour",
+            "Aldi",
+            "Lidl",
+            "Action",
+            "B&M",
+            "Dollarama",
+            "Dollar General",
+            "TJX",
+            "Costco"
+          ],
+          "associations": [
+            "EDRA/GHIN",
+            "NRF"
+          ],
+          "media": [
+            {
+              "name": "Retail Week",
+              "url": "https://www.retail-week.com/"
+            },
+            {
+              "name": "Retail Gazette",
+              "url": "https://www.retailgazette.co.uk/"
+            },
+            {
+              "name": "Retail Detail",
+              "url": "https://www.retaildetail.eu/"
+            },
+            {
+              "name": "Chain Store Age",
+              "url": "https://chainstoreage.com/"
+            },
+            {
+              "name": "Grocery Dive",
+              "url": "https://www.grocerydive.com/"
+            },
+            {
+              "name": "International Supermarket News",
+              "url": "https://internationalsupermarketnews.com/"
+            },
+            {
+              "name": "Lebensmittel Zeitung (德国LZ)",
+              "url": "https://www.lebensmittelzeitung.net/"
+            },
+            {
+              "name": "LSA Conso (法国)",
+              "url": "https://www.lsa-conso.fr/"
+            },
+            {
+              "name": "GDO Week (意大利)",
+              "url": "https://www.gdoweek.it/"
+            },
+            {
+              "name": "Alimarket (西班牙)",
+              "url": "https://www.alimarket.es/"
+            },
+            {
+              "name": "Wiadomości Handlowe (波兰)",
+              "url": "https://wiadomoscihandlowe.pl/"
+            },
+            {
+              "name": "SuperHiper ABRAS (巴西)",
+              "url": "http://superhiper.com.br/"
+            },
+            {
+              "name": "ANTAD (墨西哥零售协会)",
+              "url": "https://antad.net/"
+            },
+            {
+              "name": "Inside Retail Australia (澳洲)",
+              "url": "https://insideretail.com.au/"
+            },
+            {
+              "name": "Retailbiz Australia (澳洲)",
+              "url": "https://www.retailbiz.com.au/"
+            },
+            {
+              "name": "ILACAD World Retail (拉美)",
+              "url": "https://www.ilacad.com/"
+            },
+            {
+              "name": "日经中文网 Nikkei (日本)",
+              "url": "https://cn.nikkei.com/"
+            }
+          ]
+        },
+        {
+          "name": "玻璃工艺品",
+          "en": "Glass Artware",
+          "players": [
+            "Libbey",
+            "Anchor Hocking",
+            "ARC International",
+            "Bormioli Rocco",
+            "Luigi Bormioli",
+            "Schott Zwiesel",
+            "Riedel",
+            "Spiegelau",
+            "Ikea",
+            "Kirkland's",
+            "HomeGoods",
+            "Michaels",
+            "Iittala",
+            "Kosta Boda",
+            "Nachtmann"
+          ],
+          "retailers": [
+            "Kirkland's",
+            "HomeGoods",
+            "Etsy",
+            "Amazon",
+            "Wayfair"
+          ],
+          "associations": [
+            "IHA",
+            "Gift Association"
+          ],
+          "media": [
+            {
+              "name": "GDA Gifts & Decorative Accessories",
+              "url": "https://www.giftsanddec.com/"
+            },
+            {
+              "name": "Tableware International",
+              "url": "https://www.tablewareinternational.com/"
+            },
+            {
+              "name": "HomeWorld Business",
+              "url": "https://www.homeworldbusiness.com/"
+            },
+            {
+              "name": "Diamond Retail Media (日本)",
+              "url": "https://diamond-rm.net/"
+            },
+            {
+              "name": "ILACAD World Retail (拉美)",
+              "url": "https://www.ilacad.com/"
+            }
+          ]
+        },
+        {
+          "name": "工艺陶瓷",
+          "en": "Art Ceramics",
+          "players": [
+            "Lladró",
+            "Royal Doulton",
+            "Rosenthal",
+            "Meissen",
+            "Kähler",
+            "Fitz & Floyd",
+            "Lenox",
+            "Herend",
+            "Goebel",
+            "KPM",
+            "Haviland",
+            "Hutschenreuther"
+          ],
+          "retailers": [
+            "家居饰品店",
+            "礼品店",
+            "Etsy",
+            "Amazon",
+            "拍卖行"
+          ],
+          "associations": [
+            "Gift Association"
+          ],
+          "media": [
+            {
+              "name": "GDA",
+              "url": "https://www.giftsanddec.com/"
+            },
+            {
+              "name": "Gift Focus",
+              "url": "https://www.giftfocus.co.uk/"
+            },
+            {
+              "name": "Tableware International",
+              "url": "https://www.tablewareinternational.com/"
+            },
+            {
+              "name": "Diamond Retail Media (日本)",
+              "url": "https://diamond-rm.net/"
+            },
+            {
+              "name": "ILACAD World Retail (拉美)",
+              "url": "https://www.ilacad.com/"
+            }
+          ]
+        },
+        {
+          "name": "礼品及赠品",
+          "en": "Gifts & Premiums",
+          "players": [
+            "Target",
+            "Walmart",
+            "Hallmark",
+            "Paper Source",
+            "Enesco",
+            "Swarovski",
+            "Sanrio",
+            "PPAI",
+            "Pandora",
+            "Georg Jensen",
+            "Christofle"
+          ],
+          "retailers": [
+            "礼品批发商",
+            "促销品分销商",
+            "Etsy",
+            "Amazon"
+          ],
+          "associations": [
+            "PPAI",
+            "SAGE"
+          ],
+          "media": [
+            {
+              "name": "GDA",
+              "url": "https://www.giftsanddec.com/"
+            },
+            {
+              "name": "Gift Focus",
+              "url": "https://www.giftfocus.co.uk/"
+            },
+            {
+              "name": "PPAI",
+              "url": "https://www.ppai.org/"
+            },
+            {
+              "name": "LSA Conso (法国)",
+              "url": "https://www.lsa-conso.fr/"
+            },
+            {
+              "name": "GDO Week (意大利)",
+              "url": "https://www.gdoweek.it/"
+            },
+            {
+              "name": "Alimarket (西班牙)",
+              "url": "https://www.alimarket.es/"
+            },
+            {
+              "name": "Inside Retail Australia (澳洲)",
+              "url": "https://insideretail.com.au/"
+            }
+          ]
+        },
+        {
+          "name": "节日用品",
+          "en": "Festival & Party Products",
+          "players": [
+            "Party City",
+            "Target",
+            "Walmart",
+            "Costco",
+            "Balsam Hill",
+            "Hobby Lobby",
+            "Michaels",
+            "Lowe's",
+            "Wayfair",
+            "Kaemingk",
+            "Maisons du Monde",
+            "Gisela Graham",
+            "Depesche",
+            "JYSK"
+          ],
+          "retailers": [
+            "Party City",
+            "Target",
+            "Walmart",
+            "Costco",
+            "Hobby Lobby",
+            "Michaels"
+          ],
+          "associations": [
+            "SDA",
+            "Seasonal Association"
+          ],
+          "media": [
+            {
+              "name": "Seasonal & Décor",
+              "url": "https://seasonalanddecor.com/"
+            },
+            {
+              "name": "GDA",
+              "url": "https://www.giftsanddec.com/"
+            },
+            {
+              "name": "SuperHiper ABRAS (巴西)",
+              "url": "http://superhiper.com.br/"
+            },
+            {
+              "name": "ANTAD (墨西哥零售协会)",
+              "url": "https://antad.net/"
+            },
+            {
+              "name": "Retailbiz Australia (澳洲)",
+              "url": "https://www.retailbiz.com.au/"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "furniture_garden_decor",
+      "name": "家居家具与园林装饰",
+      "categories": [
+        {
+          "name": "家具",
+          "en": "Furniture",
+          "players": [
+            "IKEA",
+            "Ashley",
+            "Wayfair",
+            "RH",
+            "La-Z-Boy",
+            "Hooker",
+            "Flexsteel",
+            "MillerKnoll",
+            "Steelcase",
+            "West Elm",
+            "Pottery Barn",
+            "Crate & Barrel",
+            "Nitori",
+            "JYSK",
+            "XXXLutz",
+            "Roche Bobois",
+            "Conforama",
+            "Tok&Stok",
+            "Hoff",
+            "Bolia"
+          ],
+          "retailers": [
+            "IKEA",
+            "Ashley",
+            "Wayfair",
+            "Amazon",
+            "独立家具店"
+          ],
+          "associations": [
+            "AHFA",
+            "NHEA"
+          ],
+          "media": [
+            {
+              "name": "Furniture Today",
+              "url": "https://www.furnituretoday.com/"
+            },
+            {
+              "name": "Home News Now",
+              "url": "https://www.homenewsnow.com/"
+            },
+            {
+              "name": "AHFA",
+              "url": "https://www.ahfa.us/"
+            },
+            {
+              "name": "Furniture News (英国)",
+              "url": "https://www.furniturenews.net/"
+            },
+            {
+              "name": "Möbelmarkt (德国家具)",
+              "url": "https://www.moebelmarkt.de/"
+            },
+            {
+              "name": "日经中文网 Nikkei (日本)",
+              "url": "https://cn.nikkei.com/"
+            },
+            {
+              "name": "Inside Retail Australia (澳洲)",
+              "url": "https://insideretail.com.au/"
+            }
+          ]
+        },
+        {
+          "name": "编织及藤铁工艺品",
+          "en": "Weaving & Rattan/Iron Crafts",
+          "players": [
+            "Pottery Barn",
+            "World Market",
+            "Ikea",
+            "Wayfair",
+            "Lowe's",
+            "HomeGoods",
+            "Target",
+            "The Citizenry",
+            "Habitat",
+            "Zara Home",
+            "Nkuku",
+            "Cath Kidston"
+          ],
+          "retailers": [
+            "Pottery Barn",
+            "World Market",
+            "Wayfair",
+            "Etsy"
+          ],
+          "associations": [
+            "IHA"
+          ],
+          "media": [
+            {
+              "name": "Home Accents Today",
+              "url": "https://www.homeaccentstoday.com/"
+            },
+            {
+              "name": "GDA",
+              "url": "https://www.giftsanddec.com/"
+            },
+            {
+              "name": "Furniture Today",
+              "url": "https://www.furnituretoday.com/"
+            },
+            {
+              "name": "Inside Retail Australia (澳洲)",
+              "url": "https://insideretail.com.au/"
+            },
+            {
+              "name": "E-handel (北欧)",
+              "url": "https://ehandel.com/"
+            },
+            {
+              "name": "ILACAD World Retail (拉美)",
+              "url": "https://www.ilacad.com/"
+            },
+            {
+              "name": "Daily Trend (韩国零售)",
+              "url": "https://www.dailytrend.co.kr/"
+            }
+          ]
+        },
+        {
+          "name": "家居装饰品",
+          "en": "Home Decorations",
+          "players": [
+            "HomeGoods",
+            "Kirkland's",
+            "At Home",
+            "TJ Maxx",
+            "Marshalls",
+            "Walmart",
+            "Target",
+            "Ikea",
+            "Wayfair",
+            "Michaels",
+            "Hobby Lobby",
+            "H&M Home",
+            "Normann Copenhagen",
+            "Maisons du Monde",
+            "Etna",
+            "Ferm Living"
+          ],
+          "retailers": [
+            "HomeGoods",
+            "Kirkland's",
+            "At Home",
+            "TJ Maxx",
+            "Marshalls",
+            "Wayfair",
+            "Amazon"
+          ],
+          "associations": [
+            "IHA"
+          ],
+          "media": [
+            {
+              "name": "Home Accents Today",
+              "url": "https://www.homeaccentstoday.com/"
+            },
+            {
+              "name": "GDA",
+              "url": "https://www.giftsanddec.com/"
+            },
+            {
+              "name": "HFN",
+              "url": "https://www.hfndigital.com/"
+            },
+            {
+              "name": "LSA Conso (法国)",
+              "url": "https://www.lsa-conso.fr/"
+            },
+            {
+              "name": "Inside Retail Australia (澳洲)",
+              "url": "https://insideretail.com.au/"
+            },
+            {
+              "name": "ILACAD World Retail (拉美)",
+              "url": "https://www.ilacad.com/"
+            }
+          ]
+        },
+        {
+          "name": "园林用品",
+          "en": "Gardening Products",
+          "players": [
+            "Tractor Supply",
+            "Home Depot",
+            "Lowe's",
+            "Ace Hardware",
+            "True Value",
+            "Fiskars",
+            "Husqvarna",
+            "Stihl",
+            "Echo",
+            "B&Q",
+            "GARDENA",
+            "Stiga",
+            "Jardiland"
+          ],
+          "retailers": [
+            "Tractor Supply",
+            "Home Depot",
+            "Lowe's",
+            "Ace Hardware",
+            "True Value",
+            "B&Q"
+          ],
+          "associations": [
+            "ANLA",
+            "Garden Centres Association"
+          ],
+          "media": [
+            {
+              "name": "Garden Centre Update",
+              "url": "https://gardencentreupdate.com/"
+            },
+            {
+              "name": "Garden Trade Specialist",
+              "url": "https://www.gardentradespecialist.com/"
+            },
+            {
+              "name": "Lawn & Garden Retailer",
+              "url": "https://www.lawnandgardenretailer.com/"
+            },
+            {
+              "name": "Inside Retail Australia (澳洲)",
+              "url": "https://insideretail.com.au/"
+            },
+            {
+              "name": "ILACAD World Retail (拉美)",
+              "url": "https://www.ilacad.com/"
+            }
+          ]
+        },
+        {
+          "name": "石材/铁艺制品（室外）",
+          "en": "Outdoor Stone & Iron Products",
+          "players": [
+            "Home Depot",
+            "Lowe's",
+            "Quikrete",
+            "Pavestone",
+            "Oldcastle",
+            "Unilock",
+            "Techo-Bloc",
+            "Belgard",
+            "Trex",
+            "TimberTech",
+            "HeidelbergCement",
+            "Marshalls",
+            "Vandersanden"
+          ],
+          "retailers": [
+            "景观承包商",
+            "硬景观批发商",
+            "Home Depot",
+            "Lowe's"
+          ],
+          "associations": [
+            "ICPI",
+            "NCMA"
+          ],
+          "media": [
+            {
+              "name": "Hardscape Magazine",
+              "url": "https://www.hardscapemag.com/"
+            },
+            {
+              "name": "Landscape Management",
+              "url": "https://www.landscapemanagement.net/"
+            },
+            {
+              "name": "Australian Manufacturing (澳洲)",
+              "url": "https://www.australianmanufacturing.com.au/"
+            },
+            {
+              "name": "ILACAD World Retail (拉美)",
+              "url": "https://www.ilacad.com/"
+            }
+          ]
+        },
+        {
+          "name": "地毯及挂毯",
+          "en": "Carpets & Tapestries",
+          "players": [
+            "Mohawk",
+            "Shaw",
+            "Interface",
+            "Home Depot",
+            "Lowe's",
+            "Floor & Decor",
+            "Wayfair",
+            "Rugs.com",
+            "Ikea",
+            "Balta",
+            "Desso",
+            "Forbo"
+          ],
+          "retailers": [
+            "Home Depot",
+            "Lowe's",
+            "Floor & Decor",
+            "Wayfair",
+            "Rugs.com"
+          ],
+          "associations": [
+            "FCW",
+            "CFC"
+          ],
+          "media": [
+            {
+              "name": "Floor Covering News",
+              "url": "https://www.fcnews.net/"
+            },
+            {
+              "name": "HFN",
+              "url": "https://www.hfndigital.com/"
+            },
+            {
+              "name": "Diamond Retail Media (日本)",
+              "url": "https://diamond-rm.net/"
+            },
+            {
+              "name": "ILACAD World Retail (拉美)",
+              "url": "https://www.ilacad.com/"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "apparel_textile_bags",
+      "name": "服装纺织与鞋帽箱包",
+      "categories": [
+        {
+          "name": "男女装",
+          "en": "Men & Women Apparel",
+          "players": [
+            "Zara",
+            "H&M",
+            "Uniqlo",
+            "Nike",
+            "Adidas",
+            "Gap",
+            "Levi's",
+            "Macy's",
+            "Kohl's",
+            "Nordstrom",
+            "TJ Maxx",
+            "Primark",
+            "Next",
+            "Zalando",
+            "ASOS",
+            "Boohoo",
+            "Mango",
+            "Hugo Boss",
+            "C&A",
+            "Marks & Spencer",
+            "Gloria Jeans",
+            "Melon Fashion Group",
+            "Ostin"
+          ],
+          "retailers": [
+            "Zara",
+            "H&M",
+            "Uniqlo",
+            "Macy's",
+            "Kohl's",
+            "Nordstrom",
+            "TJ Maxx",
+            "Primark",
+            "Zalando",
+            "ASOS"
+          ],
+          "associations": [
+            "AAFA",
+            "USFIA"
+          ],
+          "media": [
+            {
+              "name": "WWD",
+              "url": "https://wwd.com/"
+            },
+            {
+              "name": "Sourcing Journal",
+              "url": "https://sourcingjournal.com/"
+            },
+            {
+              "name": "Business of Fashion",
+              "url": "https://www.businessoffashion.com/"
+            },
+            {
+              "name": "Fashion Network",
+              "url": "https://www.fashionnetwork.com/"
+            },
+            {
+              "name": "Drapers",
+              "url": "https://www.drapersonline.com/"
+            },
+            {
+              "name": "WGSN",
+              "url": "https://www.wgsn.com/"
+            },
+            {
+              "name": "繊研新聞 Senken (日本时尚)",
+              "url": "https://senken.co.jp/"
+            },
+            {
+              "name": "Apparel Resources (印度/南亚)",
+              "url": "https://apparelresources.com/"
+            },
+            {
+              "name": "Inside Retail Australia (澳洲)",
+              "url": "https://insideretail.com.au/"
+            },
+            {
+              "name": "Daily Trend (韩国零售)",
+              "url": "https://www.dailytrend.co.kr/"
+            }
+          ]
+        },
+        {
+          "name": "童装",
+          "en": "Children's Wear",
+          "players": [
+            "Carter's",
+            "OshKosh",
+            "Gymboree",
+            "Children's Place",
+            "Target",
+            "Walmart",
+            "Old Navy",
+            "Gap Kids",
+            "Mini Boden",
+            "H&M Kids",
+            "Zara Kids",
+            "Uniqlo",
+            "Vertbaudet",
+            "Petit Bateau",
+            "Lindex"
+          ],
+          "retailers": [
+            "Carter's",
+            "Children's Place",
+            "Target",
+            "Walmart",
+            "Old Navy"
+          ],
+          "associations": [
+            "AAFA"
+          ],
+          "media": [
+            {
+              "name": "Sourcing Journal",
+              "url": "https://sourcingjournal.com/"
+            },
+            {
+              "name": "Apparel Resources",
+              "url": "https://apparelresources.com/"
+            },
+            {
+              "name": "Kidscreen",
+              "url": "https://kidscreen.com/"
+            },
+            {
+              "name": "繊研新聞 Senken (日本时尚)",
+              "url": "https://senken.co.jp/"
+            },
+            {
+              "name": "Drapers (英国)",
+              "url": "https://www.drapersonline.com/"
+            },
+            {
+              "name": "Daily Trend (韩国零售)",
+              "url": "https://www.dailytrend.co.kr/"
+            }
+          ]
+        },
+        {
+          "name": "内衣",
+          "en": "Underwear & Loungewear",
+          "players": [
+            "Victoria's Secret",
+            "Wacoal",
+            "Triumph",
+            "Calvin Klein",
+            "Hanes",
+            "Fruit of the Loom",
+            "Jockey",
+            "Chantelle",
+            "La Perla",
+            "Aerie",
+            "Wolford",
+            "Etam",
+            "Marie Jo"
+          ],
+          "retailers": [
+            "Victoria's Secret",
+            "Macy's",
+            "Nordstrom",
+            "Amazon"
+          ],
+          "associations": [
+            "AAFA"
+          ],
+          "media": [
+            {
+              "name": "WWD",
+              "url": "https://wwd.com/"
+            },
+            {
+              "name": "Just Style",
+              "url": "https://www.just-style.com/"
+            },
+            {
+              "name": "Drapers",
+              "url": "https://www.drapersonline.com/"
+            },
+            {
+              "name": "繊研新聞 Senken (日本时尚)",
+              "url": "https://senken.co.jp/"
+            },
+            {
+              "name": "Daily Trend (韩国零售)",
+              "url": "https://www.dailytrend.co.kr/"
+            }
+          ]
+        },
+        {
+          "name": "运动服及休闲服",
+          "en": "Sports & Casual Wear",
+          "players": [
+            "Nike",
+            "Adidas",
+            "Puma",
+            "Under Armour",
+            "Lululemon",
+            "Decathlon",
+            "JD Sports",
+            "Foot Locker",
+            "Dick's",
+            "REI",
+            "Columbia",
+            "The North Face",
+            "Arc'teryx",
+            "Patagonia",
+            "Gymshark",
+            "On",
+            "Salomon",
+            "Lacoste"
+          ],
+          "retailers": [
+            "Decathlon",
+            "JD Sports",
+            "Foot Locker",
+            "Dick's",
+            "REI",
+            "Zalando"
+          ],
+          "associations": [
+            "SFIA",
+            "OIA"
+          ],
+          "media": [
+            {
+              "name": "SGB Media",
+              "url": "https://sgbonline.com/"
+            },
+            {
+              "name": "SGI Europe",
+              "url": "https://www.sgieurope.com/"
+            },
+            {
+              "name": "Footwear News",
+              "url": "https://footwearnews.com/"
+            },
+            {
+              "name": "Outdoor Industry Association",
+              "url": "https://outdoorindustry.org/"
+            },
+            {
+              "name": "繊研新聞 Senken (日本时尚)",
+              "url": "https://senken.co.jp/"
+            },
+            {
+              "name": "Inside Retail Australia (澳洲)",
+              "url": "https://insideretail.com.au/"
+            },
+            {
+              "name": "Daily Trend (韩国零售)",
+              "url": "https://www.dailytrend.co.kr/"
+            }
+          ]
+        },
+        {
+          "name": "裘革皮羽绒及制品",
+          "en": "Furs, Leather & Down Products",
+          "players": [
+            "Moncler",
+            "Canada Goose",
+            "The North Face",
+            "Columbia",
+            "Patagonia",
+            "Marmot",
+            "Helly Hansen",
+            "Woolrich",
+            "L.L.Bean",
+            "Mackage",
+            "Barbour",
+            "Mammut",
+            "Jack Wolfskin",
+            "Fjällräven"
+          ],
+          "retailers": [
+            "品牌直营",
+            "百货",
+            "REI",
+            "Amazon"
+          ],
+          "associations": [
+            "IDFL",
+            "OIA"
+          ],
+          "media": [
+            {
+              "name": "SGB Media",
+              "url": "https://sgbonline.com/"
+            },
+            {
+              "name": "Outdoor Industry Association",
+              "url": "https://outdoorindustry.org/"
+            },
+            {
+              "name": "Daily Trend (韩国零售)",
+              "url": "https://www.dailytrend.co.kr/"
+            }
+          ]
+        },
+        {
+          "name": "服装饰物及配件",
+          "en": "Fashion Accessories",
+          "players": [
+            "Gucci",
+            "Hermès",
+            "Burberry",
+            "Fossil",
+            "Swarovski",
+            "Macy's",
+            "Nordstrom",
+            "TJ Maxx",
+            "Claire's",
+            "Accessorize",
+            "Bvlgari",
+            "Falke",
+            "Thomas Sabo"
+          ],
+          "retailers": [
+            "Macy's",
+            "Nordstrom",
+            "TJ Maxx",
+            "Claire's",
+            "Amazon",
+            "Etsy"
+          ],
+          "associations": [
+            "Accessories Council"
+          ],
+          "media": [
+            {
+              "name": "WWD",
+              "url": "https://wwd.com/"
+            },
+            {
+              "name": "Fashion Network",
+              "url": "https://www.fashionnetwork.com/"
+            },
+            {
+              "name": "Drapers",
+              "url": "https://www.drapersonline.com/"
+            },
+            {
+              "name": "繊研新聞 Senken (日本时尚)",
+              "url": "https://senken.co.jp/"
+            },
+            {
+              "name": "Inside Retail Australia (澳洲)",
+              "url": "https://insideretail.com.au/"
+            },
+            {
+              "name": "Daily Trend (韩国零售)",
+              "url": "https://www.dailytrend.co.kr/"
+            }
+          ]
+        },
+        {
+          "name": "纺织原料面料",
+          "en": "Textile Raw Materials & Fabrics",
+          "players": [
+            "溢达 Esquel",
+            "Cone Mills",
+            "Toray",
+            "Teijin",
+            "Lenzing",
+            "Birla",
+            "Welspun",
+            "Trident",
+            "Zegna",
+            "Vitale Barberis Canonico",
+            "Reda"
+          ],
+          "retailers": [
+            "B2B 直供服装厂",
+            "面料贸易商"
+          ],
+          "associations": [
+            "ITMF",
+            "ATMI"
+          ],
+          "media": [
+            {
+              "name": "Fibre2Fashion",
+              "url": "https://www.fibre2fashion.com/"
+            },
+            {
+              "name": "Textile Today",
+              "url": "https://www.textiletoday.com.bd/"
+            },
+            {
+              "name": "Textile World",
+              "url": "https://www.textileworld.com/"
+            },
+            {
+              "name": "ITMF",
+              "url": "https://www.itmf.org/"
+            },
+            {
+              "name": "Première Vision",
+              "url": "https://www.premierevision.com/"
+            },
+            {
+              "name": "Intertextile",
+              "url": "https://www.intertextile.com/"
+            },
+            {
+              "name": "繊研新聞 Senken (日本时尚)",
+              "url": "https://senken.co.jp/"
+            },
+            {
+              "name": "Daily Trend (韩国零售)",
+              "url": "https://www.dailytrend.co.kr/"
+            }
+          ]
+        },
+        {
+          "name": "家用纺织品",
+          "en": "Home Textiles",
+          "players": [
+            "Welspun",
+            "Trident",
+            "Kohl's",
+            "Target",
+            "Walmart",
+            "Macy's",
+            "Pottery Barn",
+            "Zara Home",
+            "H&M Home",
+            "Ikea",
+            "HomeGoods",
+            "Frette",
+            "Christy",
+            "Zucchi"
+          ],
+          "retailers": [
+            "Kohl's",
+            "Target",
+            "Walmart",
+            "Macy's",
+            "Pottery Barn",
+            "Wayfair",
+            "Amazon",
+            "酒店渠道"
+          ],
+          "associations": [
+            "IHA",
+            "HTT"
+          ],
+          "media": [
+            {
+              "name": "Home & Textiles Today",
+              "url": "https://www.hometextilestoday.com/"
+            },
+            {
+              "name": "HFN",
+              "url": "https://www.hfndigital.com/"
+            },
+            {
+              "name": "Textile Today",
+              "url": "https://www.textiletoday.com.bd/"
+            },
+            {
+              "name": "繊研新聞 Senken (日本时尚)",
+              "url": "https://senken.co.jp/"
+            },
+            {
+              "name": "Drapers (英国)",
+              "url": "https://www.drapersonline.com/"
+            },
+            {
+              "name": "Daily Trend (韩国零售)",
+              "url": "https://www.dailytrend.co.kr/"
+            }
+          ]
+        },
+        {
+          "name": "鞋",
+          "en": "Shoes",
+          "players": [
+            "Nike",
+            "Adidas",
+            "Puma",
+            "New Balance",
+            "Asics",
+            "Skechers",
+            "Crocs",
+            "Birkenstock",
+            "Clarks",
+            "ECCO",
+            "Dr. Martens",
+            "Vans",
+            "Converse",
+            "Foot Locker",
+            "DSW",
+            "Zalando",
+            "Camper",
+            "Geox",
+            "Deichmann"
+          ],
+          "retailers": [
+            "Foot Locker",
+            "DSW",
+            "Zalando",
+            "JD Sports",
+            "Amazon"
+          ],
+          "associations": [
+            "FDRA"
+          ],
+          "media": [
+            {
+              "name": "Footwear News",
+              "url": "https://footwearnews.com/"
+            },
+            {
+              "name": "World Footwear",
+              "url": "https://www.worldfootwear.com/"
+            },
+            {
+              "name": "FDRA",
+              "url": "https://fdra.org/"
+            },
+            {
+              "name": "SGB Media",
+              "url": "https://sgbonline.com/"
+            },
+            {
+              "name": "繊研新聞 Senken (日本时尚)",
+              "url": "https://senken.co.jp/"
+            },
+            {
+              "name": "Daily Trend (韩国零售)",
+              "url": "https://www.dailytrend.co.kr/"
+            }
+          ]
+        },
+        {
+          "name": "箱包",
+          "en": "Cases & Bags",
+          "players": [
+            "Samsonite",
+            "Tumi",
+            "Rimowa",
+            "Delsey",
+            "Away",
+            "Monos",
+            "JanSport",
+            "Herschel",
+            "Fjällräven",
+            "Osprey",
+            "The North Face",
+            "Eastpak",
+            "VIP Industries",
+            "Goyard",
+            "Delvaux",
+            "Mulberry"
+          ],
+          "retailers": [
+            "Samsonite",
+            "百货",
+            "Amazon",
+            "品牌 DTC"
+          ],
+          "associations": [
+            "TGA"
+          ],
+          "media": [
+            {
+              "name": "Travel Goods Association",
+              "url": "https://www.travelgoods.org/"
+            },
+            {
+              "name": "Sourcing Journal",
+              "url": "https://sourcingjournal.com/"
+            },
+            {
+              "name": "Drapers",
+              "url": "https://www.drapersonline.com/"
+            },
+            {
+              "name": "繊研新聞 Senken (日本时尚)",
+              "url": "https://senken.co.jp/"
+            },
+            {
+              "name": "Daily Trend (韩国零售)",
+              "url": "https://www.dailytrend.co.kr/"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "toys_pets_personal_care",
+      "name": "玩具母婴与礼品个护",
+      "categories": [
+        {
+          "name": "玩具",
+          "en": "Toys",
+          "players": [
+            "LEGO",
+            "Mattel",
+            "Hasbro",
+            "Funko",
+            "MGA",
+            "Bandai Namco",
+            "Spin Master",
+            "Jazwares",
+            "Ravensburger",
+            "Playmobil",
+            "Walmart",
+            "Target",
+            "Amazon",
+            "Five Below",
+            "Steiff",
+            "Haba",
+            "Jellycat",
+            "Detsky Mir"
+          ],
+          "retailers": [
+            "Walmart",
+            "Target",
+            "Amazon",
+            "Costco",
+            "GameStop",
+            "Five Below"
+          ],
+          "associations": [
+            "Toy Association",
+            "TIA"
+          ],
+          "media": [
+            {
+              "name": "The Toy Book",
+              "url": "https://toybook.com/"
+            },
+            {
+              "name": "Toy World Magazine",
+              "url": "https://toyworldmag.co.uk/"
+            },
+            {
+              "name": "The Toy Association",
+              "url": "https://www.toyassociation.org/"
+            },
+            {
+              "name": "Spielwarenmesse 纽伦堡",
+              "url": "https://www.spielwarenmesse.de/"
+            },
+            {
+              "name": "TOYMAG Asia (亚洲玩具)",
+              "url": "https://www.toymagasia.com/"
+            },
+            {
+              "name": "SuperHiper ABRAS (巴西)",
+              "url": "http://superhiper.com.br/"
+            },
+            {
+              "name": "Inside Retail Australia (澳洲)",
+              "url": "https://insideretail.com.au/"
+            },
+            {
+              "name": "Daily Trend (韩国零售)",
+              "url": "https://www.dailytrend.co.kr/"
+            }
+          ]
+        },
+        {
+          "name": "孕婴童用品",
+          "en": "Maternal & Infant Products",
+          "players": [
+            "Chicco",
+            "Graco",
+            "Evenflo",
+            "Stokke",
+            "Bugaboo",
+            "UPPAbaby",
+            "Cybex",
+            "Britax",
+            "Joie",
+            "Philips Avent",
+            "Medela",
+            "Tommee Tippee",
+            "Pampers",
+            "Huggies",
+            "Peg Perego",
+            "Nuna",
+            "Silver Cross"
+          ],
+          "retailers": [
+            "Target",
+            "Walmart",
+            "Amazon",
+            "Buy Buy Baby",
+            "母婴连锁"
+          ],
+          "associations": [
+            "JPMA"
+          ],
+          "media": [
+            {
+              "name": "Kids Today",
+              "url": "https://www.kidstoday.com/"
+            },
+            {
+              "name": "JPMA",
+              "url": "https://www.jpma.org/"
+            },
+            {
+              "name": "Baby & Child UK",
+              "url": "https://www.babyandchild.co.uk/"
+            },
+            {
+              "name": "Nursery World",
+              "url": "https://www.nurseryworld.co.uk/"
+            },
+            {
+              "name": "SuperHiper ABRAS (巴西)",
+              "url": "http://superhiper.com.br/"
+            },
+            {
+              "name": "Inside Retail Australia (澳洲)",
+              "url": "https://insideretail.com.au/"
+            },
+            {
+              "name": "Daily Trend (韩国零售)",
+              "url": "https://www.dailytrend.co.kr/"
+            }
+          ]
+        },
+        {
+          "name": "钟表眼镜",
+          "en": "Clocks, Watches & Eyewear",
+          "players": [
+            "Rolex",
+            "Omega",
+            "Cartier",
+            "Patek Philippe",
+            "Tag Heuer",
+            "Seiko",
+            "Citizen",
+            "Casio",
+            "Fossil",
+            "Swatch",
+            "Garmin",
+            "Luxottica",
+            "Warby Parker",
+            "Specsavers",
+            "LensCrafters",
+            "ZEISS",
+            "Audemars Piguet",
+            "Hublot",
+            "Breitling"
+          ],
+          "retailers": [
+            "珠宝百货",
+            "光学店",
+            "Warby Parker DTC",
+            "Specsavers",
+            "验光师渠道"
+          ],
+          "associations": [
+            "The Vision Council"
+          ],
+          "media": [
+            {
+              "name": "WatchTime",
+              "url": "https://www.watchtime.com/"
+            },
+            {
+              "name": "WatchPro",
+              "url": "https://www.watchpro.com/"
+            },
+            {
+              "name": "JCK",
+              "url": "https://www.jckonline.com/"
+            },
+            {
+              "name": "Vision Monday",
+              "url": "https://www.visionmonday.com/"
+            },
+            {
+              "name": "Diamond Retail Media (日本)",
+              "url": "https://diamond-rm.net/"
+            },
+            {
+              "name": "Daily Trend (韩国零售)",
+              "url": "https://www.dailytrend.co.kr/"
+            }
+          ]
+        },
+        {
+          "name": "个人护理用具",
+          "en": "Personal Care Appliances",
+          "players": [
+            "Philips",
+            "Panasonic",
+            "Braun",
+            "Remington",
+            "Conair",
+            "Dyson",
+            "Gillette",
+            "Oral-B",
+            "Philips Sonicare",
+            "Waterpik",
+            "GHD",
+            "T3",
+            "Foreo",
+            "BaByliss",
+            "Beurer",
+            "Kärcher"
+          ],
+          "retailers": [
+            "Ulta",
+            "Sephora",
+            "Boots",
+            "CVS",
+            "Walgreens",
+            "Amazon"
+          ],
+          "associations": [
+            "PCPC"
+          ],
+          "media": [
+            {
+              "name": "HAPPI",
+              "url": "https://www.happi.com/"
+            },
+            {
+              "name": "Cosmetics Business",
+              "url": "https://www.cosmeticsbusiness.com/"
+            },
+            {
+              "name": "GCI",
+              "url": "https://www.gcimagazine.com/"
+            },
+            {
+              "name": "Mintel",
+              "url": "https://www.mintel.com/"
+            },
+            {
+              "name": "E-handel (北欧)",
+              "url": "https://ehandel.com/"
+            },
+            {
+              "name": "Daily Trend (韩国零售)",
+              "url": "https://www.dailytrend.co.kr/"
+            }
+          ]
+        },
+        {
+          "name": "宠物用品",
+          "en": "Pet Supplies",
+          "players": [
+            "Mars Petcare",
+            "Purina",
+            "Hill's",
+            "Blue Buffalo",
+            "Royal Canin",
+            "Petco",
+            "PetSmart",
+            "Chewy",
+            "Amazon",
+            "Pets at Home",
+            "Fressnapf",
+            "Zooplus",
+            "Tetra",
+            "Trixie",
+            "Ferplast",
+            "Eheim",
+            "Premier Pet"
+          ],
+          "retailers": [
+            "Petco",
+            "PetSmart",
+            "Chewy",
+            "Amazon",
+            "Pets at Home",
+            "Fressnapf",
+            "Zooplus"
+          ],
+          "associations": [
+            "APPA",
+            "PIJAC"
+          ],
+          "media": [
+            {
+              "name": "APPA 美国宠物用品协会",
+              "url": "https://www.americanpetproducts.org/"
+            },
+            {
+              "name": "Pet Business",
+              "url": "https://www.petbusiness.com/"
+            },
+            {
+              "name": "GlobalPETS",
+              "url": "https://www.globalpets.com/"
+            },
+            {
+              "name": "Inside Retail Australia (澳洲)",
+              "url": "https://insideretail.com.au/"
+            },
+            {
+              "name": "Daily Trend (韩国零售)",
+              "url": "https://www.dailytrend.co.kr/"
+            }
+          ]
+        },
+        {
+          "name": "办公文具",
+          "en": "Office Supplies & Stationery",
+          "players": [
+            "Staples",
+            "Office Depot",
+            "Amazon Business",
+            "Walmart",
+            "Paper Source",
+            "Moleskine",
+            "Faber-Castell",
+            "Staedtler",
+            "Pilot",
+            "Uni-ball",
+            "Bic",
+            "Sharpie",
+            "Post-it",
+            "Muji",
+            "Ikea",
+            "Pelikan",
+            "Lamy",
+            "Leuchtturm"
+          ],
+          "retailers": [
+            "Staples",
+            "Office Depot",
+            "Amazon Business",
+            "Walmart",
+            "Muji",
+            "Ikea"
+          ],
+          "associations": [
+            "NAOP",
+            "ISPA"
+          ],
+          "media": [
+            {
+              "name": "OPI Office Products International",
+              "url": "https://www.opi.net/"
+            },
+            {
+              "name": "Stationery News",
+              "url": "https://www.stationerynews.com/"
+            },
+            {
+              "name": "Paperworld 法兰克福",
+              "url": "https://paperworld.messefrankfurt.com/"
+            },
+            {
+              "name": "Diamond Retail Media (日本)",
+              "url": "https://diamond-rm.net/"
+            },
+            {
+              "name": "Daily Trend (韩国零售)",
+              "url": "https://www.dailytrend.co.kr/"
+            }
+          ]
+        },
+        {
+          "name": "体育及旅游休闲用品",
+          "en": "Sports & Outdoor Leisure Goods",
+          "players": [
+            "Decathlon",
+            "Dick's",
+            "REI",
+            "Academy Sports",
+            "JD Sports",
+            "Foot Locker",
+            "Bass Pro",
+            "Cabela's",
+            "Walmart",
+            "Target",
+            "Amazon",
+            "Intersport",
+            "Atomic",
+            "Rossignol",
+            "Sport 2000"
+          ],
+          "retailers": [
+            "Decathlon",
+            "Dick's",
+            "REI",
+            "Academy Sports",
+            "JD Sports",
+            "Amazon"
+          ],
+          "associations": [
+            "SFIA",
+            "OIA"
+          ],
+          "media": [
+            {
+              "name": "SGB Media",
+              "url": "https://sgbonline.com/"
+            },
+            {
+              "name": "SGI Europe",
+              "url": "https://www.sgieurope.com/"
+            },
+            {
+              "name": "Outdoor Retailer",
+              "url": "https://outdoorretailer.com/"
+            },
+            {
+              "name": "Outdoor Industry Association",
+              "url": "https://outdoorindustry.org/"
+            },
+            {
+              "name": "Inside Retail Australia (澳洲)",
+              "url": "https://insideretail.com.au/"
+            },
+            {
+              "name": "Daily Trend (韩国零售)",
+              "url": "https://www.dailytrend.co.kr/"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "healthcare_food",
+      "name": "医药保健与食品特色",
+      "categories": [
+        {
+          "name": "医药保健品及医疗器械",
+          "en": "Medicines, Health Products & Medical Devices",
+          "players": [
+            "Johnson & Johnson",
+            "Medtronic",
+            "Abbott",
+            "BD",
+            "Philips Health",
+            "GE HealthCare",
+            "Siemens Healthineers",
+            "Stryker",
+            "Boston Scientific",
+            "Nature's Bounty",
+            "NOW Foods",
+            "GNC",
+            "Swisse",
+            "Centrum",
+            "Fresenius",
+            "B.Braun",
+            "Smith & Nephew"
+          ],
+          "retailers": [
+            "CVS",
+            "Walgreens",
+            "Boots",
+            "GPO 医院采购",
+            "医疗器械经销"
+          ],
+          "associations": [
+            "AdvaMed",
+            "CRN"
+          ],
+          "media": [
+            {
+              "name": "MD+DI",
+              "url": "https://www.mddionline.com/"
+            },
+            {
+              "name": "MedTech Dive",
+              "url": "https://www.medtechdive.com/"
+            },
+            {
+              "name": "日刊工業新聞 Newswitch (日本)",
+              "url": "https://newswitch.jp/"
+            },
+            {
+              "name": "E-handel (北欧)",
+              "url": "https://ehandel.com/"
+            }
+          ]
+        },
+        {
+          "name": "食品",
+          "en": "Food & Agricultural Products",
+          "players": [
+            "Nestlé",
+            "Unilever",
+            "PepsiCo",
+            "Coca-Cola",
+            "Mondelez",
+            "Kraft Heinz",
+            "General Mills",
+            "Kellogg's",
+            "Tyson",
+            "Walmart",
+            "Kroger",
+            "Costco",
+            "Aldi",
+            "Lidl",
+            "Carrefour",
+            "Tesco",
+            "Sysco",
+            "US Foods",
+            "Danone",
+            "Ferrero",
+            "Lindt",
+            "Bauducco",
+            "M. Dias Branco",
+            "VkusVill"
+          ],
+          "retailers": [
+            "Walmart",
+            "Kroger",
+            "Costco",
+            "Aldi",
+            "Lidl",
+            "Carrefour",
+            "Tesco",
+            "Sysco",
+            "US Foods",
+            "Amazon Fresh"
+          ],
+          "associations": [
+            "FMI",
+            "IGD"
+          ],
+          "media": [
+            {
+              "name": "Food Dive",
+              "url": "https://www.fooddive.com/"
+            },
+            {
+              "name": "Grocery Dive",
+              "url": "https://www.grocerydive.com/"
+            },
+            {
+              "name": "FoodNavigator",
+              "url": "https://www.foodnavigator.com/"
+            },
+            {
+              "name": "Just Food",
+              "url": "https://www.just-food.com/"
+            },
+            {
+              "name": "IGD",
+              "url": "https://www.igd.com/"
+            },
+            {
+              "name": "Euromonitor",
+              "url": "https://www.euromonitor.com/"
+            },
+            {
+              "name": "Lebensmittel Zeitung (德国LZ)",
+              "url": "https://www.lebensmittelzeitung.net/"
+            },
+            {
+              "name": "LSA Conso (法国)",
+              "url": "https://www.lsa-conso.fr/"
+            },
+            {
+              "name": "GDO Week (意大利)",
+              "url": "https://www.gdoweek.it/"
+            },
+            {
+              "name": "Alimarket (西班牙)",
+              "url": "https://www.alimarket.es/"
+            },
+            {
+              "name": "Wiadomości Handlowe (波兰)",
+              "url": "https://wiadomoscihandlowe.pl/"
+            },
+            {
+              "name": "SuperHiper ABRAS (巴西)",
+              "url": "http://superhiper.com.br/"
+            },
+            {
+              "name": "ANTAD (墨西哥零售协会)",
+              "url": "https://antad.net/"
+            },
+            {
+              "name": "Inside Retail Australia (澳洲)",
+              "url": "https://insideretail.com.au/"
+            },
+            {
+              "name": "ILACAD World Retail (拉美)",
+              "url": "https://www.ilacad.com/"
+            },
+            {
+              "name": "日经中文网 Nikkei (日本)",
+              "url": "https://cn.nikkei.com/"
+            },
+            {
+              "name": "Daily Trend (韩国零售)",
+              "url": "https://www.dailytrend.co.kr/"
+            }
+          ]
+        },
+        {
+          "name": "乡村振兴特色产品",
+          "en": "Specialty Products",
+          "players": [
+            "Whole Foods",
+            "Eataly",
+            "Trader Joe's",
+            "Costco",
+            "Amazon",
+            "99 Ranch",
+            "H Mart",
+            "T&T",
+            "Yamibuy",
+            "Fortnum & Mason",
+            "Fauchon",
+            "Ladurée"
+          ],
+          "retailers": [
+            "Whole Foods",
+            "Eataly",
+            "Trader Joe's",
+            "Tmall Global",
+            "JD Worldwide",
+            "亚洲超市"
+          ],
+          "associations": [
+            "SFA 特色食品协会"
+          ],
+          "media": [
+            {
+              "name": "Specialty Food Association",
+              "url": "https://www.specialtyfood.com/"
+            },
+            {
+              "name": "Tridge",
+              "url": "https://www.tridge.com/"
+            },
+            {
+              "name": "Food Dive",
+              "url": "https://www.fooddive.com/"
+            },
+            {
+              "name": "SuperHiper ABRAS (巴西)",
+              "url": "http://superhiper.com.br/"
+            },
+            {
+              "name": "ILACAD World Retail (拉美)",
+              "url": "https://www.ilacad.com/"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

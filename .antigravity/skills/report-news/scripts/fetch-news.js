@@ -28,6 +28,21 @@ const categoriesPath = path.resolve(__dirname, '../references/standard-categorie
 const categoriesData = fs.existsSync(categoriesPath) ? JSON.parse(fs.readFileSync(categoriesPath, 'utf8')) : { clusters: [] };
 const ALL_STANDARD_CATEGORIES = categoriesData.clusters.flatMap(c => c.categories.map(cat => cat.name));
 
+// 读取 54 品类渠道玩家与行业协会图谱（用于检索词增强）
+const channelPlayersPath = path.resolve(__dirname, '../references/channel-players.json');
+const channelPlayersData = fs.existsSync(channelPlayersPath) ? JSON.parse(fs.readFileSync(channelPlayersPath, 'utf8')) : { clusters: [] };
+
+/**
+ * 根据品类名查找渠道图谱信息（玩家 / 零售商 / 协会）
+ */
+function findChannelInfo(categoryName) {
+  for (const cluster of channelPlayersData.clusters || []) {
+    const cat = (cluster.categories || []).find(c => c.name === categoryName);
+    if (cat) return cat;
+  }
+  return null;
+}
+
 /**
  * 严格 7 天时效性判定算法
  */
@@ -145,18 +160,24 @@ async function searchGoogleNews(query, location = 'us') {
 async function scrapeArticle(url) {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
+    const timeout = setTimeout(() => controller.abort(), 6000);
 
     const res = await fetch(url, {
       signal: controller.signal,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
       }
     });
     clearTimeout(timeout);
 
-    if (!res.ok) return { text: '', ogImage: '' };
+    if (!res.ok || res.status < 200 || res.status >= 400) {
+      return { text: '', ogImage: '', isValid: false };
+    }
     const html = await res.text();
+    if (html.length < 500 || html.includes('403 Forbidden') || html.includes('Access Denied')) {
+      return { text: '', ogImage: '', isValid: false };
+    }
 
     // 正则提取 og:image
     let ogImage = '';
@@ -176,9 +197,9 @@ async function scrapeArticle(url) {
       .trim()
       .slice(0, 5000);
 
-    return { text: cleanText, ogImage };
+    return { text: cleanText, ogImage, isValid: true };
   } catch (err) {
-    return { text: '', ogImage: '' };
+    return { text: '', ogImage: '', isValid: false };
   }
 }
 
@@ -426,7 +447,13 @@ async function main() {
       let query = task.query;
       if (!query) {
         const subKws = (task.keywords || []).slice(0, 3).join(' OR ');
-        query = `("${task.enName || task.category}" OR ${subKws || 'retail'}) (association OR "store openings" OR "expansion" OR "investment" OR "leadership" OR "tariff" OR "supply chain") news`;
+        // 从渠道玩家图谱中取该品类的代表玩家与协会，增强检索精准度
+        const channelInfo = findChannelInfo(task.category);
+        const players = (channelInfo?.players || []).slice(0, 5);
+        const associations = (channelInfo?.associations || []).slice(0, 3);
+        const playerKws = players.length > 0 ? ` (${players.join(' OR ')})` : '';
+        const assocKws = associations.length > 0 ? ` (${associations.join(' OR ')})` : '';
+        query = `("${task.enName || task.category}" OR ${subKws || 'retail'})${playerKws}${assocKws} (association OR "store openings" OR "expansion" OR "investment" OR "leadership" OR "tariff" OR "supply chain") news`;
       }
 
       const rawNewsList = await searchGoogleNews(query, 'us');
@@ -442,7 +469,11 @@ async function main() {
 
       for (const item of uniqueList) {
         console.log(`   🌐 正在抓取正文与高清配图: ${item.title.slice(0, 40)}...`);
-        const { text, ogImage } = await scrapeArticle(item.link);
+        const { text, ogImage, isValid } = await scrapeArticle(item.link);
+        if (!isValid) {
+          console.log(`   ⚠️ 链接连通性校验未通过(404/403/超时)，跳过此条: ${item.link}`);
+          continue;
+        }
         if (ogImage) item.imageUrl = ogImage;
 
         console.log(`   🤖 正在进行 400-500 字深度商业与外贸启示提炼...`);
@@ -473,5 +504,6 @@ module.exports = {
   deduplicateByTitle,
   searchGoogleNews,
   scrapeArticle,
-  summarizeWithAI
+  summarizeWithAI,
+  findChannelInfo
 };
