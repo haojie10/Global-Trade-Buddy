@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { STANDARD_CATEGORIES } from '../lib/category-mapper';
 
 export interface PlatformReport {
   id: string;
@@ -7,6 +8,7 @@ export interface PlatformReport {
   category: string;
   market_region: string;
   summary: string;
+  industries?: string;
   isUnlocked: boolean;
   isFavorited?: boolean;
 }
@@ -15,7 +17,8 @@ export function filterReports(
   reports: PlatformReport[],
   searchQuery: string,
   category: string,
-  region: string
+  region: string,
+  industry: string = 'All'
 ): PlatformReport[] {
   const query = searchQuery.trim().toLowerCase();
   return reports.filter(r => {
@@ -32,7 +35,18 @@ export function filterReports(
       reportRegions.includes('全球') ||
       r.market_region === '全球';
 
-    return matchQuery && matchCat && matchRegion;
+    // 支持相关行业匹配
+    const reportIndustries = r.industries
+      ? r.industries.split(',').map(s => s.trim()).filter(Boolean)
+      : [];
+    const matchIndustry =
+      industry === 'All' ||
+      reportIndustries.includes(industry) ||
+      (r.industries && r.industries.includes(industry)) ||
+      r.title.includes(industry) ||
+      (r.summary && r.summary.includes(industry));
+
+    return matchQuery && matchCat && matchRegion && matchIndustry;
   });
 }
 
@@ -50,8 +64,9 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedRegion, setSelectedRegion] = useState('All');
+  const [selectedIndustry, setSelectedIndustry] = useState('All');
 
-  const filtered = filterReports(reports, searchQuery, selectedCategory, selectedRegion);
+  const filtered = filterReports(reports, searchQuery, selectedCategory, selectedRegion, selectedIndustry);
   
   // 搜索日志追踪（防抖，用户停止输入 1 秒后且 query 不为空时上报）
   React.useEffect(() => {
@@ -199,7 +214,7 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
         />
         
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.85rem', color: 'var(--color-muted)', fontWeight: 500 }}>类别</span>
+          <span style={{ fontSize: '0.85rem', color: 'var(--color-muted)', fontWeight: 500 }}>报告类别</span>
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
@@ -212,7 +227,7 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
         </div>
 
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.85rem', color: 'var(--color-muted)', fontWeight: 500 }}>市场</span>
+          <span style={{ fontSize: '0.85rem', color: 'var(--color-muted)', fontWeight: 500 }}>市场区域</span>
           <select
             value={selectedRegion}
             onChange={(e) => setSelectedRegion(e.target.value)}
@@ -220,7 +235,23 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
           >
             {regions.map(r => (
               <option key={r} value={r}>
-                {r === 'All' ? '全部地区' : r}
+                {r === 'All' ? '全部市场区域' : r}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.85rem', color: 'var(--color-muted)', fontWeight: 500 }}>相关行业</span>
+          <select
+            value={selectedIndustry}
+            onChange={(e) => setSelectedIndustry(e.target.value)}
+            style={{ ...inputStyle, padding: '8px 12px', cursor: 'pointer' }}
+          >
+            <option value="All">全部行业</option>
+            {STANDARD_CATEGORIES.map(ind => (
+              <option key={ind} value={ind}>
+                {ind}
               </option>
             ))}
           </select>
@@ -252,17 +283,31 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
               >
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <span style={{
-                      fontSize: '0.75rem',
-                      fontWeight: 'var(--btn-font-weight)',
-                      letterSpacing: 'var(--btn-letter-spacing)',
-                      color: report.category === 'customer' ? 'var(--color-accent)' : 'var(--color-muted)',
-                      background: report.category === 'customer' ? 'rgba(255, 100, 30, 0.05)' : 'rgba(122, 117, 111, 0.08)',
-                      padding: '5px 12px',
-                      borderRadius: 'var(--border-radius)'
-                    }}>
-                      {report.category === 'customer' ? '客户洞察' : '品类分析'}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                      <span style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 'var(--btn-font-weight)',
+                        letterSpacing: 'var(--btn-letter-spacing)',
+                        color: report.category === 'customer' ? 'var(--color-accent)' : 'var(--color-muted)',
+                        background: report.category === 'customer' ? 'rgba(255, 100, 30, 0.05)' : 'rgba(122, 117, 111, 0.08)',
+                        padding: '5px 12px',
+                        borderRadius: 'var(--border-radius)'
+                      }}>
+                        {report.category === 'customer' ? '客户洞察' : '品类分析'}
+                      </span>
+                      {report.industries && (
+                        <span style={{
+                          fontSize: '0.72rem',
+                          color: '#2e5bff',
+                          background: 'rgba(46, 91, 255, 0.05)',
+                          border: '1px solid rgba(46, 91, 255, 0.12)',
+                          padding: '4px 8px',
+                          borderRadius: 'var(--border-radius)'
+                        }}>
+                          {report.industries.split(',')[0].trim()}
+                        </span>
+                      )}
+                    </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       {/* 收藏按钮（星星样式） */}
                       <button

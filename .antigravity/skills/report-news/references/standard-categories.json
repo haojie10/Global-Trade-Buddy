@@ -1,0 +1,100 @@
+{
+  "clusters": [
+    {
+      "id": "electronics_mobility",
+      "name": "电子家电与智能出行",
+      "categories": [
+        { "name": "家用电器", "en": "Home Appliances", "keywords": ["home appliances", "refrigerator", "air conditioner", "vacuum cleaner", "blender", "kitchen appliances"] },
+        { "name": "电子消费品及信息产品", "en": "Consumer Electronics & IT", "keywords": ["consumer electronics", "smartphone", "audio", "bluetooth speaker", "smart watch", "display"] },
+        { "name": "电子电气产品", "en": "Electronic & Electrical Products", "keywords": ["electrical products", "switches", "cables", "circuit breaker", "smart home"] },
+        { "name": "照明产品", "en": "Lighting Products", "keywords": ["lighting", "LED lights", "smart lighting", "outdoor lighting", "fixtures", "bulbs"] },
+        { "name": "新能源汽车及智慧出行", "en": "NEV & Smart Mobility", "keywords": ["electric vehicles", "EV charging", "smart mobility", "e-bikes", "scooters"] },
+        { "name": "车辆", "en": "Vehicles", "keywords": ["vehicles", "automotive", "trucks", "commercial vehicles"] },
+        { "name": "汽车配件", "en": "Auto Parts & Accessories", "keywords": ["auto parts", "aftermarket", "brake pads", "tires", "car accessories", "AutoZone", "O'Reilly"] },
+        { "name": "摩托车", "en": "Motorcycles", "keywords": ["motorcycles", "motorcycle gear", "helmets", "powersports"] },
+        { "name": "自行车", "en": "Bicycles", "keywords": ["bicycles", "cycling", "e-bikes", "cycling gear"] }
+      ]
+    },
+    {
+      "id": "hardware_machinery_building",
+      "name": "五金工具与机械建材",
+      "categories": [
+        { "name": "动力、电力设备", "en": "Power & Electrical Equipment", "keywords": ["power equipment", "generators", "diesel generator", "electric motors"] },
+        { "name": "通用机械及机械基础件", "en": "General Machinery & Parts", "keywords": ["general machinery", "bearings", "valves", "pumps", "fasteners"] },
+        { "name": "加工机械设备", "en": "Processing Machinery", "keywords": ["processing machinery", "CNC machines", "packaging machinery", "woodworking machinery"] },
+        { "name": "工程机械（室内/室外）", "en": "Construction Machinery", "keywords": ["construction machinery", "excavators", "forklifts", "cranes"] },
+        { "name": "农业机械（室内/室外）", "en": "Agricultural Machinery", "keywords": ["agricultural machinery", "tractors", "harvesters", "irrigation equipment"] },
+        { "name": "工业自动化及智能制造", "en": "Industrial Automation", "keywords": ["industrial automation", "robotics", "sensors", "smart manufacturing"] },
+        { "name": "五金", "en": "Hardware", "keywords": ["hardware", "fasteners", "screws", "locks", "hinges", "Home Depot", "Lowe's"] },
+        { "name": "工具", "en": "Tools", "keywords": ["power tools", "hand tools", "tool sets", "Stanley", "DeWalt", "Milwaukee"] },
+        { "name": "新材料及化工产品", "en": "New Materials & Chemicals", "keywords": ["chemicals", "polymers", "coatings", "adhesives", "advanced materials"] },
+        { "name": "新能源", "en": "New Energy", "keywords": ["solar panels", "photovoltaic", "energy storage", "lithium batteries", "wind power"] },
+        { "name": "建筑及装饰材料", "en": "Building & Decorative Materials", "keywords": ["building materials", "flooring", "tiles", "insulation", "roofing", "wall panels"] },
+        { "name": "卫浴设备", "en": "Sanitary & Bathroom Equipment", "keywords": ["sanitary ware", "faucets", "showers", "bathroom fixtures", "vanities"] }
+      ]
+    },
+    {
+      "id": "daily_goods_tableware",
+      "name": "日用百货与餐厨陶瓷",
+      "categories": [
+        { "name": "日用陶瓷", "en": "Ceramics for Daily Use", "keywords": ["ceramic tableware", "dinnerware", "porcelain plates", "mugs"] },
+        { "name": "餐厨器皿", "en": "Kitchenware & Tableware", "keywords": ["cookware", "kitchenware", "pots and pans", "cutlery", "kitchen gadgets"] },
+        { "name": "家居用品", "en": "Household Items", "keywords": ["household goods", "storage organization", "cleaning supplies", "trash cans", "Target", "Walmart", "Action"] },
+        { "name": "玻璃工艺品", "en": "Glass Artware", "keywords": ["glassware", "drinkware", "glass vases", "decorative glass"] },
+        { "name": "工艺陶瓷", "en": "Art Ceramics", "keywords": ["art ceramics", "decorative porcelain", "ceramic figurines"] },
+        { "name": "礼品及赠品", "en": "Gifts & Premiums", "keywords": ["promotional products", "novelty gifts", "souvenirs", "corporate gifts"] },
+        { "name": "节日用品", "en": "Festival & Party Products", "keywords": ["Christmas decorations", "Halloween decor", "party supplies", "holiday lighting"] }
+      ]
+    },
+    {
+      "id": "furniture_garden_decor",
+      "name": "家居家具与园林装饰",
+      "categories": [
+        { "name": "家具", "en": "Furniture", "keywords": ["furniture", "office furniture", "sofas", "dining tables", "IKEA", "Wayfair", "Ashley"] },
+        { "name": "编织及藤铁工艺品", "en": "Weaving & Rattan/Iron Crafts", "keywords": ["rattan crafts", "wicker baskets", "wrought iron decor", "handicrafts"] },
+        { "name": "家居装饰品", "en": "Home Decorations", "keywords": ["home decor", "wall art", "mirrors", "candles", "frames", "cushions"] },
+        { "name": "园林用品", "en": "Gardening Products", "keywords": ["gardening tools", "lawn mowers", "planters", "patio furniture", "outdoor decor"] },
+        { "name": "石材/铁艺制品（室外）", "en": "Outdoor Stone & Iron Products", "keywords": ["outdoor stone", "iron gates", "pavers", "fencing", "landscaping"] },
+        { "name": "地毯及挂毯", "en": "Carpets & Tapestries", "keywords": ["carpets", "area rugs", "mats", "tapestries", "floor covering"] }
+      ]
+    },
+    {
+      "id": "apparel_textile_bags",
+      "name": "服装纺织与鞋帽箱包",
+      "categories": [
+        { "name": "男女装", "en": "Men & Women Apparel", "keywords": ["apparel", "men's fashion", "women's clothing", "fast fashion", "Zara", "H&M", "Shein"] },
+        { "name": "童装", "en": "Children's Wear", "keywords": ["children's wear", "kids clothing", "baby apparel"] },
+        { "name": "内衣", "en": "Underwear & Loungewear", "keywords": ["underwear", "lingerie", "loungewear", "sleepwear", "socks"] },
+        { "name": "运动服及休闲服", "en": "Sports & Casual Wear", "keywords": ["sportswear", "activewear", "yoga pants", "outdoor clothing", "athleisure"] },
+        { "name": "裘革皮羽绒及制品", "en": "Furs, Leather & Down Products", "keywords": ["down jackets", "leather jackets", "winter coats", "fur products"] },
+        { "name": "服装饰物及配件", "en": "Fashion Accessories", "keywords": ["fashion accessories", "scarves", "hats", "belts", "ties", "gloves"] },
+        { "name": "纺织原料面料", "en": "Textile Raw Materials & Fabrics", "keywords": ["textile fabrics", "cotton fabrics", "polyester", "silk", "yarn", "recycled textiles"] },
+        { "name": "家用纺织品", "en": "Home Textiles", "keywords": ["home textiles", "bedding sets", "curtains", "towels", "blankets"] },
+        { "name": "鞋", "en": "Shoes", "keywords": ["footwear", "sneakers", "leather shoes", "sandals", "boots"] },
+        { "name": "箱包", "en": "Cases & Bags", "keywords": ["luggage", "backpacks", "handbags", "travel bags", "suitcases"] }
+      ]
+    },
+    {
+      "id": "toys_pets_personal_care",
+      "name": "玩具母婴与礼品个护",
+      "categories": [
+        { "name": "玩具", "en": "Toys", "keywords": ["toys", "action figures", "educational toys", "plush toys", "Lego", "Hasbro", "Mattel"] },
+        { "name": "孕婴童用品", "en": "Maternal & Infant Products", "keywords": ["baby products", "strollers", "car seats", "baby feeding", "nursery"] },
+        { "name": "钟表眼镜", "en": "Clocks, Watches & Eyewear", "keywords": ["watches", "smartwatches", "sunglasses", "optical frames", "clocks"] },
+        { "name": "个人护理用具", "en": "Personal Care Appliances", "keywords": ["personal care", "hair dryers", "electric shavers", "electric toothbrush", "beauty devices"] },
+        { "name": "宠物用品", "en": "Pet Supplies", "keywords": ["pet supplies", "pet food", "dog toys", "cat trees", "pet accessories", "Petco", "PetSmart"] },
+        { "name": "办公文具", "en": "Office Supplies & Stationery", "keywords": ["office supplies", "stationery", "notebooks", "pens", "Staples"] },
+        { "name": "体育及旅游休闲用品", "en": "Sports & Outdoor Leisure Goods", "keywords": ["sporting goods", "camping gear", "fitness equipment", "tents", "Decathlon"] }
+      ]
+    },
+    {
+      "id": "healthcare_food",
+      "name": "医药保健与食品特色",
+      "categories": [
+        { "name": "医药保健品及医疗器械", "en": "Medicines, Health Products & Medical Devices", "keywords": ["medical devices", "health supplements", "PPE", "home healthcare", "diagnostics"] },
+        { "name": "食品", "en": "Food & Agricultural Products", "keywords": ["packaged food", "specialty food", "beverages", "confectionery", "snacks"] },
+        { "name": "乡村振兴特色产品", "en": "Specialty Products", "keywords": ["specialty products", "organic food", "regional specialties"] }
+      ]
+    }
+  ]
+}

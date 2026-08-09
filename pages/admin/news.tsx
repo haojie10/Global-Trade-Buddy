@@ -207,7 +207,7 @@ export default function AdminNewsManagement() {
                   <tr>
                     <th>资讯标题</th>
                     <th>状态</th>
-                    <th>关联行业</th>
+                    <th>相关行业</th>
                     <th>关联国家</th>
                     <th>发布时间</th>
                     <th style={{ textAlign: 'right' }}>操作</th>
@@ -357,7 +357,7 @@ export default function AdminNewsManagement() {
                 </div>
 
                 <div className="admin-form-group">
-                  <label className="admin-label">关联行业 (多选)</label>
+                  <label className="admin-label">相关行业 (多选)</label>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '6px', maxHeight: '150px', overflowY: 'auto', background: 'rgba(255,255,255,0.02)', padding: '10px', border: '1px solid var(--admin-border)', borderRadius: '6px' }}>
                     {industries.map(ind => (
                       <label key={ind.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', cursor: 'pointer' }}>

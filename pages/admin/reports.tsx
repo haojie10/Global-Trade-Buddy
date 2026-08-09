@@ -712,7 +712,7 @@ export default function AdminReportsManagement() {
                   <tr>
                     <th>报告标题</th>
                     <th>报告类别</th>
-                    <th>关联行业</th>
+                    <th>相关行业</th>
                     <th>覆盖国家</th>
                     <th>🔗 图谱连线</th>
                     <th>上传日期</th>
@@ -1103,7 +1103,7 @@ export default function AdminReportsManagement() {
                   {/* 标签配置区域 */}
                   <div>
                     <div className="admin-form-group">
-                      <label className="admin-label">关联行业 (可多选)</label>
+                      <label className="admin-label">相关行业 (可多选)</label>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', maxHeight: '180px', overflowY: 'auto', background: 'rgba(255,255,255,0.02)', padding: '10px', border: '1px solid var(--admin-border)', borderRadius: '6px' }}>
                         {industries.map(ind => (
                           <label key={ind.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', cursor: 'pointer' }}>
@@ -1200,7 +1200,7 @@ export default function AdminReportsManagement() {
               </p>
 
               <div className="admin-form-group">
-                <label className="admin-label">关联行业 (多选)</label>
+                <label className="admin-label">相关行业 (多选)</label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', maxHeight: '180px', overflowY: 'auto', background: 'rgba(255,255,255,0.02)', padding: '10px', border: '1px solid var(--admin-border)', borderRadius: '6px', marginBottom: '16px' }}>
                   {industries.map(ind => (
                     <label key={ind.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', cursor: 'pointer' }}>

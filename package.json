@@ -5,7 +5,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start -H 0.0.0.0 -p 3000",
-    "test": "vitest run --fileParallelism=false"
+    "test": "vitest run --fileParallelism=false",
+    "fetch:news": "node .antigravity/skills/report-news/scripts/fetch-news.js"
   },
   "dependencies": {
     "@cloudbase/node-sdk": "^3.18.3",

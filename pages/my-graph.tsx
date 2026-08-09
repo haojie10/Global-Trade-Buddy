@@ -520,6 +520,11 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       if (userRole === 'admin') {
         const reportsRes = await dbClient.query(
           `SELECT r.id, r.title, r.category, r.market_region, r.summary, TRUE AS "isUnlocked",
+                  ARRAY_TO_STRING(ARRAY(
+                    SELECT name FROM industries 
+                    JOIN report_industries ON industries.id = report_industries.industry_id 
+                    WHERE report_id = r.id
+                  ), ', ') as industries,
                   EXISTS(SELECT 1 FROM favorites f WHERE f.user_id = $1 AND f.report_id = r.id) as is_favorited
            FROM reports r
            ORDER BY r.created_at DESC 
@@ -532,12 +537,18 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
           category: row.category,
           market_region: row.market_region,
           summary: row.summary,
+          industries: row.industries || '',
           isUnlocked: true,
           isFavorited: row.is_favorited
         }));
       } else {
         const reportsRes = await dbClient.query(
           `SELECT r.id, r.title, r.category, r.market_region, r.summary, TRUE AS "isUnlocked",
+                  ARRAY_TO_STRING(ARRAY(
+                    SELECT name FROM industries 
+                    JOIN report_industries ON industries.id = report_industries.industry_id 
+                    WHERE report_id = r.id
+                  ), ', ') as industries,
                   EXISTS(SELECT 1 FROM favorites f WHERE f.user_id = $1 AND f.report_id = r.id) as is_favorited
            FROM reports r
            JOIN unlocks u ON r.id = u.report_id
@@ -552,6 +563,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
           category: row.category,
           market_region: row.market_region,
           summary: row.summary,
+          industries: row.industries || '',
           isUnlocked: true,
           isFavorited: row.is_favorited
         }));

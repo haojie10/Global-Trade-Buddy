@@ -27,6 +27,8 @@ interface ReportDetailProps {
     content_html: string | null;
   };
   related: RelatedReport[];
+  canonicalUrl?: string;
+  siteUrl?: string;
   userId: string;
   userRole: string;
   freeQuota: number;
@@ -38,6 +40,8 @@ interface ReportDetailProps {
 export default function ReportDetailPage({
   report, 
   related, 
+  canonicalUrl,
+  siteUrl,
   userId, 
   userRole, 
   freeQuota,
@@ -242,8 +246,36 @@ export default function ReportDetailPage({
         position: 'relative'
       }}>
         <Head>
-          <title>{report.title} | Market Graphic</title>
+          {/* 基础 TDK (百度/搜狗/360) */}
+          <title>{`${report.title} | 外贸智友 - 深度商业研报`}</title>
+          <meta name="description" content={report.summary || '全球出海深度商业与品类调研报告，助力中国外贸企业穿透海外供应链。'} />
+          <meta name="keywords" content={`出海调研, 商业洞察, ${report.category === 'customer' ? '买家洞察' : '品类洞察'}, ${report.market_region}, 外贸报告, 外贸智友, GlobalTradeBuddy`} />
+          <meta name="author" content="外贸智友 GlobalTradeBuddy" />
+          <meta name="robots" content="index, follow" />
+          <meta name="applicable-device" content="pc,mobile" />
+          {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+
+          {/* 百度出图缩略图 */}
+          <meta name="thumbnail" content={siteUrl ? `${siteUrl}/images/discover_focus_panorama.jpg` : '/images/discover_focus_panorama.jpg'} />
+
+          {/* 微信 / QQ 网页分享协议 */}
+          <meta itemProp="name" content={`${report.title} | 外贸智友`} />
+          <meta itemProp="description" content={report.summary || '全球出海深度商业与品类调研报告，助力中国外贸企业穿透海外供应链。'} />
+          <meta itemProp="image" content={siteUrl ? `${siteUrl}/images/discover_focus_panorama.jpg` : '/images/discover_focus_panorama.jpg'} />
+
+          {/* 微信/微博/知乎/抖音通用 OpenGraph */}
+          <meta property="og:type" content="article" />
+          <meta property="og:title" content={`${report.title} | 外贸智友`} />
+          <meta property="og:description" content={report.summary || '全球出海深度商业与品类调研报告，助力中国外贸企业穿透海外供应链。'} />
+          <meta property="og:image" content={siteUrl ? `${siteUrl}/images/discover_focus_panorama.jpg` : '/images/discover_focus_panorama.jpg'} />
+          {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
+          <meta property="og:site_name" content="外贸智友 GlobalTradeBuddy" />
         </Head>
+
+        {/* 微信首图兜底 */}
+        <div style={{ display: 'none', position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}>
+          <img src={siteUrl ? `${siteUrl}/images/discover_focus_panorama.jpg` : '/images/discover_focus_panorama.jpg'} alt={report.title} width="300" height="300" />
+        </div>
         {/* 全局背景流光光源 */}
         <div className="ambient-glow-container">
           <div className="ambient-light ambient-light-1" />
@@ -843,10 +875,17 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
     context.res.setHeader('Cache-Control', 'no-store, must-revalidate');
 
+    const proto = (context.req.headers['x-forwarded-proto'] as string) || 'https';
+    const host = (context.req.headers['x-forwarded-host'] as string) || context.req.headers.host || 'marketgraphic.com';
+    const siteUrl = `${proto}://${host}`;
+    const canonicalUrl = `${siteUrl}/reports/${id}`;
+
     return {
       props: {
         report,
         related,
+        canonicalUrl,
+        siteUrl,
         userId: userId || '',
         userRole,
         freeQuota,

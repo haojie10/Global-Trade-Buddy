@@ -28,13 +28,15 @@ interface NewsDetailProps {
     market_region: string;
     summary: string;
   }>;
+  canonicalUrl?: string;
+  siteUrl?: string;
   userId: string | null;
   userRole: string;
   quota: number;
   nickname: string;
 }
 
-export default function NewsDetailPage({ news, relatedReports, userId, userRole, quota, nickname, error }: NewsDetailProps) {
+export default function NewsDetailPage({ news, relatedReports, canonicalUrl, siteUrl, userId, userRole, quota, nickname, error }: NewsDetailProps) {
   const [showAuthModal, setShowAuthModal] = useState(false);
   
   // 1. 将 React Hook (useEffect) 严格声明在组件的最顶层（不能放在 try-catch 或条件语句内部，确保渲染链路的一致性）
@@ -164,11 +166,75 @@ export default function NewsDetailPage({ news, relatedReports, userId, userRole,
       );
     };
 
+    // 提取纯文本摘要与关键词用于 SEO
+    const plainSummary = news.summary || (news.content ? news.content.replace(/<[^>]+>/g, '').replace(/[#*`~\[\]\(\)]/g, '').slice(0, 160).trim() : '');
+    const keywordsList = [news.industries, news.countries, '外贸资讯', '出海热点', '全球市场动态', '海运运价', '关税政策', 'Market Graphic'].filter(Boolean).join(', ');
+
+    // 提取正文首图用于 og:image
+    let firstImage = '';
+    if (news.content) {
+      const imgMatch = news.content.match(/<img[^>]+src=["']([^"']+)["']/i) || news.content.match(/!\[.*?\]\((https?:\/\/[^\s\)]+)\)/i);
+      if (imgMatch && imgMatch[1]) {
+        firstImage = imgMatch[1];
+      }
+    }
+    const defaultCover = siteUrl ? `${siteUrl}/images/global_trade_trends.jpg` : '/images/global_trade_trends.jpg';
+    const ogImageUrl = firstImage || defaultCover;
+
     return (
-      <WatermarkContainer text={userId ? `GTB USER ${userId.substring(0, 8)}` : 'GTB GUEST'}>
+      <WatermarkContainer text={userId ? `外贸智友 - 用户: ${nickname || userId.substring(0, 8)}` : '外贸智友 - 游客浏览模式'}>
         <Head>
-          <title>{news.title} | Market Graphic</title>
+          {/* 1. 基础 SEO / TDK (针对百度、搜狗、360等国内搜索引擎) */}
+          <title>{`${news.title} | 外贸智友 - 行业热点情报`}</title>
+          <meta name="description" content={plainSummary} />
+          <meta name="keywords" content={keywordsList} />
+          <meta name="author" content="外贸智友 GlobalTradeBuddy" />
+          <meta name="robots" content="index, follow" />
+          <meta name="applicable-device" content="pc,mobile" />
+          <meta name="format-detection" content="telephone=no" />
+          {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+
+          {/* 2. 百度搜索移动端出图 (搜索结果缩略图) */}
+          <meta name="thumbnail" content={ogImageUrl} />
+
+          {/* 3. 腾讯系 / 微信 / QQ 网页分享卡片协议 (itemprop 标准) */}
+          <meta itemProp="name" content={news.title} />
+          <meta itemProp="description" content={plainSummary} />
+          <meta itemProp="image" content={ogImageUrl} />
+
+          {/* 4. 国内主流社交平台标准 OpenGraph 协议 (微信、知乎、微博、今日头条、抖音) */}
+          <meta property="og:type" content="article" />
+          <meta property="og:title" content={news.title} />
+          <meta property="og:description" content={plainSummary} />
+          <meta property="og:image" content={ogImageUrl} />
+          <meta property="og:image:alt" content={news.title} />
+          {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
+          <meta property="og:site_name" content="外贸智友 GlobalTradeBuddy" />
+          {news.published_at && <meta property="article:published_time" content={news.published_at} />}
+          {news.industries && <meta property="article:section" content={news.industries} />}
+          {news.countries && <meta property="article:tag" content={news.countries} />}
+
+          {/* 5. 百度/国内搜索引擎结构化数据 */}
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                '@context': 'https://ziyuan.baidu.com/contexts/cambrian.jsonld',
+                '@id': canonicalUrl || '',
+                title: news.title,
+                images: [ogImageUrl],
+                description: plainSummary,
+                pubDate: news.published_at,
+                upDate: news.published_at
+              })
+            }}
+          />
         </Head>
+
+        {/* 微信内置浏览器分享兜底隐形首图 (微信早期与部分版本爬虫强制读取 Body 首张 300x300 图) */}
+        <div style={{ display: 'none', position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}>
+          <img src={ogImageUrl} alt={news.title} width="300" height="300" />
+        </div>
         <Navbar 
           userId={userId} 
           userRole={userRole} 
@@ -420,6 +486,11 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       }
     }
 
+    const proto = (context.req.headers['x-forwarded-proto'] as string) || 'https';
+    const host = (context.req.headers['x-forwarded-host'] as string) || context.req.headers.host || 'marketgraphic.com';
+    const siteUrl = `${proto}://${host}`;
+    const canonicalUrl = `${siteUrl}/news/${id}`;
+
     return {
       props: {
         error: null,
@@ -428,6 +499,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
           published_at: published_at_str
         },
         relatedReports: relatedReportsRes.rows,
+        canonicalUrl,
+        siteUrl,
         userId,
         userRole,
         quota,

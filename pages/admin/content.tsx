@@ -137,7 +137,7 @@ export default function AdminContentAnalysis() {
                     <thead>
                       <tr>
                         <th>报告标题</th>
-                        <th>关联行业</th>
+                        <th>相关行业</th>
                         <th>覆盖国家</th>
                         <th>上传时间</th>
                       </tr>

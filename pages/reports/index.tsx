@@ -152,17 +152,28 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     if (userId && userRole === 'admin') {
       const res = await dbClient.query(`
         SELECT r.id, r.title, r.category, r.market_region, r.summary,
+               ARRAY_TO_STRING(ARRAY(
+                 SELECT name FROM industries 
+                 JOIN report_industries ON industries.id = report_industries.industry_id 
+                 WHERE report_id = r.id
+               ), ', ') as industries,
                EXISTS(SELECT 1 FROM favorites f WHERE f.user_id = $1 AND f.report_id = r.id) as is_favorited
         FROM reports r ORDER BY r.created_at DESC
       `, [userId]);
       allReports = res.rows.map((row: any) => ({
         id: row.id, title: row.title, category: row.category,
         market_region: row.market_region, summary: row.summary,
+        industries: row.industries || '',
         isUnlocked: true, isFavorited: row.is_favorited
       }));
     } else if (userId) {
       const res = await dbClient.query(`
         SELECT r.id, r.title, r.category, r.market_region, r.summary,
+               ARRAY_TO_STRING(ARRAY(
+                 SELECT name FROM industries 
+                 JOIN report_industries ON industries.id = report_industries.industry_id 
+                 WHERE report_id = r.id
+               ), ', ') as industries,
                EXISTS(SELECT 1 FROM unlocks u WHERE u.user_id = $1 AND u.report_id = r.id) as is_unlocked,
                EXISTS(SELECT 1 FROM favorites f WHERE f.user_id = $1 AND f.report_id = r.id) as is_favorited
         FROM reports r ORDER BY r.created_at DESC
@@ -170,15 +181,23 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       allReports = res.rows.map((row: any) => ({
         id: row.id, title: row.title, category: row.category,
         market_region: row.market_region, summary: row.summary,
+        industries: row.industries || '',
         isUnlocked: row.is_unlocked, isFavorited: row.is_favorited
       }));
     } else {
-      const res = await dbClient.query(
-        'SELECT id, title, category, market_region, summary FROM reports ORDER BY created_at DESC'
-      );
+      const res = await dbClient.query(`
+        SELECT r.id, r.title, r.category, r.market_region, r.summary,
+               ARRAY_TO_STRING(ARRAY(
+                 SELECT name FROM industries 
+                 JOIN report_industries ON industries.id = report_industries.industry_id 
+                 WHERE report_id = r.id
+               ), ', ') as industries
+        FROM reports r ORDER BY r.created_at DESC
+      `);
       allReports = res.rows.map((row: any) => ({
         id: row.id, title: row.title, category: row.category,
         market_region: row.market_region, summary: row.summary,
+        industries: row.industries || '',
         isUnlocked: false, isFavorited: false
       }));
     }
