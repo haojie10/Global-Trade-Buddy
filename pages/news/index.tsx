@@ -5,6 +5,7 @@ import Link from 'next/link';
 import pool from '../../lib/db';
 import { resolveSsrAuth } from '../../lib/ssr-auth';
 import { STANDARD_CATEGORIES } from '../../lib/category-mapper';
+import { isNodeInRegion } from '../../lib/region-country-mapper';
 import WatermarkContainer from '../../components/WatermarkContainer';
 import Navbar from '../../components/Navbar';
 import AuthModal from '../../components/AuthModal';
@@ -37,6 +38,9 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
   const [searchKeyword, setSearchKeyword] = useState('');
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isClientLoaded, setIsClientLoaded] = useState(false);
+  const [isIndustriesExpanded, setIsIndustriesExpanded] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 18;
 
   // 1. 初始化读取 localStorage 缓存的用户订阅偏好
   useEffect(() => {
@@ -64,6 +68,7 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
       updated = [...selectedIndustries, name];
     }
     setSelectedIndustries(updated);
+    setCurrentPage(1);
     try {
       localStorage.setItem('gtb_selected_industries', JSON.stringify(updated));
     } catch (e) {}
@@ -71,18 +76,26 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
 
   const selectAll = () => {
     setSelectedIndustries([]);
+    setCurrentPage(1);
     try {
       localStorage.removeItem('gtb_selected_industries');
     } catch (e) {}
   };
 
-  // 3. 多维度过滤计算 (多选品类 + 地区 + 关键词)
+  // 3. 多维度过滤计算 (多选品类 + 地区大区智能归纳 + 关键词)
   const filteredNews = newsList.filter(item => {
     // 多选品类过滤：若为空则不过滤；若有选中，满足任一品类即可匹配
     const matchInd = selectedIndustries.length === 0 || selectedIndustries.some(ind => 
       item.industries && item.industries.includes(ind)
     );
-    const matchReg = selectedRegion === 'All' || (item.region && item.region === selectedRegion);
+    // 市场大区智能归纳过滤（如选择“欧洲”，荷兰/德国/英国等欧洲国家自动纳入）
+    const matchReg = selectedRegion === 'All' ||
+      isNodeInRegion(item.countries, selectedRegion) ||
+      isNodeInRegion(item.region, selectedRegion) ||
+      (item.region && (item.region.includes(selectedRegion) || selectedRegion.includes(item.region))) ||
+      (selectedRegion === '欧洲' && (item.title.includes('欧洲') || item.title.includes('欧盟') || (item.summary && (item.summary.includes('欧洲') || item.summary.includes('欧盟'))))) ||
+      (selectedRegion === '北美' && (item.title.includes('北美') || item.title.includes('美国') || (item.summary && (item.summary.includes('北美') || item.summary.includes('美国')))));
+
     const matchKwd = !searchKeyword.trim() || 
       item.title.toLowerCase().includes(searchKeyword.toLowerCase()) || 
       (item.summary && item.summary.toLowerCase().includes(searchKeyword.toLowerCase())) ||
@@ -92,7 +105,21 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
     return matchInd && matchReg && matchKwd;
   });
 
-  const regions = ['All', '北美', '欧洲', '亚太', '东南亚', '中东', '南美', '非洲'];
+  const totalPages = Math.ceil(filteredNews.length / PAGE_SIZE) || 1;
+  const paginatedNews = filteredNews.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  const handlePageChange = (page: number) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
+    if (typeof window !== 'undefined') {
+      const container = document.getElementById('news-feed-section');
+      if (container) {
+        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  };
+
+  const regions = ['All', '欧洲', '北美', '亚洲', '东南亚', '中东', '南美', '非洲', '大洋洲'];
   const ogImageUrl = siteUrl ? `${siteUrl}/images/global_trade_trends.jpg` : '/images/global_trade_trends.jpg';
 
   return (
@@ -157,8 +184,8 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
           </p>
         </div>
 
-        {/* 筛选与相关行业订阅面板 */}
-        <div style={{
+        {/* 筛选与行业资讯订阅面板 */}
+        <div id="news-feed-section" style={{
           background: 'rgba(255, 255, 255, 0.65)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
@@ -168,45 +195,46 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
           marginBottom: '36px',
           boxShadow: '0 10px 30px rgba(0,0,0,0.02)'
         }}>
-          {/* 上层控制栏：关键词搜索 + 地区选择 + 订阅快捷操作 */}
+          {/* 上层控制栏：关键词搜索 (左侧) + [市场区域下拉 + 快捷操作] (靠右组合) */}
           <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', flex: 1, minWidth: '280px' }}>
-              {/* 关键词搜索框 */}
-              <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
-                <input
-                  type="text"
-                  placeholder="搜索买家、渠道、品类或关税关键词..."
-                  value={searchKeyword}
-                  onChange={(e) => setSearchKeyword(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px 16px',
-                    fontSize: '0.85rem',
-                    background: 'rgba(255, 255, 255, 0.9)',
-                    border: '1px solid rgba(18, 18, 18, 0.1)',
-                    borderRadius: '6px',
-                    outline: 'none',
-                    color: 'var(--color-text)'
-                  }}
-                />
-                {searchKeyword && (
-                  <button 
-                    onClick={() => setSearchKeyword('')}
-                    style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#999' }}
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
+            {/* 左侧：关键词搜索框 */}
+            <div style={{ position: 'relative', flex: 1, minWidth: '260px', maxWidth: '440px' }}>
+              <input
+                type="text"
+                placeholder="搜索买家、渠道、品类或关税关键词..."
+                value={searchKeyword}
+                onChange={(e) => { setSearchKeyword(e.target.value); setCurrentPage(1); }}
+                style={{
+                  width: '100%',
+                  padding: '10px 16px',
+                  fontSize: '0.85rem',
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  border: '1px solid rgba(18, 18, 18, 0.1)',
+                  borderRadius: '6px',
+                  outline: 'none',
+                  color: 'var(--color-text)'
+                }}
+              />
+              {searchKeyword && (
+                <button 
+                  onClick={() => { setSearchKeyword(''); setCurrentPage(1); }}
+                  style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#999' }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
 
-              {/* 市场区域下拉 */}
+            {/* 右侧：市场区域筛选框 + 行业快捷操作按钮 */}
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+              {/* 市场区域下拉 (无地球 emoji) */}
               <select
                 value={selectedRegion}
-                onChange={(e) => setSelectedRegion(e.target.value)}
+                onChange={(e) => { setSelectedRegion(e.target.value); setCurrentPage(1); }}
                 style={{
                   background: 'rgba(255, 255, 255, 0.9)',
                   border: '1px solid rgba(18, 18, 18, 0.1)',
-                  padding: '10px 14px',
+                  padding: '9px 14px',
                   borderRadius: '6px',
                   fontSize: '0.85rem',
                   color: 'var(--color-text)',
@@ -214,15 +242,12 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
                   cursor: 'pointer'
                 }}
               >
-                <option value="All">🌍 全球全部区域</option>
+                <option value="All">全部市场区域</option>
                 {regions.filter(r => r !== 'All').map(r => (
                   <option key={r} value={r}>{r}</option>
                 ))}
               </select>
-            </div>
 
-            {/* 快捷操作：全部 vs 清空订阅 */}
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               <button
                 onClick={selectAll}
                 style={{
@@ -260,47 +285,121 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
             </div>
           </div>
 
-          {/* 下层：54 个相关行业标签多选池 */}
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-              <span style={{ fontSize: '0.8rem', color: 'var(--color-muted)', fontWeight: 600, letterSpacing: '0.5px' }}>
-                📌 我的相关行业订阅（可多选，自动记住你的偏好）：
-              </span>
-              {selectedIndustries.length > 0 && (
-                <span style={{ fontSize: '0.75rem', color: 'var(--color-accent, #ff641e)', fontWeight: 500 }}>
-                  已选 {selectedIndustries.length} 个相关行业
+          {/* 下层：行业资讯订阅（支持自动折叠与展开） */}
+          <div style={{
+            borderTop: '1px solid rgba(18, 18, 18, 0.06)',
+            paddingTop: '16px'
+          }}>
+            <div 
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                cursor: 'pointer',
+                userSelect: 'none'
+              }}
+              onClick={() => setIsIndustriesExpanded(prev => !prev)}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--color-text)', fontWeight: 600 }}>
+                  行业资讯订阅
                 </span>
-              )}
+                <span style={{ fontSize: '0.75rem', color: 'var(--color-muted)', fontWeight: 300 }}>
+                  （可多选，自动记住偏好）
+                </span>
+                {selectedIndustries.length > 0 && (
+                  <span style={{
+                    fontSize: '0.72rem',
+                    color: '#fff',
+                    background: 'var(--color-accent, #ff641e)',
+                    padding: '2px 8px',
+                    borderRadius: '12px',
+                    fontWeight: 500
+                  }}>
+                    已选 {selectedIndustries.length} 个行业
+                  </span>
+                )}
+              </div>
+
+              <button
+                type="button"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--color-accent, #ff641e)',
+                  fontSize: '0.8rem',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                {isIndustriesExpanded ? '收起 ▴' : (selectedIndustries.length > 0 ? '展开修改 ▾' : '展开选择 54 个行业 ▾')}
+              </button>
             </div>
 
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', maxHeight: '180px', overflowY: 'auto', padding: '4px 2px' }}>
-              {industries.map(ind => {
-                const isSelected = selectedIndustries.includes(ind.name);
-                return (
-                  <button
-                    key={ind.id}
-                    onClick={() => toggleIndustry(ind.name)}
+            {/* 折叠状态下展示已选行业标签，未选时保持清爽 */}
+            {!isIndustriesExpanded && selectedIndustries.length > 0 && (
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
+                {selectedIndustries.map(name => (
+                  <span
+                    key={name}
+                    onClick={(e) => { e.stopPropagation(); toggleIndustry(name); }}
                     style={{
-                      background: isSelected ? 'var(--color-accent, #ff641e)' : 'rgba(255, 255, 255, 0.8)',
-                      color: isSelected ? '#fff' : 'var(--color-text)',
-                      border: isSelected ? '1px solid var(--color-accent, #ff641e)' : '1px solid rgba(18, 18, 18, 0.08)',
-                      padding: '6px 12px',
+                      background: 'var(--color-accent, #ff641e)',
+                      color: '#fff',
+                      border: '1px solid var(--color-accent, #ff641e)',
+                      padding: '4px 10px',
                       borderRadius: '20px',
-                      fontSize: '0.78rem',
-                      fontWeight: isSelected ? 500 : 400,
+                      fontSize: '0.75rem',
+                      fontWeight: 500,
                       cursor: 'pointer',
-                      transition: 'all 0.15s ease',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '4px'
                     }}
+                    title="点击取消勾选"
                   >
-                    {isSelected && <span>✓</span>}
-                    {ind.name}
-                  </button>
-                );
-              })}
-            </div>
+                    <span>✓</span>
+                    {name}
+                    <span style={{ fontSize: '0.7rem', opacity: 0.8, marginLeft: '2px' }}>✕</span>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* 展开状态下展示全部 54 个标准行业多选池 */}
+            {isIndustriesExpanded && (
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', maxHeight: '200px', overflowY: 'auto', padding: '12px 2px 4px 2px', marginTop: '8px' }}>
+                {industries.map(ind => {
+                  const isSelected = selectedIndustries.includes(ind.name);
+                  return (
+                    <button
+                      key={ind.id}
+                      onClick={() => toggleIndustry(ind.name)}
+                      style={{
+                        background: isSelected ? 'var(--color-accent, #ff641e)' : 'rgba(255, 255, 255, 0.8)',
+                        color: isSelected ? '#fff' : 'var(--color-text)',
+                        border: isSelected ? '1px solid var(--color-accent, #ff641e)' : '1px solid rgba(18, 18, 18, 0.08)',
+                        padding: '6px 12px',
+                        borderRadius: '20px',
+                        fontSize: '0.78rem',
+                        fontWeight: isSelected ? 500 : 400,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      {isSelected && <span>✓</span>}
+                      {ind.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
@@ -335,136 +434,219 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
             </button>
           </div>
         ) : (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
-            gap: '28px',
-            marginBottom: '80px'
-          }}>
-            {filteredNews.map((art) => {
-              const itemDate = new Date(art.published_at).toLocaleDateString('zh-CN', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-              });
-              const industriesArray = art.industries ? art.industries.split(', ') : [];
+          <>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
+              gap: '28px',
+              marginBottom: '40px'
+            }}>
+              {paginatedNews.map((art) => {
+                const itemDate = new Date(art.published_at).toLocaleDateString('zh-CN', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric'
+                });
+                const industriesArray = art.industries ? art.industries.split(', ') : [];
 
-              return (
-                <article
-                  key={art.id}
-                  className="float-on-hover"
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.65)',
-                    backdropFilter: 'blur(15px)',
-                    WebkitBackdropFilter: 'blur(15px)',
-                    border: '1px solid rgba(18, 18, 18, 0.06)',
-                    padding: '28px',
-                    borderRadius: 'var(--border-radius)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    boxShadow: '0 10px 30px rgba(0,0,0,0.02)',
-                    transition: 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease'
-                  }}
-                >
-                  <div>
-                    {/* 涉及多品类与国家标签 */}
-                    <div style={{ display: 'flex', gap: '6px', marginBottom: '14px', flexWrap: 'wrap' }}>
-                      {industriesArray.slice(0, 3).map((ind, i) => (
-                        <span key={i} style={{
-                          background: 'rgba(46, 91, 255, 0.05)',
-                          color: '#2e5bff',
-                          padding: '3px 8px',
-                          fontSize: '0.72rem',
-                          fontWeight: 500,
-                          borderRadius: '4px',
-                          border: '1px solid rgba(46, 91, 255, 0.1)'
-                        }}>
-                          🏷️ {ind}
-                        </span>
-                      ))}
-                      {industriesArray.length > 3 && (
-                        <span style={{
-                          background: 'rgba(0,0,0,0.04)',
-                          color: '#666',
-                          padding: '3px 6px',
-                          fontSize: '0.72rem',
-                          borderRadius: '4px'
-                        }}>
-                          +{industriesArray.length - 3}
-                        </span>
-                      )}
-                      {art.countries && (
-                        <span style={{
-                          background: 'rgba(255, 100, 30, 0.05)',
-                          color: 'var(--color-accent, #ff641e)',
-                          padding: '3px 8px',
-                          fontSize: '0.72rem',
-                          fontWeight: 500,
-                          borderRadius: '4px',
-                          border: '1px solid rgba(255, 100, 30, 0.1)'
-                        }}>
-                          🌍 {art.countries}
-                        </span>
-                      )}
+                return (
+                  <article
+                    key={art.id}
+                    className="float-on-hover"
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.65)',
+                      backdropFilter: 'blur(15px)',
+                      WebkitBackdropFilter: 'blur(15px)',
+                      border: '1px solid rgba(18, 18, 18, 0.06)',
+                      padding: '28px',
+                      borderRadius: 'var(--border-radius)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      boxShadow: '0 10px 30px rgba(0,0,0,0.02)',
+                      transition: 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease'
+                    }}
+                  >
+                    <div>
+                      {/* 涉及多行业与国家标签 (对齐报告大厅卡片样式) */}
+                      <div style={{ display: 'flex', gap: '6px', marginBottom: '14px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        {industriesArray.slice(0, 3).map((ind, i) => (
+                          <span key={i} style={{
+                            fontSize: '0.72rem',
+                            color: '#2e5bff',
+                            background: 'rgba(46, 91, 255, 0.05)',
+                            border: '1px solid rgba(46, 91, 255, 0.12)',
+                            padding: '4px 8px',
+                            borderRadius: 'var(--border-radius)',
+                            fontWeight: 400
+                          }}>
+                            {ind}
+                          </span>
+                        ))}
+                        {industriesArray.length > 3 && (
+                          <span style={{
+                            background: 'rgba(122, 117, 111, 0.08)',
+                            color: 'var(--color-muted)',
+                            padding: '3px 6px',
+                            fontSize: '0.72rem',
+                            borderRadius: 'var(--border-radius)'
+                          }}>
+                            +{industriesArray.length - 3}
+                          </span>
+                        )}
+                        {art.countries && (
+                          <span style={{
+                            fontSize: '0.75rem',
+                            color: 'var(--color-muted)',
+                            fontWeight: 300,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            background: 'rgba(18, 18, 18, 0.04)',
+                            padding: '3px 8px',
+                            borderRadius: 'var(--border-radius)',
+                            marginLeft: 'auto'
+                          }}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                              <circle cx="12" cy="10" r="3" />
+                            </svg>
+                            {art.countries}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* 资讯标题 */}
+                      <h2 style={{
+                        fontSize: '1.2rem',
+                        fontWeight: 500,
+                        margin: '0 0 12px 0',
+                        lineHeight: 1.4,
+                        color: 'var(--color-text)'
+                      }}>
+                        <Link href={`/news/${art.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                          {art.title}
+                        </Link>
+                      </h2>
+
+                      {/* 深度事实摘要 */}
+                      <p style={{
+                        fontSize: '0.88rem',
+                        color: 'var(--color-muted)',
+                        lineHeight: 1.6,
+                        margin: '0 0 20px 0',
+                        fontWeight: 300,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden'
+                      }}>
+                        {art.summary}
+                      </p>
                     </div>
 
-                    {/* 资讯标题 */}
-                    <h2 style={{
-                      fontSize: '1.2rem',
-                      fontWeight: 500,
-                      margin: '0 0 12px 0',
-                      lineHeight: 1.4,
-                      color: 'var(--color-text)'
-                    }}>
-                      <Link href={`/news/${art.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                        {art.title}
-                      </Link>
-                    </h2>
-
-                    {/* 深度事实摘要 */}
-                    <p style={{
-                      fontSize: '0.88rem',
+                    {/* 底部时间与进入详情 */}
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      fontSize: '0.8rem',
                       color: 'var(--color-muted)',
-                      lineHeight: 1.6,
-                      margin: '0 0 20px 0',
-                      fontWeight: 300,
-                      display: '-webkit-box',
-                      WebkitLineClamp: 3,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden'
+                      borderTop: '1px solid rgba(18,18,18,0.05)',
+                      paddingTop: '14px',
+                      marginTop: '10px'
                     }}>
-                      {art.summary}
-                    </p>
-                  </div>
+                      <span>{itemDate}</span>
+                      <Link href={`/news/${art.id}`} style={{
+                        textDecoration: 'none',
+                        color: 'var(--color-accent, #ff641e)',
+                        fontWeight: 500,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}>
+                        阅读深度情报 →
+                      </Link>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
 
-                  {/* 底部时间与进入详情 */}
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    fontSize: '0.8rem',
-                    color: 'var(--color-muted)',
-                    borderTop: '1px solid rgba(18,18,18,0.05)',
-                    paddingTop: '14px',
-                    marginTop: '10px'
-                  }}>
-                    <span>{itemDate}</span>
-                    <Link href={`/news/${art.id}`} style={{
-                      textDecoration: 'none',
-                      color: 'var(--color-accent, #ff641e)',
-                      fontWeight: 500,
+            {/* 资讯卡片分页控件（单页最多18篇） */}
+            {totalPages > 1 && (
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '8px',
+                margin: '40px 0 80px 0',
+                flexWrap: 'wrap'
+              }}>
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  style={{
+                    padding: '8px 16px',
+                    fontSize: '0.85rem',
+                    background: currentPage === 1 ? 'rgba(0,0,0,0.03)' : 'rgba(255, 255, 255, 0.8)',
+                    color: currentPage === 1 ? 'var(--color-muted)' : 'var(--color-text)',
+                    border: '1px solid rgba(18, 18, 18, 0.1)',
+                    borderRadius: '6px',
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  上一页
+                </button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                  <button
+                    key={pageNum}
+                    onClick={() => handlePageChange(pageNum)}
+                    style={{
+                      width: '36px',
+                      height: '36px',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '4px'
-                    }}>
-                      阅读深度情报 →
-                    </Link>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
+                      justifyContent: 'center',
+                      fontSize: '0.85rem',
+                      background: currentPage === pageNum ? 'var(--color-accent, #ff641e)' : 'rgba(255, 255, 255, 0.8)',
+                      color: currentPage === pageNum ? '#fff' : 'var(--color-text)',
+                      border: currentPage === pageNum ? '1px solid var(--color-accent, #ff641e)' : '1px solid rgba(18, 18, 18, 0.1)',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontWeight: currentPage === pageNum ? 600 : 400,
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {pageNum}
+                  </button>
+                ))}
+
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  style={{
+                    padding: '8px 16px',
+                    fontSize: '0.85rem',
+                    background: currentPage === totalPages ? 'rgba(0,0,0,0.03)' : 'rgba(255, 255, 255, 0.8)',
+                    color: currentPage === totalPages ? 'var(--color-muted)' : 'var(--color-text)',
+                    border: '1px solid rgba(18, 18, 18, 0.1)',
+                    borderRadius: '6px',
+                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  下一页
+                </button>
+
+                <span style={{ fontSize: '0.8rem', color: 'var(--color-muted)', marginLeft: '12px' }}>
+                  共 {filteredNews.length} 篇资讯（第 {currentPage} / {totalPages} 页）
+                </span>
+              </div>
+            )}
+          </>
         )}
 
         <AuthModal 

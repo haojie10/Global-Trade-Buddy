@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { STANDARD_CATEGORIES } from '../lib/category-mapper';
+import { isNodeInRegion } from '../lib/region-country-mapper';
 
 export interface PlatformReport {
   id: string;
@@ -25,15 +26,18 @@ export function filterReports(
     const matchQuery = !query || r.title.toLowerCase().includes(query) || r.summary.toLowerCase().includes(query);
     const matchCat = category === 'All' || r.category === category;
     
-    // 支持逗号分割的国家/地区匹配，如果包含选中的地区或“全球”，即代表匹配
+    // 支持国家归属大区智能识别（如荷兰、英国自动归属欧洲）及逗号分割的多地区匹配
     const reportRegions = r.market_region
       ? r.market_region.split(',').map(s => s.trim()).filter(Boolean)
       : [];
     const matchRegion =
       region === 'All' ||
+      isNodeInRegion(r.market_region, region) ||
       reportRegions.includes(region) ||
       reportRegions.includes('全球') ||
-      r.market_region === '全球';
+      r.market_region === '全球' ||
+      (region === '欧洲' && (r.title.includes('欧洲') || r.title.includes('欧盟') || (r.summary && (r.summary.includes('欧洲') || r.summary.includes('欧盟'))))) ||
+      (region === '北美' && (r.title.includes('北美') || r.title.includes('美国') || (r.summary && (r.summary.includes('北美') || r.summary.includes('美国')))));
 
     // 支持相关行业匹配
     const reportIndustries = r.industries
@@ -86,19 +90,18 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
     return () => clearTimeout(timer);
   }, [searchQuery, filtered.length]);
   
-  // 对地区进行分割、扁平化，过滤掉非中文并去重，对齐图谱页面
-  const regions = [
-    'All',
-    ...Array.from(
-      new Set(
-        reports
-          .map(r => r.market_region)
-          .filter(Boolean)
-          .flatMap(rStr => rStr.split(',').map(r => r.trim()).filter(Boolean))
-          .filter(region => /^[\u4e00-\u9fa5]+$/.test(region))
-      )
+  // 标准市场大区与报告中实际存在的地区合并
+  const defaultRegions = ['All', '欧洲', '北美', '亚洲', '东南亚', '中东', '南美', '非洲', '大洋洲'];
+  const extractedRegions = Array.from(
+    new Set(
+      reports
+        .map(r => r.market_region)
+        .filter(Boolean)
+        .flatMap(rStr => rStr.split(',').map(r => r.trim()).filter(Boolean))
+        .filter(reg => /^[\u4e00-\u9fa5]+$/.test(reg) && !defaultRegions.includes(reg) && reg !== '全球')
     )
-  ];
+  );
+  const regions = [...defaultRegions, ...extractedRegions];
 
   const handleUnlock = async (e: React.MouseEvent, reportId: string) => {
     e.preventDefault();
