@@ -19,10 +19,14 @@
 
 ### 1. 部署与进程守护 (Hosting & Runtime)
 - **生产服务器**：腾讯云轻量应用服务器 (IP: `124.222.201.143`)
+- **项目根路径**：`/home/ubuntu/Global-Trade-Buddy`
 - **运行环境**：Node.js / Next.js 生产环境 (Pages Router)
 - **进程守护**：使用 **PM2** 守护运行生产应用进程（应用标识：`gtb-backend`）
 - **构建/部署指令**：
   ```bash
+  cd /home/ubuntu/Global-Trade-Buddy
+  git pull origin main
+  npm install
   npm run build
   pm2 restart gtb-backend
   ```
