@@ -45,14 +45,18 @@ async function resetPasswordHandler(
   }
 
   // 3. 统计近 10 分钟内该邮箱的验证码失败重试次数，防止暴力枚举
-  const failCountRes = await dbClient.query(
-    `SELECT COALESCE(SUM(attempts), 0)::int AS total_failures
-     FROM email_verifications
-     WHERE LOWER(email) = LOWER($1) AND created_at > NOW() - INTERVAL '10 minutes'`,
-    [cleanEmail]
-  );
-  if ((failCountRes.rows[0]?.total_failures || 0) >= 10) {
-    return res.status(429).json({ error: '尝试次数过多，请 10 分钟后再试' });
+  try {
+    const failCountRes = await dbClient.query(
+      `SELECT COALESCE(SUM(attempts), 0)::int AS total_failures
+       FROM email_verifications
+       WHERE LOWER(email) = LOWER($1) AND created_at > NOW() - INTERVAL '10 minutes'`,
+      [cleanEmail]
+    );
+    if ((failCountRes.rows[0]?.total_failures || 0) >= 10) {
+      return res.status(429).json({ error: '尝试次数过多，请 10 分钟后再试' });
+    }
+  } catch (rateLimitErr) {
+    console.warn('统计验证码失败频次发生警告(忽略继续):', rateLimitErr);
   }
 
   // 4. 获取最新的一条验证码记录
