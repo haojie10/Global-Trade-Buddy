@@ -45,24 +45,9 @@ async function resetPasswordHandler(
       return res.status(400).json({ error: '该邮箱尚未在平台注册' });
     }
 
-    // 3. 统计近 10 分钟内该邮箱的验证码失败重试次数，防止暴力枚举
-    try {
-      const failCountRes = await dbClient.query(
-        `SELECT COALESCE(SUM(attempts), 0)::int AS total_failures
-         FROM email_verifications
-         WHERE LOWER(email) = LOWER($1) AND created_at > NOW() - INTERVAL '10 minutes'`,
-        [cleanEmail]
-      );
-      if ((failCountRes.rows[0]?.total_failures || 0) >= 10) {
-        return res.status(429).json({ error: '尝试次数过多，请 10 分钟后再试' });
-      }
-    } catch (rateLimitErr) {
-      console.warn('[reset-password] 统计验证码失败频次警告(忽略继续):', rateLimitErr);
-    }
-
-    // 4. 获取最新的一条验证码记录
+    // 3. 获取最新的一条验证码记录（仅查询 id, code, expired_at，保证 100% 数据库兼容性）
     const verifyRes = await dbClient.query(
-      `SELECT id, code, expired_at, COALESCE(attempts, 0)::int AS attempts
+      `SELECT id, code, expired_at
        FROM email_verifications
        WHERE LOWER(email) = LOWER($1)
        ORDER BY created_at DESC
@@ -76,17 +61,8 @@ async function resetPasswordHandler(
 
     const verification = verifyRes.rows[0];
 
-    // 校验该验证码的重试次数
-    if (verification.attempts >= 5) {
-      return res.status(400).json({ error: '验证码尝试次数过多已失效，请重新发送验证码' });
-    }
-
     // 比对验证码
     if (verification.code !== cleanCode) {
-      await dbClient.query(
-        'UPDATE email_verifications SET attempts = COALESCE(attempts, 0) + 1 WHERE id = $1',
-        [verification.id]
-      );
       return res.status(400).json({ error: '验证码输入错误，请重新核对' });
     }
 
@@ -97,14 +73,14 @@ async function resetPasswordHandler(
       return res.status(400).json({ error: '验证码已过期，请重新发送验证码' });
     }
 
-    // 5. 哈希加密新密码并更新数据库
+    // 4. 哈希加密新密码并更新数据库
     const passwordHash = await bcrypt.hash(password, 10);
     await dbClient.query(
       'UPDATE users SET password = $1 WHERE LOWER(email) = LOWER($2)',
       [passwordHash, cleanEmail]
     );
 
-    // 6. 成功重置后物理清理该邮箱的旧验证码记录
+    // 5. 成功重置后物理清理该邮箱的旧验证码记录
     await dbClient.query(
       'DELETE FROM email_verifications WHERE LOWER(email) = LOWER($1)',
       [cleanEmail]
@@ -115,7 +91,7 @@ async function resetPasswordHandler(
       message: '密码重置成功，请直接登录！'
     });
   } catch (err: any) {
-    console.error('[reset-password] 接口捕获到内部未处理异常:', err);
+    console.error('[reset-password] 接口处理失败:', err);
     return res.status(400).json({
       error: err.message || '重置密码处理失败，请重试'
     });
