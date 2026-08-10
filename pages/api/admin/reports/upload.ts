@@ -7,6 +7,7 @@ import { getStandardCategory } from '../../../../lib/category-mapper';
 import { uploadImage, cleanOrphanedImages } from '../../../../lib/storage';
 import { RETAILER_ENTITIES } from '../../../../lib/entity-constants';
 import { computeRelationsForReport, ReportEntityItem } from '../../../../lib/relation-calculator';
+import { filterCountriesOnly } from '../../../../lib/country-helpers';
 
 async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
   const adminSession = requireAdmin(req);
@@ -34,7 +35,7 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
     ]))
   };
 
-  // 处理手动标记的地区标签
+  // 处理手动标记的地区标签（仅保留具体国家，剔除大洲大区词汇）
   let regionsList: string[] = [];
   if (mergedManualTags?.regions) {
     regionsList = mergedManualTags.regions.map((r: string) => r.trim()).filter(Boolean);
@@ -45,12 +46,11 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
     regionsList.push(meta.market_region);
   }
   
-  // 如果最终列表为空，则使用自动提取的地区或“全球”
-  if (regionsList.length === 0) {
-    regionsList = [meta.market_region || '全球'];
-  }
-  
-  const finalMarketRegion = Array.from(new Set(regionsList)).join(', ');
+  // 严格过滤大区词汇，仅保留具体国家（如: '英国, 欧洲' -> '英国'）
+  const cleanCountriesList = filterCountriesOnly(regionsList);
+  const finalMarketRegion = cleanCountriesList.length > 0
+    ? cleanCountriesList.join(', ')
+    : (regionsList.length > 0 ? regionsList.join(', ') : '全球');
 
   await dbClient.query('BEGIN');
 

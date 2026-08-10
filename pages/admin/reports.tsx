@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import AdminLayout from '../../components/admin/AdminLayout';
 import { detectAndDecodeHtml } from '../../lib/encoding';
 import { getStandardCategory } from '../../lib/category-mapper';
+import { filterCountriesOnly } from '../../lib/country-helpers';
 
 interface ReportListItem {
   id: string;
@@ -149,23 +150,20 @@ export default function AdminReportsManagement() {
     }
   }, [manualProducts, industries]);
 
-  // 联动根据 manualRegions 自动选择覆盖国家复选框
+  // 联动根据 manualRegions 自动选择覆盖国家复选框（严格仅保留具体国家，排除大洲词）
   useEffect(() => {
     if (manualRegions.length > 0 && countries.length > 0) {
-      const autoCtyIds = new Set<string>(selectedUploadCountries);
-      let changed = false;
-      const searchStr = manualRegions.join(' ').toLowerCase();
+      const cleanCountries = filterCountriesOnly(manualRegions);
+      const autoCtyIds = new Set<string>();
+      const searchStr = cleanCountries.join(' ').toLowerCase();
+
       for (const cty of countries) {
         const cName = cty.name.toLowerCase();
-        const cRegion = (cty.region || '').toLowerCase();
-        if (searchStr.includes(cName) || (cRegion && searchStr.includes(cRegion))) {
-          if (!autoCtyIds.has(cty.id)) {
-            autoCtyIds.add(cty.id);
-            changed = true;
-          }
+        if (searchStr.includes(cName)) {
+          autoCtyIds.add(cty.id);
         }
       }
-      if (changed) {
+      if (autoCtyIds.size > 0) {
         setSelectedUploadCountries(Array.from(autoCtyIds));
       }
     }
@@ -456,16 +454,17 @@ export default function AdminReportsManagement() {
 
         const regions = doc.querySelector('meta[name="regions"]')?.getAttribute('content');
         if (regions) {
-          const regList = regions.split(',').map(s => s.trim()).filter(Boolean);
-          setManualRegions(regList);
+          const rawRegList = regions.split(',').map(s => s.trim()).filter(Boolean);
+          const cleanRegList = filterCountriesOnly(rawRegList);
+          const finalRegs = cleanRegList.length > 0 ? cleanRegList : rawRegList;
+          setManualRegions(finalRegs);
 
-          // 自动匹配并勾选国家复选框
+          // 自动匹配并勾选国家复选框（严格按具体国家名称匹配）
           const autoCtyIds = new Set<string>();
-          const searchStr = regList.join(' ').toLowerCase();
+          const searchStr = finalRegs.join(' ').toLowerCase();
           for (const cty of countries) {
             const cName = cty.name.toLowerCase();
-            const cRegion = (cty.region || '').toLowerCase();
-            if (searchStr.includes(cName) || (cRegion && searchStr.includes(cRegion))) {
+            if (searchStr.includes(cName)) {
               autoCtyIds.add(cty.id);
             }
           }
@@ -1298,33 +1297,33 @@ export default function AdminReportsManagement() {
 
               <div className="admin-form-group" style={{ marginBottom: '16px', background: 'rgba(255,255,255,0.01)', padding: '12px', border: '1px solid var(--admin-border)', borderRadius: '6px' }}>
                 <label className="admin-label" style={{ fontWeight: 600, color: 'var(--admin-accent-light)' }}>
-                  🌍 覆盖区域 / 目标市场 (Market Region)
+                  🌍 覆盖国家 / 目标市场 (严格限制为具体国家，多个用逗号分隔)
                 </label>
                 <input
                   type="text"
                   value={editMarketRegion}
                   onChange={(e) => setEditMarketRegion(e.target.value)}
-                  placeholder="例如: 全球, 北美洲, 欧洲, 东南亚"
+                  placeholder="例如: 英国 / 美国, 墨西哥 / 德国, 法国"
                   className="admin-input"
                   style={{ marginBottom: '8px' }}
                 />
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  {['全球', '北美洲', '欧洲', '亚洲', '东南亚', '中东', '南美洲', '大洋洲', '非洲'].map(region => (
+                  {['英国', '美国', '德国', '法国', '墨西哥', '加拿大', '澳大利亚', '日本', '沙特阿拉伯', '西班牙', '意大利', '荷兰', '巴西', '全球'].map(ctyName => (
                     <button
-                      key={region}
+                      key={ctyName}
                       type="button"
-                      onClick={() => setEditMarketRegion(region)}
+                      onClick={() => setEditMarketRegion(ctyName)}
                       style={{
                         padding: '2px 8px',
                         fontSize: '0.75rem',
                         borderRadius: '4px',
                         border: '1px solid var(--admin-border)',
-                        background: editMarketRegion === region ? 'var(--admin-accent)' : 'rgba(255,255,255,0.04)',
-                        color: editMarketRegion === region ? '#fff' : 'var(--admin-text-secondary)',
+                        background: editMarketRegion === ctyName ? 'var(--admin-accent)' : 'rgba(255,255,255,0.04)',
+                        color: editMarketRegion === ctyName ? '#fff' : 'var(--admin-text-secondary)',
                         cursor: 'pointer'
                       }}
                     >
-                      {region}
+                      {ctyName}
                     </button>
                   ))}
                 </div>

@@ -4,6 +4,7 @@ import { withDb } from '../../../../lib/api-handler';
 import { requireAdmin } from '../../../../lib/auth';
 import { extractAndNormalizeEntities } from '../../../../lib/entity-extractor';
 import { computeRelationsForReport, ReportEntityItem } from '../../../../lib/relation-calculator';
+import { filterCountriesOnly } from '../../../../lib/country-helpers';
 
 async function updateEntitiesHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
   const session = requireAdmin(req);
@@ -43,9 +44,13 @@ async function updateEntitiesHandler(req: NextApiRequest, res: NextApiResponse, 
     const contentHtml = report.content_html || '';
     const title = report.title || '';
     const category = report.category || 'customer';
-    const marketRegion = (inputMarketRegion && typeof inputMarketRegion === 'string' && inputMarketRegion.trim())
+
+    // 清洗覆盖区域，严格仅保留具体国家名称（排除大洲词）
+    const rawMarketRegion = (inputMarketRegion && typeof inputMarketRegion === 'string' && inputMarketRegion.trim())
       ? inputMarketRegion.trim()
       : (report.market_region || '全球');
+    const cleanCountries = filterCountriesOnly(rawMarketRegion);
+    const marketRegion = cleanCountries.length > 0 ? cleanCountries.join(', ') : rawMarketRegion;
 
     // 2. 组装 companies 数组（第一个为主名称，其余为别称）
     let companyList: string[] = [];
@@ -58,15 +63,16 @@ async function updateEntitiesHandler(req: NextApiRequest, res: NextApiResponse, 
     // 2. 组装 manualTags
     const manualTags = {
       companies: companyList,
-      competitors: Array.isArray(competitors) ? competitors.map((s: string) => s.trim()).filter(Boolean) : [],
-      suppliers: Array.isArray(suppliers) ? suppliers.map((s: string) => s.trim()).filter(Boolean) : [],
-      customers: Array.isArray(customers) ? customers.map((s: string) => s.trim()).filter(Boolean) : [],
-      channels: Array.isArray(channels) ? channels.map((s: string) => s.trim()).filter(Boolean) : [],
-      sisters: Array.isArray(sisters) ? sisters.map((s: string) => s.trim()).filter(Boolean) : [],
-      products: Array.isArray(products) ? products.map((s: string) => s.trim()).filter(Boolean) : []
+      competitors: competitors.filter(Boolean),
+      suppliers: suppliers.filter(Boolean),
+      customers: customers.filter(Boolean),
+      channels: channels.filter(Boolean),
+      sister_parents: sisters.filter(Boolean),
+      products: products.filter(Boolean),
+      regions: cleanCountries
     };
 
-    // 3. 规范化提取实体
+    // 3. 提取并归一化实体
     const resolvedEntities = await extractAndNormalizeEntities(
       contentHtml,
       title,
@@ -89,7 +95,7 @@ async function updateEntitiesHandler(req: NextApiRequest, res: NextApiResponse, 
       );
     }
 
-    // 5. 更新 reports 主体公司关联与覆盖区域
+    // 5. 更新 reports 主体公司关联与覆盖区域（仅存具体国家）
     const primaryEnt = resolvedEntities.find(e => e.role === 'primary');
     const primaryEntityId = primaryEnt ? primaryEnt.id : null;
     await dbClient.query(
@@ -97,16 +103,15 @@ async function updateEntitiesHandler(req: NextApiRequest, res: NextApiResponse, 
       [primaryEntityId, marketRegion, reportId]
     );
 
-    // 5.1 根据 marketRegion 智能识别并自动关联 report_countries 国家标签
-    if (marketRegion) {
-      const allCountriesRes = await dbClient.query('SELECT id, name, region FROM countries');
+    // 5.1 根据 marketRegion 精确识别并自动关联 report_countries 具体国家标签
+    if (marketRegion && marketRegion !== '全球') {
+      const allCountriesRes = await dbClient.query('SELECT id, name FROM countries');
       const searchLower = marketRegion.toLowerCase();
       const matchedCtyIds = new Set<string>();
 
       for (const cty of allCountriesRes.rows) {
         const cName = cty.name.toLowerCase();
-        const cRegion = cty.region.toLowerCase();
-        if (searchLower.includes(cName) || searchLower.includes(cRegion)) {
+        if (searchLower.includes(cName)) {
           matchedCtyIds.add(cty.id);
         }
       }
