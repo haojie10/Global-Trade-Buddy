@@ -107,14 +107,43 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     const primaryEnt = resolvedEntities.find(e => e.role === 'primary');
     const primaryEntityId = primaryEnt ? primaryEnt.id : null;
 
-    // 4. 元数据去重检查与插入（智能幂等与主体覆盖设计）
+    // 处理国家名称列表
+    const autoCountries = finalMarketRegion.split(',').map(s => s.trim()).filter(Boolean);
+    const mappedCountries = autoCountries.map(ctyName => {
+      let lookupName = ctyName;
+      if (ctyName.toLowerCase() === 'germany') lookupName = '德国';
+      if (ctyName.toLowerCase() === 'austria') lookupName = '奥地利';
+      if (ctyName.toLowerCase() === 'usa' || ctyName.toLowerCase() === 'united states') lookupName = '美国';
+      if (ctyName.toLowerCase() === 'uk' || ctyName.toLowerCase() === 'united kingdom') lookupName = '英国';
+      if (ctyName.toLowerCase() === 'france') lookupName = '法国';
+      return lookupName;
+    });
+
+    // 4. 元数据去重检查与插入（智能幂等与主体+国家双重覆盖设计）
     let existingReport;
     if (finalCategory === 'customer' && primaryEntityId) {
-      // 企业洞察报告：优先根据主体公司 ID (primary_entity_id) 查重，永远锁定最早产生的第一版原始 Report ID
-      existingReport = await dbClient.query(
-        'SELECT id FROM reports WHERE category = $1 AND primary_entity_id = $2 ORDER BY created_at ASC LIMIT 1',
-        ['customer', primaryEntityId]
-      );
+      // 企业洞察报告：优先根据【主体公司 ID + 目标国家】联合查重
+      if (mappedCountries.length > 0) {
+        existingReport = await dbClient.query(
+          `SELECT r.id 
+           FROM reports r
+           JOIN report_countries rc ON r.id = rc.report_id
+           JOIN countries c ON rc.country_id = c.id
+           WHERE r.category = 'customer' 
+             AND r.primary_entity_id = $1 
+             AND c.name = ANY($2::text[])
+           ORDER BY r.created_at ASC 
+           LIMIT 1`,
+          [primaryEntityId, mappedCountries]
+        );
+      }
+      // 兜底：按主体公司 ID 查重，锁定最早产生的第一版原始 Report ID
+      if (!existingReport || existingReport.rows.length === 0) {
+        existingReport = await dbClient.query(
+          'SELECT id FROM reports WHERE category = $1 AND primary_entity_id = $2 ORDER BY created_at ASC LIMIT 1',
+          ['customer', primaryEntityId]
+        );
+      }
     }
     if (!existingReport || existingReport.rows.length === 0) {
       // 兜底查重：根据报告标题匹配最早产生的记录

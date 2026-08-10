@@ -72,28 +72,95 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
   const primaryEnt = resolvedEntities.find(e => e.role === 'primary');
   const primaryEntityId = primaryEnt ? primaryEnt.id : null;
 
-  let newReportId = overwriteReportId;
+  // 处理国家名称列表
+  const autoCountries = finalMarketRegion.split(',').map((s: string) => s.trim()).filter(Boolean);
+  const mappedCountries = autoCountries.map((ctyName: string) => {
+    let lookupName = ctyName;
+    if (ctyName.toLowerCase() === 'germany') lookupName = '德国';
+    if (ctyName.toLowerCase() === 'austria') lookupName = '奥地利';
+    if (ctyName.toLowerCase() === 'usa' || ctyName.toLowerCase() === 'united states') lookupName = '美国';
+    if (ctyName.toLowerCase() === 'uk' || ctyName.toLowerCase() === 'united kingdom') lookupName = '英国';
+    if (ctyName.toLowerCase() === 'france') lookupName = '法国';
+    return lookupName;
+  });
+
+  // 4. 智能查重与覆盖判定（主体公司 + 国家 双重联合查重）
+  let existingReport;
+  if (overwriteReportId) {
+    existingReport = await dbClient.query('SELECT id FROM reports WHERE id = $1', [overwriteReportId]);
+  } else if (finalCategory === 'customer' && primaryEntityId) {
+    // 优先按主体公司 + 目标国家联合查重
+    if (mappedCountries.length > 0) {
+      existingReport = await dbClient.query(
+        `SELECT r.id 
+         FROM reports r
+         JOIN report_countries rc ON r.id = rc.report_id
+         JOIN countries c ON rc.country_id = c.id
+         WHERE r.category = 'customer' 
+           AND r.primary_entity_id = $1 
+           AND c.name = ANY($2::text[])
+         ORDER BY r.created_at ASC 
+         LIMIT 1`,
+        [primaryEntityId, mappedCountries]
+      );
+    }
+    // 兜底按主体公司查重
+    if (!existingReport || existingReport.rows.length === 0) {
+      existingReport = await dbClient.query(
+        'SELECT id FROM reports WHERE category = $1 AND primary_entity_id = $2 ORDER BY created_at ASC LIMIT 1',
+        ['customer', primaryEntityId]
+      );
+    }
+  }
+
+  if (!existingReport || existingReport.rows.length === 0) {
+    // 兜底按报告标题查重
+    existingReport = await dbClient.query(
+      'SELECT id FROM reports WHERE title = $1 ORDER BY created_at ASC LIMIT 1',
+      [meta.title]
+    );
+  }
+
+  let newReportId: string;
   // NOTE: 覆盖更新前需保存旧 content_html，事务后用于对比并清理孤儿图片
   let oldContentHtmlForOverwrite: string | null = null;
 
-  if (overwriteReportId) {
+  if (existingReport && existingReport.rows.length > 0) {
+    newReportId = existingReport.rows[0].id;
     // 先查询旧的 content_html
     const oldContentRes = await dbClient.query(
       'SELECT content_html FROM reports WHERE id = $1',
-      [overwriteReportId]
+      [newReportId]
     );
     oldContentHtmlForOverwrite = oldContentRes.rows[0]?.content_html || null;
 
     // 覆盖更新模式：更新报告内容，同时更新主体实体关联
     await dbClient.query(
       `UPDATE reports 
-       SET title = $1, category = $2, market_region = $3, summary = $4, content_html = $5, primary_entity_id = $6
+       SET title = $1, category = $2, market_region = $3, summary = $4, content_html = $5, primary_entity_id = $6, created_at = NOW()
        WHERE id = $7`,
-      [meta.title, finalCategory, finalMarketRegion, finalSummary, cleanHtml, primaryEntityId, overwriteReportId]
+      [meta.title, finalCategory, finalMarketRegion, finalSummary, cleanHtml, primaryEntityId, newReportId]
     );
 
     // 清理旧的报告与实体的映射，以便重新建立
-    await dbClient.query(`DELETE FROM report_entities WHERE report_id = $1`, [overwriteReportId]);
+    await dbClient.query(`DELETE FROM report_entities WHERE report_id = $1`, [newReportId]);
+
+    // 自愈修复：自动清理同企业同国家的历史冗余多余报告
+    if (finalCategory === 'customer' && primaryEntityId) {
+      const dupRes = await dbClient.query(
+        'SELECT id FROM reports WHERE category = $1 AND primary_entity_id = $2 AND id != $3',
+        ['customer', primaryEntityId, newReportId]
+      );
+      for (const dupRow of dupRes.rows) {
+        const dupId = dupRow.id;
+        await dbClient.query('DELETE FROM report_entities WHERE report_id = $1', [dupId]);
+        await dbClient.query('DELETE FROM report_industries WHERE report_id = $1', [dupId]);
+        await dbClient.query('DELETE FROM report_countries WHERE report_id = $1', [dupId]);
+        await dbClient.query('DELETE FROM relations WHERE report_id_a = $1 OR report_id_b = $1', [dupId]);
+        await dbClient.query('DELETE FROM reports WHERE id = $1', [dupId]);
+        console.log(`Auto healed and removed duplicate report in admin upload: ${dupId}`);
+      }
+    }
   } else {
     // 新建模式
     const insertReportRes = await dbClient.query(
