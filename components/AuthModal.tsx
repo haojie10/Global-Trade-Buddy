@@ -23,15 +23,17 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     }
   }, [countdown]);
 
-  // 弹窗打开、关闭或切换登录/注册模式时，立即清空所有表单项、错误提示和成功提示，防止数据残留与自动填充冲突
+  // 弹窗打开或关闭时，清空表单项与提示
   React.useEffect(() => {
-    setNickname('');
-    setEmail('');
-    setPassword('');
-    setCode('');
-    setErrorMsg('');
-    setSuccessMsg('');
-  }, [authMode, isOpen]);
+    if (!isOpen) {
+      setNickname('');
+      setEmail('');
+      setPassword('');
+      setCode('');
+      setErrorMsg('');
+      setSuccessMsg('');
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -136,10 +138,16 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         });
         const data = await res.json();
         if (res.ok && data.success) {
-          setSuccessMsg(data.message || '密码重置成功，请使用新密码登录！');
+          const notice = data.message || '🎉 密码重置成功！请使用新密码登录';
+          setSuccessMsg(notice);
+          setErrorMsg('');
           setPassword('');
           setCode('');
-          setAuthMode('login');
+          // 延迟 1.5 秒展示给用户看，再平滑切到登录模式并保留绿框成功提示
+          setTimeout(() => {
+            setAuthMode('login');
+            setSuccessMsg(notice);
+          }, 1500);
         } else {
           setErrorMsg(data.error || '重置密码失败，请检查验证码和邮箱');
         }
@@ -365,7 +373,17 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             </div>
           )}
           {successMsg && (
-            <div style={{ fontSize: '0.8rem', color: '#10b981', textAlign: 'center' }}>
+            <div style={{
+              fontSize: '0.85rem',
+              color: '#15803d',
+              background: '#f0fdf4',
+              border: '1px solid #bbf7d0',
+              borderRadius: '10px',
+              padding: '10px 14px',
+              textAlign: 'center',
+              fontWeight: 500,
+              lineHeight: 1.4
+            }}>
               {successMsg}
             </div>
           )}
