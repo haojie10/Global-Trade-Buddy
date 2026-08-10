@@ -14,6 +14,8 @@ export interface PlatformReport {
   isFavorited?: boolean;
 }
 
+export const FIXED_REGIONS = ['All', '欧洲', '北美洲', '亚洲', '东南亚', '中东', '南美洲', '大洋洲', '非洲', '全球'];
+
 export function filterReports(
   reports: PlatformReport[],
   searchQuery: string,
@@ -23,21 +25,16 @@ export function filterReports(
 ): PlatformReport[] {
   const query = searchQuery.trim().toLowerCase();
   return reports.filter(r => {
-    const matchQuery = !query || r.title.toLowerCase().includes(query) || r.summary.toLowerCase().includes(query);
+    const matchQuery = !query || r.title.toLowerCase().includes(query) || (r.summary && r.summary.toLowerCase().includes(query));
     const matchCat = category === 'All' || r.category === category;
     
-    // 支持国家归属大区智能识别（如荷兰、英国自动归属欧洲）及逗号分割的多地区匹配
-    const reportRegions = r.market_region
-      ? r.market_region.split(',').map(s => s.trim()).filter(Boolean)
-      : [];
+    // 市场大区智能筛选：选择固定大区（如“欧洲”）时，自动匹配覆盖国家属于该大区的所有报告
     const matchRegion =
       region === 'All' ||
       isNodeInRegion(r.market_region, region) ||
-      reportRegions.includes(region) ||
-      reportRegions.includes('全球') ||
-      r.market_region === '全球' ||
       (region === '欧洲' && (r.title.includes('欧洲') || r.title.includes('欧盟') || (r.summary && (r.summary.includes('欧洲') || r.summary.includes('欧盟'))))) ||
-      (region === '北美' && (r.title.includes('北美') || r.title.includes('美国') || (r.summary && (r.summary.includes('北美') || r.summary.includes('美国')))));
+      (region === '北美洲' && (r.title.includes('北美') || r.title.includes('美国') || (r.summary && (r.summary.includes('北美') || r.summary.includes('美国'))))) ||
+      (region === '全球' && (r.market_region === '全球' || !r.market_region));
 
     // 支持相关行业匹配
     const reportIndustries = r.industries
@@ -90,18 +87,8 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
     return () => clearTimeout(timer);
   }, [searchQuery, filtered.length]);
   
-  // 标准市场大区与报告中实际存在的地区合并
-  const defaultRegions = ['All', '欧洲', '北美', '亚洲', '东南亚', '中东', '南美', '非洲', '大洋洲'];
-  const extractedRegions = Array.from(
-    new Set(
-      reports
-        .map(r => r.market_region)
-        .filter(Boolean)
-        .flatMap(rStr => rStr.split(',').map(r => r.trim()).filter(Boolean))
-        .filter(reg => /^[\u4e00-\u9fa5]+$/.test(reg) && !defaultRegions.includes(reg) && reg !== '全球')
-    )
-  );
-  const regions = [...defaultRegions, ...extractedRegions];
+  // 固定市场大区选项，不包含具体国家
+  const regions = FIXED_REGIONS;
 
   const handleUnlock = async (e: React.MouseEvent, reportId: string) => {
     e.preventDefault();
