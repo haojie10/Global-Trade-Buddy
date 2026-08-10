@@ -36,15 +36,15 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   if (!isOpen) return null;
 
   const inputStyle = {
-    background: 'var(--bg-main)',
-    border: 'none',
+    background: '#f8fafc',
+    border: '1px solid #e2e8f0',
     borderRadius: '12px',
     padding: '12px 16px',
     fontSize: '0.85rem',
-    color: 'var(--color-text)',
+    color: '#0f172a',
     outline: 'none',
     width: '100%',
-    transition: 'box-shadow 0.3s ease',
+    transition: 'all 0.2s ease',
     boxSizing: 'border-box' as const
   };
 
@@ -211,8 +211,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         >
           ✕
         </button>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 300, marginBottom: '24px', textAlign: 'center', color: 'var(--color-text)' }}>
-          {authMode === 'login' ? '账号登录' : authMode === 'signup' ? '新用户注册' : '重置密码'}
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 300, marginBottom: '24px', textAlign: 'center', color: '#0f172a' }}>
+          {authMode === 'login' ? '账号登录' : authMode === 'signup' ? '新用户注册' : '找回密码 / 重置密码'}
         </h2>
         <form onSubmit={handleAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {authMode === 'signup' ? (
@@ -279,46 +279,45 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 id="auth-email-forgot"
                 name="email"
                 type="email" 
-                placeholder="注册邮箱" 
+                placeholder="请输入注册邮箱" 
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 style={inputStyle}
                 autoComplete="email"
                 required
               />
-              {email && (
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input 
-                    id="auth-code-forgot"
-                    name="code"
-                    type="text" 
-                    placeholder="验证码" 
-                    value={code}
-                    onChange={e => setCode(e.target.value)}
-                    style={{ ...inputStyle, flex: 1 }}
-                    autoComplete="one-time-code"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSendCode}
-                    disabled={countdown > 0 || isSending}
-                    className="sand-btn"
-                    style={{
-                      fontSize: '0.8rem',
-                      padding: '8px 12px',
-                      whiteSpace: 'nowrap',
-                      cursor: countdown > 0 || isSending ? 'not-allowed' : 'pointer',
-                      opacity: countdown > 0 || isSending ? 0.6 : 1,
-                      borderRadius: '12px',
-                      border: '1px solid var(--color-accent)',
-                      background: 'transparent',
-                      color: 'var(--color-accent)'
-                    }}
-                  >
-                    {countdown > 0 ? `${countdown}s` : isSending ? '发送中...' : '发送验证码'}
-                  </button>
-                </div>
-              )}
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input 
+                  id="auth-code-forgot"
+                  name="code"
+                  type="text" 
+                  placeholder="邮箱验证码" 
+                  value={code}
+                  onChange={e => setCode(e.target.value)}
+                  style={{ ...inputStyle, flex: 1 }}
+                  autoComplete="one-time-code"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={handleSendCode}
+                  disabled={countdown > 0 || isSending}
+                  className="sand-btn"
+                  style={{
+                    fontSize: '0.8rem',
+                    padding: '8px 12px',
+                    whiteSpace: 'nowrap',
+                    cursor: countdown > 0 || isSending ? 'not-allowed' : 'pointer',
+                    opacity: countdown > 0 || isSending ? 0.6 : 1,
+                    borderRadius: '12px',
+                    border: '1px solid var(--color-accent)',
+                    background: 'transparent',
+                    color: 'var(--color-accent)'
+                  }}
+                >
+                  {countdown > 0 ? `${countdown}s` : isSending ? '发送中...' : '发送验证码'}
+                </button>
+              </div>
             </>
           ) : (
             <input 

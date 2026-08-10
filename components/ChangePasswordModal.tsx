@@ -25,15 +25,15 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
   if (!isOpen) return null;
 
   const inputStyle = {
-    background: 'var(--bg-main)',
-    border: 'none',
+    background: '#f8fafc',
+    border: '1px solid #e2e8f0',
     borderRadius: '12px',
     padding: '12px 16px',
     fontSize: '0.85rem',
-    color: 'var(--color-text)',
+    color: '#0f172a',
     outline: 'none',
     width: '100%',
-    transition: 'box-shadow 0.3s ease',
+    transition: 'all 0.2s ease',
     boxSizing: 'border-box' as const
   };
 
