@@ -121,24 +121,30 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
     if (authMode === 'forgot') {
       if (!email || !password || !code) {
-        setErrorMsg('请填写完整的邮箱、验证码和新密码');
+        setErrorMsg('请填写完整的注册邮箱、验证码和设置的新密码');
+        return;
+      }
+      if (password.length < 8 || !/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+        setErrorMsg('新密码长度至少 8 位，且需包含至少一个字母和一个数字');
         return;
       }
       try {
         const res = await fetch('/api/auth/reset-password', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password, code })
+          body: JSON.stringify({ email: email.trim(), password, code: code.trim() })
         });
         const data = await res.json();
         if (res.ok && data.success) {
-          setSuccessMsg(data.message || '重置密码成功，请直接登录！');
+          setSuccessMsg(data.message || '密码重置成功，请使用新密码登录！');
+          setPassword('');
+          setCode('');
           setAuthMode('login');
         } else {
-          setErrorMsg(data.error || '重置密码失败，请重试');
+          setErrorMsg(data.error || '重置密码失败，请检查验证码和邮箱');
         }
       } catch (err) {
-        setErrorMsg('连接服务器失败');
+        setErrorMsg('连接重置密码服务失败');
       }
       return;
     }
