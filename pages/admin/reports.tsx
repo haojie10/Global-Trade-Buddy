@@ -42,7 +42,7 @@ export default function AdminReportsManagement() {
 
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
+  const [pageSize, setPageSize] = useState(20);
   const [totalReports, setTotalReports] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
 

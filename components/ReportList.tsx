@@ -65,8 +65,18 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedRegion, setSelectedRegion] = useState('All');
   const [selectedIndustry, setSelectedIndustry] = useState('All');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
 
   const filtered = filterReports(reports, searchQuery, selectedCategory, selectedRegion, selectedIndustry);
+
+  // 筛选条件变化时，自动复位到第 1 页
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedCategory, selectedRegion, selectedIndustry]);
+
+  const totalPages = Math.ceil(filtered.length / pageSize) || 1;
+  const paginatedReports = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   
   // 搜索日志追踪（防抖，用户停止输入 1 秒后且 query 不为空时上报）
   React.useEffect(() => {
@@ -249,8 +259,8 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
 
       {/* 列表网格 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
-        {filtered.length > 0 ? (
-          filtered.map((report) => (
+        {paginatedReports.length > 0 ? (
+          paginatedReports.map((report) => (
             <Link 
               href={`/reports/${report.id}`} 
               key={report.id} 
@@ -491,6 +501,107 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
           </div>
         )}
       </div>
+
+      {/* 分页控制器 */}
+      {totalPages > 1 && (
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginTop: '40px',
+          padding: '16px 24px',
+          background: 'rgba(255, 255, 255, 0.45)',
+          backdropFilter: 'blur(15px)',
+          WebkitBackdropFilter: 'blur(15px)',
+          border: '1px solid rgba(18, 18, 18, 0.05)',
+          borderRadius: 'var(--border-radius)',
+          boxShadow: '0 6px 20px rgba(0, 0, 0, 0.01)',
+          flexWrap: 'wrap',
+          gap: '16px'
+        }}>
+          <span style={{ fontSize: '0.85rem', color: 'var(--color-muted)', fontWeight: 300 }}>
+            显示第 <strong style={{ color: 'var(--color-text)', fontWeight: 500 }}>{(currentPage - 1) * pageSize + 1}</strong> 到 <strong style={{ color: 'var(--color-text)', fontWeight: 500 }}>{Math.min(currentPage * pageSize, filtered.length)}</strong> 条，共 <strong style={{ color: 'var(--color-text)', fontWeight: 500 }}>{filtered.length}</strong> 篇报告
+          </span>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              onClick={() => {
+                if (currentPage > 1) {
+                  setCurrentPage(prev => prev - 1);
+                  window.scrollTo({ top: 200, behavior: 'smooth' });
+                }
+              }}
+              disabled={currentPage <= 1}
+              style={{
+                padding: '6px 14px',
+                fontSize: '0.85rem',
+                borderRadius: 'var(--border-radius)',
+                border: '1px solid rgba(18, 18, 18, 0.1)',
+                background: currentPage <= 1 ? 'rgba(0, 0, 0, 0.02)' : 'rgba(255, 255, 255, 0.8)',
+                color: currentPage <= 1 ? 'rgba(18, 18, 18, 0.25)' : 'var(--color-text)',
+                cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              上一页
+            </button>
+
+            {/* 页码数字按钮 */}
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 2)
+              .map((p, idx, arr) => {
+                const prevPage = arr[idx - 1];
+                const showEllipsis = prevPage && p - prevPage > 1;
+                return (
+                  <React.Fragment key={p}>
+                    {showEllipsis && <span style={{ color: 'var(--color-muted)', padding: '0 4px' }}>...</span>}
+                    <button
+                      onClick={() => {
+                        setCurrentPage(p);
+                        window.scrollTo({ top: 200, behavior: 'smooth' });
+                      }}
+                      style={{
+                        padding: '6px 12px',
+                        fontSize: '0.85rem',
+                        borderRadius: 'var(--border-radius)',
+                        border: p === currentPage ? '1px solid var(--color-accent)' : '1px solid rgba(18, 18, 18, 0.1)',
+                        background: p === currentPage ? 'var(--color-accent)' : 'rgba(255, 255, 255, 0.8)',
+                        color: p === currentPage ? '#ffffff' : 'var(--color-text)',
+                        fontWeight: p === currentPage ? 500 : 400,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      {p}
+                    </button>
+                  </React.Fragment>
+                );
+              })}
+
+            <button
+              onClick={() => {
+                if (currentPage < totalPages) {
+                  setCurrentPage(prev => prev + 1);
+                  window.scrollTo({ top: 200, behavior: 'smooth' });
+                }
+              }}
+              disabled={currentPage >= totalPages}
+              style={{
+                padding: '6px 14px',
+                fontSize: '0.85rem',
+                borderRadius: 'var(--border-radius)',
+                border: '1px solid rgba(18, 18, 18, 0.1)',
+                background: currentPage >= totalPages ? 'rgba(0, 0, 0, 0.02)' : 'rgba(255, 255, 255, 0.8)',
+                color: currentPage >= totalPages ? 'rgba(18, 18, 18, 0.25)' : 'var(--color-text)',
+                cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              下一页
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

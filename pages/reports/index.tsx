@@ -19,9 +19,6 @@ export default function ReportsPage({ reports: initialReports, userId, userRole,
   const [reports, setReports] = useState(initialReports);
   const [quota, setQuota] = useState(initialQuota);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [showAll, setShowAll] = useState(false);
-
-  const displayedReports = showAll ? reports : reports.slice(0, 9);
 
   return (
     <div style={{
@@ -80,9 +77,9 @@ export default function ReportsPage({ reports: initialReports, userId, userRole,
           </p>
         </div>
 
-        {/* 报告列表 */}
+        {/* 报告列表（20篇/页分页） */}
         <ReportList
-          reports={displayedReports}
+          reports={reports}
           userId={userId || ''}
           userRole={userRole}
           quota={quota}
@@ -97,35 +94,6 @@ export default function ReportsPage({ reports: initialReports, userId, userRole,
             setReports(prev => prev.map(r => r.id === reportId ? { ...r, isFavorited } : r));
           }}
         />
-
-        {/* 加载更多 */}
-        {!showAll && reports.length > 9 && (
-          <div style={{ textAlign: 'center', marginTop: '48px' }}>
-            <button
-              onClick={() => setShowAll(true)}
-              style={{
-                padding: '14px 40px',
-                fontSize: '0.95rem',
-                background: 'transparent',
-                border: '1px solid rgba(18, 18, 18, 0.15)',
-                color: 'var(--color-text)',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                borderRadius: '0px'
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.borderColor = 'var(--color-accent)';
-                e.currentTarget.style.color = 'var(--color-accent)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(18, 18, 18, 0.15)';
-                e.currentTarget.style.color = 'var(--color-text)';
-              }}
-            >
-              查看全部报告（还有 {reports.length - 9} 份）➔
-            </button>
-          </div>
-        )}
       </div>
 
       <AuthModal

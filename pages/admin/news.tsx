@@ -27,6 +27,12 @@ export default function AdminNewsManagement() {
   const [countries, setCountries] = useState<TagOption[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // 分页状态
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
+  const [totalNews, setTotalNews] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
   // 编辑器状态
   const [editId, setEditId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
@@ -42,13 +48,22 @@ export default function AdminNewsManagement() {
     fetchData();
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = async (targetPage = currentPage) => {
     setLoading(true);
     try {
-      const newsRes = await fetch('/api/admin/news');
+      const newsRes = await fetch(`/api/admin/news?page=${targetPage}&pageSize=${pageSize}`);
       if (newsRes.ok) {
         const newsData = await newsRes.json();
-        setNews(newsData);
+        if (newsData && Array.isArray(newsData.data)) {
+          setNews(newsData.data);
+          setCurrentPage(newsData.page);
+          setTotalNews(newsData.total);
+          setTotalPages(Math.ceil(newsData.total / pageSize) || 1);
+        } else if (Array.isArray(newsData)) {
+          setNews(newsData);
+          setTotalNews(newsData.length);
+          setTotalPages(Math.ceil(newsData.length / pageSize) || 1);
+        }
       }
 
       const indRes = await fetch('/api/admin/industries');
@@ -200,7 +215,7 @@ export default function AdminNewsManagement() {
         ) : activeTab === 'list' ? (
           /* 资讯列表 */
           <div className="admin-card">
-            <h3 className="admin-card-title">当前快讯列表 ({news.length} 条)</h3>
+            <h3 className="admin-card-title">当前快讯列表 ({totalNews} 条)</h3>
             <div className="admin-table-container">
               <table className="admin-table">
                 <thead>
@@ -286,6 +301,62 @@ export default function AdminNewsManagement() {
                 </tbody>
               </table>
             </div>
+
+            {/* 分页控制栏 */}
+            {totalPages > 1 && (
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                marginTop: '16px', 
+                paddingTop: '16px',
+                borderTop: '1px solid var(--admin-border)',
+                fontSize: '0.85rem',
+                color: 'var(--admin-text-secondary)',
+                flexWrap: 'wrap',
+                gap: '12px'
+              }}>
+                <div>
+                  显示第 <strong>{(currentPage - 1) * pageSize + 1}</strong> 到 <strong>{Math.min(currentPage * pageSize, totalNews)}</strong> 条，共 <strong>{totalNews}</strong> 条快讯
+                </div>
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  <button 
+                    className="admin-btn admin-btn-secondary" 
+                    style={{ padding: '4px 10px', fontSize: '0.8rem' }}
+                    disabled={currentPage <= 1}
+                    onClick={() => fetchData(currentPage - 1)}
+                  >
+                    上一页
+                  </button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 2)
+                    .map((p, idx, arr) => {
+                      const prev = arr[idx - 1];
+                      const showEllipsis = prev && p - prev > 1;
+                      return (
+                        <React.Fragment key={p}>
+                          {showEllipsis && <span style={{ padding: '0 4px', alignSelf: 'center' }}>...</span>}
+                          <button
+                            className={`admin-btn ${p === currentPage ? '' : 'admin-btn-secondary'}`}
+                            style={{ padding: '4px 10px', fontSize: '0.8rem' }}
+                            onClick={() => fetchData(p)}
+                          >
+                            {p}
+                          </button>
+                        </React.Fragment>
+                      );
+                    })}
+                  <button 
+                    className="admin-btn admin-btn-secondary" 
+                    style={{ padding: '4px 10px', fontSize: '0.8rem' }}
+                    disabled={currentPage >= totalPages}
+                    onClick={() => fetchData(currentPage + 1)}
+                  >
+                    下一页
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           /* 发布/编辑表单 */
