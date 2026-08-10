@@ -14,7 +14,7 @@ export interface PlatformReport {
   isFavorited?: boolean;
 }
 
-export const FIXED_REGIONS = ['All', '欧洲', '北美洲', '亚洲', '东南亚', '中东', '南美洲', '大洋洲', '非洲', '全球'];
+export const FIXED_REGIONS = ['All', '欧洲', '北美洲', '亚洲', '东南亚', '中东', '南美洲', '大洋洲', '非洲'];
 
 export function filterReports(
   reports: PlatformReport[],
@@ -33,8 +33,7 @@ export function filterReports(
       region === 'All' ||
       isNodeInRegion(r.market_region, region) ||
       (region === '欧洲' && (r.title.includes('欧洲') || r.title.includes('欧盟') || (r.summary && (r.summary.includes('欧洲') || r.summary.includes('欧盟'))))) ||
-      (region === '北美洲' && (r.title.includes('北美') || r.title.includes('美国') || (r.summary && (r.summary.includes('北美') || r.summary.includes('美国'))))) ||
-      (region === '全球' && (r.market_region === '全球' || !r.market_region));
+      (region === '北美洲' && (r.title.includes('北美') || r.title.includes('美国') || (r.summary && (r.summary.includes('北美') || r.summary.includes('美国')))));
 
     // 支持相关行业匹配
     const reportIndustries = r.industries
