@@ -464,17 +464,49 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
     const newsItem = newsRes.rows[0];
 
-    // 2. 获取关联推荐报告
-    const relatedReportsRes = await dbClient.query(
-      `SELECT DISTINCT r.id, r.title, r.category, r.market_region, r.summary
+    // 2. 获取关联推荐报告（三阶递进：行业契合度优先 -> 上架时间最新 -> 动态随机轮播）
+    const candidateReportsRes = await dbClient.query(
+      `SELECT r.id, r.title, r.category, r.market_region, r.summary, r.created_at,
+              COUNT(ri.industry_id)::int AS hit_count
        FROM reports r
        JOIN report_industries ri ON r.id = ri.report_id
        WHERE ri.industry_id IN (
          SELECT industry_id FROM news_industries WHERE news_id = $1
        )
-       LIMIT 3`,
+       GROUP BY r.id, r.title, r.category, r.market_region, r.summary, r.created_at
+       ORDER BY hit_count DESC, r.created_at DESC
+       LIMIT 10`,
       [id]
     );
+
+    let finalRelatedReports: any[] = [];
+    if (candidateReportsRes.rows.length > 0) {
+      // 2.1 按契合度 hit_count 分组（高契合度优先）
+      const groups: { [key: number]: any[] } = {};
+      for (const row of candidateReportsRes.rows) {
+        const count = row.hit_count || 1;
+        if (!groups[count]) groups[count] = [];
+        groups[count].push(row);
+      }
+
+      // 获取所有契合度从高到低的层级
+      const sortedCounts = Object.keys(groups).map(Number).sort((a, b) => b - a);
+
+      for (const count of sortedCounts) {
+        if (finalRelatedReports.length >= 3) break;
+
+        const groupItems = groups[count];
+        // 2.2 在同等契合度层级内部做 Fisher-Yates 动态洗牌打散，增加每次刷新页面的轮播丰富度
+        const shuffledGroup = [...groupItems];
+        for (let i = shuffledGroup.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffledGroup[i], shuffledGroup[j]] = [shuffledGroup[j], shuffledGroup[i]];
+        }
+
+        const needed = 3 - finalRelatedReports.length;
+        finalRelatedReports.push(...shuffledGroup.slice(0, needed));
+      }
+    }
 
     // 确保 published_at 转换不报错，防范 null/string 类型的 issue
     let published_at_str = '';
@@ -498,7 +530,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
           ...newsItem,
           published_at: published_at_str
         },
-        relatedReports: relatedReportsRes.rows,
+        relatedReports: finalRelatedReports,
         canonicalUrl,
         siteUrl,
         userId,

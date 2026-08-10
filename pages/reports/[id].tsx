@@ -55,6 +55,18 @@ export default function ReportDetailPage({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [quota, setQuota] = useState(freeQuota);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [previewImgUrl, setPreviewImgUrl] = useState<string | null>(null);
+
+  // 监听 iframe 传来的图片点击预览消息
+  React.useEffect(() => {
+    const handleMessage = (e: MessageEvent) => {
+      if (e.data && e.data.type === 'GTB_PREVIEW_IMAGE' && e.data.src) {
+        setPreviewImgUrl(e.data.src);
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
 
   // 收藏与笔记状态
   const [isFav, setIsFav] = useState(initialIsFavorite);
@@ -725,6 +737,65 @@ export default function ReportDetailPage({
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
       />
+
+      {/* 🖼️ 报告正文图片全屏放大预览 Modal */}
+      {previewImgUrl && (
+        <div
+          onClick={() => setPreviewImgUrl(null)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(15px)',
+            WebkitBackdropFilter: 'blur(15px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            cursor: 'zoom-out',
+            animation: 'navFadeIn 0.2s ease-out'
+          }}
+        >
+          <img
+            src={previewImgUrl}
+            alt="图片放大预览"
+            style={{
+              maxWidth: '92vw',
+              maxHeight: '92vh',
+              objectFit: 'contain',
+              borderRadius: '8px',
+              boxShadow: '0 25px 60px rgba(0, 0, 0, 0.6)',
+              cursor: 'zoom-out'
+            }}
+          />
+          <button
+            onClick={() => setPreviewImgUrl(null)}
+            style={{
+              position: 'absolute',
+              top: '24px',
+              right: '24px',
+              background: 'rgba(255, 255, 255, 0.2)',
+              border: 'none',
+              color: '#ffffff',
+              fontSize: '1.4rem',
+              width: '44px',
+              height: '44px',
+              borderRadius: '50%',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backdropFilter: 'blur(10px)',
+              transition: 'background 0.2s'
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </WatermarkContainer>
   );
 }

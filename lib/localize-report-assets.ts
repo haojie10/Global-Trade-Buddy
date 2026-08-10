@@ -29,6 +29,19 @@ export function localizeReportHtml(html: string | null | undefined): string {
   for (const [pattern, replacement] of CDN_REPLACEMENTS) {
     result = result.replace(pattern, replacement);
   }
-  result = result.replace(GOOGLE_FONTS_LINK, '');
-  return result;
+  const previewScript = `
+<style>
+  img { cursor: zoom-in !important; transition: opacity 0.2s ease, transform 0.2s ease; }
+  img:hover { opacity: 0.95; }
+</style>
+<script>
+  document.addEventListener('click', function(e) {
+    var target = e.target;
+    if (target && target.tagName === 'IMG') {
+      window.parent.postMessage({ type: 'GTB_PREVIEW_IMAGE', src: target.src }, '*');
+    }
+  });
+</script>
+`;
+  return result + previewScript;
 }
