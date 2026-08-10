@@ -5,6 +5,7 @@ import { runDehydration, extractAndNormalizeEntities, parseMetadata } from '../.
 import { getStandardCategory } from '../../../lib/category-mapper';
 import { uploadImage, cleanOrphanedImages } from '../../../lib/storage';
 import { RETAILER_ENTITIES } from '../../../lib/entity-constants';
+import { filterCountriesOnly } from '../../../lib/country-helpers';
 
 async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
   const authHeader = req.headers.authorization;
@@ -80,7 +81,7 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     const finalCategory = metaCategory || 'customer';
     const finalSummary = metaSummary || summary || '';
 
-    // 处理地区/国家标签
+    // 处理地区/国家标签（严格过滤大区词汇，仅保留具体国家，如: '英国, 欧洲' -> '英国'）
     let regionsList: string[] = [];
     if (manualTags.regions && manualTags.regions.length > 0) {
       regionsList = [...manualTags.regions];
@@ -88,10 +89,10 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     if (meta.market_region && meta.market_region !== '全球') {
       regionsList.push(meta.market_region);
     }
-    if (regionsList.length === 0) {
-      regionsList = [meta.market_region || '全球'];
-    }
-    const finalMarketRegion = Array.from(new Set(regionsList)).join(', ');
+    const cleanCountriesList = filterCountriesOnly(regionsList);
+    const finalMarketRegion = cleanCountriesList.length > 0
+      ? cleanCountriesList.join(', ')
+      : (regionsList.length > 0 ? regionsList.join(', ') : '全球');
 
     // 3. 提取并归一化实体
     const resolvedEntities = await extractAndNormalizeEntities(
