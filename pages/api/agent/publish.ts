@@ -236,16 +236,7 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
 
     // 6. 保存覆盖国家关联 (写入 report_countries)
     await dbClient.query('DELETE FROM report_countries WHERE report_id = $1', [newReportId]);
-    const autoCountries = finalMarketRegion.split(',').map(s => s.trim()).filter(Boolean);
-    if (autoCountries.length > 0) {
-      const mappedCountries = autoCountries.map(ctyName => {
-        let lookupName = ctyName;
-        if (ctyName.toLowerCase() === 'germany') lookupName = '德国';
-        if (ctyName.toLowerCase() === 'austria') lookupName = '奥地利';
-        if (ctyName.toLowerCase() === 'usa' || ctyName.toLowerCase() === 'united states') lookupName = '美国';
-        return lookupName;
-      });
-
+    if (mappedCountries.length > 0) {
       const ctyRes = await dbClient.query(
         'SELECT id FROM countries WHERE name = ANY($1)',
         [mappedCountries]

@@ -223,18 +223,12 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
   }
 
   // 自动从 HTML 的 market_region 提取国家并建立关联
-  const autoCountries = finalMarketRegion.split(',').map(s => s.trim()).filter(Boolean);
-  for (const ctyName of autoCountries) {
-    let lookupName = ctyName;
-    if (ctyName.toLowerCase() === 'germany') lookupName = '德国';
-    if (ctyName.toLowerCase() === 'austria') lookupName = '奥地利';
-    
-    const ctyRes = await dbClient.query('SELECT id FROM countries WHERE name = $1 LIMIT 1', [lookupName]);
-    if (ctyRes.rows.length > 0) {
-      const ctyId = ctyRes.rows[0].id;
+  if (mappedCountries.length > 0) {
+    const ctyRes = await dbClient.query('SELECT id FROM countries WHERE name = ANY($1)', [mappedCountries]);
+    for (const row of ctyRes.rows) {
       await dbClient.query(
         'INSERT INTO report_countries (report_id, country_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-        [newReportId, ctyId]
+        [newReportId, row.id]
       );
     }
   }
