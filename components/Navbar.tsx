@@ -52,10 +52,16 @@ export default function Navbar({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (err) {
+      console.error('退出登录失败', err);
+    }
     document.cookie = 'user_id=; path=/; max-age=0';
     document.cookie = 'user_role=; path=/; max-age=0';
-    window.location.reload();
+    document.cookie = 'gtb_session=; path=/; max-age=0';
+    window.location.href = '/';
   };
 
   return (

@@ -87,9 +87,13 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
       if (res.ok && data.success) {
         setSuccessMsg(data.message || '密码修改成功，正在引导重新登录...');
         // 修改成功，安全退出登录并清理凭证
-        setTimeout(() => {
+        setTimeout(async () => {
+          try {
+            await fetch('/api/auth/logout', { method: 'POST' });
+          } catch {}
           document.cookie = 'user_id=; path=/; max-age=0';
           document.cookie = 'user_role=; path=/; max-age=0';
+          document.cookie = 'gtb_session=; path=/; max-age=0';
           window.location.href = '/';
         }, 1500);
       } else {
