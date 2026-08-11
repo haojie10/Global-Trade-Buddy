@@ -17,7 +17,7 @@ function getSessionSecret(): string {
     if (process.env.NODE_ENV === 'production') {
       throw new Error(
         'FATAL: SESSION_SECRET 环境变量未设置。生产环境禁止使用默认密钥启动。' +
-        '请在 Vercel 或部署平台的环境变量中配置 SESSION_SECRET。'
+        '请在服务器的环境变量中配置 SESSION_SECRET。'
       );
     }
     // 开发/测试环境使用默认值，仅供本地调试

@@ -6,15 +6,15 @@ require('dotenv').config();
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
-  console.error('[ERROR] .env 中未找到 DATABASE_URL，无法连接到 Supabase 云端数据库');
+  console.error('[ERROR] .env 中未找到 DATABASE_URL，无法连接到数据库');
   process.exit(1);
 }
 
-console.log('Connecting to Supabase Database...');
+console.log('Connecting to Database...');
 
 const pool = new Pool({
   connectionString,
-  ssl: { rejectUnauthorized: false }
+  ssl: undefined
 });
 
 async function run() {
@@ -27,12 +27,12 @@ async function run() {
     process.exit(1);
   }
 
-  console.log(`Applying migration file [${targetFileName}] to Supabase...`);
+  console.log(`Applying migration file [${targetFileName}] to database...`);
   const sql = fs.readFileSync(sqlPath, 'utf8');
 
   try {
     await pool.query(sql);
-    console.log(`✅ 成功将 [${targetFileName}] 应用至 Supabase 云端数据库！`);
+    console.log(`✅ 成功将 [${targetFileName}] 应用至生产数据库！`);
   } catch (err) {
     console.error('❌ 执行 Migration 失败:', err.message);
   } finally {

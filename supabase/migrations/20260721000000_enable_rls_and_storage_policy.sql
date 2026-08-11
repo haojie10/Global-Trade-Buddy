@@ -35,11 +35,14 @@ END $$;
 -- ANON KEY 也能正常上传/删除（API 层已有 admin 鉴权）。
 -- 移除旧的分散策略后重建。
 
-DROP POLICY IF EXISTS "Public Read report-images" ON storage.objects;
-DROP POLICY IF EXISTS "Public Upload report-images" ON storage.objects;
-DROP POLICY IF EXISTS "Allow INSERT into report-images" ON storage.objects;
+DO $$
+BEGIN
+    EXECUTE 'DROP POLICY IF EXISTS "Public Read report-images" ON storage.objects';
+    EXECUTE 'DROP POLICY IF EXISTS "Public Upload report-images" ON storage.objects';
+    EXECUTE 'DROP POLICY IF EXISTS "Allow INSERT into report-images" ON storage.objects';
 
-CREATE POLICY "report-images_full_access"
-ON storage.objects FOR ALL
-USING (bucket_id = 'report-images')
-WITH CHECK (bucket_id = 'report-images');
+    EXECUTE 'CREATE POLICY "report-images_full_access" ON storage.objects FOR ALL USING (bucket_id = ''report-images'') WITH CHECK (bucket_id = ''report-images'')';
+EXCEPTION
+    WHEN OTHERS THEN NULL;
+END $$;
+

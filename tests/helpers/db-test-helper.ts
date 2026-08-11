@@ -49,7 +49,7 @@ export async function cleanDatabase(client: any) {
         try {
           await client.query(sql);
         } catch (err: any) {
-          // 忽略在 Supabase 云端由于非 superuser 导致无法 CREATE EXTENSION 等权限错误
+          // 忽略在自建 PostgreSQL 数据库中由于权限或缺少扩展库导致无法 CREATE EXTENSION 的错误
           if (!sql.includes('EXTENSION')) {
             console.warn(`[WARN] 执行迁移 SQL 失败 (file: ${file}):`, err.message);
           }

@@ -4,13 +4,6 @@ const connectionString = (process.env.NODE_ENV === 'test' && process.env.TEST_DA
   ? process.env.TEST_DATABASE_URL
   : (process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/postgres');
 
-const isSupabase = connectionString.includes('supabase.co') || connectionString.includes('supabase.net') || connectionString.includes('pooler.supabase.com');
-// 仅在开发环境放宽证书校验（解决 Clash 等代理引起的证书错误）；
-// 通过 ssl 选项作用于 PG 连接，不污染全局 NODE_TLS_REJECT_UNAUTHORIZED
-const sslConfig = isSupabase
-  ? { rejectUnauthorized: false }  // Supabase Pooler 使用自签名证书，必须放宽验证
-  : undefined;
-
 let pool: Pool;
 
 const globalWithPool = global as typeof globalThis & {
@@ -20,10 +13,10 @@ const globalWithPool = global as typeof globalThis & {
 if (process.env.NODE_ENV === 'production') {
   pool = new Pool({
     connectionString,
-    max: 5,                  // Serverless 环境下每个实例的最大连接数调为 5，避免耗尽连接池
+    max: 5,                  // 生产环境下设置适当的最大连接数，避免占用过多服务器资源
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
-    ssl: sslConfig,
+    ssl: undefined,
   });
   
   // 生产环境后台连接错误捕获，避免未捕获异常导致 Next.js 进程退出
@@ -37,7 +30,7 @@ if (process.env.NODE_ENV === 'production') {
       max: 10,                 // 开发环境调小最大连接数
       idleTimeoutMillis: 10000, // 缩短闲置释放时长为10秒，减少网络代理的空闲中断干扰
       connectionTimeoutMillis: 5000,
-      ssl: sslConfig,
+      ssl: undefined,
     });
     
     // 监听开发环境后台连接错误，拦截 Clash/VPN 等网络代理引起的闲置连接被掐断报错

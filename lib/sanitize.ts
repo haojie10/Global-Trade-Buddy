@@ -3,7 +3,7 @@ import xss, { IFilterXSSOptions, IWhiteList } from 'xss';
 /**
  * 通用的富文本消毒配置
  * 在 SSR 和客户端共用，使用纯 JS 的 xss 库（不依赖 DOM/jsdom），
- * 避免 isomorphic-dompurify 在 Vercel Serverless 中出现 ESM require 问题。
+ * 避免 isomorphic-dompurify 在 部署环境 中出现 ESM require 问题。
  */
 const XSS_WHITELIST: IWhiteList = {
   h1: [], h2: [], h3: [], h4: [], h5: [], h6: [],

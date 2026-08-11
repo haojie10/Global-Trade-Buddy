@@ -1,14 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PoolClient } from 'pg';
 import COS from 'cos-nodejs-sdk-v5';
-import cloudbase from '@cloudbase/node-sdk';
-import { createClient } from '@supabase/supabase-js';
 import { withDb } from '../../../../lib/api-handler';
 import { requireAdmin } from '../../../../lib/auth';
 import { extractStorageFileNames } from '../../../../lib/storage';
 
 /**
- * 管理后台一键触发 Storage GC 端点 (支持 COS / CloudBase / Supabase)
+ * 管理后台一键触发 Storage GC 端点 (支持 COS)
  * POST /api/admin/reports/gc
  * Body: { dryRun?: boolean }
  */
@@ -46,20 +44,16 @@ async function gcHandler(req: NextApiRequest, res: NextApiResponse, dbClient: Po
   // ====================================================
   const cosBucket = process.env.COS_BUCKET;
   const cosRegion = process.env.COS_REGION;
-  const cosSecretId = process.env.COS_SECRET_ID || process.env.TCB_SECRET_ID;
-  const cosSecretKey = process.env.COS_SECRET_KEY || process.env.TCB_SECRET_KEY;
+  const cosSecretId = process.env.COS_SECRET_ID;
+  const cosSecretKey = process.env.COS_SECRET_KEY;
 
-  let provider: 'cos' | 'cloudbase' | 'supabase' | null = null;
+  let provider: 'cos' | null = null;
   if (cosBucket && cosRegion && cosSecretId && cosSecretKey) {
     provider = 'cos';
-  } else if (process.env.TCB_ENV_ID) {
-    provider = 'cloudbase';
-  } else if (process.env.NEXT_PUBLIC_SUPABASE_URL && (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY)) {
-    provider = 'supabase';
   }
 
   if (!provider) {
-    return res.status(500).json({ error: '未检测到有效的对象存储配置（COS / CloudBase / Supabase）' });
+    return res.status(500).json({ error: '未检测到有效的对象存储配置（COS）' });
   }
 
   const allStorageFiles: string[] = [];
@@ -94,26 +88,6 @@ async function gcHandler(req: NextApiRequest, res: NextApiResponse, dbClient: Po
       } while (marker);
     } catch (err: any) {
       return res.status(500).json({ error: `COS 枚举存储桶文件失败: ${err.message || JSON.stringify(err)}` });
-    }
-  } else if (provider === 'supabase') {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY)!;
-    const supabase = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } });
-
-    let offset = 0;
-    const PAGE_SIZE = 100;
-    while (true) {
-      const { data: files, error: listError } = await supabase.storage
-        .from('report-images')
-        .list('', { limit: PAGE_SIZE, offset, sortBy: { column: 'name', order: 'asc' } });
-
-      if (listError) {
-        return res.status(500).json({ error: `枚举 Supabase Storage 失败: ${listError.message}` });
-      }
-      if (!files || files.length === 0) break;
-      allStorageFiles.push(...files.map(f => f.name).filter(Boolean));
-      if (files.length < PAGE_SIZE) break;
-      offset += PAGE_SIZE;
     }
   }
 
@@ -161,21 +135,6 @@ async function gcHandler(req: NextApiRequest, res: NextApiResponse, dbClient: Po
         deletedCount += batch.length;
       } catch (err: any) {
         errors.push(`COS 批量删除异常: ${err.message || JSON.stringify(err)}`);
-      }
-    }
-  } else if (provider === 'supabase') {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY)!;
-    const supabase = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } });
-
-    const BATCH_SIZE = 100;
-    for (let i = 0; i < orphaned.length; i += BATCH_SIZE) {
-      const batch = orphaned.slice(i, i + BATCH_SIZE);
-      const { error: removeError } = await supabase.storage.from('report-images').remove(batch);
-      if (removeError) {
-        errors.push(`Supabase 删除批次失败: ${removeError.message}`);
-      } else {
-        deletedCount += batch.length;
       }
     }
   }

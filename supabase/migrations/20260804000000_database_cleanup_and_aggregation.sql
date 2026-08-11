@@ -121,6 +121,12 @@ $$ LANGUAGE plpgsql;
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
+        BEGIN
+            PERFORM cron.unschedule('auto_cleanup_and_aggregate_logs');
+        EXCEPTION
+            WHEN OTHERS THEN NULL;
+        END;
+
         PERFORM cron.schedule(
             'auto_cleanup_and_aggregate_logs',
             '0 3 * * *',

@@ -3,7 +3,7 @@ const nextConfig = {
   compress: true,
   reactStrictMode: true,
   poweredByHeader: false,
-  // 仅在 Docker 容器化构建时启用 standalone（如 CloudBase CloudRun），EdgeOne Pages 部署时保持默认标准模式
+  // 仅在 Docker 容器化构建时启用 standalone（如 腾讯云轻量服务器）
   ...(process.env.NEXT_OUTPUT_STANDALONE === 'true' ? { output: 'standalone' } : {}),
 
   async headers() {
@@ -29,7 +29,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "font-src 'self' data:",
               "img-src 'self' data: blob: https:",
-              "connect-src 'self' https://*.tcb.qcloud.la https://*.tcloudbaseapp.com ws: wss:",
+              "connect-src 'self' ws: wss:",
               "frame-ancestors 'none'",
             ].join('; '),
           },
