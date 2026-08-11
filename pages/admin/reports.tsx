@@ -173,11 +173,11 @@ export default function AdminReportsManagement() {
     setLoading(true);
     try {
       // 1. 获取报告列表 (包含标签与实体及分页)
-      const repRes = await fetch(`/api/admin/stats/content?page=${targetPage}&pageSize=${pageSize}`);
+      const repRes = await fetch(`/api/admin/reports/list?page=${targetPage}&pageSize=${pageSize}`);
       if (repRes.ok) {
         const repData = await repRes.json();
         // 对齐数据格式
-        const list: ReportListItem[] = repData.reportsList.map((r: any) => {
+        const list: ReportListItem[] = (repData.reportsList || []).map((r: any) => {
           return {
             id: r.id,
             title: r.title,
