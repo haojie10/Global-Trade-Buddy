@@ -173,6 +173,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         document.cookie = `user_id=${data.user.id}; path=/; max-age=604800`;
         document.cookie = `user_role=${data.user.role}; path=/; max-age=604800`;
         document.cookie = `user_nickname=${encodeURIComponent(data.user.nickname || '')}; path=/; max-age=604800`;
+        document.cookie = `user_email=${encodeURIComponent(data.user.email || '')}; path=/; max-age=604800`;
         window.location.reload();
       } else {
         setErrorMsg(data.error || '认证失败，请重试');

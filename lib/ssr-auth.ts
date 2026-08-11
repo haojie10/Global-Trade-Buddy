@@ -7,6 +7,7 @@ export interface SsrAuthResult {
   userRole: string;
   freeQuota: number;
   nickname: string;
+  email: string;
   session: Session | null;
 }
 
@@ -25,20 +26,20 @@ export async function resolveSsrAuth(
     session = getSession(context.req as any);
   } catch {
     // SESSION_SECRET 未配置或签名验证失败时，静默降级为访客
-    return { userId: null, userRole: 'guest', freeQuota: 0, nickname: '', session: null };
+    return { userId: null, userRole: 'guest', freeQuota: 0, nickname: '', email: '', session: null };
   }
 
   if (!session) {
-    return { userId: null, userRole: 'guest', freeQuota: 0, nickname: '', session: null };
+    return { userId: null, userRole: 'guest', freeQuota: 0, nickname: '', email: '', session: null };
   }
 
   try {
     const userRes = await dbClient.query(
-      'SELECT id, role, free_quota, nickname FROM users WHERE id = $1',
+      'SELECT id, role, free_quota, nickname, email FROM users WHERE id = $1',
       [session.userId]
     );
     if (userRes.rows.length === 0) {
-      return { userId: null, userRole: 'guest', freeQuota: 0, nickname: '', session: null };
+      return { userId: null, userRole: 'guest', freeQuota: 0, nickname: '', email: '', session: null };
     }
     const user = userRes.rows[0];
     return {
@@ -46,9 +47,10 @@ export async function resolveSsrAuth(
       userRole: user.role,
       freeQuota: user.free_quota || 0,
       nickname: user.nickname || '',
+      email: user.email || '',
       session
     };
   } catch {
-    return { userId: null, userRole: 'guest', freeQuota: 0, nickname: '', session: null };
+    return { userId: null, userRole: 'guest', freeQuota: 0, nickname: '', email: '', session: null };
   }
 }

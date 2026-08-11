@@ -16,30 +16,21 @@ export default function FeedbackModal({ isOpen, onClose, userEmail = '' }: Feedb
   // 表单状态 - 品类调研
   const [targetChannel, setTargetChannel] = useState('');
   const [productName, setProductName] = useState('');
-  const [categoryMarket, setCategoryMarket] = useState('北美');
+  const [categoryMarket, setCategoryMarket] = useState('');
 
   // 表单状态 - 企业洞察
   const [companyName, setCompanyName] = useState('');
   const [companyUrl, setCompanyUrl] = useState('');
-  const [companyMarket, setCompanyMarket] = useState('北美');
+  const [companyMarket, setCompanyMarket] = useState('');
 
   // 表单状态 - 改善意见
   const [feedbackCategory, setFeedbackCategory] = useState('功能建议');
   const [feedbackContent, setFeedbackContent] = useState('');
 
-  // 通用联系邮箱
-  const [contactEmail, setContactEmail] = useState(userEmail);
-
   // 状态机
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
-
-  useEffect(() => {
-    if (userEmail) {
-      setContactEmail(userEmail);
-    }
-  }, [userEmail]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -54,8 +45,9 @@ export default function FeedbackModal({ isOpen, onClose, userEmail = '' }: Feedb
     e.preventDefault();
     setErrorMsg('');
 
-    if (!contactEmail.trim()) {
-      setErrorMsg('请填写用于接收结果或反馈回复的联系邮箱');
+    const activeEmail = (userEmail || '').trim();
+    if (!activeEmail) {
+      setErrorMsg('您尚未登录，请先登录后再提交需求或反馈');
       return;
     }
 
@@ -65,24 +57,24 @@ export default function FeedbackModal({ isOpen, onClose, userEmail = '' }: Feedb
     if (mainTab === 'custom_report') {
       requestType = reportSubTab;
       if (reportSubTab === 'category_insight') {
-        if (!targetChannel.trim() || !productName.trim()) {
-          setErrorMsg('请填写完整的目标销售渠道和具体产品名称');
+        if (!targetChannel.trim() || !productName.trim() || !categoryMarket.trim()) {
+          setErrorMsg('请填写完整的目标销售渠道、具体产品名称和目标市场');
           return;
         }
         payload = {
           channel: targetChannel.trim(),
           productName: productName.trim(),
-          marketRegion: categoryMarket.trim() || '北美'
+          marketRegion: categoryMarket.trim()
         };
       } else {
-        if (!companyName.trim() || !companyUrl.trim()) {
-          setErrorMsg('请填写完整的目标公司名称和公司官网地址');
+        if (!companyName.trim() || !companyUrl.trim() || !companyMarket.trim()) {
+          setErrorMsg('请填写完整的目标公司名称、公司官网地址和目标市场');
           return;
         }
         payload = {
           companyName: companyName.trim(),
           companyUrl: companyUrl.trim(),
-          marketRegion: companyMarket.trim() || '北美'
+          marketRegion: companyMarket.trim()
         };
       }
     } else {
@@ -103,7 +95,7 @@ export default function FeedbackModal({ isOpen, onClose, userEmail = '' }: Feedb
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           requestType,
-          contactEmail: contactEmail.trim(),
+          contactEmail: activeEmail,
           payload
         })
       });
@@ -236,7 +228,7 @@ export default function FeedbackModal({ isOpen, onClose, userEmail = '' }: Feedb
                   transition: 'all 0.2s'
                 }}
               >
-                📊 调研报告定制
+                调研报告定制
               </button>
               <button
                 type="button"
@@ -255,7 +247,7 @@ export default function FeedbackModal({ isOpen, onClose, userEmail = '' }: Feedb
                   transition: 'all 0.2s'
                 }}
               >
-                💬 平台改善意见
+                平台改善意见
               </button>
             </div>
 
@@ -285,7 +277,7 @@ export default function FeedbackModal({ isOpen, onClose, userEmail = '' }: Feedb
                         onChange={() => setReportSubTab('category_insight')}
                         style={{ accentColor: 'var(--color-accent)' }}
                       />
-                      🛒 渠道品类调研
+                      渠道品类调研
                     </label>
                     <label style={{
                       flex: 1,
@@ -308,7 +300,7 @@ export default function FeedbackModal({ isOpen, onClose, userEmail = '' }: Feedb
                         onChange={() => setReportSubTab('company_insight')}
                         style={{ accentColor: 'var(--color-accent)' }}
                       />
-                      🏢 企业战略洞察
+                      企业战略洞察
                     </label>
                   </div>
 
@@ -340,7 +332,7 @@ export default function FeedbackModal({ isOpen, onClose, userEmail = '' }: Feedb
                         <label style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: '4px', display: 'block' }}>目标市场 / 地区</label>
                         <input
                           type="text"
-                          placeholder="例如：北美、欧洲、东南亚"
+                          placeholder="例如：德国，法国，美国，澳大利亚"
                           value={categoryMarket}
                           onChange={e => setCategoryMarket(e.target.value)}
                           style={inputStyle}
@@ -376,7 +368,7 @@ export default function FeedbackModal({ isOpen, onClose, userEmail = '' }: Feedb
                         <label style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: '4px', display: 'block' }}>目标市场 / 地区</label>
                         <input
                           type="text"
-                          placeholder="例如：北美、欧洲、拉美"
+                          placeholder="例如：德国，法国，美国，澳大利亚"
                           value={companyMarket}
                           onChange={e => setCompanyMarket(e.target.value)}
                           style={inputStyle}
@@ -395,10 +387,10 @@ export default function FeedbackModal({ isOpen, onClose, userEmail = '' }: Feedb
                       onChange={e => setFeedbackCategory(e.target.value)}
                       style={{ ...inputStyle, cursor: 'pointer' }}
                     >
-                      <option value="功能建议">💡 功能建议</option>
-                      <option value="UI/UX体验">🎨 界面与体验优化</option>
-                      <option value="报告质量">📄 研报质量与数据建议</option>
-                      <option value="其他意见">💬 其他想法</option>
+                      <option value="功能建议">功能建议</option>
+                      <option value="UI/UX体验">界面与体验优化</option>
+                      <option value="报告质量">研报质量与数据建议</option>
+                      <option value="其他意见">其他想法</option>
                     </select>
                   </div>
                   <div>
@@ -413,18 +405,6 @@ export default function FeedbackModal({ isOpen, onClose, userEmail = '' }: Feedb
                   </div>
                 </>
               )}
-
-              <div>
-                <label style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: '4px', display: 'block' }}>联系邮箱 (用于接收结果/回复)</label>
-                <input
-                  type="email"
-                  placeholder="name@example.com"
-                  value={contactEmail}
-                  onChange={e => setContactEmail(e.target.value)}
-                  style={inputStyle}
-                  required
-                />
-              </div>
 
               {errorMsg && (
                 <div style={{ fontSize: '0.8rem', color: '#ef4444', textAlign: 'center' }}>
