@@ -464,6 +464,7 @@ export default function Navbar({
       <FeedbackModal
         isOpen={showFeedbackModal}
         onClose={() => setShowFeedbackModal(false)}
+        userId={userId}
         userEmail={userEmail}
       />
 
