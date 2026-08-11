@@ -5,10 +5,23 @@ import path from 'path';
 export async function setup() {
   const connectionString = process.env.TEST_DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/postgres_test';
   
-  const client = new Client({
-    connectionString
-  });
-  await client.connect();
+  let client: Client | null = null;
+  for (let i = 0; i < 3; i++) {
+    try {
+      client = new Client({
+        connectionString,
+        connectionTimeoutMillis: 10000,
+        keepAlive: true,
+        ssl: false
+      });
+      await client.connect();
+      break;
+    } catch (cErr) {
+      if (i === 2) throw cErr;
+      await new Promise(r => setTimeout(r, 1000));
+    }
+  }
+  if (!client) throw new Error('Failed to connect to test database');
 
   try {
     console.log('Initializing test database schema...');
@@ -32,19 +45,23 @@ export async function setup() {
     await client.query(`SET search_path TO ${targetSchema}, public`);
 
     // Drop existing tables in test database to ensure clean schema setup
-    await client.query(`
-      DROP TABLE IF EXISTS email_verifications CASCADE;
-      DROP TABLE IF EXISTS notes CASCADE;
-      DROP TABLE IF EXISTS favorites CASCADE;
-      DROP TABLE IF EXISTS unlocks CASCADE;
-      DROP TABLE IF EXISTS relations CASCADE;
-      DROP TABLE IF EXISTS reports CASCADE;
-      DROP TABLE IF EXISTS users CASCADE;
-      DROP TABLE IF EXISTS entities CASCADE;
-      DROP TABLE IF EXISTS entity_aliases CASCADE;
-      DROP TABLE IF EXISTS report_entities CASCADE;
-      DROP TABLE IF EXISTS entity_relations CASCADE;
-    `);
+    const tablesToDrop = [
+      'custom_report_requests',
+      'email_verifications',
+      'notes',
+      'favorites',
+      'unlocks',
+      'relations',
+      'reports',
+      'users',
+      'entities',
+      'entity_aliases',
+      'report_entities',
+      'entity_relations'
+    ];
+    for (const tbl of tablesToDrop) {
+      await client.query(`DROP TABLE IF EXISTS ${tbl} CASCADE;`);
+    }
 
     // Get all migration files, sort them by name, and apply in sequence
     const migrationsDir = path.join(process.cwd(), 'supabase/migrations');

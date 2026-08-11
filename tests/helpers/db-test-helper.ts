@@ -6,6 +6,7 @@ import { encodeSession } from '../../lib/auth';
 export function createTestClient(): Client {
   return new Client({
     connectionString: process.env.TEST_DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/postgres',
+    connectionTimeoutMillis: 10000,
   });
 }
 

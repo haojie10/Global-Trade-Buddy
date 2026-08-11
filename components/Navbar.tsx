@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import MGLogo from './MGLogo';
 import ChangePasswordModal from './ChangePasswordModal';
+import FeedbackModal from './FeedbackModal';
 
 interface NavbarProps {
   userId?: string | null;
   userRole?: string;
   quota?: number;
   nickname?: string;
+  userEmail?: string;
   onShowAuthModal?: () => void;
   onShowUploadModal?: () => void;
   dark?: boolean;
@@ -19,6 +21,7 @@ export default function Navbar({
   userRole,
   quota,
   nickname,
+  userEmail,
   onShowAuthModal,
   onShowUploadModal,
   dark = false,
@@ -29,6 +32,7 @@ export default function Navbar({
   const [isMobile, setIsMobile] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -109,6 +113,13 @@ export default function Navbar({
               <Link href="/news" style={{ textDecoration: 'none', color: 'var(--color-text)', fontSize: '1rem', fontWeight: 400, transition: 'color 0.2s' }} className="nav-menu-item">每日资讯</Link>
               <Link href="/reports" style={{ textDecoration: 'none', color: 'var(--color-text)', fontSize: '1rem', fontWeight: 400, transition: 'color 0.2s' }} className="nav-menu-item">报告大厅</Link>
               <Link href="/my-graph" style={{ textDecoration: 'none', color: 'var(--color-text)', fontSize: '1rem', fontWeight: 400, transition: 'color 0.2s' }} className="nav-menu-item">个人图谱</Link>
+              <button 
+                onClick={() => setShowFeedbackModal(true)} 
+                style={{ background: 'transparent', border: 'none', color: 'var(--color-text)', fontSize: '1rem', fontWeight: 400, transition: 'color 0.2s', cursor: 'pointer', padding: 0 }} 
+                className="nav-menu-item"
+              >
+                需求反馈
+              </button>
             </nav>
           )}
         </div>
@@ -382,6 +393,12 @@ export default function Navbar({
           <Link href="/my-graph" onClick={() => setMobileMenuOpen(false)} style={{ textDecoration: 'none', color: 'var(--color-text)', fontSize: '1.1rem', fontWeight: 400, padding: '8px 0', display: 'block' }}>
             个人图谱
           </Link>
+          <button 
+            onClick={() => { setMobileMenuOpen(false); setShowFeedbackModal(true); }} 
+            style={{ background: 'transparent', border: 'none', color: 'var(--color-text)', fontSize: '1.1rem', fontWeight: 400, padding: '8px 0', width: '100%', textAlign: 'left', cursor: 'pointer' }} 
+          >
+            需求反馈
+          </button>
           
           <hr style={{ border: 'none', borderTop: dark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(18,18,18,0.05)', margin: '8px 0' }} />
           
@@ -443,6 +460,11 @@ export default function Navbar({
       <ChangePasswordModal 
         isOpen={showChangePassword}
         onClose={() => setShowChangePassword(false)}
+      />
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+        userEmail={userEmail}
       />
 
       {/* 注入淡入动画关键帧 */}
