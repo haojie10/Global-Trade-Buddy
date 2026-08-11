@@ -6,7 +6,7 @@ import { getSession } from '../../lib/auth';
 interface SettingsProps {
   env: {
     nodeEnv: string;
-    supabaseUrl: string | null;
+    hasCos: boolean;
     hasSessionSecret: boolean;
   };
 }
@@ -126,9 +126,9 @@ export default function AdminSettings({ env }: SettingsProps) {
                 </span>
               </div>
               <div className="admin-list-item">
-                <span>Supabase 存储服务:</span>
-                <span className={`admin-badge ${env.supabaseUrl ? 'admin-badge-success' : 'admin-badge-warning'}`}>
-                  {env.supabaseUrl ? '已启用 (Supabase)' : '本地降级模式 (public/uploads)'}
+                <span>腾讯云 COS 存储服务:</span>
+                <span className={`admin-badge ${env.hasCos ? 'admin-badge-success' : 'admin-badge-warning'}`}>
+                  {env.hasCos ? '已启用 (腾讯云 COS)' : '本地降级模式 (public/uploads)'}
                 </span>
               </div>
               <div className="admin-list-item">
@@ -154,7 +154,7 @@ export default function AdminSettings({ env }: SettingsProps) {
           </div>
         </div>
 
-        {/* Supabase Storage 垃圾回收 (GC) */}
+        {/* 对象存储垃圾回收 (COS GC) */}
         <StorageGcCard />
       </div>
     </AdminLayout>
@@ -200,7 +200,7 @@ function StorageGcCard() {
 
   return (
     <div className="admin-card" style={{ marginTop: '24px' }}>
-      <h3 className="admin-card-title">🧹 Supabase Storage 存储垃圾回收 (GC)</h3>
+      <h3 className="admin-card-title">🧹 对象存储垃圾回收 (COS GC)</h3>
       <p style={{ fontSize: '0.85rem', color: 'var(--admin-text-secondary)', marginBottom: '16px' }}>
         物理扫描报告、快讯及文章数据库表中的图片引用，比对 Storage 储存桶 <code>report-images</code> 中的全部文件，找出无引用的孤儿图片并执行同步物理删除。
       </p>
@@ -294,7 +294,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     props: {
       env: {
         nodeEnv: process.env.NODE_ENV || 'development',
-        supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || null,
+        hasCos: !!(process.env.COS_SECRET_ID && process.env.COS_SECRET_KEY && process.env.COS_BUCKET),
         hasSessionSecret: !!process.env.SESSION_SECRET
       }
     }

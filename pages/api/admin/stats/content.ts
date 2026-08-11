@@ -3,6 +3,28 @@ import { PoolClient } from 'pg';
 import { withDb } from '../../../../lib/api-handler';
 import { requireAdmin } from '../../../../lib/auth';
 
+// 常见国家/关键词到 7 大标准区域的智能映射表
+const REGION_MAPPING: Record<string, string> = {
+  '美国': '北美', '加拿大': '北美', '墨西哥': '北美', '北美': '北美', '北美洲': '北美', 'usa': '北美', 'us': '北美',
+  '英国': '欧洲', '德国': '欧洲', '法国': '欧洲', '意大利': '欧洲', '西班牙': '欧洲', '波兰': '欧洲', '荷兰': '欧洲', '西欧': '欧洲', '东欧': '欧洲', '欧洲': '欧洲', 'uk': '欧洲',
+  '日本': '亚太', '韩国': '亚太', '澳大利亚': '亚太', '新西兰': '亚太', '印度': '亚太', '亚太': '亚太', '亚洲': '亚太',
+  '越南': '东南亚', '泰国': '东南亚', '印度尼西亚': '东南亚', '马来西亚': '东南亚', '菲律宾': '东南亚', '新加坡': '东南亚', '东南亚': '东南亚',
+  '沙特': '中东', '阿联酋': '中东', '土耳其': '中东', '以色列': '中东', '中东': '中东',
+  '巴西': '南美', '阿根廷': '南美', '智利': '南美', '秘鲁': '南美', '哥伦比亚': '南美', '南美': '南美', '南美洲': '南美',
+  '南非': '非洲', '埃及': '非洲', '尼日利亚': '非洲', '肯尼亚': '非洲', '非洲': '非洲'
+};
+
+function normalizeRegion(raw: string): string | null {
+  if (!raw) return null;
+  const clean = raw.trim();
+  for (const [key, reg] of Object.entries(REGION_MAPPING)) {
+    if (clean.toLowerCase().includes(key.toLowerCase())) {
+      return reg;
+    }
+  }
+  return null;
+}
+
 async function contentStatsHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
   const session = requireAdmin(req);
   if (!session) {
@@ -11,7 +33,7 @@ async function contentStatsHandler(req: NextApiRequest, res: NextApiResponse, db
 
   // 1. 行业分布
   const industryDistRes = await dbClient.query(
-    `SELECT i.name, COUNT(ri.report_id)::int as value
+    `SELECT i.name, COUNT(DISTINCT ri.report_id)::int as value
      FROM industries i
      LEFT JOIN report_industries ri ON i.id = ri.industry_id
      GROUP BY i.name
@@ -21,7 +43,7 @@ async function contentStatsHandler(req: NextApiRequest, res: NextApiResponse, db
 
   // 2. 地区分布
   const regionDistRes = await dbClient.query(
-    `SELECT c.region as name, COUNT(rc.report_id)::int as value
+    `SELECT c.region as name, COUNT(DISTINCT rc.report_id)::int as value
      FROM countries c
      JOIN report_countries rc ON c.id = rc.country_id
      GROUP BY c.region
@@ -31,7 +53,7 @@ async function contentStatsHandler(req: NextApiRequest, res: NextApiResponse, db
 
   // 3. 国家分布
   const countryDistRes = await dbClient.query(
-    `SELECT c.name, c.region, COUNT(rc.report_id)::int as value
+    `SELECT c.name, c.region, COUNT(DISTINCT rc.report_id)::int as value
      FROM countries c
      LEFT JOIN report_countries rc ON c.id = rc.country_id
      GROUP BY c.name, c.region
@@ -40,17 +62,73 @@ async function contentStatsHandler(req: NextApiRequest, res: NextApiResponse, db
   );
   const countryDist = countryDistRes.rows;
 
-  // 4. 行业 x 区域 矩阵热力图数据
-  const matrixRes = await dbClient.query(
-    `SELECT i.name as industry, c.region, COUNT(r.id)::int as count
-     FROM reports r
-     JOIN report_industries ri ON r.id = ri.report_id
-     JOIN industries i ON ri.industry_id = i.id
-     JOIN report_countries rc ON r.id = rc.report_id
-     JOIN countries c ON rc.country_id = c.id
-     GROUP BY i.name, c.region`
-  );
-  const matrix = matrixRes.rows;
+  // 4. 全量计算 行业 × 区域 矩阵热力图（结合关联表 + 报告本身的 market_region 双重智能归一化）
+  const allReportsRes = await dbClient.query(`
+    SELECT r.id, r.title, r.market_region,
+           ARRAY_AGG(DISTINCT i.name) FILTER (WHERE i.name IS NOT NULL) as industries,
+           ARRAY_AGG(DISTINCT c.region) FILTER (WHERE c.region IS NOT NULL) as country_regions,
+           ARRAY_AGG(DISTINCT c.name) FILTER (WHERE c.name IS NOT NULL) as country_names
+    FROM reports r
+    LEFT JOIN report_industries ri ON r.id = ri.report_id
+    LEFT JOIN industries i ON ri.industry_id = i.id
+    LEFT JOIN report_countries rc ON r.id = rc.report_id
+    LEFT JOIN countries c ON rc.country_id = c.id
+    GROUP BY r.id, r.title, r.market_region
+  `);
+
+  const matrixMap = new Map<string, number>(); // key: `${industry}__${region}` -> count
+
+  for (const r of allReportsRes.rows) {
+    const rIndustries: string[] = (r.industries || []).filter(Boolean);
+    
+    // 解析报告涉及的标准大区集合
+    const rRegions = new Set<string>();
+
+    // a. 从关联的 countries.region 获取
+    if (r.country_regions && Array.isArray(r.country_regions)) {
+      for (const reg of r.country_regions) {
+        const norm = normalizeRegion(reg);
+        if (norm) rRegions.add(norm);
+      }
+    }
+
+    // b. 从关联的 countries.name 获取
+    if (r.country_names && Array.isArray(r.country_names)) {
+      for (const cname of r.country_names) {
+        const norm = normalizeRegion(cname);
+        if (norm) rRegions.add(norm);
+      }
+    }
+
+    // c. 从 reports.market_region 获取（容错兜底，覆盖美国、加拿大等）
+    if (r.market_region) {
+      const parts = r.market_region.split(/,|，|\/|\s+/).map((s: string) => s.trim()).filter(Boolean);
+      for (const part of parts) {
+        const norm = normalizeRegion(part);
+        if (norm) rRegions.add(norm);
+      }
+    }
+
+    // 如果还没有，尝试从标题中提取国家/区域
+    if (rRegions.size === 0 && r.title) {
+      const norm = normalizeRegion(r.title);
+      if (norm) rRegions.add(norm);
+    }
+
+    // 默认若仍未识别出区域，则不归入特定 7 大区
+    for (const ind of rIndustries) {
+      for (const reg of Array.from(rRegions)) {
+        const key = `${ind}__${reg}`;
+        matrixMap.set(key, (matrixMap.get(key) || 0) + 1);
+      }
+    }
+  }
+
+  const matrix: Array<{ industry: string; region: string; count: number }> = [];
+  matrixMap.forEach((count, key) => {
+    const [industry, region] = key.split('__');
+    matrix.push({ industry, region, count });
+  });
 
   // 5. 新鲜度看板
   const freshnessRes = await dbClient.query(
@@ -61,153 +139,67 @@ async function contentStatsHandler(req: NextApiRequest, res: NextApiResponse, db
      FROM reports`
   );
   const freshness = [
-    { name: '活跃 (<30天)', value: freshnessRes.rows[0].green || 0 },
-    { name: '黄警 (30-90天)', value: freshnessRes.rows[0].yellow || 0 },
-    { name: '老化 (>90天)', value: freshnessRes.rows[0].red || 0 }
+    { name: '活跃 (<30天)', value: freshnessRes.rows[0]?.green || 0 },
+    { name: '黄警 (30-90天)', value: freshnessRes.rows[0]?.yellow || 0 },
+    { name: '老化 (>90天)', value: freshnessRes.rows[0]?.red || 0 }
   ];
 
-  // 6. 报告明细列表（支持按标签展示，分页防止数据膨胀导致单请求过大）
-  const page = Math.max(1, parseInt((req.query.page as string) || '1', 10) || 1);
-  const pageSize = Math.min(200, Math.max(1, parseInt((req.query.pageSize as string) || '50', 10) || 50));
-  const offset = (page - 1) * pageSize;
+  // 6. 内容缺口建议 (最近 30 天未命中搜索词)
+  let gaps: Array<{ name: string; count: number }> = [];
+  try {
+    const gapsRes = await dbClient.query(
+      `SELECT query as name, COUNT(*)::int as count
+       FROM search_logs
+       WHERE results_count = 0 AND created_at >= NOW() - INTERVAL '30 days'
+       GROUP BY query
+       ORDER BY count DESC
+       LIMIT 10`
+    );
+    gaps = gapsRes.rows;
+  } catch (err) {
+    console.warn('Search logs query failed (table may be empty or missing):', err);
+  }
 
-  const reportsCountRes = await dbClient.query('SELECT COUNT(*)::int AS total FROM reports');
-  const reportsTotal = reportsCountRes.rows[0].total;
+  // 7. 智能选题与生产建议生成算法
+  const standardRegions = ['北美', '欧洲', '亚太', '东南亚', '中东', '南美'];
+  const topicRecommendations: Array<{
+    title: string;
+    region: string;
+    industry: string;
+    reason: string;
+    urgency: 'high' | 'medium';
+  }> = [];
 
-  const reportsListRes = await dbClient.query(
-    `SELECT r.id, r.title, r.category, r.market_region, r.created_at,
-            COALESCE((SELECT STRING_AGG(name, ', ') FROM industries JOIN report_industries ON industries.id = report_industries.industry_id WHERE report_id = r.id), '') as industries,
-            COALESCE((SELECT STRING_AGG(name, ', ') FROM countries JOIN report_countries ON countries.id = report_countries.country_id WHERE report_id = r.id), '') as countries
-     FROM reports r
-     ORDER BY r.created_at DESC
-     LIMIT $1 OFFSET $2`,
-    [pageSize, offset]
-  );
-  const reportsList = reportsListRes.rows;
-
-  // 6.1 获取这些报告的实体关联与图谱连线数
-  if (reportsList.length > 0) {
-    const reportIds = reportsList.map((r: any) => r.id);
-
-    const [entitiesRes, edgesRes] = await Promise.all([
-      dbClient.query(
-        `SELECT re.report_id, e.id as entity_id, e.canonical_name, e.entity_type, re.role, re.source,
-                (SELECT STRING_AGG(ea.alias_name, '|||') FROM entity_aliases ea WHERE ea.entity_id = e.id) as aliases
-         FROM report_entities re
-         JOIN entities e ON re.entity_id = e.id
-         WHERE re.report_id = ANY($1)`,
-        [reportIds]
-      ),
-      dbClient.query(
-        `SELECT report_id, COUNT(*)::int as edge_count FROM (
-           SELECT report_id_a as report_id FROM relations WHERE report_id_a = ANY($1)
-           UNION ALL
-           SELECT report_id_b as report_id FROM relations WHERE report_id_b = ANY($1)
-         ) sub GROUP BY report_id`,
-        [reportIds]
-      )
-    ]);
-
-    const entityMap = new Map<string, {
-      primary_company: string;
-      company_aliases: string[];
-      competitors: string[];
-      suppliers: string[];
-      customers: string[];
-      channels: string[];
-      sisters: string[];
-      products: string[];
-      mentioned: string[];
-      entitySources: Record<string, 'manual' | 'auto'>;
-    }>();
-
-    for (const row of entitiesRes.rows) {
-      if (!entityMap.has(row.report_id)) {
-        entityMap.set(row.report_id, {
-          primary_company: '',
-          company_aliases: [],
-          competitors: [],
-          suppliers: [],
-          customers: [],
-          channels: [],
-          sisters: [],
-          products: [],
-          mentioned: [],
-          entitySources: {}
-        });
-      }
-      const item = entityMap.get(row.report_id)!;
-      const role = row.role;
-      const name = row.canonical_name;
-      const source = row.source || 'auto';
-
-      item.entitySources[name] = source;
-
-      if (role === 'primary') {
-        item.primary_company = name;
-        if (row.aliases) {
-          const aliasList = row.aliases.split('|||').map((s: string) => s.trim()).filter(Boolean);
-          item.company_aliases = Array.from(new Set([...item.company_aliases, ...aliasList]));
-        }
-      } else if (role === 'competitor') {
-        if (!item.competitors.includes(name)) item.competitors.push(name);
-      } else if (role === 'supplier') {
-        if (!item.suppliers.includes(name)) item.suppliers.push(name);
-      } else if (role === 'customer') {
-        if (!item.customers.includes(name)) item.customers.push(name);
-      } else if (role === 'channel') {
-        if (!item.channels.includes(name)) item.channels.push(name);
-      } else if (role === 'sister_parent') {
-        if (!item.sisters.includes(name)) item.sisters.push(name);
-      } else if (role === 'product') {
-        if (!item.products.includes(name)) item.products.push(name);
-      } else if (role === 'mentioned') {
-        if (!item.mentioned.includes(name)) item.mentioned.push(name);
-      }
-    }
-
-    const edgeMap = new Map<string, number>();
-    for (const row of edgesRes.rows) {
-      edgeMap.set(row.report_id, row.edge_count);
-    }
-
-    for (const r of reportsList) {
-      const ents = entityMap.get(r.id) || {
-        primary_company: '',
-        company_aliases: [],
-        competitors: [],
-        suppliers: [],
-        customers: [],
-        channels: [],
-        sisters: [],
-        products: [],
-        mentioned: [],
-        entitySources: {}
-      };
-      r.primary_company = ents.primary_company;
-      r.company_aliases = ents.company_aliases;
-      r.competitors = ents.competitors;
-      r.suppliers = ents.suppliers;
-      r.customers = ents.customers;
-      r.channels = ents.channels;
-      r.sisters = ents.sisters;
-      r.products = ents.products;
-      r.mentioned = ents.mentioned;
-      r.entitySources = ents.entitySources;
-      r.edge_count = edgeMap.get(r.id) || 0;
+  // a. 基于高频未命中词建议
+  if (gaps.length > 0) {
+    for (const gap of gaps.slice(0, 3)) {
+      topicRecommendations.push({
+        title: `【高需求补品】${gap.name} 深度市场准入与竞品分析`,
+        region: '全球 / 重点市场',
+        industry: gap.name,
+        reason: `近 30 天内有 ${gap.count} 位用户主动检索但未搜出结果`,
+        urgency: 'high'
+      });
     }
   }
 
-  // 7. 内容缺口建议 (最近30天未命中搜索)
-  const gapsRes = await dbClient.query(
-    `SELECT query as name, COUNT(*)::int as count
-     FROM search_logs
-     WHERE results_count = 0 AND created_at >= NOW() - INTERVAL '30 days'
-     GROUP BY query
-     ORDER BY count DESC
-     LIMIT 5`
-  );
-  const gaps = gapsRes.rows;
+  // b. 基于热力图空白区域智能推荐（挑出已有行业但在核心区域为 0 的缺口）
+  for (const indRow of industryDist.slice(0, 4)) {
+    for (const reg of standardRegions) {
+      const match = matrix.find(m => m.industry === indRow.name && m.region === reg);
+      if (!match || match.count === 0) {
+        if (topicRecommendations.length < 6) {
+          topicRecommendations.push({
+            title: `【区域盲区填补】${reg}市场 - ${indRow.name}主流渠道与选品洞察`,
+            region: reg,
+            industry: indRow.name,
+            reason: `平台在「${indRow.name}」行业有深度积累，但「${reg}」大区尚处于内容空白`,
+            urgency: 'medium'
+          });
+        }
+      }
+    }
+  }
 
   return res.status(200).json({
     industryDist,
@@ -215,9 +207,8 @@ async function contentStatsHandler(req: NextApiRequest, res: NextApiResponse, db
     countryDist,
     matrix,
     freshness,
-    reportsList,
-    reportsPagination: { page, pageSize, total: reportsTotal },
-    gaps
+    gaps,
+    topicRecommendations
   });
 }
 
