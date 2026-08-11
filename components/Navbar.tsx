@@ -466,6 +466,7 @@ export default function Navbar({
         onClose={() => setShowFeedbackModal(false)}
         userId={userId}
         userEmail={userEmail}
+        onShowAuthModal={onShowAuthModal}
       />
 
       {/* 注入淡入动画关键帧 */}

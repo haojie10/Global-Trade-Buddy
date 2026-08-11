@@ -5,9 +5,16 @@ interface FeedbackModalProps {
   onClose: () => void;
   userId?: string | null;
   userEmail?: string;
+  onShowAuthModal?: () => void;
 }
 
-export default function FeedbackModal({ isOpen, onClose, userId, userEmail = '' }: FeedbackModalProps) {
+export default function FeedbackModal({
+  isOpen,
+  onClose,
+  userId,
+  userEmail = '',
+  onShowAuthModal
+}: FeedbackModalProps) {
   // 主模式: 'custom_report' (调研报告定制) | 'feedback' (平台改善意见)
   const [mainTab, setMainTab] = useState<'custom_report' | 'feedback'>('custom_report');
   
@@ -28,15 +35,12 @@ export default function FeedbackModal({ isOpen, onClose, userId, userEmail = '' 
   const [feedbackCategory, setFeedbackCategory] = useState('功能建议');
   const [feedbackContent, setFeedbackContent] = useState('');
 
-  // 接收通知的邮箱
-  const [contactEmail, setContactEmail] = useState('');
-
   // 状态机
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // 多维获取客户端登录状态与用户邮箱 (包含 Cookie 兜底)
+  // 多源获取客户端登录状态与用户邮箱
   const getClientLoginState = () => {
     let activeUserId = userId || null;
     let activeEmail = userEmail || '';
@@ -65,12 +69,6 @@ export default function FeedbackModal({ isOpen, onClose, userId, userEmail = '' 
   const { isLoggedIn, email: boundEmail } = getClientLoginState();
 
   useEffect(() => {
-    if (boundEmail) {
-      setContactEmail(boundEmail);
-    }
-  }, [boundEmail, isOpen]);
-
-  useEffect(() => {
     if (!isOpen) {
       setErrorMsg('');
       setIsSuccess(false);
@@ -85,12 +83,10 @@ export default function FeedbackModal({ isOpen, onClose, userId, userEmail = '' 
 
     if (!isLoggedIn) {
       setErrorMsg('您尚未登录，请先登录后再提交需求或反馈');
-      return;
-    }
-
-    const finalNotifyEmail = (contactEmail || boundEmail || '').trim();
-    if (!finalNotifyEmail) {
-      setErrorMsg('请填写接收研报完成通知的邮箱');
+      if (onShowAuthModal) {
+        onClose();
+        onShowAuthModal();
+      }
       return;
     }
 
@@ -138,7 +134,7 @@ export default function FeedbackModal({ isOpen, onClose, userId, userEmail = '' 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           requestType,
-          contactEmail: finalNotifyEmail,
+          contactEmail: boundEmail || '',
           payload
         })
       });
@@ -447,23 +443,6 @@ export default function FeedbackModal({ isOpen, onClose, userId, userEmail = '' 
                     />
                   </div>
                 </>
-              )}
-
-              {/* 当账号没有检测到绑定邮箱时（如手机号账号），智能提供接收通知的邮箱输入框 */}
-              {!boundEmail && (
-                <div>
-                  <label style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: '4px', display: 'block' }}>
-                    接收通知的邮箱 (用于研报完成通知)
-                  </label>
-                  <input
-                    type="email"
-                    placeholder="name@example.com"
-                    value={contactEmail}
-                    onChange={e => setContactEmail(e.target.value)}
-                    style={inputStyle}
-                    required
-                  />
-                </div>
               )}
 
               {errorMsg && (
