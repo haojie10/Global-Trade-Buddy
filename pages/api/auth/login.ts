@@ -22,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     dbClient = await pool.connect();
     // 只用账号查询，不把密码放入 SQL 条件（防止时序攻击）
     const userRes = await dbClient.query(
-      `SELECT id, phone_number, email, role, free_quota, password, nickname 
+      `SELECT id, phone_number, email, role, free_quota, password, nickname, status, member_type, subscription_expires_at 
        FROM users 
        WHERE phone_number = $1 OR email = $1`,
       [phoneOrEmail]
@@ -35,6 +35,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const user = userRes.rows[0];
+
+    // 检查账号状态（若已被封禁，直接拦截）
+    if (user.status === 'banned') {
+      return res.status(403).json({ error: '您的账号已被管理员禁用，请联系平台支持' });
+    }
+
     const passwordMatch = await bcrypt.compare(password, user.password);
 
     if (!passwordMatch) {
