@@ -104,9 +104,9 @@ export default function AdminNewsManagement() {
     setSourceUrl(item.source_url || '');
     setStatus(item.status);
 
-    // 解析文字映射回 ID 数组
-    const curIndNames = item.industries.split(', ').filter(Boolean);
-    const curCtyNames = item.countries.split(', ').filter(Boolean);
+    // 解析文字映射回 ID 数组（空值安全保护）
+    const curIndNames = (item.industries || '').split(', ').filter(Boolean);
+    const curCtyNames = (item.countries || '').split(', ').filter(Boolean);
 
     const curIndIds = industries.filter(i => curIndNames.includes(i.name)).map(i => i.id);
     const curCtyIds = countries.filter(c => curCtyNames.includes(c.name)).map(c => c.id);

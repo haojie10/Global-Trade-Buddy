@@ -265,9 +265,9 @@ export default function AdminReportsManagement() {
       // 我们从 reports 列表中对应的项获取已有的行业/国家文字，然后在选项中匹配 ID
       const currentReport = reports.find(r => r.id === report.id);
       if (currentReport) {
-        // 通过名字匹配 ID
-        const curIndNames = currentReport.industries.split(', ').filter(Boolean);
-        const curCtyNames = currentReport.countries.split(', ').filter(Boolean);
+        // 通过名字匹配 ID（空值安全保护）
+        const curIndNames = (currentReport.industries || '').split(', ').filter(Boolean);
+        const curCtyNames = (currentReport.countries || '').split(', ').filter(Boolean);
 
         const curIndIds = industries.filter(i => curIndNames.includes(i.name)).map(i => i.id);
         const curCtyIds = countries.filter(c => curCtyNames.includes(c.name)).map(c => c.id);

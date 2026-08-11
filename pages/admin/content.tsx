@@ -37,8 +37,8 @@ export default function AdminContentAnalysis() {
   const renderMatrix = () => {
     if (!data || !data.matrix) return null;
 
-    // 获取所有独立行业和区域
-    const industries = Array.from(new Set(data.reportsList.flatMap(r => r.industries.split(', ').filter(Boolean))));
+    // 获取所有独立行业和区域（安全防御 null/undefined）
+    const industries = Array.from(new Set(data.reportsList.flatMap(r => (r.industries || '').split(', ').filter(Boolean))));
     const regions = ['北美', '欧洲', '亚太', '东南亚', '中东', '南美', '非洲'];
 
     if (industries.length === 0) {

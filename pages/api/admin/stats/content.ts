@@ -76,8 +76,8 @@ async function contentStatsHandler(req: NextApiRequest, res: NextApiResponse, db
 
   const reportsListRes = await dbClient.query(
     `SELECT r.id, r.title, r.category, r.market_region, r.created_at,
-            (SELECT STRING_AGG(name, ', ') FROM industries JOIN report_industries ON industries.id = report_industries.industry_id WHERE report_id = r.id) as industries,
-            (SELECT STRING_AGG(name, ', ') FROM countries JOIN report_countries ON countries.id = report_countries.country_id WHERE report_id = r.id) as countries
+            COALESCE((SELECT STRING_AGG(name, ', ') FROM industries JOIN report_industries ON industries.id = report_industries.industry_id WHERE report_id = r.id), '') as industries,
+            COALESCE((SELECT STRING_AGG(name, ', ') FROM countries JOIN report_countries ON countries.id = report_countries.country_id WHERE report_id = r.id), '') as countries
      FROM reports r
      ORDER BY r.created_at DESC
      LIMIT $1 OFFSET $2`,
