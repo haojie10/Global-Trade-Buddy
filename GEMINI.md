@@ -12,6 +12,7 @@
 
 1. **部署与运行环境 (Hosting & Runtime)**
    - **生产运行平台**：腾讯云轻量应用服务器（IP: `124.222.201.143`）
+   - **正式生产域名**：`https://marketgraphic.cn`（已配置 SSL + Nginx 反向代理至本地 3000 端口）
    - **进程守护**：使用 PM2 守护运行 Next.js 生产应用进程（`gtb-backend`）
    - **废弃平台说明**：⛔ **已彻底废弃 Vercel、CloudBase (云开发) 与 EdgeOne Pages 部署**，请勿针对这些废弃平台编写部署规则或配置文件。
 

@@ -948,7 +948,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     context.res.setHeader('Cache-Control', 'no-store, must-revalidate');
 
     const proto = (context.req.headers['x-forwarded-proto'] as string) || 'https';
-    const host = (context.req.headers['x-forwarded-host'] as string) || context.req.headers.host || 'marketgraphic.com';
+    const host = (context.req.headers['x-forwarded-host'] as string) || context.req.headers.host || 'marketgraphic.cn';
     const siteUrl = `${proto}://${host}`;
     const canonicalUrl = `${siteUrl}/reports/${id}`;
 

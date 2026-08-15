@@ -13,7 +13,7 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
-const API_BASE = process.env.GTB_API_URL || 'http://124.222.201.143:3000';
+const API_BASE = process.env.GTB_API_URL || 'https://marketgraphic.cn';
 const AGENT_KEY = process.env.AGENT_API_KEY || 'automation_agent_secret';
 const POLL_INTERVAL_MS = 60 * 1000; // 每 60 秒轮询一次
 

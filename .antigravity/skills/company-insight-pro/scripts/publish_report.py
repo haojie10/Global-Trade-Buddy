@@ -59,7 +59,7 @@ def publish_report_file(html_path, target_url=None, api_key=None):
     # 读取环境变量
     env_vars = find_and_load_env()
     
-    gtb_api_url = target_url or env_vars.get('GTB_API_URL', 'http://124.222.201.143:3000')
+    gtb_api_url = target_url or env_vars.get('GTB_API_URL', 'https://marketgraphic.cn')
     agent_api_key = api_key or env_vars.get('AGENT_API_KEY', 'automation_agent_secret')
 
     with open(html_path, 'r', encoding='utf-8') as f:

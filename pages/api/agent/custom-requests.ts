@@ -103,7 +103,7 @@ async function agentCustomRequestsHandler(
           ) {
             return envUrl.replace(/\/+$/, '');
           }
-          return 'http://124.222.201.143:3000';
+          return 'https://marketgraphic.cn';
         };
 
         const siteUrl = getValidSiteUrl();

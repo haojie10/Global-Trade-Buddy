@@ -106,11 +106,11 @@ description: 360度企业战略情报洞察工具。用于为特定企业生成�
    ```
 
 2. **自动发布与真实 ID 校验逻辑（强制要求）**：
-   - 该脚本会自动读取 `.env` 中的 `GTB_API_URL` 配置（默认为 `http://124.222.201.143:3000`）及 `AGENT_API_KEY`。
+   - 该脚本会自动读取 `.env` 中的 `GTB_API_URL` 配置（默认为 `https://marketgraphic.cn`）及 `AGENT_API_KEY`。
    - 解析 HTML 中的 `<meta>` 标签（`company_name`, `summary`, `regions`, `products` 等）并校验标准品类名。
    - 向 `/api/agent/publish` 发送 POST 请求。
    - **严格禁止预先捏造/猜想 UUID**：终端打印 `[OK] Report published successfully! ID: <真实UUID>`，必须严格以控制台返回的真实 ID 为准。
-   - **强制探活校验（Verification Before Completion）**：在宣称完成或调用 `PATCH /api/agent/custom-requests` 之前，必须先使用 `curl` 探活 `GET http://124.222.201.143:3000/reports/<真实UUID>` 并确认返回 `HTTP 200 OK`，之后方可将任务更新为 `completed`。
+   - **强制探活校验（Verification Before Completion）**：在宣称完成或调用 `PATCH /api/agent/custom-requests` 之前，必须先使用 `curl` 探活 `GET https://marketgraphic.cn/reports/<真实UUID>` 并确认返回 `HTTP 200 OK`，之后方可将任务更新为 `completed`。
 
 ---
 
