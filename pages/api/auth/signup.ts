@@ -50,9 +50,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: passwordError });
   }
 
-  const dbClient = await pool.connect();
+  let dbClient: any = null;
 
   try {
+    dbClient = await pool.connect();
+
     // 邮箱验证码核验
     if (email) {
       if (!code) {
@@ -94,6 +96,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (new Date() > new Date(verification.expired_at)) {
         return res.status(400).json({ error: '验证码已过期，请重新获取' });
       }
+
+      // 核销已使用的验证码，防止在有效期内被重放
+      await dbClient.query(
+        'DELETE FROM email_verifications WHERE id = $1',
+        [verification.id]
+      );
     }
     // NOTE: 角色强制为 'user'，管理员只能通过数据库手动分配，防止注册自封管理员
     const selectedRole = 'user';
@@ -131,6 +139,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const safeMsg = process.env.NODE_ENV === 'production' ? '服务器内部错误' : err.message;
     return res.status(500).json({ error: safeMsg });
   } finally {
-    dbClient.release();
+    if (dbClient) {
+      dbClient.release();
+    }
   }
 }
+

@@ -11,12 +11,22 @@ import { computeRelationsForReport, ReportEntityItem } from '../../../lib/relati
 async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
   const authHeader = req.headers.authorization;
   const token = (authHeader && authHeader.split(' ')[1]) || (req.headers['x-agent-key'] as string);
-  const expectedToken = process.env.AGENT_API_KEY || 'automation_agent_secret';
+  const isProd = process.env.NODE_ENV === 'production';
+  const expectedToken = process.env.AGENT_API_KEY;
 
-  const isAuthValid = token === expectedToken || token === 'automation_agent_secret';
+  if (isProd && !expectedToken) {
+    console.error('FATAL: 生产环境未配置 AGENT_API_KEY 环境变量');
+    return res.status(500).json({ error: 'Server Configuration Error' });
+  }
+
+  const isAuthValid = isProd
+    ? (Boolean(token) && token === expectedToken)
+    : (token === (expectedToken || 'automation_agent_secret') || token === 'automation_agent_secret');
+
   if (!isAuthValid) {
     return res.status(401).json({ error: 'Unauthorized: Invalid Agent API Key' });
   }
+
 
   const { type, title, summary, contentHtml, region, country, industry, industries, tags } = req.body;
 

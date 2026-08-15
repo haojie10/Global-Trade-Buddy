@@ -1,10 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import pool from '../../../../lib/db';
+import { PoolClient } from 'pg';
 import { requireAdmin } from '../../../../lib/auth';
+import { withDb } from '../../../../lib/api-handler';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
+async function tagHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
+  const adminSession = requireAdmin(req);
+  if (!adminSession) {
+    return res.status(403).json({ error: '权限不足，仅管理员可执行此操作' });
   }
 
   const { reportId, entityName, entityType } = req.body;
@@ -21,79 +23,67 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: '无效的实体类型' });
   }
 
-  // 统一管理员鉴权，取代原有的 session/cookie 双重回退方案
-  const adminSession = requireAdmin(req);
-  if (!adminSession) {
-    return res.status(403).json({ error: '权限不足，仅管理员可执行此操作' });
+  await dbClient.query('BEGIN');
+
+  // 1. 查询报告是否存在
+  const reportRes = await dbClient.query('SELECT id, market_region FROM reports WHERE id = $1', [reportId]);
+  if (reportRes.rows.length === 0) {
+    return res.status(404).json({ error: '指定报告不存在' });
+  }
+  const reportMarket = reportRes.rows[0].market_region;
+
+  // 2. 查找或插入实体 (通过 canonical_name 唯一)
+  let entityId: string;
+  
+  // 检查是否已有同名实体或别称
+  const entityCheck = await dbClient.query(
+    `SELECT e.id FROM entities e
+     LEFT JOIN entity_aliases ea ON e.id = ea.entity_id
+     WHERE e.canonical_name = $1 OR ea.alias_name = $1
+     LIMIT 1`,
+    [tag]
+  );
+
+  if (entityCheck.rows.length > 0) {
+    entityId = entityCheck.rows[0].id;
+  } else {
+    let dbEntityType = entityType;
+    if (entityType === 'supplier' || entityType === 'customer') {
+      dbEntityType = 'company';
+    }
+    const insertEntityRes = await dbClient.query(
+      `INSERT INTO entities (canonical_name, entity_type)
+       VALUES ($1, $2)
+       ON CONFLICT (canonical_name) DO UPDATE SET entity_type = EXCLUDED.entity_type
+       RETURNING id`,
+      [tag, dbEntityType]
+    );
+    entityId = insertEntityRes.rows[0].id;
   }
 
-  const dbClient = await pool.connect();
+  // 3. 关联到 report_entities 表，并写明在此报告中扮演的角色 role
+  await dbClient.query(
+    `INSERT INTO report_entities (report_id, entity_id, role)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (report_id, entity_id) DO UPDATE SET role = EXCLUDED.role`,
+    [reportId, entityId, entityType]
+  );
 
-  try {
-    await dbClient.query('BEGIN');
+  // 4. 重建 relations 关联边，让图谱关联报告
+  await dbClient.query(
+    `INSERT INTO relations (report_id_a, report_id_b, relation_key, market_region, relation_type)
+     SELECT DISTINCT $1::UUID AS report_id_a, re.report_id AS report_id_b, $2 AS relation_key, $3 AS market_region, 'supplier' AS relation_type
+     FROM report_entities re
+     WHERE re.entity_id = $4::UUID AND re.report_id != $1::UUID
+     ON CONFLICT (report_id_a, report_id_b, relation_key) DO NOTHING`,
+    [reportId, tag, reportMarket, entityId]
+  );
 
-    // 1. 查询报告是否存在
-    const reportRes = await dbClient.query('SELECT id, market_region FROM reports WHERE id = $1', [reportId]);
-    if (reportRes.rows.length === 0) {
-      throw new Error('指定报告不存在');
-    }
-    const reportMarket = reportRes.rows[0].market_region;
-
-    // 2. 查找或插入实体 (通过 canonical_name 唯一)
-    let entityId: string;
-    
-    // 检查是否已有同名实体或别称
-    const entityCheck = await dbClient.query(
-      `SELECT e.id FROM entities e
-       LEFT JOIN entity_aliases ea ON e.id = ea.entity_id
-       WHERE e.canonical_name = $1 OR ea.alias_name = $1
-       LIMIT 1`,
-      [tag]
-    );
-
-    if (entityCheck.rows.length > 0) {
-      entityId = entityCheck.rows[0].id;
-    } else {
-      let dbEntityType = entityType;
-      if (entityType === 'supplier' || entityType === 'customer') {
-        dbEntityType = 'company';
-      }
-      const insertEntityRes = await dbClient.query(
-        `INSERT INTO entities (canonical_name, entity_type)
-         VALUES ($1, $2)
-         ON CONFLICT (canonical_name) DO UPDATE SET entity_type = EXCLUDED.entity_type
-         RETURNING id`,
-        [tag, dbEntityType]
-      );
-      entityId = insertEntityRes.rows[0].id;
-    }
-
-    // 3. 关联到 report_entities 表，并写明在此报告中扮演的角色 role
-    await dbClient.query(
-      `INSERT INTO report_entities (report_id, entity_id, role)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (report_id, entity_id) DO UPDATE SET role = EXCLUDED.role`,
-      [reportId, entityId, entityType]
-    );
-
-    // 4. 重建 relations 关联边，让图谱关联报告
-    // 将此报告和具有相同实体的其他报告连起来
-    await dbClient.query(
-      `INSERT INTO relations (report_id_a, report_id_b, relation_key, market_region, relation_type)
-       SELECT DISTINCT $1::UUID AS report_id_a, re.report_id AS report_id_b, $2 AS relation_key, $3 AS market_region, 'supplier' AS relation_type
-       FROM report_entities re
-       WHERE re.entity_id = $4::UUID AND re.report_id != $1::UUID
-       ON CONFLICT (report_id_a, report_id_b, relation_key) DO NOTHING`,
-      [reportId, tag, reportMarket, entityId]
-    );
-
-    await dbClient.query('COMMIT');
-    return res.status(200).json({ success: true, entityId });
-  } catch (err: any) {
-    await dbClient.query('ROLLBACK');
-    const safeMsg = process.env.NODE_ENV === 'production' ? '服务器内部错误' : err.message;
-    return res.status(500).json({ error: safeMsg });
-  } finally {
-    dbClient.release();
-  }
+  await dbClient.query('COMMIT');
+  return res.status(200).json({ success: true, entityId });
 }
+
+export default withDb(tagHandler, {
+  methods: ['POST'],
+  requiredBody: ['reportId', 'entityName', 'entityType']
+});

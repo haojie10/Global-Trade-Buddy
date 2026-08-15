@@ -3,26 +3,34 @@ import { PoolClient } from 'pg';
 import { withDb } from '../../../lib/api-handler';
 import { sendMail } from '../../../lib/email';
 
-const AGENT_SECRET = process.env.AGENT_API_KEY || 'automation_agent_secret';
+const isProd = process.env.NODE_ENV === 'production';
+const AGENT_SECRET = process.env.AGENT_API_KEY;
 
 async function agentCustomRequestsHandler(
   req: NextApiRequest,
   res: NextApiResponse,
   dbClient: PoolClient
 ) {
-  // 简单的 Agent 秘钥校验（HTTP Header 或 Query）
+  // Agent 密钥校验（HTTP Header 或 Query）
   const authKey = req.headers['x-agent-key'] || req.query.agent_key;
-  if (authKey !== AGENT_SECRET) {
-    return res.status(401).json({ error: '未授权的 Agent 客户端访问' });
+  if (isProd) {
+    if (!AGENT_SECRET || authKey !== AGENT_SECRET) {
+      return res.status(401).json({ error: '未授权的 Agent 客户端访问' });
+    }
+  } else {
+    if (authKey !== (AGENT_SECRET || 'automation_agent_secret') && authKey !== 'automation_agent_secret') {
+      return res.status(401).json({ error: '未授权的 Agent 客户端访问' });
+    }
   }
 
   if (req.method === 'GET') {
-    // 拉取等待处理的任务（默认拉取最先提交的 5 条）
+    // 拉取等待处理的任务（含超过 30 分钟未更新的僵死任务，支持自动重试恢复）
     const limit = parseInt((req.query.limit as string) || '5', 10);
     const result = await dbClient.query(
       `SELECT id, user_id, contact_email, request_type, payload, status, created_at
        FROM custom_report_requests
-       WHERE status = 'pending'
+       WHERE status = 'pending' 
+          OR (status = 'processing' AND updated_at < NOW() - INTERVAL '30 minutes')
        ORDER BY created_at ASC
        LIMIT $1`,
       [limit]
@@ -33,6 +41,7 @@ async function agentCustomRequestsHandler(
       requests: result.rows
     });
   }
+
 
   if (req.method === 'PATCH') {
     const { id, status, reportId, errorMessage } = req.body;

@@ -472,8 +472,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     const quota = auth.freeQuota;
     const nickname = auth.nickname;
 
-    // 1. 查询快讯详情
-    const newsRes = await dbClient.query(
+    // 1. 并发查询快讯详情与关联推荐候选报告
+    const newsPromise = dbClient.query(
       `SELECT n.id, n.title, n.summary, n.content, n.source_url, n.published_at,
               ARRAY_TO_STRING(ARRAY(SELECT name FROM industries JOIN news_industries ON industries.id = news_industries.industry_id WHERE news_id = n.id), ', ') as industries,
               ARRAY_TO_STRING(ARRAY(SELECT name FROM countries JOIN news_countries ON countries.id = news_countries.country_id WHERE news_id = n.id), ', ') as countries
@@ -481,6 +481,25 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
        WHERE n.id = $1 AND n.status = 'published'`,
       [id]
     );
+
+    const candidatePromise = dbClient.query(
+      `SELECT r.id, r.title, r.category, r.market_region, r.summary, r.created_at,
+              COUNT(ri.industry_id)::int AS hit_count
+       FROM reports r
+       JOIN report_industries ri ON r.id = ri.report_id
+       WHERE ri.industry_id IN (
+         SELECT industry_id FROM news_industries WHERE news_id = $1
+       )
+       GROUP BY r.id, r.title, r.category, r.market_region, r.summary, r.created_at
+       ORDER BY hit_count DESC, r.created_at DESC
+       LIMIT 10`,
+      [id]
+    );
+
+    const [newsRes, candidateReportsRes] = await Promise.all([
+      newsPromise,
+      candidatePromise
+    ]);
 
     if (newsRes.rows.length === 0) {
       return {
@@ -497,27 +516,12 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     }
 
     const newsItem = newsRes.rows[0];
-
-    // 2. 获取关联推荐报告（三阶递进：行业契合度优先 -> 上架时间最新 -> 动态随机轮播）
-    const candidateReportsRes = await dbClient.query(
-      `SELECT r.id, r.title, r.category, r.market_region, r.summary, r.created_at,
-              COUNT(ri.industry_id)::int AS hit_count
-       FROM reports r
-       JOIN report_industries ri ON r.id = ri.report_id
-       WHERE ri.industry_id IN (
-         SELECT industry_id FROM news_industries WHERE news_id = $1
-       )
-       GROUP BY r.id, r.title, r.category, r.market_region, r.summary, r.created_at
-       ORDER BY hit_count DESC, r.created_at DESC
-       LIMIT 10`,
-      [id]
-    );
-
     let finalRelatedReports: any[] = [];
     if (candidateReportsRes.rows.length > 0) {
       // 2.1 按契合度 hit_count 分组（高契合度优先）
       const groups: { [key: number]: any[] } = {};
       for (const row of candidateReportsRes.rows) {
+
         const count = row.hit_count || 1;
         if (!groups[count]) groups[count] = [];
         groups[count].push(row);

@@ -832,10 +832,12 @@ export default function ReportDetailPage({
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const { id } = context.params!;
-  const dbClient = await pool.connect();
+  let dbClient: any = null;
 
   try {
+    dbClient = await pool.connect();
     const auth = await resolveSsrAuth(context, dbClient);
+
     const userId = auth.userId;
     const userRole = auth.userRole;
     const freeQuota = auth.freeQuota;
@@ -846,136 +848,157 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     let isFavorite = false;
     let noteContent = '';
 
-    if (userId) {
-      if (userRole === 'admin') {
+    // 并行拉取：报告详情、收藏状态、笔记、关联推荐报告
+    const reportPromise = (async () => {
+      if (userId) {
+        if (userRole === 'admin') {
+          const reportRes = await dbClient.query(
+            'SELECT id, title, category, market_region, summary, content_html FROM reports WHERE id = $1',
+            [id]
+          );
+          if (reportRes.rows.length === 0) return null;
+          const rep = reportRes.rows[0];
+          return {
+            id: rep.id,
+            title: rep.title,
+            category: rep.category,
+            market_region: rep.market_region,
+            summary: rep.summary,
+            isUnlocked: true,
+            content_html: localizeReportHtml(rep.content_html)
+          };
+        } else {
+          return await getReportDetail(userId, id as string, dbClient);
+        }
+      } else {
         const reportRes = await dbClient.query(
-          'SELECT id, title, category, market_region, summary, content_html FROM reports WHERE id = $1',
+          'SELECT id, title, category, market_region, summary FROM reports WHERE id = $1',
           [id]
         );
-        if (reportRes.rows.length === 0) {
-          return { notFound: true };
-        }
+        if (reportRes.rows.length === 0) return null;
         const rep = reportRes.rows[0];
-        report = {
+        return {
           id: rep.id,
           title: rep.title,
           category: rep.category,
           market_region: rep.market_region,
           summary: rep.summary,
-          isUnlocked: true,
-          content_html: localizeReportHtml(rep.content_html)
+          isUnlocked: false,
+          content_html: null
         };
-      } else {
-        report = await getReportDetail(userId, id as string, dbClient);
       }
+    })();
 
-      // 获取用户对该报告的收藏与笔记状态
-      const favRes = await dbClient.query('SELECT id FROM favorites WHERE user_id = $1 AND report_id = $2', [userId, id]);
-      isFavorite = favRes.rows.length > 0;
-      const noteRes = await dbClient.query('SELECT content FROM notes WHERE user_id = $1 AND report_id = $2', [userId, id]);
-      noteContent = noteRes.rows[0]?.content || '';
-    } else {
-      const reportRes = await dbClient.query(
-        'SELECT id, title, category, market_region, summary FROM reports WHERE id = $1',
-        [id]
-      );
-      if (reportRes.rows.length === 0) {
-        return { notFound: true };
-      }
-      const rep = reportRes.rows[0];
-      report = {
-        id: rep.id,
-        title: rep.title,
-        category: rep.category,
-        market_region: rep.market_region,
-        summary: rep.summary,
-        isUnlocked: false,
-        content_html: null
-      };
+    const favPromise = userId
+      ? dbClient.query('SELECT id FROM favorites WHERE user_id = $1 AND report_id = $2', [userId, id])
+      : Promise.resolve({ rows: [] });
+
+    const notePromise = userId
+      ? dbClient.query('SELECT content FROM notes WHERE user_id = $1 AND report_id = $2', [userId, id])
+      : Promise.resolve({ rows: [] });
+
+    const relatedPromise = dbClient.query(
+      `SELECT r.id, r.title, r.category, r.market_region, rel.relation_key
+       FROM reports r
+       JOIN relations rel ON r.id = rel.report_id_a
+       WHERE rel.report_id_b = $1
+       UNION
+       SELECT r.id, r.title, r.category, r.market_region, rel.relation_key
+       FROM reports r
+       JOIN relations rel ON r.id = rel.report_id_b
+       WHERE rel.report_id_a = $1`,
+      [id]
+    );
+
+    const [resolvedReport, favRes, noteRes, relatedRes] = await Promise.all([
+      reportPromise,
+      favPromise,
+      notePromise,
+      relatedPromise
+    ]);
+
+    if (!resolvedReport) {
+      return { notFound: true };
     }
 
-    if (report) {
-      const relatedRes = await dbClient.query(
-        `SELECT r.id, r.title, r.category, r.market_region, rel.relation_key
-         FROM reports r
-         JOIN relations rel ON r.id = rel.report_id_a
-         WHERE rel.report_id_b = $1
-         UNION
-         SELECT r.id, r.title, r.category, r.market_region, rel.relation_key
-         FROM reports r
-         JOIN relations rel ON r.id = rel.report_id_b
-         WHERE rel.report_id_a = $1`,
-        [id]
-      );
-      const rawRows = relatedRes.rows;
+    report = resolvedReport;
+    isFavorite = favRes.rows.length > 0;
+    noteContent = noteRes.rows[0]?.content || '';
 
-      // 1. 归类到 4 个关系类型的篮子中
-      const baskets: Record<string, any[]> = {
-        competitor: [],
-        supplier: [],
-        operation: [],
-        mention: []
-      };
+    const rawRows = relatedRes.rows;
 
-      rawRows.forEach((row: any) => {
-        const key = row.relation_key;
-        if (baskets[key]) {
-          baskets[key].push(row);
-        } else {
-          baskets.mention.push(row);
-        }
-      });
+    // 1. 归类到 4 个关系类型的篮子中
+    const baskets: Record<string, any[]> = {
+      competitor: [],
+      supplier: [],
+      operation: [],
+      mention: []
+    };
 
-      // 2. 随机打散每个篮子中的候选报告
-      const shuffle = (array: any[]) => {
-        for (let i = array.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [array[i], array[j]] = [array[j], array[i]];
-        }
-        return array;
-      };
+    rawRows.forEach((row: any) => {
+      const key = row.relation_key;
+      if (baskets[key]) {
+        baskets[key].push(row);
+      } else {
+        baskets.mention.push(row);
+      }
+    });
 
-      shuffle(baskets.competitor);
-      shuffle(baskets.supplier);
-      shuffle(baskets.operation);
-      shuffle(baskets.mention);
+    // 2. 随机打散每个篮子中的候选报告
+    const shuffle = (array: any[]) => {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    };
 
-      // 3. 轮询穿插抽取不重复的报告 (竞争 -> 供销 -> 经营 -> 涉及)
-      const orderKeys = ['competitor', 'supplier', 'operation', 'mention'];
-      const basketIndices = [0, 0, 0, 0];
-      const selectedList: any[] = [];
-      const selectedIds = new Set<string>();
+    shuffle(baskets.competitor);
+    shuffle(baskets.supplier);
+    shuffle(baskets.operation);
+    shuffle(baskets.mention);
 
-      let hasMore = true;
-      while (selectedList.length < 4 && hasMore) {
-        hasMore = false;
-        for (let i = 0; i < 4; i++) {
-          if (selectedList.length >= 4) break;
-          const key = orderKeys[i];
-          const basket = baskets[key];
-          const curIdx = basketIndices[i];
-          if (curIdx < basket.length) {
-            hasMore = true;
-            const item = basket[curIdx];
-            basketIndices[i] = curIdx + 1;
-            if (!selectedIds.has(item.id)) {
-              selectedIds.add(item.id);
-              selectedList.push({
-                id: item.id,
-                title: item.title,
-                category: item.category,
-                market_region: item.market_region
-              });
-            }
+    // 3. 轮询穿插抽取不重复的报告 (竞争 -> 供销 -> 经营 -> 涉及)
+    const orderKeys = ['competitor', 'supplier', 'operation', 'mention'];
+    const basketIndices = [0, 0, 0, 0];
+    const selectedList: any[] = [];
+    const selectedIds = new Set<string>();
+
+    let hasMore = true;
+    while (selectedList.length < 4 && hasMore) {
+      hasMore = false;
+      for (let i = 0; i < 4; i++) {
+        if (selectedList.length >= 4) break;
+        const key = orderKeys[i];
+        const basket = baskets[key];
+        const curIdx = basketIndices[i];
+        if (curIdx < basket.length) {
+          hasMore = true;
+          const item = basket[curIdx];
+          basketIndices[i] = curIdx + 1;
+          if (!selectedIds.has(item.id)) {
+            selectedIds.add(item.id);
+            selectedList.push({
+              id: item.id,
+              title: item.title,
+              category: item.category,
+              market_region: item.market_region
+            });
           }
         }
       }
-
-      // 4. 最后再次随机混淆已选出报告的排序，以完全打破规律性
-      related = shuffle(selectedList);
     }
 
-    context.res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+    // 4. 最后再次随机混淆已选出报告的排序，以完全打破规律性
+    related = shuffle(selectedList);
+
+    if (userId) {
+      context.res.setHeader('Cache-Control', 'private, no-cache, no-store');
+    } else {
+      context.res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+    }
+    context.res.setHeader('Vary', 'Cookie');
+
 
     const proto = (context.req.headers['x-forwarded-proto'] as string) || 'https';
     const host = (context.req.headers['x-forwarded-host'] as string) || context.req.headers.host || 'marketgraphic.cn';
@@ -998,8 +1021,11 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     };
   } catch (err) {
     console.error('SSR 加载报告详情页失败，原因:', err);
-    return { notFound: true };
+    throw err; // 让 Next.js 渲染 500.tsx 错误页，避免伪装成 404 导致爬虫误删索引
   } finally {
-    dbClient.release();
+    if (dbClient) {
+      dbClient.release();
+    }
   }
 };
+

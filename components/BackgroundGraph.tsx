@@ -30,6 +30,44 @@ export default function BackgroundGraph() {
     if (!ctx) return;
 
     let width = 0, height = 0;
+    let staticCanvas: HTMLCanvasElement | null = null;
+
+    const lineSpacing = 100;
+    const yDotSpacing = 80;
+
+    const renderStaticGrid = (w: number, h: number, dpr: number) => {
+      staticCanvas = document.createElement('canvas');
+      staticCanvas.width = w * dpr;
+      staticCanvas.height = h * dpr;
+      const sCtx = staticCanvas.getContext('2d');
+      if (!sCtx) return;
+      sCtx.scale(dpr, dpr);
+
+      // 1. 预绘制垂直轨道线
+      sCtx.save();
+      sCtx.strokeStyle = 'rgba(18, 18, 18, 0.02)';
+      sCtx.lineWidth = 1.0;
+      for (let x = 0; x < w + lineSpacing; x += lineSpacing) {
+        sCtx.beginPath();
+        sCtx.moveTo(x, 0);
+        sCtx.lineTo(x, h);
+        sCtx.stroke();
+      }
+      sCtx.restore();
+
+      // 2. 预绘制网格点阵
+      sCtx.save();
+      sCtx.fillStyle = 'rgba(18, 18, 18, 0.06)';
+      for (let x = 0; x < w + lineSpacing; x += lineSpacing) {
+        for (let y = 0; y < h + yDotSpacing; y += yDotSpacing) {
+          sCtx.beginPath();
+          sCtx.arc(x, y, 1.5, 0, Math.PI * 2);
+          sCtx.fill();
+        }
+      }
+      sCtx.restore();
+    };
+
     const resize = () => {
       const dpr = window.devicePixelRatio || 1;
       width = window.innerWidth;
@@ -37,6 +75,7 @@ export default function BackgroundGraph() {
       canvas.width = width * dpr;
       canvas.height = height * dpr;
       ctx.scale(dpr, dpr);
+      renderStaticGrid(width, height, dpr);
     };
     window.addEventListener('resize', resize);
     resize();
@@ -48,32 +87,19 @@ export default function BackgroundGraph() {
       return x - Math.floor(x);
     };
 
-    // Instantiate 14 regular vertical tracks and distribute 15 scrolling spheres
-    const lineSpacing = 100;
-    const yDotSpacing = 80;
     const ballCount = 15;
     const balls: FloatingBall[] = [];
-
-    // Calculate maximum grid track count based on typical wide display sizes
     const maxTrackCount = Math.ceil(3000 / lineSpacing);
 
     for (let i = 0; i < ballCount; i++) {
-      // Pick a random grid vertical line index
       const xIndex = Math.floor(random() * maxTrackCount);
-      // Random initial Y position with safety margins
       const initialY = random() * (height > 0 ? height : 800);
-      // Random vertical speed between [-1.0, 1.0] excluding stationary speeds [-0.2, 0.2]
       let speed = -1.0 + random() * 2.0;
       if (Math.abs(speed) < 0.2) {
         speed = speed > 0 ? 0.3 : -0.3;
       }
-      // Speed multiplier for subtle scrolling dynamics
       speed *= 0.8;
-
-      // Ball radius between 3px and 5.5px
       const radius = 3.0 + random() * 2.5;
-
-      // Color scheme: 20% Accent Orange, 80% Soft Slate Grey
       const isOrange = random() < 0.2;
       const color = isOrange ? 'rgba(255, 100, 30, 0.3)' : 'rgba(122, 117, 111, 0.18)';
 
@@ -86,7 +112,6 @@ export default function BackgroundGraph() {
       });
     }
 
-    // 手动在特定垂直轨道上追加小球（分别在第二条、第四条、倒数第二条竖线上）
     const numTracks = Math.floor(width / lineSpacing) || 14;
     const addCustomBall = (xIndex: number, isOrange: boolean) => {
       const radius = 3.0 + random() * 2.5;
@@ -103,14 +128,9 @@ export default function BackgroundGraph() {
       });
     };
 
-    // 1. 第二条竖线 (索引 1) 增加各一个 (一个橘色，一个灰色)
     addCustomBall(1, true);
     addCustomBall(1, false);
-
-    // 2. 第四条竖线 (索引 3) 增加一个灰色
     addCustomBall(3, false);
-
-    // 3. 倒数第二条竖线 (索引 numTracks - 2) 增加各一个 (一个橘色，一个灰色)
     const penIndex = Math.max(2, numTracks - 2);
     addCustomBall(penIndex, true);
     addCustomBall(penIndex, false);
@@ -135,35 +155,15 @@ export default function BackgroundGraph() {
 
       ctx.clearRect(0, 0, width, height);
 
-      // 1. Draw Regular Vertical Track Lines (100px intervals)
-      ctx.save();
-      ctx.strokeStyle = 'rgba(18, 18, 18, 0.02)';
-      ctx.lineWidth = 1.0;
-      for (let x = 0; x < width + lineSpacing; x += lineSpacing) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
-        ctx.stroke();
+      // 1. 高性能单次贴图预渲染的静态背景网格
+      if (staticCanvas) {
+        ctx.drawImage(staticCanvas, 0, 0, width, height);
       }
-      ctx.restore();
 
-      // 2. Draw Regular Intersection Grid Dots (100px X, 80px Y)
-      ctx.save();
-      ctx.fillStyle = 'rgba(18, 18, 18, 0.06)';
-      for (let x = 0; x < width + lineSpacing; x += lineSpacing) {
-        for (let y = 0; y < height + yDotSpacing; y += yDotSpacing) {
-          ctx.beginPath();
-          ctx.arc(x, y, 1.5, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-      ctx.restore();
-
-      // 3. Update & Draw Floating Sphere Particles
+      // 2. 更新并绘制动态小球粒子
       balls.forEach(ball => {
         ball.y += ball.speed;
 
-        // Loop recycle logic
         if (ball.speed > 0 && ball.y > height + 20) {
           ball.y = -20;
         } else if (ball.speed < 0 && ball.y < -20) {
@@ -177,7 +177,6 @@ export default function BackgroundGraph() {
         ctx.arc(realX, ball.y, ball.radius, 0, Math.PI * 2);
         ctx.fillStyle = ball.color;
         
-        // Add delicate glowing effect to accent orange spheres
         if (ball.color.includes('255, 100, 30')) {
           ctx.shadowBlur = 6;
           ctx.shadowColor = 'rgba(255, 100, 30, 0.6)';
@@ -199,6 +198,7 @@ export default function BackgroundGraph() {
       cancelAnimationFrame(animId);
     };
   }, [reduceMotion]);
+
 
   if (reduceMotion) {
     return <div className={styles.container} style={{ background: '#f5f5f7' }}></div>;

@@ -674,8 +674,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     const quota = auth.freeQuota;
     const nickname = auth.nickname;
 
-    // 1. 获取所有公开快讯 (使用 ARRAY_TO_STRING 聚合多品类与多国家标签)
-    const newsRes = await dbClient.query(
+    // 并行拉取：快讯列表与行业分类字典
+    const newsPromise = dbClient.query(
       `SELECT n.id, n.title, n.summary, n.published_at, n.source_url,
               ARRAY_TO_STRING(ARRAY(
                 SELECT name FROM industries 
@@ -693,18 +693,30 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
        ORDER BY n.published_at DESC`
     );
 
+    const industriesPromise = dbClient.query(
+      'SELECT id, name FROM industries WHERE name = ANY($1)',
+      [STANDARD_CATEGORIES]
+    );
+
+    const [newsRes, industriesRes] = await Promise.all([
+      newsPromise,
+      industriesPromise
+    ]);
+
     const newsList = newsRes.rows.map((row: any) => ({
       ...row,
       published_at: row.published_at ? row.published_at.toISOString() : null
     }));
 
-    // 2. 获取所有行业列表供筛选使用，严格按照 GTB 54 项标准品类顺序展示
-    const industriesRes = await dbClient.query(
-      'SELECT id, name FROM industries WHERE name = ANY($1)',
-      [STANDARD_CATEGORIES]
-    );
     const indMap = new Map(industriesRes.rows.map((r: any) => [r.name, r]));
     const orderedIndustries = STANDARD_CATEGORIES.map(name => indMap.get(name) || { id: name, name });
+
+    if (userId) {
+      context.res.setHeader('Cache-Control', 'private, no-cache, no-store');
+    } else {
+      context.res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+    }
+    context.res.setHeader('Vary', 'Cookie');
 
     const proto = (context.req.headers['x-forwarded-proto'] as string) || 'https';
     const host = (context.req.headers['x-forwarded-host'] as string) || context.req.headers.host || 'marketgraphic.cn';
@@ -723,6 +735,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         nickname
       }
     };
+
   } catch (err) {
     console.error('Error fetching public news list page SSR:', err);
     return {

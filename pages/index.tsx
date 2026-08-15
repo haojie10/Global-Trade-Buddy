@@ -694,77 +694,95 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     const nickname = auth.nickname;
 
     let graphData: any = { nodes: [], links: [] };
-    let allReports: any[] = [];
 
-    if (userId) {
-      if (userRole === 'admin') {
-        const reportsRes = await dbClient.query(`
-          SELECT r.id, r.title, r.category, r.market_region, r.summary,
-                 EXISTS(SELECT 1 FROM favorites f WHERE f.user_id = $1 AND f.report_id = r.id) as is_favorited
-          FROM reports r
-          ORDER BY r.created_at DESC
-        `, [userId]);
-        
-        allReports = reportsRes.rows.map((row: any) => ({
-          id: row.id,
-          title: row.title,
-          category: row.category,
-          market_region: row.market_region,
-          summary: row.summary,
-          isUnlocked: true,
-          isFavorited: row.is_favorited
-        }));
+    // 并发拉取：报告列表 Promise 与 最新资讯 Promise
+    const reportsPromise = (async () => {
+      if (userId) {
+        if (userRole === 'admin') {
+          const reportsRes = await dbClient.query(`
+            SELECT r.id, r.title, r.category, r.market_region, r.summary,
+                   EXISTS(SELECT 1 FROM favorites f WHERE f.user_id = $1 AND f.report_id = r.id) as is_favorited
+            FROM reports r
+            ORDER BY r.created_at DESC
+          `, [userId]);
+          
+          return reportsRes.rows.map((row: any) => ({
+            id: row.id,
+            title: row.title,
+            category: row.category,
+            market_region: row.market_region,
+            summary: row.summary,
+            isUnlocked: true,
+            isFavorited: row.is_favorited
+          }));
+        } else {
+          const reportsRes = await dbClient.query(`
+            SELECT r.id, r.title, r.category, r.market_region, r.summary,
+                   EXISTS(SELECT 1 FROM unlocks u WHERE u.user_id = $1 AND u.report_id = r.id) as is_unlocked,
+                   EXISTS(SELECT 1 FROM favorites f WHERE f.user_id = $1 AND f.report_id = r.id) as is_favorited
+            FROM reports r
+            ORDER BY r.created_at DESC
+            LIMIT 30
+          `, [userId]);
+          
+          return reportsRes.rows.map((row: any) => ({
+            id: row.id,
+            title: row.title,
+            category: row.category,
+            market_region: row.market_region,
+            summary: row.summary,
+            isUnlocked: row.is_unlocked,
+            isFavorited: row.is_favorited
+          }));
+        }
       } else {
         const reportsRes = await dbClient.query(`
-          SELECT r.id, r.title, r.category, r.market_region, r.summary,
-                 EXISTS(SELECT 1 FROM unlocks u WHERE u.user_id = $1 AND u.report_id = r.id) as is_unlocked,
-                 EXISTS(SELECT 1 FROM favorites f WHERE f.user_id = $1 AND f.report_id = r.id) as is_favorited
-          FROM reports r
-          ORDER BY r.created_at DESC
-          LIMIT 30
-        `, [userId]);
-        
-        allReports = reportsRes.rows.map((row: any) => ({
+          SELECT id, title, category, market_region, summary FROM reports ORDER BY created_at DESC LIMIT 30
+        `);
+        return reportsRes.rows.map((row: any) => ({
           id: row.id,
           title: row.title,
           category: row.category,
           market_region: row.market_region,
           summary: row.summary,
-          isUnlocked: row.is_unlocked,
-          isFavorited: row.is_favorited
+          isUnlocked: false,
+          isFavorited: false
         }));
       }
-    } else {
-      const reportsRes = await dbClient.query(`
-        SELECT id, title, category, market_region, summary FROM reports ORDER BY created_at DESC LIMIT 30
-      `);
-      allReports = reportsRes.rows.map((row: any) => ({
-        id: row.id,
-        title: row.title,
-        category: row.category,
-        market_region: row.market_region,
-        summary: row.summary,
-        isUnlocked: false,
-        isFavorited: false
-      }));
-    }
+    })();
 
-    // 获取最新 6 条资讯数据
-    const latestArticlesRes = await dbClient.query(
-      `SELECT n.id, n.title, n.summary, n.published_at,
-              (SELECT name FROM industries JOIN news_industries ON industries.id = news_industries.industry_id WHERE news_id = n.id LIMIT 1) as industry,
-              (SELECT region FROM countries JOIN news_countries ON countries.id = news_countries.country_id WHERE news_id = n.id LIMIT 1) as region,
-              (SELECT name FROM countries JOIN news_countries ON countries.id = news_countries.country_id WHERE news_id = n.id LIMIT 1) as country
-       FROM news n
-       WHERE n.status = 'published'
-       ORDER BY n.published_at DESC LIMIT 6`
-    );
+    // 优化：采用单次 LEFT JOIN 消除 3 次标量子查询 (Correlated Subqueries)
+    const latestArticlesPromise = dbClient.query(`
+      SELECT n.id, n.title, n.summary, n.published_at,
+             i.name as industry,
+             c.region as region,
+             c.name as country
+      FROM news n
+      LEFT JOIN news_industries ni ON n.id = ni.news_id
+      LEFT JOIN industries i ON ni.industry_id = i.id
+      LEFT JOIN news_countries nc ON n.id = nc.news_id
+      LEFT JOIN countries c ON nc.country_id = c.id
+      WHERE n.status = 'published'
+      ORDER BY n.published_at DESC LIMIT 6
+    `);
+
+    const [allReports, latestArticlesRes] = await Promise.all([
+      reportsPromise,
+      latestArticlesPromise
+    ]);
+
     const latestArticles = latestArticlesRes.rows.map((row: any) => ({
       ...row,
       published_at: row.published_at ? row.published_at.toISOString() : null
     }));
 
-    context.res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+    if (userId) {
+      context.res.setHeader('Cache-Control', 'private, no-cache, no-store');
+    } else {
+      context.res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+    }
+    context.res.setHeader('Vary', 'Cookie');
+
 
     return {
       props: {
