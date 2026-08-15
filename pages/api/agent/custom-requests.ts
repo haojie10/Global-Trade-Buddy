@@ -92,7 +92,21 @@ async function agentCustomRequestsHandler(
           reportTitle = `《${payloadObj.companyName || ''} 企业战略情报洞察报告》`;
         }
 
-        const siteUrl = process.env.GTB_API_URL || 'http://124.222.201.143:3000';
+        const getValidSiteUrl = (): string => {
+          const envUrl = process.env.GTB_API_URL || process.env.NEXT_PUBLIC_SITE_URL || '';
+          if (
+            envUrl &&
+            !envUrl.includes('edgeone') &&
+            !envUrl.includes('vercel') &&
+            !envUrl.includes('tcb.qcloud.la') &&
+            !envUrl.includes('cloudbase')
+          ) {
+            return envUrl.replace(/\/+$/, '');
+          }
+          return 'http://124.222.201.143:3000';
+        };
+
+        const siteUrl = getValidSiteUrl();
         const reportUrl = `${siteUrl}/reports/${updatedRecord.report_id}`;
 
         const emailSubject = `【GlobalTradeBuddy】您订购的 ${reportTitle} 已生成完毕！`;

@@ -44,7 +44,20 @@ async function handler(req: NextApiRequest, res: NextApiResponse, dbClient: Pool
       const notifyEmail = taskObj.contact_email;
 
       if (notifyEmail && notifyEmail.includes('@') && !notifyEmail.endsWith('@gtb.user')) {
-        const reportLink = `http://124.222.201.143:3000/reports/${newReport.id}`;
+        const getValidSiteUrl = (): string => {
+          const envUrl = process.env.GTB_API_URL || process.env.NEXT_PUBLIC_SITE_URL || '';
+          if (
+            envUrl &&
+            !envUrl.includes('edgeone') &&
+            !envUrl.includes('vercel') &&
+            !envUrl.includes('tcb.qcloud.la') &&
+            !envUrl.includes('cloudbase')
+          ) {
+            return envUrl.replace(/\/+$/, '');
+          }
+          return 'http://124.222.201.143:3000';
+        };
+        const reportLink = `${getValidSiteUrl()}/reports/${newReport.id}`;
         sendMail({
           to: notifyEmail,
           subject: `【GlobalTradeBuddy】您定制的《${title}》研报已生成上线！`,
