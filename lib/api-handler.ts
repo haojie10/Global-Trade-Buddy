@@ -40,6 +40,9 @@ export function withDb(handler: DbHandler, options?: WithDbOptions) {
     }
 
     // 4. 获取数据库连接并执行 handler
+    const requestId = Math.random().toString(36).slice(2, 10);
+    const startTime = Date.now();
+    console.log(`[${requestId}] ${req.method} ${req.url}`);
     const dbClient = await pool.connect();
     if (process.env.NODE_ENV === 'test') {
       const connStr = process.env.TEST_DATABASE_URL || '';
@@ -64,6 +67,7 @@ export function withDb(handler: DbHandler, options?: WithDbOptions) {
       return res.status(500).json({ error: safeMessage });
     } finally {
       dbClient.release();
+      console.log(`[${requestId}] ${req.method} ${req.url} -> ${Date.now() - startTime}ms`);
     }
   };
 }

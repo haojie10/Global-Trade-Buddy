@@ -106,8 +106,7 @@ font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, s
 所有生成的 HTML 报告必须在以下两个位置完整展示 Market Graphic 品牌 Logo 与官方网址：
 
 1. **吸顶导航栏 / 头部右上角 (Header)**：
-   - 必须包含 `Powered by Market Graphic` 品牌文字；
-   - 在文字右侧必须紧随放置高清官方品牌 Logo（以 Base64 内嵌），保持整体排版紧凑、水平居中对齐。
+   - 包含 `Powered by` 说明文字紧随官方品牌 Logo 图标（以 Base64 内嵌），保持排版轻量紧凑，无需重复堆叠文字。
 2. **报告底部 (Footer)**：
-   - 必须居中展示官方品牌 Logo 图标及 `Market Graphic` 标识；
+   - 居中展示官方品牌 Logo 图标（色值精准对齐品牌色 `#ff641e`）；
    - 必须附带官方主站超链接：`<a href="https://marketgraphic.cn" target="_blank">www.marketgraphic.cn</a>`，样式采用品牌橘色 `#ff641e`。
