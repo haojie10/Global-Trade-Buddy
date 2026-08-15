@@ -137,5 +137,4 @@ font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, s
 1. **头部标题区域右上角 (Header)**：
    - 包含 `Powered by` 说明文字紧随官方品牌 Logo 图标（以 Base64 内嵌），保持排版轻量紧凑，无需重复堆叠文字。
 2. **报告底部 (Footer)**：
-   - 居中展示官方品牌 Logo 图标（色值精准对齐品牌色 `#ff641e`）；
-   - 必须附带官方主站超链接：`<a href="https://marketgraphic.cn" target="_blank">www.marketgraphic.cn</a>`，样式采用品牌橘色 `#ff641e`。
+   - 底部不放置 Logo，保持极简纯粹；在最下方居中附带官方主站超链接：`<a href="https://marketgraphic.cn" target="_blank">www.marketgraphic.cn</a>`，样式采用品牌橘色 `#ff641e`。
