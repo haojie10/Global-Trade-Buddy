@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>El Corte Inglés - 360° 企业战略情报报告</title>
+
+    <!-- ⚠️ 元数据 - 必须按实际内容填写，多值用英文半角逗号分割 ⚠️ -->
+    <!-- ⚠️ competitors/channels/suppliers/customers/sister_parents 均使用公司简称，去除法律形式后缀 -->
+    <!-- ⚠️ 无真实公司名时该字段留空(content="")，严禁填入产业集群/地域泛称等非公司实体描述 -->
+    <meta name="category" content="customer">
+    <meta name="summary" content="El Corte Inglés（西班牙英国宫/英格列斯）是欧洲第一大综合百货零售巨头，2024/2025财年总营业额达166.75亿欧元（约1308亿人民币），EBITDA达12.09亿欧元。集团旗下拥有百货商厦、Hipercor大卖场、Supercor超市、Sfera快时尚及Bricor等多元业态。报告深度解构其百亿级全品类采购网络、上海与香港办事处直采通道、自主品牌矩阵、准入合规红线及中国供应商切入策略。">
+    <meta name="company_name" content="El Corte Inglés">
+    <meta name="company_aliases" content="西班牙英国宫, 英格列斯百货, 英国宫, El Corte Ingles, ECI">
+    <meta name="company_website" content="https://www.elcorteingles.es">
+    <meta name="competitors" content="Inditex, Mercadona, Carrefour, Primark, Mango, MediaMarkt, Leroy Merlin, IKEA, Amazon, Tendam">
+    <meta name="products" content="男女装, 童装, 内衣, 运动服及休闲服, 鞋, 箱包, 服装饰物及配件, 家居用品, 家用纺织品, 家具, 家用电器, 电子消费品及信息产品, 玩具, 办公文具, 体育及旅游休闲用品, 食品, 个人护理用具, 钟表眼镜">
+    <meta name="regions" content="西班牙, 葡萄牙, 欧洲">
+    <meta name="channels" content="">
+    <meta name="suppliers" content="Samsung, Sony, Philips, LG, Balay, Cecotec, DeLonghi, Samsonite, LOreal, Puig, Mayoral, Pikolin, Flex">
+    <meta name="customers" content="">
+    <meta name="sister_parents" content="Fundación Ramón Areces, Primefin, Mutua Madrileña, Financiera El Corte Inglés, Viajes El Corte Inglés">
+
+    <!-- CDN 依赖 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            --bg-main: #fdfbf7;
+            --bg-sub: #f6f3ec;
+            --color-accent: #ff641e;
+            --color-text: #3c3935;
+            --color-muted: #7a756f;
+            --radius-card: 22px;
+            --radius-sub: 16px;
+            --radius-tag: 12px;
+            --shadow-default: 0 4px 12px rgba(160, 109, 68, 0.03);
+            --shadow-hover: 0 6px 16px rgba(160, 109, 68, 0.08);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg-main); color: var(--color-text); font-weight: 400;
+            line-height: 1.6; scroll-behavior: smooth;
+        }
+        .sand-card {
+            background: var(--bg-sub); border: 1px solid rgba(160, 109, 68, 0.08);
+            border-radius: var(--radius-card); box-shadow: var(--shadow-default);
+        }
+        .sand-card-sub {
+            background: var(--bg-main); border: 1px solid rgba(160, 109, 68, 0.08);
+            border-radius: var(--radius-sub);
+        }
+        .report-tag {
+            background: rgba(160, 109, 68, 0.05); color: var(--color-text);
+            border: 1px solid rgba(160, 109, 68, 0.15); padding: 4px 10px;
+            border-radius: var(--radius-tag); font-size: 0.75rem; font-weight: 500; display: inline-block;
+        }
+        .sand-btn {
+            background: var(--bg-sub); border: none; border-radius: var(--radius-card);
+            color: var(--color-accent); padding: 10px 24px; font-weight: 300;
+            box-shadow: var(--shadow-default);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); cursor: pointer; font-size: 0.85rem;
+        }
+        .sand-btn:hover { background: var(--bg-main); box-shadow: var(--shadow-hover); transform: translateY(-1px); }
+        h2 { font-size: 1.25rem; font-weight: 400; letter-spacing: -0.01em; }
+        h3 { font-size: 0.95rem; font-weight: 400; }
+        .text-accent { color: var(--color-accent); }
+        .text-muted { color: var(--color-muted); }
+        .section-accent { border-left: 3px solid var(--color-accent); padding-left: 14px; }
+        .legend-customer { color: #ff641e; }
+        .legend-product { color: #7a756f; }
+        .chart-container { height: 350px; width: 100%; }
+        .tier-tag { background: var(--color-accent); }
+    </style>
+</head>
+<body>
+
+    <!-- Main Content -->
+    <main>
+
+    <!-- ====== 店面横幅 (实体零售商标配) ====== -->
+    <div class="w-full overflow-hidden aspect-[21/9] max-h-[250px] border-b border-[rgba(160,109,68,0.08)] relative group">
+        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAwIDUwMCIgd2lkdGg9IjEyMDAiIGhlaWdodD0iNTAwIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0ic2t5R3JhZCIgeDE9IjAlIiB5MT0iMCUiIHgyPSIwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMWUyOTNiIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iNjAlIiBzdG9wLWNvbG9yPSIjMzM0MTU1Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzQ3NTU2OSIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZmFjYWRlR3JhZCIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMmQzNzQ4Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iNTAlIiBzdG9wLWNvbG9yPSIjMWEyMDJjIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzJkMzc0OCIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZWNpR3JlZW5HcmFkIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzAwNmIzZiIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMwMDRkMmMiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImdsYXNzR3JhZDEiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMCUiIHkyPSIxMDAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI2ZlZjNjNyIgc3RvcC1vcGFjaXR5PSIwLjkiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSI1MCUiIHN0b3AtY29sb3I9IiNmZmZiZWIiIHN0b3Atb3BhY2l0eT0iMC42Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iI2ZlZDdhYSIgc3RvcC1vcGFjaXR5PSIwLjg1Ii8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJnbGFzc0dyYWQyIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjAlIiB5Mj0iMTAwJSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiNlMGU3ZmYiIHN0b3Atb3BhY2l0eT0iMC44NSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjUwJSIgc3RvcC1jb2xvcj0iI2VlZjJmZiIgc3RvcC1vcGFjaXR5PSIwLjYiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjYzdkMmZlIiBzdG9wLW9wYWNpdHk9IjAuODUiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8ZmlsdGVyIGlkPSJzdWJ0bGVTaGFkb3ciIHg9Ii0xMCUiIHk9Ii0xMCUiIHdpZHRoPSIxMjAlIiBoZWlnaHQ9IjEyMCUiPgogICAgICA8ZmVEcm9wU2hhZG93IGR4PSIwIiBkeT0iOCIgc3RkRGV2aWF0aW9uPSIxMiIgZmxvb2QtY29sb3I9IiMwMDAwMDAiIGZsb29kLW9wYWNpdHk9IjAuNSIvPgogICAgPC9maWx0ZXI+CiAgICA8ZmlsdGVyIGlkPSJnbG93R3JlZW4iIHg9Ii0yMCUiIHk9Ii0yMCUiIHdpZHRoPSIxNDAlIiBoZWlnaHQ9IjE0MCUiPgogICAgICA8ZmVEcm9wU2hhZG93IGR4PSIwIiBkeT0iNCIgc3RkRGV2aWF0aW9uPSI4IiBmbG9vZC1jb2xvcj0iIzAwNmIzZiIgZmxvb2Qtb3BhY2l0eT0iMC42Ii8+CiAgICA8L2ZpbHRlcj4KICA8L2RlZnM+CgogIDwhLS0gU2t5ICYgR3JvdW5kIEJhY2tncm91bmQgLS0+CiAgPHJlY3Qgd2lkdGg9IjEyMDAiIGhlaWdodD0iNTAwIiBmaWxsPSJ1cmwoI3NreUdyYWQpIi8+CiAgPHJlY3QgeT0iNDAwIiB3aWR0aD0iMTIwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiMwZjE3MmEiLz4KICA8bGluZSB4MT0iMCIgeTE9IjQwMCIgeDI9IjEyMDAiIHkyPSI0MDAiIHN0cm9rZT0iIzY0NzQ4YiIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPHJlY3QgeD0iMTAwIiB5PSI0MDUiIHdpZHRoPSIxMDAwIiBoZWlnaHQ9Ijk1IiBmaWxsPSIjMWUyOTNiIiBvcGFjaXR5PSIwLjciLz4KCiAgPCEtLSBNYWluIERlcGFydG1lbnQgU3RvcmUgQnVpbGRpbmcgQXJjaGl0ZWN0dXJlIC0tPgogIDxyZWN0IHg9IjgwIiB5PSI2MCIgd2lkdGg9IjEwNDAiIGhlaWdodD0iMzQwIiByeD0iMTAiIGZpbGw9InVybCgjZmFjYWRlR3JhZCkiIGZpbHRlcj0idXJsKCNzdWJ0bGVTaGFkb3cpIi8+CiAgCiAgPCEtLSBBcmNoaXRlY3R1cmFsIFRvcCBDb3JuaWNlIHdpdGggRUNJIFNpZ25hdHVyZSBEYXJrIEdyZWVuIFN0cmlwIC0tPgogIDxyZWN0IHg9IjgwIiB5PSI2MCIgd2lkdGg9IjEwNDAiIGhlaWdodD0iMTgiIGZpbGw9IiMwMDRkMmMiLz4KICA8cmVjdCB4PSI4MCIgeT0iNzgiIHdpZHRoPSIxMDQwIiBoZWlnaHQ9IjYiIGZpbGw9IiNmZjY0MWUiLz4KCiAgPCEtLSBVcHBlciBCdWlsZGluZyBXaW5kb3dzIC8gR3JpZCBUZXh0dXJlIC0tPgogIDxnIG9wYWNpdHk9IjAuMzUiPgogICAgPHJlY3QgeD0iMTIwIiB5PSIxMDAiIHdpZHRoPSI4MCIgaGVpZ2h0PSIzNSIgcng9IjMiIGZpbGw9IiNjYmQ1ZTEiLz4KICAgIDxyZWN0IHg9IjIyMCIgeT0iMTAwIiB3aWR0aD0iODAiIGhlaWdodD0iMzUiIHJ4PSIzIiBmaWxsPSIjY2JkNWUxIi8+CiAgICA8cmVjdCB4PSIzMjAiIHk9IjEwMCIgd2lkdGg9IjgwIiBoZWlnaHQ9IjM1IiByeD0iMyIgZmlsbD0iI2NiZDVlMSIvPgogICAgPHJlY3QgeD0iODAwIiB5PSIxMDAiIHdpZHRoPSI4MCIgaGVpZ2h0PSIzNSIgcng9IjMiIGZpbGw9IiNjYmQ1ZTEiLz4KICAgIDxyZWN0IHg9IjkwMCIgeT0iMTAwIiB3aWR0aD0iODAiIGhlaWdodD0iMzUiIHJ4PSIzIiBmaWxsPSIjY2JkNWUxIi8+CiAgICA8cmVjdCB4PSIxMDAwIiB5PSIxMDAiIHdpZHRoPSI4MCIgaGVpZ2h0PSIzNSIgcng9IjMiIGZpbGw9IiNjYmQ1ZTEiLz4KCiAgICA8cmVjdCB4PSIxMjAiIHk9IjE1MCIgd2lkdGg9IjgwIiBoZWlnaHQ9IjM1IiByeD0iMyIgZmlsbD0iI2NiZDVlMSIvPgogICAgPHJlY3QgeD0iMjIwIiB5PSIxNTAiIHdpZHRoPSI4MCIgaGVpZ2h0PSIzNSIgcng9IjMiIGZpbGw9IiNjYmQ1ZTEiLz4KICAgIDxyZWN0IHg9IjMyMCIgeT0iMTUwIiB3aWR0aD0iODAiIGhlaWdodD0iMzUiIHJ4PSIzIiBmaWxsPSIjY2JkNWUxIi8+CiAgICA8cmVjdCB4PSI4MDAiIHk9IjE1MCIgd2lkdGg9IjgwIiBoZWlnaHQ9IjM1IiByeD0iMyIgZmlsbD0iI2NiZDVlMSIvPgogICAgPHJlY3QgeD0iOTAwIiB5PSIxNTAiIHdpZHRoPSI4MCIgaGVpZ2h0PSIzNSIgcng9IjMiIGZpbGw9IiNjYmQ1ZTEiLz4KICAgIDxyZWN0IHg9IjEwMDAiIHk9IjE1MCIgd2lkdGg9IjgwIiBoZWlnaHQ9IjM1IiByeD0iMyIgZmlsbD0iI2NiZDVlMSIvPgogIDwvZz4KCiAgPCEtLSBDZW50cmFsIFByb21pbmVudCBCcmFuZCBTaWduYm9hcmQgLSBFbCBDb3J0ZSBJbmdsw6lzIEljb25pYyBUcmlhbmd1bGFyIEZsYWcgJiBMb2dvIC0tPgogIDxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDQyMCwgOTUpIiBmaWx0ZXI9InVybCgjZ2xvd0dyZWVuKSI+CiAgICA8IS0tIEJhY2tpbmcgQm9hcmQgLS0+CiAgICA8cmVjdCB4PSItMTAiIHk9Ii01IiB3aWR0aD0iMzgwIiBoZWlnaHQ9IjEwNSIgcng9IjE0IiBmaWxsPSJ1cmwoI2VjaUdyZWVuR3JhZCkiIHN0cm9rZT0iI2ZmZmZmZiIgc3Ryb2tlLXdpZHRoPSIyLjUiIGZpbHRlcj0idXJsKCNzdWJ0bGVTaGFkb3cpIi8+CiAgICAKICAgIDwhLS0gU2lnbmF0dXJlIEdyZWVuIFRyaWFuZ2xlIEZsYWcgU3ltYm9sIC0tPgogICAgPHBvbHlnb24gcG9pbnRzPSIyMCwxNSA3MCw1MCAyMCw4NSIgZmlsbD0iI2ZmZmZmZiIgb3BhY2l0eT0iMC45NSIvPgogICAgPHBvbHlnb24gcG9pbnRzPSIyNCwyMyA2Miw1MCAyNCw3NyIgZmlsbD0iIzAwNmIzZiIvPgogICAgPHBhdGggZD0iTSAyOCAzNSBRIDM4IDQ4IDUwIDUwIFEgMzggNTIgMjggNjUiIHN0cm9rZT0iI2ZmZmZmZiIgc3Ryb2tlLXdpZHRoPSIzIiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KCiAgICA8IS0tIERpc3RpbmN0aXZlIEJyYW5kIFNjcmlwdCAvIFR5cG9ncmFwaHkgLS0+CiAgICA8dGV4dCB4PSI4OCIgeT0iNTgiIGZvbnQtZmFtaWx5PSInQnJ1c2ggU2NyaXB0IE1UJywgJ1BhbGF0aW5vJywgJ1RpbWVzIE5ldyBSb21hbicsIHNlcmlmIiBmb250LXNpemU9IjQ2IiBmb250LXN0eWxlPSJpdGFsaWMiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiNmZmZmZmYiIGxldHRlci1zcGFjaW5nPSIxIj5FbCBDb3J0ZSBJbmdsw6lzPC90ZXh0PgogICAgPHRleHQgeD0iOTIiIHk9IjgyIiBmb250LWZhbWlseT0ic3lzdGVtLXVpLCAtYXBwbGUtc3lzdGVtLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjExIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjZTJlOGYwIiBsZXR0ZXItc3BhY2luZz0iMy41Ij5HUkFOREVTIEFMTUFDRU5FUzwvdGV4dD4KICA8L2c+CgogIDwhLS0gR3JvdW5kIEZsb29yIExhcmdlIEx1eHVyeSBEaXNwbGF5IFdpbmRvd3MgKEVzY2FwYXJhdGVzKSAtLT4KICA8ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxMTAsIDIzMCkiPgogICAgPCEtLSBXaW5kb3cgMTogTW9kYSAmIEFsdGEgQ29zdHVyYSAoRmFzaGlvbikgLS0+CiAgICA8cmVjdCB4PSIwIiB5PSIwIiB3aWR0aD0iMjIwIiBoZWlnaHQ9IjE3MCIgZmlsbD0idXJsKCNnbGFzc0dyYWQxKSIgc3Ryb2tlPSIjMzM0MTU1IiBzdHJva2Utd2lkdGg9IjQiLz4KICAgIDxyZWN0IHg9IjE1IiB5PSIzMCIgd2lkdGg9IjE5MCIgaGVpZ2h0PSIxOCIgZmlsbD0iIzFlMjkzYiIgb3BhY2l0eT0iMC43NSIgcng9IjMiLz4KICAgIDx0ZXh0IHg9IjExMCIgeT0iNDQiIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiNmZmZmZmYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGxldHRlci1zcGFjaW5nPSIxIj5NT0RBIFkgVEVOREVOQ0lBUzwvdGV4dD4KICAgIDwhLS0gU3R5bGl6ZWQgTWFubmVxdWlucyAvIEx1eHVyeSBEaXNwbGF5IC0tPgogICAgPHBhdGggZD0iTSA2MCA3MCBMIDc1IDE0MCBMIDQ1IDE0MCBaIiBmaWxsPSIjYjQ1MzA5IiBvcGFjaXR5PSIwLjg1Ii8+CiAgICA8Y2lyY2xlIGN4PSI2MCIgY3k9IjYyIiByPSI5IiBmaWxsPSIjZDk3NzA2Ii8+CiAgICA8cGF0aCBkPSJNIDE1MCA2NSBMIDE2NSAxNDAgTCAxMzUgMTQwIFoiIGZpbGw9IiMxZTI5M2IiIG9wYWNpdHk9IjAuODUiLz4KICAgIDxjaXJjbGUgY3g9IjE1MCIgY3k9IjU3IiByPSI5IiBmaWxsPSIjNDc1NTY5Ii8+CiAgICA8dGV4dCB4PSIxMTAiIHk9IjE2MCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTEiIGZvbnQtd2VpZ2h0PSI2MDAiIGZpbGw9IiM3ODM1MGYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPlNmZXJhIOKAoiBFbWlkaW8gVHVjY2k8L3RleHQ+CgogICAgPCEtLSBXaW5kb3cgMjogTWFpbiBFbnRyYW5jZSAmIEx1eHVyeSBBdHJpdW0gLS0+CiAgICA8cmVjdCB4PSIyNDAiIHk9IjAiIHdpZHRoPSIyNDAiIGhlaWdodD0iMTcwIiBmaWxsPSJ1cmwoI2dsYXNzR3JhZDIpIiBzdHJva2U9IiMzMzQxNTUiIHN0cm9rZS13aWR0aD0iNCIvPgogICAgPGxpbmUgeDE9IjM2MCIgeTE9IjAiIHgyPSIzNjAiIHkyPSIxNzAiIHN0cm9rZT0iIzFlMjkzYiIgc3Ryb2tlLXdpZHRoPSIzIi8+CiAgICA8cmVjdCB4PSIyNTUiIHk9IjIwIiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEzMCIgcng9IjQiIGZpbGw9IiNmZmZmZmYiIG9wYWNpdHk9IjAuMyIvPgogICAgPHJlY3QgeD0iMzY1IiB5PSIyMCIgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMzAiIHJ4PSI0IiBmaWxsPSIjZmZmZmZmIiBvcGFjaXR5PSIwLjMiLz4KICAgIDwhLS0gR3JhbmQgRW50cmFuY2UgQ2Fub3B5IFNpZ24gLS0+CiAgICA8cmVjdCB4PSIzMDAiIHk9IjU1IiB3aWR0aD0iMTIwIiBoZWlnaHQ9IjMwIiByeD0iNiIgZmlsbD0iIzAwNmIzZiIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjEuNSIvPgogICAgPHRleHQgeD0iMzYwIiB5PSI3NSIgZm9udC1mYW1pbHk9InN5c3RlbS11aSwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iI2ZmZmZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgbGV0dGVyLXNwYWNpbmc9IjIiPkVOVFJBREE8L3RleHQ+CiAgICA8dGV4dCB4PSIzNjAiIHk9IjE2MCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTEiIGZvbnQtd2VpZ2h0PSI2MDAiIGZpbGw9IiMxZTNhOGEiIHRleHQtYW5jaG9yPSJtaWRkbGUiPlBlcmZ1bWVyw61hIHkgQ29zbcOpdGljYTwvdGV4dD4KCiAgICA8IS0tIFdpbmRvdyAzOiBIb2dhciwgRGVjb3JhY2nDs24geSBHb3VybWV0IC0tPgogICAgPHJlY3QgeD0iNTAwIiB5PSIwIiB3aWR0aD0iMjIwIiBoZWlnaHQ9IjE3MCIgZmlsbD0idXJsKCNnbGFzc0dyYWQxKSIgc3Ryb2tlPSIjMzM0MTU1IiBzdHJva2Utd2lkdGg9IjQiLz4KICAgIDxyZWN0IHg9IjUxNSIgeT0iMzAiIHdpZHRoPSIxOTAiIGhlaWdodD0iMTgiIGZpbGw9IiMwMDRkMmMiIG9wYWNpdHk9IjAuODUiIHJ4PSIzIi8+CiAgICA8dGV4dCB4PSI2MTAiIHk9IjQ0IiBmb250LWZhbWlseT0ic3lzdGVtLXVpLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjZmZmZmZmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBsZXR0ZXItc3BhY2luZz0iMSI+Q0xVQiBERUwgR09VUk1FVDwvdGV4dD4KICAgIDwhLS0gR291cm1ldCBkaXNwbGF5IGljb25zIC0tPgogICAgPGNpcmNsZSBjeD0iNTYwIiBjeT0iOTAiIHI9IjIyIiBmaWxsPSIjYjkxYzFjIiBvcGFjaXR5PSIwLjgiLz4KICAgIDxjaXJjbGUgY3g9IjYxMCIgY3k9Ijg1IiByPSIxOCIgZmlsbD0iI2Q5NzcwNiIgb3BhY2l0eT0iMC44Ii8+CiAgICA8Y2lyY2xlIGN4PSI2NjAiIGN5PSI5NSIgcj0iMjQiIGZpbGw9IiMwNDc4NTciIG9wYWNpdHk9IjAuOCIvPgogICAgPHRleHQgeD0iNjEwIiB5PSIxNjAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjExIiBmb250LXdlaWdodD0iNjAwIiBmaWxsPSIjNzgzNTBmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5Ib2dhciDigKIgR2FzdHJvbm9tw61hPC90ZXh0PgoKICAgIDwhLS0gV2luZG93IDQ6IFRlY25vbG9nw61hIHkgRWxlY3Ryw7NuaWNhIC0tPgogICAgPHJlY3QgeD0iNzQwIiB5PSIwIiB3aWR0aD0iMjMwIiBoZWlnaHQ9IjE3MCIgZmlsbD0idXJsKCNnbGFzc0dyYWQyKSIgc3Ryb2tlPSIjMzM0MTU1IiBzdHJva2Utd2lkdGg9IjQiLz4KICAgIDxyZWN0IHg9Ijc1NSIgeT0iMzAiIHdpZHRoPSIyMDAiIGhlaWdodD0iMTgiIGZpbGw9IiMxZTI5M2IiIG9wYWNpdHk9IjAuODUiIHJ4PSIzIi8+CiAgICA8dGV4dCB4PSI4NTUiIHk9IjQ0IiBmb250LWZhbWlseT0ic3lzdGVtLXVpLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjZmZmZmZmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBsZXR0ZXItc3BhY2luZz0iMSI+RUxFQ1RSw5NOSUNBIFkgREVQT1JURTwvdGV4dD4KICAgIDwhLS0gU2NyZWVuIGRpc3BsYXkgbW9ja3VwcyAtLT4KICAgIDxyZWN0IHg9Ijc3MCIgeT0iNjUiIHdpZHRoPSI4MCIgaGVpZ2h0PSI1MCIgcng9IjMiIGZpbGw9IiMxZTI5M2IiIHN0cm9rZT0iIzYwYTVmYSIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgICA8cmVjdCB4PSI4NjUiIHk9IjcwIiB3aWR0aD0iOTAiIGhlaWdodD0iNDUiIHJ4PSIzIiBmaWxsPSIjMGYxNzJhIiBzdHJva2U9IiMzNGQzOTkiIHN0cm9rZS13aWR0aD0iMiIvPgogICAgPHRleHQgeD0iODU1IiB5PSIxNjAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjExIiBmb250LXdlaWdodD0iNjAwIiBmaWxsPSIjMWUzYThhIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5BbnNvbmljIOKAoiBTYWl2b2Qg4oCiIEJvb21lcmFuZzwvdGV4dD4KICA8L2c+CgogIDwhLS0gQW1iaWVudCBHb2xkZW4gU3RvcmVmcm9udCBTcG90bGlnaHRzIC0tPgogIDxwb2x5Z29uIHBvaW50cz0iNDEwLDEwMCAzMDAsNDAwIDY1MCw0MDAgNTAwLDEwMCIgZmlsbD0iI2ZlZjA4YSIgb3BhY2l0eT0iMC4wOCIvPgogIDxwb2x5Z29uIHBvaW50cz0iNzAwLDEwMCA2MDAsNDAwIDk1MCw0MDAgODAwLDEwMCIgZmlsbD0iI2ZlZjA4YSIgb3BhY2l0eT0iMC4wOCIvPgo8L3N2Zz4=" class="w-full h-full object-cover object-center" alt="El Corte Inglés 西班牙马德里旗舰百货大厦外景与品牌标识">
+        <div class="absolute inset-0 bg-gradient-to-t from-[#3c3935]/30 via-transparent to-transparent"></div>
+        <div class="absolute bottom-4 left-8 text-white z-10">
+            <span class="bg-[#ff641e] text-white text-[10px] uppercase font-semibold px-2 py-0.5 rounded tracking-wider">MADRID, SPAIN</span>
+            <h3 class="text-xl font-bold mt-1 drop-shadow-md text-white">El Corte Inglés S.A. 欧洲综合百货旗舰与全渠道零售网络</h3>
+        </div>
+    </div>
+
+        <!-- ====== 吸顶标题栏 ====== -->
+        <header class="sticky top-0 z-40 bg-[#fdfbf7] border-b border-[rgba(160,109,68,0.08)] shadow-[0_4px_12px_rgba(160,109,68,0.03)] px-6 py-1">
+            <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-1">
+                <div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="tier-tag text-[10px] text-white font-bold px-2 py-0.5 rounded" style="background:#ff641e;">欧洲第一大百货零售巨头</span>
+                    </div>
+                    <h2 class="text-xl font-normal text-[#3c3935] tracking-tight">El Corte Inglés 企业全维洞察报告</h2>
+                    <p class="text-[#7a756f] mt-1">2024/2025 财年营业额达 166.75 亿欧元 | 西班牙与葡萄牙全渠道覆盖 | 远东直采通道与供应商准入全景报告</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="flex flex-col items-end gap-0.5">
+                            <span class="text-xs text-[#7a756f] font-medium">Powered by</span>
+                            <span class="text-sm font-semibold text-[#ff641e] tracking-tight">Market Graphic</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- ====== 报告正文容器 ====== -->
+        <div class="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
+
+            <!-- ═══════════ Section 1: 企业全景概览 ═══════════ -->
+            <section id="overview" class="scroll-mt-12">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 bg-blue-100 text-blue-600 rounded-lg"><i data-lucide="globe" size="24"></i></div>
+                    <h3 class="text-2xl font-bold text-[#3c3935]">1. 企业全景概览 (Overview)</h3>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="md:col-span-2 sand-card p-8 leading-relaxed text-[#3c3935] space-y-4">
+                        <div class="space-y-4 text-sm leading-7">
+                            <p class="font-medium text-[#3c3935]">
+                                <strong>El Corte Inglés S.A.（西班牙英国宫 / 英格列斯百货公司）</strong>创立于 1940 年（其商业源头可追溯至 1890 年马德里市中心的一家裁缝工坊），总部设于西班牙马德里。经过八十余年的演进与并购整合，集团已成长为<strong>欧洲排名第一、全球规模名列前茅的综合性百货零售与商业服务巨头</strong>，更是西班牙与葡萄牙现代零售业不可撼动的商业图腾。
+                            </p>
+                            <p>
+                                <strong>商业体量与核心业绩：</strong>根据集团最新发布的 2024/2025 财年（截至 2025 年 2 月 28 日）经审计财务数据，El Corte Inglés 全年实现<strong>总营业额（Volumen global de ingresos）166.75 亿欧元</strong>（按当前汇率折合约 <strong>1,308 亿元人民币</strong> / 182 亿美元），同比增长 2.0%（同店可比口径增长 4.3%）；其中核心零售业务（Retail）营业额达 <strong>129.76 亿欧元</strong>（约 1,018 亿元人民币）；合并 <strong>EBITDA 达 12.09 亿欧元</strong>，同比强劲增长 11.9%；经常性净利润（Recurring Net Profit）达 <strong>4.70 亿欧元</strong>，同比大幅跃升 30.8%，创下自 2009 年以来的最佳常规经营盈利水平。
+                            </p>
+                            <p>
+                                <strong>多业态商业生态与渠道护城河：</strong>集团以「一站式品质生活殿堂」为核心定位，旗下构建了极其完善的零售与服务矩阵：
+                                包含 <strong>78 家大型综合百货大厦（Grandes Almacenes）</strong>，占据马德里、巴塞罗那、瓦伦西亚、塞维利亚以及葡萄牙里斯本与波尔图等伊比利亚半岛核心城市黄金地段；
+                                <strong>38 家 Hipercor 大型综合大卖场</strong>；
+                                <strong>187 家 Supercor 及 Supercor Exprés 高品质社区超市与便利连锁</strong>；
+                                <strong>近 500 家 Sfera 快时尚服装专门店</strong>（网络覆盖西班牙、葡萄牙、墨西哥、希腊及波兰等国际市场）；
+                                以及 <strong>Bricor 家居建材连锁</strong>、<strong>Club del Gourmet 高端美食殿堂</strong> 与欧洲顶尖文旅服务航母 <strong>Viajes El Corte Inglés</strong>。
+                            </p>
+                            <p>
+                                <strong>治理结构与长期资本：</strong>集团为未上市的股份有限公司（Sociedad Anónima），股权结构呈现高度稳健的基金会与家族控股格局。非营利性学术与慈善机构<strong>拉蒙·阿雷塞斯基金会（Fundación Ramón Areces）</strong>持有约 37% 股权，为第一大股东；创始家族成员控股公司及阿尔瓦雷斯家族（Álvarez Family）合计持有核心控制权；董事会主席由 <strong>Marta Álvarez Guil</strong> 执掌；此外，西班牙最大保险巨头之一 Mutua Madrileña 持股约 8%，卡塔尔王室投资实体 Primefin 持股约 10%。
+                            </p>
+                            <p>
+                                <strong>战略转向与全渠道演进：</strong>面对数字化零售浪潮与欧洲消费结构变化，El Corte Inglés 深度推进「2025-2030 战略转型蓝图」，聚焦三大战略方向：
+                                其一，<strong>资产负债表与财务结构优化</strong>：近年来累计压降净金融负债至 20.59 亿欧元（创 16 年来最低水平），成功重获国际评级机构标普（S&P）与惠誉（Fitch）的「投资级（Investment Grade）」信用评级；
+                                其二，<strong>全渠道数字化融合（Omnichannel）</strong>：集团官网与移动端 App 年访问量突破 8.91 亿次，注册会员达 1,490 万人，依托线下密集门店网络实现全西班牙「2 小时极速送达（Entrega en 2h）」与「Click & Car / Click & Collect」到店自提闭环；
+                                其三，<strong>自有品牌（Private Label）高附加值升级与绿色供应链变革</strong>：在男女装、童装、家居用品、家用电器、食品及户外用品等关键品类大力强化自研与对华深度直采，全面融入欧洲 CSRD 与 ESG 准入合规体系。
+                            </p>
+                        </div>
+
+                        <!-- 基础注册信息表格 -->
+                        <div class="mt-6">
+                            <h4 class="font-bold text-[#3c3935] mb-3 flex items-center gap-2">
+                                <i data-lucide="building" size="18" class="text-[#ff641e]"></i> 集团组织基础与法定注册信息
+                            </h4>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-xs text-left border border-[rgba(160,109,68,0.12)] rounded-lg">
+                                    <tbody class="divide-y divide-[rgba(160,109,68,0.08)]">
+                                        <tr class="bg-[#fdfbf7]">
+                                            <td class="px-4 py-2 font-medium text-[#7a756f] w-1/3">公司法定全称</td>
+                                            <td class="px-4 py-2 font-semibold text-[#3c3935]">El Corte Inglés, S.A.</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-4 py-2 font-medium text-[#7a756f]">商业通用名称</td>
+                                            <td class="px-4 py-2 text-[#3c3935]">El Corte Inglés / 英国宫 / 西班牙英格列斯百货</td>
+                                        </tr>
+                                        <tr class="bg-[#fdfbf7]">
+                                            <td class="px-4 py-2 font-medium text-[#7a756f]">法定税号 / 商业登记号</td>
+                                            <td class="px-4 py-2 text-[#3c3935]">NIF: A-28017895 (Madrid Mercantile Registry, Tomo 519, Folio 1, Hoja M-11841)</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-4 py-2 font-medium text-[#7a756f]">全球总部注册地址</td>
+                                            <td class="px-4 py-2 text-[#3c3935]">Calle Hermosilla, 112, 28009 Madrid, Spain</td>
+                                        </tr>
+                                        <tr class="bg-[#fdfbf7]">
+                                            <td class="px-4 py-2 font-medium text-[#7a756f]">官方官方网站</td>
+                                            <td class="px-4 py-2">
+                                                <a href="https://www.elcorteingles.es" target="_blank" class="text-[#ff641e] hover:underline font-medium">https://www.elcorteingles.es</a> 
+                                                <span class="text-[#7a756f] text-[11px] ml-2">| 企业站: <a href="https://www.elcorteingles.es/informacioncorporativa/" target="_blank" class="text-[#ff641e] hover:underline">informacioncorporativa</a></span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-4 py-2 font-medium text-[#7a756f]">最新财年总营收 (FY2024/25)</td>
+                                            <td class="px-4 py-2 text-[#3c3935] font-semibold">166.75 亿欧元（约 1,308 亿元人民币）</td>
+                                        </tr>
+                                        <tr class="bg-[#fdfbf7]">
+                                            <td class="px-4 py-2 font-medium text-[#7a756f]">全球员工与网络规模</td>
+                                            <td class="px-4 py-2 text-[#3c3935]">约 80,000+ 名正式员工 | 700+ 家直营商业与旅行网点</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-4 py-2 font-medium text-[#7a756f]">董事会主席 / 核心领导</td>
+                                            <td class="px-4 py-2 text-[#3c3935]">Marta Álvarez Guil（董事会主席 Presidenta）</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- 零售业态与渠道矩阵 -->
+                        <div class="mt-6">
+                            <h4 class="font-bold text-[#3c3935] mb-3 flex items-center gap-2">
+                                <i data-lucide="layers" size="18" class="text-[#ff641e]"></i> 核心零售业态与渠道矩阵
+                            </h4>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                                <div class="p-3 bg-[#fdfbf7] rounded-xl border border-[rgba(160,109,68,0.1)]">
+                                    <div class="font-semibold text-[#3c3935] flex items-center justify-between">
+                                        <span>El Corte Inglés (百货大厦)</span>
+                                        <span class="report-tag">78 家旗舰店</span>
+                                    </div>
+                                    <p class="text-[#7a756f] mt-1">定位于中高端全品类百货，集聚国际奢侈品、自营男女装、美妆个护、家居家电与数码娱乐。</p>
+                                </div>
+                                <div class="p-3 bg-[#fdfbf7] rounded-xl border border-[rgba(160,109,68,0.1)]">
+                                    <div class="font-semibold text-[#3c3935] flex items-center justify-between">
+                                        <span>Hipercor (大型综合超市)</span>
+                                        <span class="report-tag">38 家卖场</span>
+                                    </div>
+                                    <p class="text-[#7a756f] mt-1">家庭一站式购物大卖场，涵盖优质生鲜食品、日用百货、平价服装（Unit）及小家电。</p>
+                                </div>
+                                <div class="p-3 bg-[#fdfbf7] rounded-xl border border-[rgba(160,109,68,0.1)]">
+                                    <div class="font-semibold text-[#3c3935] flex items-center justify-between">
+                                        <span>Supercor / Exprés (生鲜超市)</span>
+                                        <span class="report-tag">187 家网点</span>
+                                    </div>
+                                    <p class="text-[#7a756f] mt-1">城市核心社区与加油站（Cepsa）密集便利网点，主打高品质生鲜、即食餐点与日常快消品。</p>
+                                </div>
+                                <div class="p-3 bg-[#fdfbf7] rounded-xl border border-[rgba(160,109,68,0.1)]">
+                                    <div class="font-semibold text-[#3c3935] flex items-center justify-between">
+                                        <span>Sfera (快时尚服饰连锁)</span>
+                                        <span class="report-tag">近 500 家门店</span>
+                                    </div>
+                                    <p class="text-[#7a756f] mt-1">面向青年与都市女性的快时尚服装品牌，独立专卖店与百货专柜协同，具备极强中国供应链粘性。</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 来源链接 -->
+                        <div class="text-[11px] text-[#7a756f] pt-2 border-t border-[rgba(160,109,68,0.08)]">
+                            信息来源：<a href="https://www.elcorteingles.es/informacioncorporativa/es/informacion-financiera/informes-y-presentaciones/" target="_blank" class="text-[#ff641e] hover:underline">El Corte Inglés 集团官方财报与企业年鉴</a>、<a href="https://www.registradores.org/" target="_blank" class="text-[#ff641e] hover:underline">西班牙工商注册登记处 (Registro Mercantil)</a>。
+                        </div>
+                    </div>
+
+                    <!-- 历史里程碑时间线 -->
+                    <div class="space-y-6">
+                        <div class="sand-card p-6">
+                            <h4 class="font-bold text-[#3c3935] mb-4 flex items-center gap-2">
+                                <i data-lucide="history" size="18" class="text-[#ff641e]"></i> 历史关键转折点
+                            </h4>
+                            <ul class="space-y-4 text-xs border-l-2 border-[#ff641e]/30 pl-4">
+                                <li class="relative">
+                                    <div class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-[#ff641e]"></div>
+                                    <div class="font-bold text-[#3c3935]">1890 - 1940: 裁缝铺启航与集团创立</div>
+                                    <p class="text-[#7a756f] mt-0.5">从马德里裁缝铺起步，Ramón Areces 与 César Rodríguez 联合收购并正式注册设立 El Corte Inglés S.A.。</p>
+                                </li>
+                                <li class="relative">
+                                    <div class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-[#ff641e]"></div>
+                                    <div class="font-bold text-[#3c3935]">1962: 走出马德里与全国扩张</div>
+                                    <p class="text-[#7a756f] mt-0.5">在巴塞罗那开设首家大型百货旗舰店，拉开西班牙全国性大中城市核心商圈扩张序幕。</p>
+                                </li>
+                                <li class="relative">
+                                    <div class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-[#ff641e]"></div>
+                                    <div class="font-bold text-[#3c3935]">1980: 推出 Hipercor 大卖场</div>
+                                    <p class="text-[#7a756f] mt-0.5">开创大型综合超市模式，全面拓展家庭食品与非食品日用品类的大宗采购与销售。</p>
+                                </li>
+                                <li class="relative">
+                                    <div class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-[#ff641e]"></div>
+                                    <div class="font-bold text-[#3c3935]">1995: 并购 Galerías Preciados</div>
+                                    <p class="text-[#7a756f] mt-0.5">全资收购西班牙第二大百货连锁，一举奠定其在伊比利亚半岛百货领域的绝对垄断地位。</p>
+                                </li>
+                                <li class="relative">
+                                    <div class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-[#ff641e]"></div>
+                                    <div class="font-bold text-[#3c3935]">2001: 跨国进军葡萄牙 & 创立 Sfera</div>
+                                    <p class="text-[#7a756f] mt-0.5">在里斯本开设首家海外百货商场；创立快时尚品牌 Sfera，开始构建亚洲快时尚柔性供应链。</p>
+                                </li>
+                                <li class="relative">
+                                    <div class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-[#ff641e]"></div>
+                                    <div class="font-bold text-[#3c3935]">2008: 加入 amfori BSCI & 亚洲直采中枢</div>
+                                    <p class="text-[#7a756f] mt-0.5">全面确立对华供应链社会责任准入标准，设立上海与香港直采办事处，加速去中介化直采。</p>
+                                </li>
+                                <li class="relative">
+                                    <div class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-[#ff641e]"></div>
+                                    <div class="font-bold text-[#3c3935]">2021: 文旅大合并 & 全渠道重构</div>
+                                    <p class="text-[#7a756f] mt-0.5">旗下 Viajes El Corte Inglés 与 Logitravel 合并重组，打造营收超 30 亿欧元的欧洲文旅领头羊。</p>
+                                </li>
+                                <li class="relative">
+                                    <div class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-[#ff641e]"></div>
+                                    <div class="font-bold text-[#3c3935]">2024 - 2025: 业绩与盈利登顶</div>
+                                    <p class="text-[#7a756f] mt-0.5">总营收达 166.75 亿欧元，EBITDA 达 12.09 亿欧元，净负债降至 16 年新低并重获投资级评级。</p>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══════════ Section 2: 财务深度穿透 ═══════════ -->
+            <section id="finance" class="scroll-mt-16 mt-8">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 bg-[#f6f3ec] text-[#ff641e] rounded-lg"><i data-lucide="trending-up" size="24"></i></div>
+                    <h3 class="text-2xl font-bold text-[#3c3935]">2. 财务深度穿透 (Financial Deep-Dive)</h3>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="sand-card p-6">
+                        <h4 class="font-bold text-[#3c3935] mb-4">2024/2025 财年核心业务线营收分布结构</h4>
+                        <div id="financeChart1" class="chart-container"></div>
+                        <div class="mt-4 text-xs text-[#7a756f] leading-relaxed space-y-1">
+                            <p><strong>零售板块总额：</strong>129.76 亿欧元（占整体业务 77.8%），同店可比增长 3.9%。</p>
+                            <p><strong>非食品品类总额：</strong>Moda y Belleza（57.04亿欧）+ Hogar y Electrónica（26.97亿欧）+ Cultura y Ocio（15.31亿欧）合计达 <strong>99.32 亿欧元</strong>（约 779 亿人民币），占零售总额的 <strong>76.5%</strong>，构成了对华采购的绝对主体。</p>
+                        </div>
+                    </div>
+                    <div class="sand-card p-6" style="background: #3c3935; color: #fdfbf7;">
+                        <h4 class="font-bold text-[#ff641e] mb-4 flex items-center gap-2">
+                            <i data-lucide="info" size="18"></i> 财务核心洞察与资本动向
+                        </h4>
+                        <div class="space-y-4 mt-4 text-xs leading-relaxed">
+                            <div class="p-3.5 rounded-xl border border-white/10 bg-white/5">
+                                <h5 class="font-bold text-[#ff641e] mb-1">1. 高毛利时尚与生活方式品类支撑强劲盈利</h5>
+                                <p class="text-slate-300">
+                                    时尚与美妆（Moda y Belleza）在 2024/25 财年录得 57.04 亿欧元营业额，同比稳步增长 4.9%。得益于高毛利的自主服装品牌（Sfera、Emidio Tucci、Woman ECI、Unit）渗透率提升及供应链直采效率改善，综合毛利率进一步扩张，带动合并 EBITDA 同比大增 11.9% 至 12.09 亿欧元。
+                                </p>
+                            </div>
+                            <div class="p-3.5 rounded-xl border border-white/10 bg-white/5">
+                                <h5 class="font-bold text-[#ff641e] mb-1">2. 资产负债表大幅去杠杆与信用评级重归投资级</h5>
+                                <p class="text-slate-300">
+                                    集团净金融负债（Net Financial Debt）降至约 20.59 亿欧元，净负债/EBITDA 比率压缩至 1.7 倍（为 2008 年以来的最优健康度）。标准普尔（S&P Global Ratings）与惠誉（Fitch Ratings）相继将其企业长期信用评级提升至「BBB-（投资级，展望稳定）」，极大降低了集团的国际贸易融资与流动资金借贷成本。
+                                </p>
+                            </div>
+                            <div class="p-3.5 rounded-xl border border-white/10 bg-white/5">
+                                <h5 class="font-bold text-[#ff641e] mb-1">3. 年均 4 亿+ 欧元资本支出投向体验式改造与物流智造</h5>
+                                <p class="text-slate-300">
+                                    集团在「2025-2030 战略规划」中明确保持每年超 4 亿欧元的资本支出（Capex），重点投入：马德里 Castellana 及巴塞罗那旗舰商场的奢华体验升级、马德里 Valdemoro 物流总仓的自动化分拣与机器人仓储改造、以及全链路供应链碳足迹数字化追踪系统。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- 来源链接 -->
+                <div class="text-[11px] text-[#7a756f] mt-2">
+                    数据来源：<a href="https://www.elcorteingles.es/informacioncorporativa/es/informacion-financiera/cuentas-anuales/" target="_blank" class="text-[#ff641e] hover:underline">El Corte Inglés S.A. 2024/2025 财年合并财务报告 (Cuentas Anuales Consolidadas)</a>。
+                </div>
+            </section>
+
+            <!-- ═══════════ Section 3: 渠道分布与竞争格局 ═══════════ -->
+            <section id="channels" class="scroll-mt-12">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 bg-purple-100 text-purple-600 rounded-lg"><i data-lucide="store" size="24"></i></div>
+                    <h3 class="text-2xl font-bold text-[#3c3935]">3. 渠道分布与竞争格局 (Channel & Competition)</h3>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="sand-card p-6 md:col-span-2">
+                        <h4 class="font-bold text-[#3c3935] mb-4">近五年营业额及 EBITDA 演进趋势 (2020/21 - 2024/25 财年)</h4>
+                        <div id="channelChart" class="chart-container"></div>
+                        <div class="mt-4 text-xs text-[#7a756f] leading-relaxed space-y-2">
+                            <p>
+                                <strong>渠道地理布局与消费人群画像：</strong>
+                                El Corte Inglés 在伊比利亚半岛拥有无与伦比的区位优势。78 家大型百货主要坐落在西班牙各大自治区首府及核心省会城市最核心的商业街区（如马德里的 Preciados、Serrano、Castellana，巴塞罗那的 Plaça Catalunya、Diagonal），辐射西班牙中产阶级、高净值家庭以及庞大的国际入境旅游消费人群；Hipercor 与 Supercor 则深度下沉至中高收入居民社区，锁定高频家庭日常消费。
+                            </p>
+                        </div>
+                    </div>
+                    <div class="sand-card p-6 flex flex-col justify-between">
+                        <div>
+                            <h4 class="font-bold text-[#3c3935] mb-4">主要市场竞品对峙格局</h4>
+                            <div class="space-y-3 text-xs leading-relaxed">
+                                <div class="p-2.5 bg-[#fdfbf7] rounded-lg border border-[rgba(160,109,68,0.1)]">
+                                    <div class="font-semibold text-[#3c3935] flex items-center justify-between">
+                                        <span>服装与时尚板块</span>
+                                        <span class="report-tag">Inditex, Mango, Primark</span>
+                                    </div>
+                                    <p class="text-[#7a756f] mt-1">
+                                        面对 Zara/Massimo Dutti 的极速快时尚与 Primark 的极致性价比夹击，ECI 采取「Sfera 快时尚 + 多元中高端自有品牌（Emidio Tucci/Woman）+ 国际奢侈品专柜」的组合拳，稳居西班牙时尚消费额首位。
+                                    </p>
+                                </div>
+                                <div class="p-2.5 bg-[#fdfbf7] rounded-lg border border-[rgba(160,109,68,0.1)]">
+                                    <div class="font-semibold text-[#3c3935] flex items-center justify-between">
+                                        <span>食品与生鲜超市板块</span>
+                                        <span class="report-tag">Mercadona, Carrefour, Lidl</span>
+                                    </div>
+                                    <p class="text-[#7a756f] mt-1">
+                                        西班牙食品零售市场由 Mercadona（市占率约 27.6%）与 Carrefour（约 10%）领跑。ECI 错位竞争，通过 Club del Gourmet 打造顶尖高端美食壁垒，Supercor 强化高品质生鲜与便利体验。
+                                    </p>
+                                </div>
+                                <div class="p-2.5 bg-[#fdfbf7] rounded-lg border border-[rgba(160,109,68,0.1)]">
+                                    <div class="font-semibold text-[#3c3935] flex items-center justify-between">
+                                        <span>家电数码与家居建材</span>
+                                        <span class="report-tag">MediaMarkt, Leroy Merlin, IKEA</span>
+                                    </div>
+                                    <p class="text-[#7a756f] mt-1">
+                                        在电子产品与家居领域直面 MediaMarkt、Leroy Merlin 与 IKEA。ECI 依托专业售后送装服务、金牌会员分期付款（Financiera ECI）与品质背书维系高端家庭客户忠诚度。
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-[11px] text-[#7a756f] mt-4 pt-2 border-t border-[rgba(160,109,68,0.08)]">
+                            数据来源：<a href="https://www.kantarworldpanel.com/es" target="_blank" class="text-[#ff641e] hover:underline">Kantar 西班牙零售分销市场份额报告</a>、<a href="https://www.revistainforetail.com/" target="_blank" class="text-[#ff641e] hover:underline">InfoRetail 行业调研</a>。
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══════════ Section 4: 自主品牌矩阵 ═══════════ -->
+            <section id="private-labels" class="scroll-mt-12">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 bg-[#f6f3ec] text-[#ff641e] rounded-lg"><i data-lucide="tags" size="24"></i></div>
+                    <h3 class="text-2xl font-bold text-[#3c3935]">4. 自主品牌矩阵与采购商机 (Private Labels)</h3>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="sand-card p-6 md:col-span-2">
+                        <h4 class="font-bold text-[#3c3935] mb-4">自主品牌全品类架构与定位梯队</h4>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs text-left border border-[rgba(160,109,68,0.12)] rounded-lg">
+                                <thead class="bg-[#f6f3ec] text-[#3c3935] font-semibold">
+                                    <tr>
+                                        <th class="px-3 py-2 border-b border-[rgba(160,109,68,0.1)]">业务品类 (GTB标准)</th>
+                                        <th class="px-3 py-2 border-b border-[rgba(160,109,68,0.1)]">自主品牌名称</th>
+                                        <th class="px-3 py-2 border-b border-[rgba(160,109,68,0.1)]">档次定位</th>
+                                        <th class="px-3 py-2 border-b border-[rgba(160,109,68,0.1)]">核心产品线与特色</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-[rgba(160,109,68,0.08)]">
+                                    <tr class="bg-[#fdfbf7]">
+                                        <td class="px-3 py-2 font-medium text-[#3c3935]">男女装 / 服装饰物及配件</td>
+                                        <td class="px-3 py-2 font-semibold text-[#ff641e]">Emidio Tucci</td>
+                                        <td class="px-3 py-2"><span class="report-tag">中高端商务</span></td>
+                                        <td class="px-3 py-2 text-[#7a756f]">男士正装西服、高级免烫衬衫、真丝领带、皮鞋与商务公文包。</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-3 py-2 font-medium text-[#3c3935]">男女装 / 运动服及休闲服</td>
+                                        <td class="px-3 py-2 font-semibold text-[#3c3935]">Dustin, Lloyd's, Easy Wear</td>
+                                        <td class="px-3 py-2"><span class="report-tag">大众中端休闲</span></td>
+                                        <td class="px-3 py-2 text-[#7a756f]">轻商务 Polo 衫、纯棉休闲裤、针织衫、风衣与青年潮流服饰。</td>
+                                    </tr>
+                                    <tr class="bg-[#fdfbf7]">
+                                        <td class="px-3 py-2 font-medium text-[#3c3935]">男女装 / 服装饰物及配件</td>
+                                        <td class="px-3 py-2 font-semibold text-[#ff641e]">Sfera</td>
+                                        <td class="px-3 py-2"><span class="report-tag">快时尚 / 都市流行</span></td>
+                                        <td class="px-3 py-2 text-[#7a756f]">女装快时尚连衣裙、季节性外套、流行饰品，高频翻单与柔性上新。</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-3 py-2 font-medium text-[#3c3935]">男女装 / 童装 / 内衣</td>
+                                        <td class="px-3 py-2 font-semibold text-[#3c3935]">Unit</td>
+                                        <td class="px-3 py-2"><span class="report-tag">平价基础款</span></td>
+                                        <td class="px-3 py-2 text-[#7a756f]">Hipercor 与百货专区全家基础打底衫、纯棉内衣裤、家居服与童装。</td>
+                                    </tr>
+                                    <tr class="bg-[#fdfbf7]">
+                                        <td class="px-3 py-2 font-medium text-[#3c3935]">童装 / 孕婴童用品</td>
+                                        <td class="px-3 py-2 font-semibold text-[#3c3935]">Freestyle, Brotes, Bass 10</td>
+                                        <td class="px-3 py-2"><span class="report-tag">婴童与青少年</span></td>
+                                        <td class="px-3 py-2 text-[#7a756f]">婴幼儿安全棉服、儿童校服、青少年户外运动服饰与童鞋。</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-3 py-2 font-medium text-[#3c3935]">家居用品 / 家用纺织品 / 家具</td>
+                                        <td class="px-3 py-2 font-semibold text-[#ff641e]">El Corte Inglés Home, Privium</td>
+                                        <td class="px-3 py-2"><span class="report-tag">中高品质家居</span></td>
+                                        <td class="px-3 py-2 text-[#7a756f]">高支埃及棉床品、羽绒被枕、地中海风格餐厨器皿、现代软体家具。</td>
+                                    </tr>
+                                    <tr class="bg-[#fdfbf7]">
+                                        <td class="px-3 py-2 font-medium text-[#3c3935]">家用电器 / 电子消费品及信息产品</td>
+                                        <td class="px-3 py-2 font-semibold text-[#ff641e]">Ansonic, Saivod</td>
+                                        <td class="px-3 py-2"><span class="report-tag">高性价比家电</span></td>
+                                        <td class="px-3 py-2 text-[#7a756f]">空气炸锅、咖啡机、扫地机、微波炉、冰箱洗衣机及高性价比影音。</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-3 py-2 font-medium text-[#3c3935]">体育及旅游休闲用品 / 运动服及休闲服</td>
+                                        <td class="px-3 py-2 font-semibold text-[#3c3935]">Boomerang, Mountain Pro</td>
+                                        <td class="px-3 py-2"><span class="report-tag">专业运动与户外</span></td>
+                                        <td class="px-3 py-2 text-[#7a756f]">健身器械、跑步装备、户外露营帐篷、冲锋衣、登山杖与专业运动鞋。</td>
+                                    </tr>
+                                    <tr class="bg-[#fdfbf7]">
+                                        <td class="px-3 py-2 font-medium text-[#3c3935]">玩具 / 办公文具</td>
+                                        <td class="px-3 py-2 font-semibold text-[#3c3935]">Miyo, Play Land</td>
+                                        <td class="px-3 py-2"><span class="report-tag">益智与启蒙文娱</span></td>
+                                        <td class="px-3 py-2 text-[#7a756f]">FSC 认证环保木玩、毛绒玩具、益智拼插积木、学生文具套装。</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="sand-card p-6">
+                        <h4 class="font-bold text-[#3c3935] mb-4">对华代工与贴牌 (OEM/ODM) 商机</h4>
+                        <div class="space-y-3 text-xs text-[#3c3935] leading-relaxed">
+                            <div class="p-3 bg-[#fdfbf7] rounded-xl border border-[rgba(160,109,68,0.08)]">
+                                <strong class="text-[#ff641e]">1. 服装与家纺绿色功能升级：</strong>
+                                <p class="text-[#7a756f] mt-1">Sfera 与 Unit 正在大幅提高 OEKO-TEX Standard 100 及 GRS 再生纤维比重；针对 Emidio Tucci 寻求免烫、抗皱的高支高密面料与无缝针织工艺。</p>
+                            </div>
+                            <div class="p-3 bg-[#fdfbf7] rounded-xl border border-[rgba(160,109,68,0.08)]">
+                                <strong class="text-[#ff641e]">2. 厨房与环境智能小家电：</strong>
+                                <p class="text-[#7a756f] mt-1">Ansonic 与 Saivod 品牌急需符合欧盟最新能效标准（ErP）的高性价比小家电，重点品类包括 BLDC 变频厨房料理机、低噪智能咖啡机、便携挂烫机与扫地机器人。</p>
+                            </div>
+                            <div class="p-3 bg-[#fdfbf7] rounded-xl border border-[rgba(160,109,68,0.08)]">
+                                <strong class="text-[#ff641e]">3. 户外露营与便携运动装备：</strong>
+                                <p class="text-[#7a756f] mt-1">Mountain Pro 与 Boomerang 扩张户外徒步与水上运动品类，中国超轻碳纤维杖、防水露营帐篷、充气桨板（SUP）具备极强替代优势。</p>
+                            </div>
+                        </div>
+                        <div class="text-[11px] text-[#7a756f] mt-4 pt-2 border-t border-[rgba(160,109,68,0.08)]">
+                            信息来源：<a href="https://www.elcorteingles.es/marcas-propias/" target="_blank" class="text-[#ff641e] hover:underline">El Corte Inglés 自有品牌采购官网</a>。
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══════════ Section 5: 组织架构与决策链 ═══════════ -->
+            <section id="org" class="scroll-mt-12">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 bg-[#f6f3ec] text-[#ff641e] rounded-lg"><i data-lucide="users" size="24"></i></div>
+                    <h3 class="text-2xl font-bold text-[#3c3935]">5. 组织架构与采购决策链 (Organization & Decision Chain)</h3>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="sand-card p-6 md:col-span-2 space-y-4">
+                        <h4 class="font-bold text-[#3c3935] mb-2">采购组织深度解构与在华直采架构</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                            <div class="p-3.5 bg-[#fdfbf7] rounded-xl border border-[rgba(160,109,68,0.1)]">
+                                <div class="font-bold text-[#3c3935] flex items-center gap-1.5 mb-1.5">
+                                    <i data-lucide="globe" size="14" class="text-[#ff641e]"></i>
+                                    <span>亚洲采购总办事处 (香港)</span>
+                                </div>
+                                <p class="text-[#7a756f] leading-relaxed">
+                                    <strong>注册实体：</strong>El Corte Ingles Hong Kong Limited<br>
+                                    <strong>核心权责：</strong>统筹整个亚太区（中国大陆、港台、东南亚及南亚）采购合同拟定、国际海运拼箱调配、信用证（L/C）结算及供应商准入资质初审。
+                                </p>
+                            </div>
+                            <div class="p-3.5 bg-[#fdfbf7] rounded-xl border border-[rgba(160,109,68,0.1)]">
+                                <div class="font-bold text-[#3c3935] flex items-center gap-1.5 mb-1.5">
+                                    <i data-lucide="map-pin" size="14" class="text-[#ff641e]"></i>
+                                    <span>在华直采代表处 (上海)</span>
+                                </div>
+                                <p class="text-[#7a756f] leading-relaxed">
+                                    <strong>在华实体：</strong>西班牙英国宫百货公司上海代表处 / 英格列斯商贸<br>
+                                    <strong>核心权责：</strong>负责中国华东、华南、华北产业带工厂现场勘厂、验厂（amfori BSCI / SMETA）、样品质检、大货出运前抽检（AQL）及国内技术对接。
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 p-4 bg-[#fdfbf7] rounded-xl border border-[rgba(160,109,68,0.1)] text-xs text-[#3c3935] leading-relaxed space-y-2">
+                            <h5 class="font-bold text-[#3c3935] flex items-center gap-1.5">
+                                <i data-lucide="git-merge" size="14" class="text-[#ff641e]"></i>
+                                采购决策链角色分工与新品上架流转闭环
+                            </h5>
+                            <ol class="list-decimal list-inside space-y-1.5 text-[#7a756f]">
+                                <li><strong class="text-[#3c3935]">总部非食品采购总监（Director de Compras Non-Food）：</strong>负责制定年度品类预算、自有品牌渗透目标与毛利红线。</li>
+                                <li><strong class="text-[#3c3935]">品类采购经理（Jefes de Compras / Category Managers）：</strong>对具体 SKU 具备绝对选品权与淘汰权，主导季节性比价与订单分配。</li>
+                                <li><strong class="text-[#3c3935]">质量与 ESG 合规团队（Calidad y Sostenibilidad）：</strong>拥有一票否决权，审核工厂 BSCI 报告（需 C 级以上）、CE/REACH 认证及产品物理化学检测报告。</li>
+                                <li><strong class="text-[#3c3935]">供应链与物流集成部（Logística y Operaciones）：</strong>负责对接 Valdemoro 自动化中央仓的入库条码规范与 EDI 电子单据核验。</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="sand-card p-6 flex flex-col justify-between">
+                        <div>
+                            <h4 class="font-bold text-[#3c3935] mb-4">供应商对接与系统接入通道</h4>
+                            <div class="space-y-3 text-xs leading-relaxed">
+                                <div class="p-3 bg-[#fdfbf7] rounded-xl border border-[rgba(160,109,68,0.08)]">
+                                    <strong class="text-[#3c3935]">官方供应商门户：</strong>
+                                    <p class="text-[#7a756f] mt-1">El Corte Inglés Portal de Proveedores 官方供应商协同系统，新供应商须在此登记公司资质与合规认证证书。</p>
+                                </div>
+                                <div class="p-3 bg-[#fdfbf7] rounded-xl border border-[rgba(160,109,68,0.08)]">
+                                    <strong class="text-[#3c3935]">电子数据交换 (EDI) 系统：</strong>
+                                    <p class="text-[#7a756f] mt-1">支持 EDIFACT 标准报文格式（ORDERS 订单、DESADV 预发货通知、INVOIC 电子发票），已全面集成西班牙 TicketBAI 与法案电子发票合规接口。</p>
+                                </div>
+                                <div class="p-3 bg-[#fdfbf7] rounded-xl border border-[rgba(160,109,68,0.08)]">
+                                    <strong class="text-[#3c3935]">直接接洽建议：</strong>
+                                    <p class="text-[#7a756f] mt-1">中国出口企业建议优先通过其上海代表处或香港采购办事处递交西班牙文/英文完整产品目录与 BSCI 审计编号。</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-[11px] text-[#7a756f] mt-4 pt-2 border-t border-[rgba(160,109,68,0.08)]">
+                            信息来源：<a href="https://www.elcorteingles.es/informacioncorporativa/es/sostenibilidad/cadena-de-suministro/" target="_blank" class="text-[#ff641e] hover:underline">El Corte Inglés 供应链与供应商准则</a>、<a href="https://www.hktdc.com/" target="_blank" class="text-[#ff641e] hover:underline">香港贸发局采购名录</a>。
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══════════ Section 6: 供应链与合规 ═══════════ -->
+            <section id="supply" class="scroll-mt-12">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 bg-[#f6f3ec] text-[#ff641e] rounded-lg"><i data-lucide="globe-2" size="24"></i></div>
+                    <h3 class="text-2xl font-bold text-[#3c3935]">6. 供应链布局与准入合规 (Supply Chain & Compliance)</h3>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="sand-card p-6 md:col-span-2">
+                        <h4 class="font-bold text-[#3c3935] mb-4">近五年对华大宗商品直接与间接采购估值趋势 (2020 - 2024 年)</h4>
+                        <div id="supplyChart" class="chart-container"></div>
+                        <div class="mt-4 text-xs text-[#7a756f] leading-relaxed space-y-2">
+                            <p>
+                                <strong>全球采购地图格局：</strong>
+                                El Corte Inglés 非食品自主品牌（Private Label）采购中，<strong>远东地区（中国大陆为主，辅以孟加拉国、越南、印度）占比约 65%~70%</strong>，主要覆盖男女装、童装、家用纺织品、箱包鞋履、家用电器、数码消费品、玩具及办公文具；<strong>近岸与本土采购（西班牙、葡萄牙、摩洛哥、土耳其）占比约 30%~35%</strong>，主要负责对交期要求极高的快时尚补单与重型家具。
+                            </p>
+                        </div>
+
+                        <!-- 核心供应商清单 -->
+                        <div class="mt-4 pt-3 border-t border-[rgba(160,109,68,0.1)]">
+                            <h5 class="font-bold text-[#3c3935] text-xs mb-2 flex items-center gap-1.5">
+                                <i data-lucide="check-circle" size="14" class="text-[#ff641e]"></i> 核心供应商清单 (已核实公开合作品牌与制造实体)
+                            </h5>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-[#7a756f]">
+                                <div>• <strong>Samsung</strong> — 电子消费品及信息产品、家用电器</div>
+                                <div>• <strong>Sony</strong> — 电子消费品及信息产品、影音娱乐</div>
+                                <div>• <strong>Philips</strong> — 家用电器、个人护理用具、照明产品</div>
+                                <div>• <strong>LG</strong> — 家用电器、电子消费品及信息产品</div>
+                                <div>• <strong>Balay</strong> — 家用电器（厨房大型白电）</div>
+                                <div>• <strong>Cecotec</strong> — 家用电器（西班牙畅销智能小家电）</div>
+                                <div>• <strong>DeLonghi</strong> — 家用电器（高阶咖啡机与料理机）</div>
+                                <div>• <strong>Samsonite</strong> — 箱包、体育及旅游休闲用品</div>
+                                <div>• <strong>LOreal</strong> — 个人护理用具、美妆洗护</div>
+                                <div>• <strong>Puig</strong> — 个人护理用具、高端香水香氛</div>
+                                <div>• <strong>Mayoral</strong> — 童装、孕婴童用品</div>
+                                <div>• <strong>Pikolin</strong> — 家具、家用纺织品（床垫及寝具系统）</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sand-card p-6 flex flex-col justify-between">
+                        <div>
+                            <h4 class="font-bold text-[#3c3935] mb-4 flex items-center gap-1.5">
+                                <i data-lucide="shield-check" size="18" class="text-[#ff641e]"></i> 准入红线与强制认证
+                            </h4>
+                            <div class="space-y-2.5 text-xs text-[#3c3935] leading-relaxed">
+                                <div class="p-2.5 bg-[#fdfbf7] rounded-lg border border-[rgba(160,109,68,0.08)]">
+                                    <strong class="text-[#ff641e]">1. 社会责任与验厂 (amfori BSCI)：</strong>
+                                    <p class="text-[#7a756f] mt-0.5">集团自 2008 年加入 amfori BSCI，所有自有品牌代工厂必须具备有效期内的 BSCI 报告（最低 C 级，推荐 A/B 级）或 Sedex SMETA 4-Pillar 报告，严禁童工与超时强迫加班。</p>
+                                </div>
+                                <div class="p-2.5 bg-[#fdfbf7] rounded-lg border border-[rgba(160,109,68,0.08)]">
+                                    <strong class="text-[#ff641e]">2. 环保与纺织品化学安全：</strong>
+                                    <p class="text-[#7a756f] mt-0.5">严格执行欧盟 REACH 法规（SVHC 禁用物质清单），纺织品必须持有 OEKO-TEX Standard 100 认证；含木材/纸质产品需提前满足欧盟零毁林法案（EUDR）与 FSC 产销监管链溯源。</p>
+                                </div>
+                                <div class="p-2.5 bg-[#fdfbf7] rounded-lg border border-[rgba(160,109,68,0.08)]">
+                                    <strong class="text-[#ff641e]">3. 西班牙包装法与 EPR 合规：</strong>
+                                    <p class="text-[#7a756f] mt-0.5">严格执行西班牙包装与废弃物皇家法令（RD 1055/2022），包装必须印有 Ecoembes 绿点回收标识与材质分类图例，对非回收塑料课税 0.45 欧元/公斤。</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-[#f6f3ec] border border-[rgba(160,109,68,0.08)] rounded-xl text-[11px] text-[#3c3935] mt-4 leading-relaxed">
+                            <i data-lucide="info" size="14" class="inline mr-1 text-[#ff641e]"></i>
+                            <strong>物流渠道提示：</strong>对华直采海运集装箱主要走西班牙瓦伦西亚港（Port of Valencia）、巴塞罗那港（Port of Barcelona）及阿尔赫西拉斯港（Algeciras），清关后直接干线调拨至马德里 Valdemoro 中央自动化物流枢纽。
+                        </div>
+                    </div>
+                </div>
+                <!-- 来源链接 -->
+                <div class="text-[11px] text-[#7a756f] mt-2">
+                    信息来源：<a href="https://www.amfori.org/" target="_blank" class="text-[#ff641e] hover:underline">amfori BSCI 成员数据库</a>、<a href="https://www.miteco.gob.es/" target="_blank" class="text-[#ff641e] hover:underline">西班牙生态转型与人口挑战部 (MITECO) 包装法案</a>。
+                </div>
+            </section>
+
+            <!-- ═══════════ Section 7: 用户舆情与社媒 ═══════════ -->
+            <section id="consumer" class="scroll-mt-12">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 bg-pink-100 text-pink-600 rounded-lg"><i data-lucide="message-square" size="24"></i></div>
+                    <h3 class="text-2xl font-bold text-[#3c3935]">7. 用户舆情与社媒洞察 (Voice of Customer)</h3>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="sand-card p-6 md:col-span-2">
+                        <h4 class="font-bold text-[#3c3935] mb-4">消费者真实反馈与产品设计痛点</h4>
+                        <div class="space-y-3 text-xs leading-relaxed">
+                            <div class="p-3 bg-[#fdfbf7] rounded-xl border border-[rgba(160,109,68,0.08)]">
+                                <div class="flex items-center justify-between font-semibold text-[#3c3935]">
+                                    <span>小家电类目（Ansonic / Saivod）：按键与电池续航衰减</span>
+                                    <span class="report-tag">Trustpilot & OCU 评价反馈</span>
+                                </div>
+                                <p class="text-[#7a756f] mt-1">
+                                    部分消费者反馈手持吸尘器与便携料理机在使用半年后出现锂电池续航明显下滑、塑料卡扣易磨损、说明书仅有简单机翻西语而缺乏详细排障指引。
+                                </p>
+                            </div>
+                            <div class="p-3 bg-[#fdfbf7] rounded-xl border border-[rgba(160,109,68,0.08)]">
+                                <div class="flex items-center justify-between font-semibold text-[#3c3935]">
+                                    <span>服装服饰类目（Sfera / Unit）：版型尺码差异与水洗缩水</span>
+                                    <span class="report-tag">社交媒体与论坛讨论</span>
+                                </div>
+                                <p class="text-[#7a756f] mt-1">
+                                    快时尚女装与童装部分批次存在洗涤后轻微缩水变形、缝线偶有脱线现象，且 Sfera 与 Unit 在欧洲标准尺码标定上存在轻微公差。
+                                </p>
+                            </div>
+                            <div class="p-3 bg-[#fdfbf7] rounded-xl border border-[rgba(160,109,68,0.08)]">
+                                <div class="flex items-center justify-between font-semibold text-[#3c3935]">
+                                    <span>网购配送与包装体验：旺季大促过度包装与破损</span>
+                                    <span class="report-tag">黑五 / Rebajas 促销峰值</span>
+                                </div>
+                                <p class="text-[#7a756f] mt-1">
+                                    在大促期间部分小件商品采用过大的外包装瓦楞纸箱，内部气泡塑料填充过多，遭到欧洲环保型年轻消费者的社媒吐槽。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="sand-card p-6 flex flex-col justify-between">
+                        <div>
+                            <h4 class="font-bold text-[#3c3935] mb-2">社交媒体营销动向</h4>
+                            <p class="text-xs text-[#7a756f] leading-relaxed mb-4">
+                                集团在 Instagram、TikTok、YouTube 上重点运营「Semana Fantástica（梦幻周）」、「Las Rebajas（换季打折季）」及「El 8 de Oro」大促 IP，强调地中海品质生活、可持续绿色环保与本土美食文化。
+                            </p>
+                        </div>
+                        <div class="space-y-2 text-xs">
+                            <strong class="text-[#3c3935]">中国供应商针对性技术改进方案：</strong>
+                            <div class="p-2.5 bg-[#fdfbf7] rounded-lg border border-[rgba(160,109,68,0.08)] text-[11px] text-[#7a756f] space-y-1">
+                                <div>• <strong>家电模块化与可维修性：</strong>提升电机轴承与齿轮材质硬度，适配欧盟「维修权（Right to Repair）」法规。</div>
+                                <div>• <strong>面料预缩水防起球：</strong>强化定型与酵素洗工艺，提供全套西班牙语/葡萄牙语精装说明书。</div>
+                                <div>• <strong>减塑减容绿色包装：</strong>采用 100% 可降解纸浆模塑与紧凑型彩盒，协助降低 Ecoembes 包装税。</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- 来源链接 -->
+                <div class="text-[11px] text-[#7a756f] mt-2">
+                    信息来源：<a href="https://es.trustpilot.com/review/www.elcorteingles.es" target="_blank" class="text-[#ff641e] hover:underline">Trustpilot 西班牙消费者口碑评价</a>、<a href="https://www.ocu.org/" target="_blank" class="text-[#ff641e] hover:underline">OCU 消费者与用户组织</a>。
+                </div>
+            </section>
+
+            <!-- ═══════════ Section 8: 实战建议 ═══════════ -->
+            <section id="strategy" class="scroll-mt-24 pb-20">
+                <div class="rounded-3xl p-10 relative overflow-hidden" style="background: #3c3935;">
+                    <div class="relative z-10">
+                        <h3 class="text-3xl font-bold mb-6 flex items-center gap-3 text-white">
+                            <i data-lucide="sparkles" class="text-[#ff641e]"></i>
+                            对中国供应商的实战建议 (Strategy)
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-xs leading-relaxed">
+                            <div class="p-5 bg-white/5 rounded-2xl border border-white/10 space-y-2">
+                                <h4 class="font-bold text-[#ff641e] text-sm flex items-center gap-2">
+                                    <i data-lucide="shield-alert" size="16"></i> 战术一：全链路合规先行（"合规即产品"）
+                                </h4>
+                                <p class="text-slate-300">
+                                    主动备齐 <strong>amfori BSCI 验厂报告（A/B 级）</strong>、OEKO-TEX Standard 100、CE/RoHS 及西班牙 Ecoembes 包装回收标识。在递交产品方案时，同步附上完备的欧盟符合性声明（DoC）、技术构造文件（TCF）与西班牙语/葡萄牙语本地化说明书，大幅降低品类买手与合规团队的准入评估门槛。
+                                </p>
+                            </div>
+                            <div class="p-5 bg-white/5 rounded-2xl border border-white/10 space-y-2">
+                                <h4 class="font-bold text-[#ff641e] text-sm flex items-center gap-2">
+                                    <i data-lucide="layers" size="16"></i> 战术二：精准切入自有品牌（OEM/ODM 替代升级）
+                                </h4>
+                                <p class="text-slate-300">
+                                    重点主攻 <strong>Ansonic / Saivod</strong>（高性价比智能厨房小家电与生活电器）、<strong>Unit / Boomerang</strong>（高性价比运动功能面料、基础打底服饰与童装）、以及 <strong>El Corte Inglés Home</strong>（地中海极简风家纺与餐厨用具）。提供具备差异化外观设计、低碳环保认证（GRS/GOTS/FSC）的现成爆款解决方案。
+                                </p>
+                            </div>
+                            <div class="p-5 bg-white/5 rounded-2xl border border-white/10 space-y-2">
+                                <h4 class="font-bold text-[#ff641e] text-sm flex items-center gap-2">
+                                    <i data-lucide="send" size="16"></i> 战术三：穿透在华采购中枢与官方 B2B EDI 协同
+                                </h4>
+                                <p class="text-slate-300">
+                                    主动通过 <strong>El Corte Inglés 上海代表处及香港办事处</strong> 递交精准样品与报价，建立常态化对接。同时提前升级自身 IT 供应链系统，确保兼容其官方 B2B 供应商门户与 EDIFACT 电子数据交换协议（支持 ORDERS 订单、DESADV 预发货通知及符合西班牙法案的电子发票）。
+                                </p>
+                            </div>
+                            <div class="p-5 bg-white/5 rounded-2xl border border-white/10 space-y-2">
+                                <h4 class="font-bold text-[#ff641e] text-sm flex items-center gap-2">
+                                    <i data-lucide="truck" size="16"></i> 战术四：近岸仓储协同与灵活供应链响应
+                                </h4>
+                                <p class="text-slate-300">
+                                    针对每年 1 月和 7 月的 Rebajas（换季打折季）以及年末黑五促销，探索在西班牙瓦伦西亚或马德里保税仓/海外仓建立常备安全库存。通过「国内核心部件制造 + 欧洲保税仓敏捷组装/二次贴标」模式，实现 48 小时内的补货响应与退换备件支持，契合其对高履约确定性的严苛要求。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- 来源链接 -->
+                <div class="text-[11px] text-[#7a756f] mt-2">
+                    信息来源：<a href="https://www.icex.es/" target="_blank" class="text-[#ff641e] hover:underline">西班牙对外贸易发展和投资局 (ICEX) 跨国供应链采购指引</a>。
+                </div>
+            </section>
+        </div>
+
+        <!-- ====== Footer ====== -->
+        <footer class="mt-16 pt-8 border-t border-[rgba(160,109,68,0.08)] text-center text-xs text-[#7a756f]">
+            <div class="mb-2 leading-relaxed">
+                <p>数据来源：官方发布、商业登记信息、EPR框架合规指南、消费者舆情反馈及行业公开研报。</p>
+                <p class="mt-1">报告生成声明：本报告由 <strong>Market Graphic</strong> 平台分析生成。</p>
+            </div>
+        </footer>
+    </main>
+
+    <script>
+        lucide.createIcons();
+
+        // ===== 图表初始化 =====
+        const initCharts = () => {
+            if (typeof echarts === 'undefined') {
+                console.warn('ECharts 未加载，跳过图表渲染');
+                return;
+            }
+
+            // --- 图表 1: 财务数据 (环形图) ---
+            const chart1Dom = document.getElementById('financeChart1');
+            if (chart1Dom) {
+                const chart1 = echarts.init(chart1Dom);
+                const chart1Option = {
+                    tooltip: {
+                        trigger: 'item',
+                        formatter: '{b}: {c} 亿欧元 ({d}%)'
+                    },
+                    legend: {
+                        bottom: '0%',
+                        left: 'center',
+                        textStyle: { color: '#7a756f', fontSize: 11 }
+                    },
+                    color: ['#ff641e', '#3c3935', '#b89d82', '#64748b', '#006b3f', '#e2e8f0'],
+                    series: [
+                        {
+                            name: '营收分布',
+                            type: 'pie',
+                            radius: ['45%', '70%'],
+                            center: ['50%', '45%'],
+                            avoidLabelOverlap: false,
+                            itemStyle: {
+                                borderRadius: 8,
+                                borderColor: '#fdfbf7',
+                                borderWidth: 2
+                            },
+                            label: {
+                                show: false,
+                                position: 'center'
+                            },
+                            emphasis: {
+                                label: {
+                                    show: true,
+                                    fontSize: 14,
+                                    fontWeight: 'bold',
+                                    formatter: '{b}\n{c} 亿欧'
+                                }
+                            },
+                            labelLine: { show: false },
+                            data: [
+                                { value: 57.04, name: '男女装与服饰箱包' },
+                                { value: 34.49, name: '旅游文旅服务' },
+                                { value: 30.44, name: '食品与生鲜餐饮' },
+                                { value: 26.97, name: '家居用品与家电数码' },
+                                { value: 15.31, name: '办公文具与体育休闲' },
+                                { value: 2.50, name: '金融与其他服务' }
+                            ]
+                        }
+                    ]
+                };
+                chart1.setOption(chart1Option);
+                window.addEventListener('resize', () => chart1.resize());
+            }
+
+            // --- 图表 2: 渠道与历史演进数据 (柱折图) ---
+            const chart2Dom = document.getElementById('channelChart');
+            if (chart2Dom) {
+                const chart2 = echarts.init(chart2Dom);
+                const chart2Option = {
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: { type: 'cross' }
+                    },
+                    legend: {
+                        data: ['总营业额 (亿欧元)', 'EBITDA (亿欧元)'],
+                        textStyle: { color: '#7a756f', fontSize: 11 },
+                        top: '0%'
+                    },
+                    grid: {
+                        left: '3%',
+                        right: '4%',
+                        bottom: '8%',
+                        top: '18%',
+                        containLabel: true
+                    },
+                    xAxis: [
+                        {
+                            type: 'category',
+                            data: ['2020/21', '2021/22', '2022/23', '2023/24', '2024/25'],
+                            axisPointer: { type: 'shadow' },
+                            axisLine: { lineStyle: { color: '#e0dcd3' } },
+                            axisLabel: { color: '#7a756f', fontSize: 11 }
+                        }
+                    ],
+                    yAxis: [
+                        {
+                            type: 'value',
+                            name: '营业额',
+                            min: 80,
+                            max: 180,
+                            interval: 20,
+                            axisLabel: { formatter: '{value} 亿', color: '#7a756f', fontSize: 10 },
+                            splitLine: { lineStyle: { color: 'rgba(160,109,68,0.08)' } }
+                        },
+                        {
+                            type: 'value',
+                            name: 'EBITDA',
+                            min: 0,
+                            max: 15,
+                            interval: 3,
+                            axisLabel: { formatter: '{value} 亿', color: '#ff641e', fontSize: 10 },
+                            splitLine: { show: false }
+                        }
+                    ],
+                    series: [
+                        {
+                            name: '总营业额 (亿欧元)',
+                            type: 'bar',
+                            barWidth: '35%',
+                            itemStyle: {
+                                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                    { offset: 0, color: '#3c3935' },
+                                    { offset: 1, color: '#64748b' }
+                                ]),
+                                borderRadius: [6, 6, 0, 0]
+                            },
+                            data: [104.32, 125.08, 153.27, 163.33, 166.75]
+                        },
+                        {
+                            name: 'EBITDA (亿欧元)',
+                            type: 'line',
+                            yAxisIndex: 1,
+                            smooth: true,
+                            symbolSize: 8,
+                            lineStyle: { width: 3, color: '#ff641e' },
+                            itemStyle: { color: '#ff641e' },
+                            data: [1.42, 8.04, 9.51, 10.81, 12.09]
+                        }
+                    ]
+                };
+                chart2.setOption(chart2Option);
+                window.addEventListener('resize', () => chart2.resize());
+            }
+
+            // --- 图表 3: 对华大宗商品采购估值趋势 (柱状图) ---
+            const chart3Dom = document.getElementById('supplyChart');
+            if (chart3Dom) {
+                const chart3 = echarts.init(chart3Dom);
+                const chart3Option = {
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: { type: 'shadow' },
+                        formatter: '{b}年 估算对华直接与间接采购额: {c} 亿欧元'
+                    },
+                    grid: {
+                        left: '3%',
+                        right: '4%',
+                        bottom: '8%',
+                        top: '12%',
+                        containLabel: true
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: ['2020', '2021', '2022', '2023', '2024'],
+                        axisLine: { lineStyle: { color: '#e0dcd3' } },
+                        axisLabel: { color: '#7a756f', fontSize: 11 }
+                    },
+                    yAxis: {
+                        type: 'value',
+                        name: '采购估值 (亿欧元)',
+                        min: 8,
+                        max: 20,
+                        axisLabel: { formatter: '{value} 亿', color: '#7a756f', fontSize: 10 },
+                        splitLine: { lineStyle: { color: 'rgba(160,109,68,0.08)' } }
+                    },
+                    series: [
+                        {
+                            name: '对华大宗商品采购额',
+                            type: 'bar',
+                            barWidth: '40%',
+                            itemStyle: {
+                                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                    { offset: 0, color: '#ff641e' },
+                                    { offset: 1, color: '#f59e0b' }
+                                ]),
+                                borderRadius: [6, 6, 0, 0]
+                            },
+                            data: [11.2, 12.8, 14.5, 15.6, 16.8]
+                        }
+                    ]
+                };
+                chart3.setOption(chart3Option);
+                window.addEventListener('resize', () => chart3.resize());
+            }
+        };
+
+        initCharts();
+    </script>
+</body>
+</html>

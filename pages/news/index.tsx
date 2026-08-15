@@ -149,6 +149,11 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
         <meta property="og:image" content={ogImageUrl} />
         {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
         <meta property="og:site_name" content="外贸智友 GlobalTradeBuddy" />
+
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="每日外贸资讯与全球行业热点大厅 | 外贸智友" />
+        <meta name="twitter:description" content="实时追踪全球外贸热点、关税政策调整、海运费波动及海外零售动态，助中国制造企业敏锐捕捉出海商机与前沿趋势。" />
+        <meta name="twitter:image" content={ogImageUrl} />
       </Head>
 
       {/* 微信首图兜底 */}

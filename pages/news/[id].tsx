@@ -214,6 +214,12 @@ export default function NewsDetailPage({ news, relatedReports, canonicalUrl, sit
           {news.industries && <meta property="article:section" content={news.industries} />}
           {news.countries && <meta property="article:tag" content={news.countries} />}
 
+          {/* Twitter Card */}
+          <meta name="twitter:card" content="summary_large_image" />
+          <meta name="twitter:title" content={`${news.title} | 外贸智友`} />
+          <meta name="twitter:description" content={plainSummary} />
+          <meta name="twitter:image" content={ogImageUrl} />
+
           {/* 5. 百度/国内搜索引擎结构化数据 */}
           <script
             type="application/ld+json"
@@ -229,6 +235,34 @@ export default function NewsDetailPage({ news, relatedReports, canonicalUrl, sit
               })
             }}
           />
+
+          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'NewsArticle',
+            headline: news.title,
+            description: plainSummary,
+            image: [ogImageUrl],
+            datePublished: news.published_at,
+            dateModified: news.published_at,
+            author: {
+              '@type': 'Organization',
+              name: '外贸智友 GlobalTradeBuddy',
+              url: 'https://marketgraphic.cn'
+            },
+            publisher: {
+              '@type': 'Organization',
+              name: 'Market Graphic',
+              url: 'https://marketgraphic.cn',
+              logo: {
+                '@type': 'ImageObject',
+                url: 'https://marketgraphic.cn/images/mg_logo.png'
+              }
+            },
+            mainEntityOfPage: {
+              '@type': 'WebPage',
+              '@id': canonicalUrl || ''
+            }
+          }) }} />
         </Head>
 
         {/* 微信内置浏览器分享兜底隐形首图 (微信早期与部分版本爬虫强制读取 Body 首张 300x300 图) */}

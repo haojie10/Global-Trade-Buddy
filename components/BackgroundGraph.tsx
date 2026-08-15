@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import styles from './BackgroundGraph.module.css';
 
 interface FloatingBall {
@@ -11,8 +11,19 @@ interface FloatingBall {
 
 export default function BackgroundGraph() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [reduceMotion, setReduceMotion] = useState(false);
 
   useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setReduceMotion(mediaQuery.matches);
+    const handler = (e: MediaQueryListEvent) => setReduceMotion(e.matches);
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, []);
+
+  useEffect(() => {
+    if (reduceMotion) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -105,7 +116,23 @@ export default function BackgroundGraph() {
     addCustomBall(penIndex, false);
 
     let animId = 0;
+    let isVisible = !document.hidden;
+
+    const handleVisibilityChange = () => {
+      isVisible = !document.hidden;
+      if (isVisible && !animId) {
+        animId = requestAnimationFrame(draw);
+      }
+    };
+
+    window.addEventListener('visibilitychange', handleVisibilityChange);
+
     const draw = () => {
+      if (!isVisible) {
+        animId = 0;
+        return;
+      }
+
       ctx.clearRect(0, 0, width, height);
 
       // 1. Draw Regular Vertical Track Lines (100px intervals)
@@ -162,13 +189,20 @@ export default function BackgroundGraph() {
       animId = requestAnimationFrame(draw);
     };
 
-    animId = requestAnimationFrame(draw);
+    if (isVisible) {
+      animId = requestAnimationFrame(draw);
+    }
 
     return () => {
       window.removeEventListener('resize', resize);
+      window.removeEventListener('visibilitychange', handleVisibilityChange);
       cancelAnimationFrame(animId);
     };
-  }, []);
+  }, [reduceMotion]);
+
+  if (reduceMotion) {
+    return <div className={styles.container} style={{ background: '#f5f5f7' }}></div>;
+  }
 
   return (
     <div className={styles.container}>

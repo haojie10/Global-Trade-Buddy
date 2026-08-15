@@ -283,6 +283,36 @@ export default function ReportDetailPage({
           <meta property="og:image" content={siteUrl ? `${siteUrl}/images/discover_focus_panorama.jpg` : '/images/discover_focus_panorama.jpg'} />
           {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
           <meta property="og:site_name" content="外贸智友 GlobalTradeBuddy" />
+
+          <meta name="twitter:card" content="summary_large_image" />
+          <meta name="twitter:title" content={`${report.title} | 外贸智友`} />
+          <meta name="twitter:description" content={report.summary || `${report.title} — 深度商业研报`} />
+          <meta name="twitter:image" content={siteUrl ? `${siteUrl}/images/discover_focus_panorama.jpg` : '/images/discover_focus_panorama.jpg'} />
+
+          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Article',
+            headline: report.title,
+            description: report.summary || `${report.title} — 深度商业研报`,
+            author: {
+              '@type': 'Organization',
+              name: '外贸智友 GlobalTradeBuddy',
+              url: 'https://marketgraphic.cn'
+            },
+            publisher: {
+              '@type': 'Organization',
+              name: 'Market Graphic',
+              url: 'https://marketgraphic.cn',
+              logo: {
+                '@type': 'ImageObject',
+                url: 'https://marketgraphic.cn/images/mg_logo.png'
+              }
+            },
+            mainEntityOfPage: {
+              '@type': 'WebPage',
+              '@id': canonicalUrl || ''
+            }
+          }) }} />
         </Head>
 
         {/* 微信首图兜底 */}
@@ -945,7 +975,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       related = shuffle(selectedList);
     }
 
-    context.res.setHeader('Cache-Control', 'no-store, must-revalidate');
+    context.res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
 
     const proto = (context.req.headers['x-forwarded-proto'] as string) || 'https';
     const host = (context.req.headers['x-forwarded-host'] as string) || context.req.headers.host || 'marketgraphic.cn';

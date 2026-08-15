@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /my-graph
+Disallow: /story-demo
+
+Sitemap: https://marketgraphic.cn/sitemap.xml
