@@ -1019,10 +1019,14 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         nickname
       }
     };
-  } catch (err) {
+  } catch (err: any) {
+    if (err.message === '报告未找到' || err.message?.includes('未找到')) {
+      return { notFound: true };
+    }
     console.error('SSR 加载报告详情页失败，原因:', err);
     throw err; // 让 Next.js 渲染 500.tsx 错误页，避免伪装成 404 导致爬虫误删索引
   } finally {
+
     if (dbClient) {
       dbClient.release();
     }

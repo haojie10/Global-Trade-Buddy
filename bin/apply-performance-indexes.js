@@ -37,9 +37,10 @@ const indexes = [
     sql: 'CREATE INDEX IF NOT EXISTS idx_news_published ON news(status, published_at DESC);'
   },
   {
-    name: 'idx_page_views_viewed_at',
-    sql: 'CREATE INDEX IF NOT EXISTS idx_page_views_viewed_at ON page_views(viewed_at);'
+    name: 'idx_page_views_created_at',
+    sql: 'CREATE INDEX IF NOT EXISTS idx_page_views_created_at ON page_views(created_at);'
   },
+
   {
     name: 'idx_search_logs_created_at',
     sql: 'CREATE INDEX IF NOT EXISTS idx_search_logs_created_at ON search_logs(created_at);'

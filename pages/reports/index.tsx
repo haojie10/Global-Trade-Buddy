@@ -147,7 +147,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       `, [userId]);
       allReports = res.rows.map((row: any) => ({
         id: row.id, title: row.title, category: row.category,
-        market_region: row.market_region, summary: row.summary,
+        market_region: row.market_region,
+        summary: row.summary ? (row.summary.length > 150 ? row.summary.slice(0, 150) + '...' : row.summary) : '',
         industries: row.industries || '',
         isUnlocked: true, isFavorited: row.is_favorited
       }));
@@ -165,7 +166,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       `, [userId]);
       allReports = res.rows.map((row: any) => ({
         id: row.id, title: row.title, category: row.category,
-        market_region: row.market_region, summary: row.summary,
+        market_region: row.market_region,
+        summary: row.summary ? (row.summary.length > 150 ? row.summary.slice(0, 150) + '...' : row.summary) : '',
         industries: row.industries || '',
         isUnlocked: row.is_unlocked, isFavorited: row.is_favorited
       }));
@@ -181,11 +183,13 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       `);
       allReports = res.rows.map((row: any) => ({
         id: row.id, title: row.title, category: row.category,
-        market_region: row.market_region, summary: row.summary,
+        market_region: row.market_region,
+        summary: row.summary ? (row.summary.length > 150 ? row.summary.slice(0, 150) + '...' : row.summary) : '',
         industries: row.industries || '',
         isUnlocked: false, isFavorited: false
       }));
     }
+
 
     context.res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
 

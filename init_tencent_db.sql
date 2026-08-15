@@ -237,7 +237,7 @@ CREATE INDEX IF NOT EXISTS idx_entity_relations_b ON entity_relations(entity_id_
 CREATE INDEX IF NOT EXISTS idx_report_entities_entity ON report_entities(entity_id);
 CREATE INDEX IF NOT EXISTS idx_reports_created_at ON reports(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_news_published ON news(status, published_at DESC);
-CREATE INDEX IF NOT EXISTS idx_page_views_viewed_at ON page_views(viewed_at);
+CREATE INDEX IF NOT EXISTS idx_page_views_created_at ON page_views(created_at);
 CREATE INDEX IF NOT EXISTS idx_search_logs_created_at ON search_logs(created_at);
 CREATE INDEX IF NOT EXISTS idx_email_verif_expires ON email_verifications(expired_at);
 
