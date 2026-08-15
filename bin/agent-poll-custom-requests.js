@@ -70,7 +70,32 @@ async function pollOnce() {
   }
 }
 
+async function verifyReportOnline(reportId) {
+  try {
+    const checkUrl = `${API_BASE}/reports/${reportId}`;
+    const res = await fetch(checkUrl);
+    if (res.status === 200) {
+      console.log(`[Agent Poll] ✅ 线上报告探活校验成功 (HTTP 200 OK): ${checkUrl}`);
+      return true;
+    }
+    console.error(`[Agent Poll] ❌ 线上报告探活失败 (HTTP ${res.status}): ${checkUrl}`);
+    return false;
+  } catch (err) {
+    console.error(`[Agent Poll] ❌ 探活网络异常:`, err.message);
+    return false;
+  }
+}
+
 async function updateStatus(id, status, reportId = null) {
+  if (status === 'completed' && reportId) {
+    console.log(`[Agent Poll] 🔍 正在对生成的 Report ID (${reportId}) 执行上线前探活校验...`);
+    const isOnline = await verifyReportOnline(reportId);
+    if (!isOnline) {
+      console.error(`[Agent Poll] ⛔ 阻断更新：Report ID (${reportId}) 无法通过 HTTP 200 探活，拒绝触发完成通知邮件！`);
+      return false;
+    }
+  }
+
   try {
     const res = await fetch(`${API_BASE}/api/agent/custom-requests`, {
       method: 'PATCH',
@@ -86,12 +111,15 @@ async function updateStatus(id, status, reportId = null) {
     });
     const data = await res.json();
     if (res.ok && data.success) {
-      console.log(`[Agent Poll] 状态成功更新为: ${status}${reportId ? ` (Report ID: ${reportId})` : ''}`);
+      console.log(`[Agent Poll] 🎉 状态成功更新为: ${status}${reportId ? ` (Report ID: ${reportId})` : ''}`);
+      return true;
     } else {
-      console.error(`[Agent Poll] 更新状态失败:`, data.error);
+      console.error(`[Agent Poll] ❌ 更新状态失败:`, data.error);
+      return false;
     }
   } catch (err) {
     console.error(`[Agent Poll] 更新状态请求异常:`, err.message);
+    return false;
   }
 }
 

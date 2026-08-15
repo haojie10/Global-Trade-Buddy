@@ -102,12 +102,12 @@ description: 360度企业战略情报洞察工具。用于为特定企业生成�
    python C:/Users/066/.gemini/config/skills/company-insight-pro/scripts/publish_report.py <path/to/your/generated/html>
    ```
 
-2. **自动发布逻辑**：
-   - 该脚本会自动读取 `d:\我的APP\Globaltradebuddy\.env` 中的 `GTB_API_URL` 配置（默认为 `http://124.222.201.143:3000`）及 `AGENT_API_KEY`。
+2. **自动发布与真实 ID 校验逻辑（强制要求）**：
+   - 该脚本会自动读取 `.env` 中的 `GTB_API_URL` 配置（默认为 `http://124.222.201.143:3000`）及 `AGENT_API_KEY`。
    - 解析 HTML 中的 `<meta>` 标签（`company_name`, `summary`, `regions`, `products` 等）并校验标准品类名。
-   - 向 `/api/agent/publish` 发送 POST 请求。若远端接口无法连通，会自动退路尝试 `http://localhost:3000/api/agent/publish`。
-   - 终端打印 `[OK] Report published successfully! ID: ...` 即代表线上发布完成，在最终回复中向用户反馈 Report ID。
-
+   - 向 `/api/agent/publish` 发送 POST 请求。
+   - **严格禁止预先捏造/猜想 UUID**：终端打印 `[OK] Report published successfully! ID: <真实UUID>`，必须严格以控制台返回的真实 ID 为准。
+   - **强制探活校验（Verification Before Completion）**：在宣称完成或调用 `PATCH /api/agent/custom-requests` 之前，必须先使用 `curl` 探活 `GET http://124.222.201.143:3000/reports/<真实UUID>` 并确认返回 `HTTP 200 OK`，之后方可将任务更新为 `completed`。
 
 ---
 
@@ -123,4 +123,4 @@ description: 360度企业战略情报洞察工具。用于为特定企业生成�
   1. 报告必须是**单文件 HTML**（图像 Base64 嵌入）。
   2. 任务结束前，**必须删除**所有过程中产生的临时图片、脚本及中间文件，仅保留最终的 HTML 报告。
 - **无需浏览器验证**：报告生成并保存后即可视为任务完成，**禁止**自动调用浏览器工具进行视觉验证。
-- **上传校验**：平台上传步骤必须在本地合规自检通过后才能执行。上传失败不影响任务完成判定，但必须在最终回复中明确说明上传状态（成功 / 失败 / 已跳过）及原因。
+- **上传与探活校验**：平台上传步骤必须在本地合规自检通过后才能执行，且必须通过 HTTP 200 探活验证后方可反馈 Report ID 并触发完成。

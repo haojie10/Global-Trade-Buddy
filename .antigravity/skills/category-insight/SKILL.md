@@ -129,10 +129,11 @@ description: |
    python C:/Users/066/.gemini/config/skills/category-insight/scripts/publish_report.py d:\我的APP\品类洞察\eyebrow-lash-beauty-tools-us-tjmaxx-insight.html
    ```
 
-2. **自动发布逻辑**：
-   - 该脚本会自动读取 `d:\我的APP\Globaltradebuddy\.env` 中的 API 配置，提取 HTML 中的元数据与正文。
-   - 自动向 `https://globaltradebuddy.vercel.app/api/agent/publish` 发送请求，将报告实时发布上线。
-   - 终端打印 `[OK] Report published successfully! ID: ...` 即代表线上发布完成，向用户反馈发布 ID 与平台链接。
+2. **自动发布与真实 ID 校验逻辑（强制要求）**：
+   - 该脚本会自动读取 `.env` 中的 `GTB_API_URL`（默认 `http://124.222.201.143:3000`）与 `AGENT_API_KEY`。
+   - 自动向 `/api/agent/publish` 发送请求，将报告实时发布上线。
+   - **严格禁止预先捏造/猜想 UUID**：终端打印 `[OK] Report published successfully! ID: <真实UUID>`，必须严格以控制台返回的真实 ID 为准。
+   - **强制探活校验（Verification Before Completion）**：在宣称完成或调用 `PATCH /api/agent/custom-requests` 之前，必须先使用 `curl` 探活 `GET http://124.222.201.143:3000/reports/<真实UUID>` 并确认返回 `HTTP 200 OK`，之后方可将任务更新为 `completed`。
 
 ---
 
@@ -141,4 +142,4 @@ description: |
 - **命名规范**：最终报告文件必须以 `品类-市场-insight.html`（短横线命名）命名。
 - **完整性**：必须包含品类矩阵、差异对比、痛点分析、差距诊断以及研发建议这五大结构。研发建议部分必须严格遵循反堆料控成本原则，并对每款产品完整覆盖【1. 消费群体/用户画像】、【2. 群体痛点】、【3. 开发建议】三要素。
 - **整洁度**：确认工作目录里已成功清除了临时图片，除了生成的最终自包含 HTML 报告外，不留任何过程垃圾文件。
-- **自动化上线**：必须确保报告已通过 `publish_report.py` 成功推送至 `https://globaltradebuddy.vercel.app` 平台并反馈 Report ID。
+- **真实性与探活闭环**：必须确保报告已成功推送至平台，且通过 HTTP 200 探活验证后方可反馈真实 Report ID。

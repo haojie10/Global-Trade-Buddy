@@ -45,6 +45,30 @@ async function agentCustomRequestsHandler(
       return res.status(400).json({ error: '不合法的状态值' });
     }
 
+    // 1. 先检索当前任务信息
+    const curRecordRes = await dbClient.query(
+      'SELECT id, request_type, report_id, contact_email FROM custom_report_requests WHERE id = $1',
+      [id]
+    );
+    if (curRecordRes.rows.length === 0) {
+      return res.status(404).json({ error: '未找到指定 ID 的定制请求' });
+    }
+    const curRecord = curRecordRes.rows[0];
+    const targetReportId = reportId || curRecord.report_id;
+
+    // 2. 🛡️ 强制防错拦截：研报类任务若标记为 completed，必须提供且存在于 reports 表中
+    if (status === 'completed' && curRecord.request_type !== 'feedback') {
+      if (!targetReportId) {
+        return res.status(400).json({ error: '研报类定制任务标记 completed 时必须提供有效的 reportId' });
+      }
+      const checkReport = await dbClient.query('SELECT id FROM reports WHERE id = $1', [targetReportId]);
+      if (checkReport.rows.length === 0) {
+        return res.status(400).json({
+          error: `指定的 reportId (${targetReportId}) 在数据库 reports 表中不存在，拒绝标记为已完成并阻断失效邮件发送`
+        });
+      }
+    }
+
     const updateRes = await dbClient.query(
       `UPDATE custom_report_requests
        SET status = $1,
@@ -54,10 +78,6 @@ async function agentCustomRequestsHandler(
        RETURNING id, contact_email, request_type, payload, status, report_id`,
       [status, reportId || null, id]
     );
-
-    if (updateRes.rows.length === 0) {
-      return res.status(404).json({ error: '未找到指定 ID 的定制请求' });
-    }
 
     const updatedRecord = updateRes.rows[0];
 
