@@ -1,11 +1,12 @@
 module.exports = {
   apps: [{
     name: 'gtb-backend',
-    script: 'node_modules/.bin/next',
-    args: 'start -H 0.0.0.0 -p 3000',
+    cwd: '/home/ubuntu/Global-Trade-Buddy',
+    script: 'npm',
+    args: 'start',
     instances: 1,
     exec_mode: 'fork',
-    max_memory_restart: '512M',
+    max_memory_restart: '1G',
     env: {
       NODE_ENV: 'production',
       PORT: 3000,
