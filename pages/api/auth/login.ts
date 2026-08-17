@@ -65,9 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.error("Login Handler Error:", err);
     // 返回具体错误信息便于排查（包含数据库连通性、表缺失或密钥问题）
     return res.status(500).json({ 
-      error: '服务器内部错误', 
-      details: err.message,
-      code: err.code || null 
+      error: process.env.NODE_ENV === 'production' ? '服务器内部错误' : err.message 
     });
   } finally {
     if (dbClient) {

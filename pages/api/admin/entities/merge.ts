@@ -1,15 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next';
+import { PoolClient } from 'pg';
 import { requireAdmin } from '../../../../lib/auth';
-import pool from '../../../../lib/db';
+import { withDb } from '../../../../lib/api-handler';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function mergeHandler(req: NextApiRequest, res: NextApiResponse, client: PoolClient) {
   const adminSession = requireAdmin(req);
   if (!adminSession) {
     return res.status(403).json({ error: '权限不足，仅管理员可执行此操作' });
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
   const { sourceEntityId, targetEntityId, aliasName } = req.body;
@@ -17,22 +14,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Missing parameters: targetEntityId, aliasName are required.' });
   }
 
-  const client = await pool.connect();
+  await client.query('BEGIN');
 
-  try {
-    await client.query('BEGIN');
+  // 1. 在 entity_aliases 中为目标公司记录该别名
+  await client.query(
+    `INSERT INTO entity_aliases (entity_id, alias_name)
+     VALUES ($1, $2)
+     ON CONFLICT (alias_name) 
+     DO UPDATE SET entity_id = EXCLUDED.entity_id`,
+    [targetEntityId, aliasName]
+  );
 
-    // 1. 在 entity_aliases 中为目标公司记录该别名
-    await client.query(
-      `INSERT INTO entity_aliases (entity_id, alias_name)
-       VALUES ($1, $2)
-       ON CONFLICT (alias_name) 
-       DO UPDATE SET entity_id = EXCLUDED.entity_id`,
-      [targetEntityId, aliasName]
-    );
-
-    // 如果指定了旧实体 ID，则执行数据合并和转移逻辑
-    if (sourceEntityId) {
+  // 如果指定了旧实体 ID，则执行数据合并和转移逻辑
+  if (sourceEntityId) {
     // 查询旧公司被哪些报告提及过
     const reportEnts = await client.query(
       `SELECT report_id FROM report_entities WHERE entity_id = $1`,
@@ -55,7 +49,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
 
     // 3. 将所有涉及旧公司的实体关系 (entity_relations) 迁移到新公司上
-    // 注意：迁移后可能会与已有关系发生冲突，所以这里处理一下唯一约束
     const relationsA = await client.query(
       `SELECT id, entity_id_b, relation_type, market_region FROM entity_relations WHERE entity_id_a = $1`,
       [sourceEntityId]
@@ -93,16 +86,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       `DELETE FROM entities WHERE id = $1`,
       [sourceEntityId]
     );
-    }
-
-    await client.query('COMMIT');
-
-    return res.status(200).json({ success: true });
-  } catch (err: any) {
-    await client.query('ROLLBACK');
-    const safeMsg = process.env.NODE_ENV === 'production' ? '服务器内部错误' : err.message;
-    return res.status(500).json({ error: safeMsg });
-  } finally {
-    client.release();
   }
+
+  await client.query('COMMIT');
+
+  return res.status(200).json({ success: true });
 }
+
+export default withDb(mergeHandler, {
+  methods: ['POST'],
+  requiredBody: ['targetEntityId', 'aliasName']
+});

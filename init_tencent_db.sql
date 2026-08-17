@@ -230,3 +230,14 @@ VALUES (
   999999
 )
 ON CONFLICT (email) DO NOTHING;
+
+-- 19. 核心性能索引 (Performance Indexes)
+CREATE INDEX IF NOT EXISTS idx_relations_report_b ON relations(report_id_b);
+CREATE INDEX IF NOT EXISTS idx_entity_relations_b ON entity_relations(entity_id_b);
+CREATE INDEX IF NOT EXISTS idx_report_entities_entity ON report_entities(entity_id);
+CREATE INDEX IF NOT EXISTS idx_reports_created_at ON reports(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_news_published ON news(status, published_at DESC);
+CREATE INDEX IF NOT EXISTS idx_page_views_created_at ON page_views(created_at);
+CREATE INDEX IF NOT EXISTS idx_search_logs_created_at ON search_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_email_verif_expires ON email_verifications(expired_at);
+

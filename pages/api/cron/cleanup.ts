@@ -45,12 +45,14 @@ async function cronCleanupHandler(req: NextApiRequest, res: NextApiResponse, dbC
     });
   } catch (err: any) {
     console.error('[CRON CLEANUP ERROR]', err);
+    const isProd = process.env.NODE_ENV === 'production';
     return res.status(500).json({
       error: '清理任务执行失败',
-      details: err.message
+      ...(isProd ? {} : { details: err.message })
     });
   }
 }
+
 
 export default withDb(cronCleanupHandler, {
   methods: ['POST', 'GET']

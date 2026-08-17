@@ -52,3 +52,5 @@ public/Intro-loop.mp4
 public/Outro-loop.mp4
 public/main.mp4
 
+# 视频文件（服务器本地管理，不纳入 Git）
+public/*.mp4

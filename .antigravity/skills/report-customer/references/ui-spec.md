@@ -98,3 +98,14 @@ font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, s
   transform: translateY(-1px);
 }
 ```
+
+---
+
+## 七、品牌标识与页脚官网链接规范
+
+所有生成的 HTML 报告必须在以下两个位置完整展示 Market Graphic 品牌 Logo 与官方网址：
+
+1. **吸顶导航栏 / 头部右上角 (Header)**：
+   - 包含 `Powered by` 说明文字紧随官方品牌 Logo 图标（以 Base64 内嵌），保持排版轻量紧凑，无需重复堆叠文字。
+2. **报告底部 (Footer)**：
+   - 底部不放置 Logo，保持极简纯粹；在最下方居中附带官方主站超链接：`<a href="https://marketgraphic.cn" target="_blank">www.marketgraphic.cn</a>`，样式采用品牌橘色 `#ff641e`。

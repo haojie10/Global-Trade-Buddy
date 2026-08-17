@@ -3,26 +3,34 @@ import { PoolClient } from 'pg';
 import { withDb } from '../../../lib/api-handler';
 import { sendMail } from '../../../lib/email';
 
-const AGENT_SECRET = process.env.AGENT_API_KEY || 'automation_agent_secret';
+const isProd = process.env.NODE_ENV === 'production';
+const AGENT_SECRET = process.env.AGENT_API_KEY;
 
 async function agentCustomRequestsHandler(
   req: NextApiRequest,
   res: NextApiResponse,
   dbClient: PoolClient
 ) {
-  // 简单的 Agent 秘钥校验（HTTP Header 或 Query）
+  // Agent 密钥校验（HTTP Header 或 Query）
   const authKey = req.headers['x-agent-key'] || req.query.agent_key;
-  if (authKey !== AGENT_SECRET) {
-    return res.status(401).json({ error: '未授权的 Agent 客户端访问' });
+  if (isProd) {
+    if (!AGENT_SECRET || authKey !== AGENT_SECRET) {
+      return res.status(401).json({ error: '未授权的 Agent 客户端访问' });
+    }
+  } else {
+    if (authKey !== (AGENT_SECRET || 'automation_agent_secret') && authKey !== 'automation_agent_secret') {
+      return res.status(401).json({ error: '未授权的 Agent 客户端访问' });
+    }
   }
 
   if (req.method === 'GET') {
-    // 拉取等待处理的任务（默认拉取最先提交的 5 条）
+    // 拉取等待处理的任务（含超过 30 分钟未更新的僵死任务，支持自动重试恢复）
     const limit = parseInt((req.query.limit as string) || '5', 10);
     const result = await dbClient.query(
       `SELECT id, user_id, contact_email, request_type, payload, status, created_at
        FROM custom_report_requests
-       WHERE status = 'pending'
+       WHERE status = 'pending' 
+          OR (status = 'processing' AND updated_at < NOW() - INTERVAL '30 minutes')
        ORDER BY created_at ASC
        LIMIT $1`,
       [limit]
@@ -33,6 +41,7 @@ async function agentCustomRequestsHandler(
       requests: result.rows
     });
   }
+
 
   if (req.method === 'PATCH') {
     const { id, status, reportId, errorMessage } = req.body;
@@ -45,6 +54,30 @@ async function agentCustomRequestsHandler(
       return res.status(400).json({ error: '不合法的状态值' });
     }
 
+    // 1. 先检索当前任务信息
+    const curRecordRes = await dbClient.query(
+      'SELECT id, request_type, report_id, contact_email FROM custom_report_requests WHERE id = $1',
+      [id]
+    );
+    if (curRecordRes.rows.length === 0) {
+      return res.status(404).json({ error: '未找到指定 ID 的定制请求' });
+    }
+    const curRecord = curRecordRes.rows[0];
+    const targetReportId = reportId || curRecord.report_id;
+
+    // 2. 🛡️ 强制防错拦截：研报类任务若标记为 completed，必须提供且存在于 reports 表中
+    if (status === 'completed' && curRecord.request_type !== 'feedback') {
+      if (!targetReportId) {
+        return res.status(400).json({ error: '研报类定制任务标记 completed 时必须提供有效的 reportId' });
+      }
+      const checkReport = await dbClient.query('SELECT id FROM reports WHERE id = $1', [targetReportId]);
+      if (checkReport.rows.length === 0) {
+        return res.status(400).json({
+          error: `指定的 reportId (${targetReportId}) 在数据库 reports 表中不存在，拒绝标记为已完成并阻断失效邮件发送`
+        });
+      }
+    }
+
     const updateRes = await dbClient.query(
       `UPDATE custom_report_requests
        SET status = $1,
@@ -54,10 +87,6 @@ async function agentCustomRequestsHandler(
        RETURNING id, contact_email, request_type, payload, status, report_id`,
       [status, reportId || null, id]
     );
-
-    if (updateRes.rows.length === 0) {
-      return res.status(404).json({ error: '未找到指定 ID 的定制请求' });
-    }
 
     const updatedRecord = updateRes.rows[0];
 
@@ -72,7 +101,21 @@ async function agentCustomRequestsHandler(
           reportTitle = `《${payloadObj.companyName || ''} 企业战略情报洞察报告》`;
         }
 
-        const siteUrl = process.env.GTB_API_URL || 'http://124.222.201.143:3000';
+        const getValidSiteUrl = (): string => {
+          const envUrl = process.env.GTB_API_URL || process.env.NEXT_PUBLIC_SITE_URL || '';
+          if (
+            envUrl &&
+            !envUrl.includes('edgeone') &&
+            !envUrl.includes('vercel') &&
+            !envUrl.includes('tcb.qcloud.la') &&
+            !envUrl.includes('cloudbase')
+          ) {
+            return envUrl.replace(/\/+$/, '');
+          }
+          return 'https://marketgraphic.cn';
+        };
+
+        const siteUrl = getValidSiteUrl();
         const reportUrl = `${siteUrl}/reports/${updatedRecord.report_id}`;
 
         const emailSubject = `【GlobalTradeBuddy】您订购的 ${reportTitle} 已生成完毕！`;

@@ -214,6 +214,12 @@ export default function NewsDetailPage({ news, relatedReports, canonicalUrl, sit
           {news.industries && <meta property="article:section" content={news.industries} />}
           {news.countries && <meta property="article:tag" content={news.countries} />}
 
+          {/* Twitter Card */}
+          <meta name="twitter:card" content="summary_large_image" />
+          <meta name="twitter:title" content={`${news.title} | 外贸智友`} />
+          <meta name="twitter:description" content={plainSummary} />
+          <meta name="twitter:image" content={ogImageUrl} />
+
           {/* 5. 百度/国内搜索引擎结构化数据 */}
           <script
             type="application/ld+json"
@@ -229,6 +235,34 @@ export default function NewsDetailPage({ news, relatedReports, canonicalUrl, sit
               })
             }}
           />
+
+          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'NewsArticle',
+            headline: news.title,
+            description: plainSummary,
+            image: [ogImageUrl],
+            datePublished: news.published_at,
+            dateModified: news.published_at,
+            author: {
+              '@type': 'Organization',
+              name: '外贸智友 GlobalTradeBuddy',
+              url: 'https://marketgraphic.cn'
+            },
+            publisher: {
+              '@type': 'Organization',
+              name: 'Market Graphic',
+              url: 'https://marketgraphic.cn',
+              logo: {
+                '@type': 'ImageObject',
+                url: 'https://marketgraphic.cn/images/mg_logo.png'
+              }
+            },
+            mainEntityOfPage: {
+              '@type': 'WebPage',
+              '@id': canonicalUrl || ''
+            }
+          }) }} />
         </Head>
 
         {/* 微信内置浏览器分享兜底隐形首图 (微信早期与部分版本爬虫强制读取 Body 首张 300x300 图) */}
@@ -438,8 +472,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     const quota = auth.freeQuota;
     const nickname = auth.nickname;
 
-    // 1. 查询快讯详情
-    const newsRes = await dbClient.query(
+    // 1. 并发查询快讯详情与关联推荐候选报告
+    const newsPromise = dbClient.query(
       `SELECT n.id, n.title, n.summary, n.content, n.source_url, n.published_at,
               ARRAY_TO_STRING(ARRAY(SELECT name FROM industries JOIN news_industries ON industries.id = news_industries.industry_id WHERE news_id = n.id), ', ') as industries,
               ARRAY_TO_STRING(ARRAY(SELECT name FROM countries JOIN news_countries ON countries.id = news_countries.country_id WHERE news_id = n.id), ', ') as countries
@@ -447,6 +481,25 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
        WHERE n.id = $1 AND n.status = 'published'`,
       [id]
     );
+
+    const candidatePromise = dbClient.query(
+      `SELECT r.id, r.title, r.category, r.market_region, r.summary, r.created_at,
+              COUNT(ri.industry_id)::int AS hit_count
+       FROM reports r
+       JOIN report_industries ri ON r.id = ri.report_id
+       WHERE ri.industry_id IN (
+         SELECT industry_id FROM news_industries WHERE news_id = $1
+       )
+       GROUP BY r.id, r.title, r.category, r.market_region, r.summary, r.created_at
+       ORDER BY hit_count DESC, r.created_at DESC
+       LIMIT 10`,
+      [id]
+    );
+
+    const [newsRes, candidateReportsRes] = await Promise.all([
+      newsPromise,
+      candidatePromise
+    ]);
 
     if (newsRes.rows.length === 0) {
       return {
@@ -463,27 +516,12 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     }
 
     const newsItem = newsRes.rows[0];
-
-    // 2. 获取关联推荐报告（三阶递进：行业契合度优先 -> 上架时间最新 -> 动态随机轮播）
-    const candidateReportsRes = await dbClient.query(
-      `SELECT r.id, r.title, r.category, r.market_region, r.summary, r.created_at,
-              COUNT(ri.industry_id)::int AS hit_count
-       FROM reports r
-       JOIN report_industries ri ON r.id = ri.report_id
-       WHERE ri.industry_id IN (
-         SELECT industry_id FROM news_industries WHERE news_id = $1
-       )
-       GROUP BY r.id, r.title, r.category, r.market_region, r.summary, r.created_at
-       ORDER BY hit_count DESC, r.created_at DESC
-       LIMIT 10`,
-      [id]
-    );
-
     let finalRelatedReports: any[] = [];
     if (candidateReportsRes.rows.length > 0) {
       // 2.1 按契合度 hit_count 分组（高契合度优先）
       const groups: { [key: number]: any[] } = {};
       for (const row of candidateReportsRes.rows) {
+
         const count = row.hit_count || 1;
         if (!groups[count]) groups[count] = [];
         groups[count].push(row);
@@ -519,7 +557,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     }
 
     const proto = (context.req.headers['x-forwarded-proto'] as string) || 'https';
-    const host = (context.req.headers['x-forwarded-host'] as string) || context.req.headers.host || 'marketgraphic.com';
+    const host = (context.req.headers['x-forwarded-host'] as string) || context.req.headers.host || 'marketgraphic.cn';
     const siteUrl = `${proto}://${host}`;
     const canonicalUrl = `${siteUrl}/news/${id}`;
 

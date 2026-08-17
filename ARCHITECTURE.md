@@ -19,6 +19,7 @@
 
 ### 1. 部署与进程守护 (Hosting & Runtime)
 - **生产服务器**：腾讯云轻量应用服务器 (IP: `124.222.201.143`)
+- **正式生产域名**：`https://marketgraphic.cn` (已配置 SSL 证书 + Nginx 80/443 反向代理至本地 `127.0.0.1:3000`)
 - **项目根路径**：`/home/ubuntu/Global-Trade-Buddy`
 - **运行环境**：Node.js / Next.js 生产环境 (Pages Router)
 - **进程守护**：使用 **PM2** 守护运行生产应用进程（应用标识：`gtb-backend`）

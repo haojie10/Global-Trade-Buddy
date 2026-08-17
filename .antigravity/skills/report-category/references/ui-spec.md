@@ -127,3 +127,14 @@ font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, s
 | 容器高度 | `280px` | 比紧凑模式多 60px 展示空间，避免产品主体被过度裁剪 |
 | `object-fit` | `cover` | 填满容器不产生黑边，保持卡片视觉饱满 |
 | `object-position` | `center 30%` | 焦点略偏上，优先展示镜子上半部分的设计细节 |
+
+---
+
+## 八、品牌标识与页脚官网链接规范
+
+所有生成的 HTML 报告必须在以下两个位置完整展示 Market Graphic 品牌 Logo 与官方网址：
+
+1. **头部标题区域右上角 (Header)**：
+   - 包含 `Powered by` 说明文字紧随官方品牌 Logo 图标（以 Base64 内嵌），保持排版轻量紧凑，无需重复堆叠文字。
+2. **报告底部 (Footer)**：
+   - 底部不放置 Logo，保持极简纯粹；在最下方居中附带官方主站超链接：`<a href="https://marketgraphic.cn" target="_blank">www.marketgraphic.cn</a>`，样式采用品牌橘色 `#ff641e`。

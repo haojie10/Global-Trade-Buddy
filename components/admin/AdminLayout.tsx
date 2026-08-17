@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-
+import Head from 'next/head';
 interface AdminLayoutProps {
   children: React.ReactNode;
   currentPage: string;
@@ -35,6 +35,10 @@ export default function AdminLayout({ children, currentPage }: AdminLayoutProps)
 
   return (
     <div className="admin-layout">
+      <Head>
+        <meta name="robots" content="noindex, nofollow" />
+        <title>Admin | Market Graphic</title>
+      </Head>
       {/* 侧边栏 */}
       <aside className="admin-sidebar">
         <div className="admin-sidebar-logo">

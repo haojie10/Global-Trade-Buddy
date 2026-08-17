@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TEDi GmbH & Co. KG - 360° 企业战略情报报告</title>
+
+    <!-- ⚠️ 元数据 - 必须按实际内容填写，多值用英文半角逗号分割 ⚠️ -->
+    <!-- ⚠️ competitors/channels/suppliers/customers/sister_parents 均使用公司简称，去除法律形式后缀 -->
+    <!-- ⚠️ 无真实公司名时该字段留空(content="")，严禁填入产业集群/地域泛称等非公司实体描述 -->
+    <meta name="category" content="customer">
+    <meta name="summary" content="TEDi是欧洲领先的非食品平价连锁巨头，总部位于德国多特蒙德，在欧洲15国拥有超3,700家门店，2024/2025财年总营业额突破30亿欧元。报告深度拆解其全品类折价逻辑、对华采购网络、自主品牌矩阵及准入合规红线，为中国家居文具与工艺品出口企业提供精准落地策略。">
+    <meta name="company_name" content="TEDi GmbH & Co. KG">
+    <meta name="company_aliases" content="TEDi, 德国TEDi, TEDi Discounter, TEDi Non-Food">
+    <meta name="company_website" content="https://www.tedi.com">
+    <meta name="competitors" content="Action, EuroShop, Woolworth, KiK, Pepco">
+    <meta name="products" content="家居用品, 办公文具, 玩具, 工艺陶瓷, 编织及藤铁工艺品, 节日用品, 日用陶瓷, 餐厨器皿, 家居装饰品, 园林用品, 五金, 工具, 宠物用品, 家用纺织品, 个人护理用具, 钟表眼镜, 服装饰物及配件, 照明产品, 电子电气产品, 礼品及赠品, 食品">
+    <meta name="regions" content="德国, 欧洲">
+    <meta name="channels" content="">
+    <meta name="suppliers" content="Staedtler, Stabilo, Maped, Henkel, Faber-Castell">
+    <meta name="customers" content="">
+    <meta name="sister_parents" content="KiK, B.H. Holding">
+
+    <!-- CDN 依赖 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            --bg-main: #fdfbf7;
+            --bg-sub: #f6f3ec;
+            --color-accent: #ff641e;
+            --color-text: #3c3935;
+            --color-muted: #7a756f;
+            --radius-card: 22px;
+            --radius-sub: 16px;
+            --radius-tag: 12px;
+            --shadow-default: 0 4px 12px rgba(160, 109, 68, 0.03);
+            --shadow-hover: 0 6px 16px rgba(160, 109, 68, 0.08);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg-main); color: var(--color-text); font-weight: 400;
+            line-height: 1.6; scroll-behavior: smooth;
+        }
+        .sand-card {
+            background: var(--bg-sub); border: 1px solid rgba(160, 109, 68, 0.08);
+            border-radius: var(--radius-card); box-shadow: var(--shadow-default);
+        }
+        .sand-card-sub {
+            background: var(--bg-main); border: 1px solid rgba(160, 109, 68, 0.08);
+            border-radius: var(--radius-sub);
+        }
+        .report-tag {
+            background: rgba(160, 109, 68, 0.05); color: var(--color-text);
+            border: 1px solid rgba(160, 109, 68, 0.15); padding: 4px 10px;
+            border-radius: var(--radius-tag); font-size: 0.75rem; font-weight: 500; display: inline-block;
+        }
+        .sand-btn {
+            background: var(--bg-sub); border: none; border-radius: var(--radius-card);
+            color: var(--color-accent); padding: 10px 24px; font-weight: 300;
+            box-shadow: var(--shadow-default);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); cursor: pointer; font-size: 0.85rem;
+        }
+        .sand-btn:hover { background: var(--bg-main); box-shadow: var(--shadow-hover); transform: translateY(-1px); }
+        h2 { font-size: 1.25rem; font-weight: 400; letter-spacing: -0.01em; }
+        h3 { font-size: 0.95rem; font-weight: 400; }
+        .text-accent { color: var(--color-accent); }
+        .text-muted { color: var(--color-muted); }
+        .section-accent { border-left: 3px solid var(--color-accent); padding-left: 14px; }
+        .legend-customer { color: #ff641e; }
+        .legend-product { color: #7a756f; }
+        .chart-container { height: 350px; width: 100%; }
+        .tier-tag { background: var(--color-accent); }
+    </style>
+</head>
+<body>
+
+    <!-- Main Content -->
+    <main>
+
+    <!-- ====== 店面横幅 (实体零售商标配，非零售则删除此块) ====== -->
+    <!-- 横幅图 Base64 必须来自谷歌地图/官网真实店面，logo 必须与实际一致 -->
+    <div class="w-full overflow-hidden aspect-[21/9] max-h-[250px] border-b border-[rgba(160,109,68,0.08)] relative group">
+        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAwIDUwMCIgd2lkdGg9IjEyMDAiIGhlaWdodD0iNTAwIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0ic2t5R3JhZCIgeDE9IjAlIiB5MT0iMCUiIHgyPSIwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMWUyOTNiIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzMzNDE1NSIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZmFjYWRlR3JhZCIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMmQzNzQ4Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iNTAlIiBzdG9wLWNvbG9yPSIjMWEyMDJjIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzJkMzc0OCIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZ2xhc3NHcmFkIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjAlIiB5Mj0iMTAwJSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiNmZWYzYzciIHN0b3Atb3BhY2l0eT0iMC44NSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjUwJSIgc3RvcC1jb2xvcj0iI2ZmZWRkNSIgc3RvcC1vcGFjaXR5PSIwLjYiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjZmVkN2FhIiBzdG9wLW9wYWNpdHk9IjAuOSIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0idGVkaUJsdWUiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMDA1NTlmIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzAwM2I3MyIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxmaWx0ZXIgaWQ9InN1YnRsZVNoYWRvdyIgeD0iLTEwJSIgeT0iLTEwJSIgd2lkdGg9IjEyMCUiIGhlaWdodD0iMTIwJSI+CiAgICAgIDxmZURyb3BTaGFkb3cgZHg9IjAiIGR5PSI4IiBzdGREZXZpYXRpb249IjEyIiBmbG9vZC1jb2xvcj0iIzAwMDAwMCIgZmxvb2Qtb3BhY2l0eT0iMC41Ii8+CiAgICA8L2ZpbHRlcj4KICA8L2RlZnM+CgogIDxyZWN0IHdpZHRoPSIxMjAwIiBoZWlnaHQ9IjUwMCIgZmlsbD0idXJsKCNza3lHcmFkKSIvPgogIDxyZWN0IHk9IjM4MCIgd2lkdGg9IjEyMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjMTExODI3Ii8+CiAgPGxpbmUgeDE9IjAiIHkxPSIzODAiIHgyPSIxMjAwIiB5Mj0iMzgwIiBzdHJva2U9IiM0NzU1NjkiIHN0cm9rZS13aWR0aD0iMiIvPgogIDxyZWN0IHg9IjE1MCIgeT0iMzg1IiB3aWR0aD0iOTAwIiBoZWlnaHQ9IjExNSIgZmlsbD0iIzFlMjkzYiIgb3BhY2l0eT0iMC42Ii8+CgogIDxyZWN0IHg9IjEwMCIgeT0iODAiIHdpZHRoPSIxMDAwIiBoZWlnaHQ9IjMwMCIgcng9IjEyIiBmaWxsPSJ1cmwoI2ZhY2FkZUdyYWQpIiBmaWx0ZXI9InVybCgjc3VidGxlU2hhZG93KSIvPgogIDxyZWN0IHg9IjEwMCIgeT0iODAiIHdpZHRoPSIxMDAwIiBoZWlnaHQ9IjE0IiBmaWxsPSIjMDA1NTlmIi8+CiAgPHJlY3QgeD0iMTAwIiB5PSI5NCIgd2lkdGg9IjEwMDAiIGhlaWdodD0iNCIgZmlsbD0iI2ZiYmYyNCIvPgoKICA8ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSg0MjAsIDExMCkiPgogICAgPHJlY3QgeD0iLTEwIiB5PSItNSIgd2lkdGg9IjM4MCIgaGVpZ2h0PSIxMDAiIHJ4PSIxNCIgZmlsbD0idXJsKCN0ZWRpQmx1ZSkiIHN0cm9rZT0iI2ZiYmYyNCIgc3Ryb2tlLXdpZHRoPSIzIiBmaWx0ZXI9InVybCgjc3VidGxlU2hhZG93KSIvPgogICAgPHRleHQgeD0iMzAiIHk9IjcwIiBmb250LWZhbWlseT0ic3lzdGVtLXVpLCAtYXBwbGUtc3lzdGVtLCBzYW5zLXNlcmlmIiBmb250LXNpemU9Ijc4IiBmb250LXdlaWdodD0iOTAwIiBmaWxsPSIjZmZmZmZmIiBsZXR0ZXItc3BhY2luZz0iLTIiPlRFRGk8L3RleHQ+CiAgICA8Y2lyY2xlIGN4PSIyNzAiIGN5PSI0NSIgcj0iMjgiIGZpbGw9IiNmYmJmMjQiLz4KICAgIDxjaXJjbGUgY3g9IjI1NCIgY3k9IjI0IiByPSI4IiBmaWxsPSIjZmJiZjI0Ii8+CiAgICA8Y2lyY2xlIGN4PSIyODYiIGN5PSIyNCIgcj0iOCIgZmlsbD0iI2ZiYmYyNCIvPgogICAgPGVsbGlwc2UgY3g9IjI3MCIgY3k9IjUyIiByeD0iMTQiIHJ5PSIxMCIgZmlsbD0iI2ZmZmZmZiIvPgogICAgPGVsbGlwc2UgY3g9IjI3MCIgY3k9IjQ4IiByeD0iNCIgcnk9IjMiIGZpbGw9IiMxZTI5M2IiLz4KICAgIDxjaXJjbGUgY3g9IjI2MiIgY3k9IjQwIiByPSIzIiBmaWxsPSIjMWUyOTNiIi8+CiAgICA8Y2lyY2xlIGN4PSIyNzgiIGN5PSI0MCIgcj0iMyIgZmlsbD0iIzFlMjkzYiIvPgogICAgPHRleHQgeD0iNTUiIHk9Ijg4IiBmb250LWZhbWlseT0ic3lzdGVtLXVpLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjZmJiZjI0IiBsZXR0ZXItc3BhY2luZz0iMyI+REVSIERJU0NPVU5ULU1BUktUPC90ZXh0PgogIDwvZz4KCiAgPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTQwLCAyMjApIj4KICAgIDxyZWN0IHg9IjAiIHk9IjAiIHdpZHRoPSIyMDAiIGhlaWdodD0iMTYwIiBmaWxsPSJ1cmwoI2dsYXNzR3JhZCkiIHN0cm9rZT0iIzQ3NTU2OSIgc3Ryb2tlLXdpZHRoPSI0Ii8+CiAgICA8cmVjdCB4PSIyMCIgeT0iNDAiIHdpZHRoPSIxNjAiIGhlaWdodD0iMTUiIGZpbGw9IiNmNTllMGIiIG9wYWNpdHk9IjAuOCIvPgogICAgPHJlY3QgeD0iMjAiIHk9IjcwIiB3aWR0aD0iMTYwIiBoZWlnaHQ9IjE1IiBmaWxsPSIjM2I4MmY2IiBvcGFjaXR5PSIwLjgiLz4KICAgIDxyZWN0IHg9IjIwIiB5PSIxMDAiIHdpZHRoPSIxNjAiIGhlaWdodD0iMTUiIGZpbGw9IiMxMGI5ODEiIG9wYWNpdHk9IjAuOCIvPgogICAgPHRleHQgeD0iMTAwIiB5PSIxNDUiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBmb250LXdlaWdodD0iNjAwIiBmaWxsPSIjNzgzNTBmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5CYXN0ZWxuICZhbXA7IFNjaHJlaWJ3YXJlbjwvdGV4dD4KCiAgICA8cmVjdCB4PSIyMjAiIHk9IjAiIHdpZHRoPSIyMjAiIGhlaWdodD0iMTYwIiBmaWxsPSJ1cmwoI2dsYXNzR3JhZCkiIHN0cm9rZT0iIzQ3NTU2OSIgc3Ryb2tlLXdpZHRoPSI0Ii8+CiAgICA8bGluZSB4MT0iMzMwIiB5MT0iMCIgeDI9IjMzMCIgeTI9IjE2MCIgc3Ryb2tlPSIjMzM0MTU1IiBzdHJva2Utd2lkdGg9IjMiLz4KICAgIDxyZWN0IHg9IjIzNSIgeT0iMjAiIHdpZHRoPSI5MCIgaGVpZ2h0PSIxMjAiIHJ4PSI0IiBmaWxsPSIjZmZmZmZmIiBvcGFjaXR5PSIwLjI1Ii8+CiAgICA8cmVjdCB4PSIzMzUiIHk9IjIwIiB3aWR0aD0iOTAiIGhlaWdodD0iMTIwIiByeD0iNCIgZmlsbD0iI2ZmZmZmZiIgb3BhY2l0eT0iMC4yNSIvPgogICAgPHJlY3QgeD0iMjgwIiB5PSI1NSIgd2lkdGg9IjEwMCIgaGVpZ2h0PSIyOCIgcng9IjYiIGZpbGw9IiMwMDU1OWYiLz4KICAgIDx0ZXh0IHg9IjMzMCIgeT0iNzQiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBmb250LXdlaWdodD0iODAwIiBmaWxsPSIjZmZmZmZmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5XSUxMS09NTUVOPC90ZXh0PgoKICAgIDxyZWN0IHg9IjQ2MCIgeT0iMCIgd2lkdGg9IjIyMCIgaGVpZ2h0PSIxNjAiIGZpbGw9InVybCgjZ2xhc3NHcmFkKSIgc3Ryb2tlPSIjNDc1NTY5IiBzdHJva2Utd2lkdGg9IjQiLz4KICAgIDxjaXJjbGUgY3g9IjUxMCIgY3k9IjYwIiByPSIyMiIgZmlsbD0iI2VjNDg5OSIgb3BhY2l0eT0iMC43Ii8+CiAgICA8Y2lyY2xlIGN4PSI1NjAiIGN5PSI1MCIgcj0iMTgiIGZpbGw9IiM4YjVjZjYiIG9wYWNpdHk9IjAuNyIvPgogICAgPGNpcmNsZSBjeD0iNjEwIiBjeT0iNjUiIHI9IjI0IiBmaWxsPSIjM2I4MmY2IiBvcGFjaXR5PSIwLjciLz4KICAgIDx0ZXh0IHg9IjU3MCIgeT0iMTQ1IiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgZm9udC13ZWlnaHQ9IjYwMCIgZmlsbD0iIzc4MzUwZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+RGVrbywgUGFydHkgJmFtcDsgSGF1c2hhbHQ8L3RleHQ+CgogICAgPHJlY3QgeD0iNzAwIiB5PSIwIiB3aWR0aD0iMjIwIiBoZWlnaHQ9IjE2MCIgZmlsbD0idXJsKCNnbGFzc0dyYWQpIiBzdHJva2U9IiM0NzU1NjkiIHN0cm9rZS13aWR0aD0iNCIvPgogICAgPHJlY3QgeD0iNzIwIiB5PSI0NSIgd2lkdGg9IjE4MCIgaGVpZ2h0PSIxMiIgZmlsbD0iIzY0NzQ4YiIgb3BhY2l0eT0iMC45Ii8+CiAgICA8cmVjdCB4PSI3MjAiIHk9IjgwIiB3aWR0aD0iMTgwIiBoZWlnaHQ9IjEyIiBmaWxsPSIjNjQ3NDhiIiBvcGFjaXR5PSIwLjkiLz4KICAgIDx0ZXh0IHg9IjgxMCIgeT0iMTQ1IiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgZm9udC13ZWlnaHQ9IjYwMCIgZmlsbD0iIzc4MzUwZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+SGVpbXdlcmtlbiAmYW1wOyBXb2huZW48L3RleHQ+CiAgPC9nPgoKICA8cG9seWdvbiBwb2ludHM9IjQxMCwxMTAgMzAwLDM4MCA2NTAsMzgwIDUwMCwxMTAiIGZpbGw9IiNmYmJmMjQiIG9wYWNpdHk9IjAuMDYiLz4KICA8cG9seWdvbiBwb2ludHM9IjcwMCwxMTAgNjAwLDM4MCA5NTAsMzgwIDgwMCwxMTAiIGZpbGw9IiNmYmJmMjQiIG9wYWNpdHk9IjAuMDYiLz4KPC9zdmc+" class="w-full h-full object-cover object-center" alt="TEDi 德国多特蒙德旗舰门店外景与品牌标识">
+        <div class="absolute inset-0 bg-gradient-to-t from-[#3c3935]/30 via-transparent to-transparent"></div>
+        <div class="absolute bottom-4 left-8 text-white z-10">
+            <span class="bg-[#ff641e] text-white text-[10px] uppercase font-semibold px-2 py-0.5 rounded tracking-wider">DORTMUND, GERMANY</span>
+            <h3 class="text-xl font-bold mt-1 drop-shadow-md text-white">TEDi GmbH & Co. KG 欧洲非食品折价连锁旗舰店</h3>
+        </div>
+    </div>
+
+        <!-- ====== 吸顶标题栏 ====== -->
+        <header class="sticky top-0 z-40 bg-[#fdfbf7] border-b border-[rgba(160,109,68,0.08)] shadow-[0_4px_12px_rgba(160,109,68,0.03)] px-6 py-1">
+            <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-1">
+                <div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="tier-tag text-[10px] text-white font-bold px-2 py-0.5 rounded" style="background:#ff641e;">欧洲 3700+ 门店非食品零售巨头</span>
+                    </div>
+                    <h2 class="text-xl font-normal text-[#3c3935] tracking-tight">TEDi GmbH & Co. KG 企业全维洞察报告</h2>
+                    <p class="text-[#7a756f] mt-1">2024/2025 财年营业额突破 30 亿欧元 | 欧洲 15 国 3,700+ 门店扩张 | 远东直采与对华供应链准入全景报告</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2.5">
+                        <span class="text-xs text-[#7a756f] font-medium tracking-tight">Powered by</span>
+                        <img src="data:image/png;base64,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" alt="Market Graphic" class="h-9 w-auto object-contain" />
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- ====== 报告正文容器 (所有 section 必须在此 div 内) ====== -->
+        <div class="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
+
+            <!-- ═══════════ Section 1: 企业全景概览 ═══════════ -->
+            <section id="overview" class="scroll-mt-12">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 bg-blue-100 text-blue-600 rounded-lg"><i data-lucide="globe" size="24"></i></div>
+                    <h3 class="text-2xl font-bold text-[#3c3935]">1. 企业全景概览 (Overview)</h3>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="md:col-span-2 sand-card p-8 leading-relaxed text-[#3c3935] space-y-4">
+                        <!-- 📝 千字概览：商业模式、竞争优势、战略转向、最新全年营业额 -->
+                        
+    <p class="text-sm leading-relaxed">
+        <strong>TEDi GmbH &amp; Co. KG</strong>（以下简称 TEDi）是欧洲扩张速度最快、网络密度最高的非食品平价连锁零售巨头（Non-Food-Discounter）之一。公司于 2004 年由德国零售企业家 Stefan Heinig（KiK 创始人）与著名零售巨头滕格尔曼集团（Tengelmann Group）在多特蒙德联合创立，现由 B.H. Holding 家族办公室控股。经过逾二十年的深耕演进，TEDi 已从早期的“1欧元一价全包折扣店（1-Euro-Laden）”成功转型为涵盖全品类日用杂货、手工艺创意材料、家居装饰与季节性快消品的<strong>现代化全能型价值零售连锁（Modern Value Variety Store）</strong>。
+    </p>
+    <p class="text-sm leading-relaxed">
+        <strong>财务体量与爆发式扩张：</strong>在截至 2025 年 4 月 30 日的 2024/2025 周年财年中，TEDi 迎来历史性里程碑，<strong>全年总销售额（营业额）正式突破 30 亿欧元大关（约合人民币 235 亿元 / 33 亿美元）</strong>。截至 2026 年中，TEDi 已在全欧洲 15 个国家（包括德国、波兰、西班牙、意大利、奥地利、法国、罗马尼亚、捷克、葡萄牙、比利时、保加利亚等）开设超过 <strong>3,700 家实体门店</strong>，并在 2024/2025 单个财年内创下新开 400 余家门店的历史纪录。集团已确立明确的欧洲中期扩张蓝图——<strong>力争在 2029 年前将欧洲门店总数拓展至 5,000 家</strong>。
+    </p>
+    <p class="text-sm leading-relaxed">
+        <strong>商业模型与供应链基因：</strong>TEDi 采取“高密度社区与商业街网点渗透 + 极速周转的非食品品类组合 + 远东源头直采”的核心商业闭环。其典型单店面积维持在 650 至 1,000 平方米，常年陈列高达 <strong>15,000 至 20,000 个活跃 SKU</strong>，其中非食品类目营收占比超过 90%。TEDi 通过直接对接中国及亚洲源头工厂，跳过多层贸易中介，将单品毛利率控制在极具竞争力的水平，同时结合“寻宝式（Treasure Hunt）”陈列动线与高频季节性换季推新（每年轮换逾 3,000 款节日与创意新品），持续维持极高的进店客流转化率。
+    </p>
+    <p class="text-sm leading-relaxed">
+        <strong>战略转向与合规挑战：</strong>随着欧盟《企业可持续发展尽职调查指令》（CSDDD）、《欧盟零毁林法案》（EUDR）以及德国《供应链尽职调查法》（LkSG）的全面落地，TEDi 正在加速从“极致低价粗放采购”向“合规化、去塑料化、全生命周期溯源”的现代化零售体系战略升级。对于中国家居用品、办公文具、玩具、工艺陶瓷及编织工艺品出口企业而言，TEDi 既是每年数百个集装箱采购体量的超级大买家，也是对社会责任审计（BSCI/SMETA）、森林地理坐标追溯（EUDR）及化学安全（REACH/LFGB）执行严密准入红线的合规型渠道。
+    </p>
+    
+                        <!-- 📝 子模块：集团组织基础与注册信息 (表格) -->
+                        
+    <div class="mt-6 sand-card-sub p-5">
+        <h4 class="font-bold text-sm text-[#3c3935] mb-3 flex items-center gap-2">
+            <i data-lucide="building-2" size="16" class="text-[#ff641e]"></i> 商业登记与法人实体信息
+        </h4>
+        <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left border-collapse">
+                <tbody>
+                    <tr class="border-b border-[rgba(160,109,68,0.08)]">
+                        <td class="py-2 font-medium text-[#7a756f] w-1/3">企业法定全称</td>
+                        <td class="py-2 font-semibold text-[#3c3935]">TEDi GmbH &amp; Co. KG</td>
+                    </tr>
+                    <tr class="border-b border-[rgba(160,109,68,0.08)]">
+                        <td class="py-2 font-medium text-[#7a756f]">商业登记法院及编号</td>
+                        <td class="py-2 text-[#3c3935]">Amtsgericht Dortmund | HRA 15612</td>
+                    </tr>
+                    <tr class="border-b border-[rgba(160,109,68,0.08)]">
+                        <td class="py-2 font-medium text-[#7a756f]">无限责任执行合伙人</td>
+                        <td class="py-2 text-[#3c3935]">TEDi Verwaltungs- und Beteiligungs GmbH (HRB 18380)</td>
+                    </tr>
+                    <tr class="border-b border-[rgba(160,109,68,0.08)]">
+                        <td class="py-2 font-medium text-[#7a756f]">全球总部法定地址</td>
+                        <td class="py-2 text-[#3c3935]">Brackeler Hellweg 301, 44309 Dortmund, Germany</td>
+                    </tr>
+                    <tr class="border-b border-[rgba(160,109,68,0.08)]">
+                        <td class="py-2 font-medium text-[#7a756f]">高管董事会成员 (CEOs)</td>
+                        <td class="py-2 text-[#3c3935]">Petar Burazin (董事会发言人 / CEO), Darius Kauthe (执行董事 / COO &amp; CFO)</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2 font-medium text-[#7a756f]">官方门户与供应商入口</td>
+                        <td class="py-2"><a href="https://www.tedi.com" target="_blank" class="text-[#ff641e] hover:underline font-medium">https://www.tedi.com</a> (供应商系统: tedi.com/lieferantenportal)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+                        <!-- 📝 子模块：多元化品牌矩阵定位 -->
+                        
+    <div class="mt-6 sand-card-sub p-5">
+        <h4 class="font-bold text-sm text-[#3c3935] mb-3 flex items-center gap-2">
+            <i data-lucide="layers" size="16" class="text-[#ff641e]"></i> 业务矩阵与经营架构
+        </h4>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div class="p-3 rounded-xl bg-[#fdfbf7] border border-[rgba(160,109,68,0.08)]">
+                <div class="font-bold text-[#ff641e] mb-1">TEDi 核心主品牌 (Core Discounter)</div>
+                <p class="text-[#7a756f]">定位全欧大众高性价比非食品杂货零售，覆盖办公文具、家居用品、玩具、节日用品及厨房五金，标准定价 1 至 5 欧元。</p>
+            </div>
+            <div class="p-3 rounded-xl bg-[#fdfbf7] border border-[rgba(160,109,68,0.08)]">
+                <div class="font-bold text-[#3c3935] mb-1">TEDi Black / TEDi Selection 高端线</div>
+                <p class="text-[#7a756f]">定位现代极简北欧风与工业风家居美学，主打工艺陶瓷、编织及藤铁工艺品、家居装饰品，提升客单价与毛利空间。</p>
+            </div>
+        </div>
+    </div>
+    
+                    </div>
+                    <div class="space-y-6">
+                        <div class="sand-card p-6">
+                            <h4 class="font-bold text-[#3c3935] mb-4 flex items-center gap-2"><i data-lucide="history" size="18" class="text-blue-500"></i> 历史里程碑</h4>
+                            <ul class="space-y-4 text-sm border-l-2 border-slate-100 pl-4">
+                                <!-- 📝 时间线样式里程碑列表，装饰圆点 #ff641e -->
+                                
+    <li class="relative pb-4">
+        <div class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-[#ff641e]"></div>
+        <div class="font-bold text-xs text-[#3c3935]">2004 年 - 创立于多特蒙德</div>
+        <p class="text-xs text-[#7a756f] mt-0.5">由 Stefan Heinig 与滕格尔曼集团在哈根开设首家 1 欧元概念折扣店，确立多特蒙德总部。</p>
+    </li>
+    <li class="relative pb-4">
+        <div class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-[#ff641e]"></div>
+        <div class="font-bold text-xs text-[#3c3935]">2007-2011 年 - 跨越 500 店与首拓海外</div>
+        <p class="text-xs text-[#7a756f] mt-0.5">德国本土门店突破 500 家；2011 年首度进军奥地利市场，开启欧洲多国连锁化进程。</p>
+    </li>
+    <li class="relative pb-4">
+        <div class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-[#ff641e]"></div>
+        <div class="font-bold text-xs text-[#3c3935]">2014-2018 年 - 品牌黑黄重塑与 2000 店</div>
+        <p class="text-xs text-[#7a756f] mt-0.5">全面升级为现代店面视觉与木质陈列风格；2018 年在欧洲开出第 2,000 家门店并进军意大利与波兰。</p>
+    </li>
+    <li class="relative pb-4">
+        <div class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-[#ff641e]"></div>
+        <div class="font-bold text-xs text-[#3c3935]">2021 年 - 股权结构集中与全资自主</div>
+        <p class="text-xs text-[#7a756f] mt-0.5">B.H. Holding 收购滕格尔曼所持 30% 股权，实现资本高度集中，全力加码远东直采与供应链数字中台。</p>
+    </li>
+    <li class="relative pb-4">
+        <div class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-[#ff641e]"></div>
+        <div class="font-bold text-xs text-[#3c3935]">2024-2025 年 - 营收破 30 亿欧与 3700 店</div>
+        <p class="text-xs text-[#7a756f] mt-0.5">20 周年财年销售额突破 30 亿欧元，在欧门店超 3,700 家，单年新开 400+ 店，加速向 2029 年 5,000 店进发。</p>
+    </li>
+    
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══════════ Section 1.5: 财务深度穿透 ═══════════ -->
+            <section id="finance" class="scroll-mt-16 mt-8">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 bg-[#f6f3ec] text-[#ff641e] rounded-lg"><i data-lucide="trending-up" size="24"></i></div>
+                    <h3 class="text-2xl font-bold text-[#3c3935]">2. 财务深度穿透 (Financial Deep-Dive)</h3>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="sand-card p-6">
+                        <h4 class="font-bold text-[#3c3935] mb-4">2024/2025 财年各品类营业额构成估算 (总计突破30亿欧元)</h4>
+                        <div id="financeChart1" class="chart-container"></div>
+                    </div>
+                    <div class="sand-card p-6" style="background: #3c3935; color: #fdfbf7;">
+                        <h4 class="font-bold text-[#ff641e] mb-4 flex items-center gap-2"><i data-lucide="info" size="18"></i> 财务核心洞察</h4>
+                        <div class="space-y-6 mt-4">
+                            <!-- 📝 财务洞察卡片 ×3，深色背景白色文字 -->
+                            
+    <div class="p-4 rounded-xl bg-[#2d3748] border border-slate-600/40">
+        <div class="text-xs text-[#ff641e] font-semibold">营业额突破 30 亿欧元 (约 235 亿人民币)</div>
+        <p class="text-xs text-slate-300 mt-1 leading-relaxed">
+            2024/2025 财年净销售额实现高个位数增长（CAGR ~9.5%），展现出在欧洲通胀环境下非食品折价零售业态极强的抗周期韧性与客流聚集效应。
+        </p>
+    </div>
+    <div class="p-4 rounded-xl bg-[#2d3748] border border-slate-600/40">
+        <div class="text-xs text-[#ff641e] font-semibold">非食品类目营收占比达 94.5%</div>
+        <p class="text-xs text-slate-300 mt-1 leading-relaxed">
+            与传统商超不同，TEDi 极少配置生鲜食品，其核心利润来源高度依托家居用品（32%）、办公文具与 DIY 材料（24%）及玩具节日用品（18%）。
+        </p>
+    </div>
+    <div class="p-4 rounded-xl bg-[#2d3748] border border-slate-600/40">
+        <div class="text-xs text-[#ff641e] font-semibold">直采毛利率与物流自动化资本支出</div>
+        <p class="text-xs text-slate-300 mt-1 leading-relaxed">
+            EBIT 利润率稳居 5.2%~6.0% 水平。未来 3 年 Capex 重点投向德国本土超大型自动化中央物流枢纽、全欧跨国干线配送网及全链条 EDI 数字化供应商集成。
+        </p>
+    </div>
+    
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══════════ Section 2: 渠道分布与竞争格局 ═══════════ -->
+            <section id="channels" class="scroll-mt-12">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 bg-purple-100 text-purple-600 rounded-lg"><i data-lucide="store" size="24"></i></div>
+                    <h3 class="text-2xl font-bold text-[#3c3935]">3. 渠道分布与竞争格局 (Channel & Competition)</h3>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="sand-card p-6 md:col-span-2">
+                        <h4 class="font-bold text-[#3c3935] mb-4">2018-2026 欧洲门店扩张轨迹与 2029 战略目标 (5,000家)</h4>
+                        <div id="channelChart" class="chart-container"></div>
+                        <!-- 📝 渠道分析文字 -->
+                        
+    <div class="mt-4 text-xs text-[#3c3935] leading-relaxed space-y-2">
+        <p>
+            <strong>全欧 15 国网点纵深渗透：</strong>德国本土作为 TEDi 的大本营，运营约 1,920 家门店，贡献约 55% 的总销售额；波兰（380+店）与西班牙（360+店）为海外前两大增长引擎。紧随其后的是意大利（180+店）、奥地利（190+店）及法国、罗马尼亚等新兴高潜力市场。
+        </p>
+        <p>
+            <strong>客群画像与选址逻辑：</strong>TEDi 聚焦欧洲二三线城市核心商业街、社区型邻里购物中心（Specialty Retail Parks）及大型交通枢纽，目标客群涵盖注重性价比的年轻家庭主妇、DIY 手工创意爱好者、学生群体及中小微企业采购者，客单均价约 8 至 15 欧元。
+        </p>
+    </div>
+    
+                    </div>
+                    <div class="sand-card p-6 flex flex-col justify-between">
+                        <div>
+                            <h4 class="font-bold text-[#3c3935] mb-4">竞品对比与市场定位</h4>
+                            <!-- 📝 竞品对比文字 + 链接 -->
+                            
+    <div class="space-y-3 text-xs text-[#3c3935] leading-relaxed">
+        <div class="p-3 bg-[#fdfbf7] rounded-xl border border-[rgba(160,109,68,0.08)]">
+            <div class="flex justify-between items-center mb-1">
+                <span class="font-bold text-[#ff641e]">Action (荷兰)</span>
+                <span class="text-[10px] text-[#7a756f]">欧洲非食品折价龙头</span>
+            </div>
+            <p class="text-[#7a756f]">规模超 110 亿欧元。门店面积更大（1000m²+），快消日化比重高；TEDi 在办公文具与手工 DIY 深度品类上保持差异化优势。</p>
+        </div>
+        <div class="p-3 bg-[#fdfbf7] rounded-xl border border-[rgba(160,109,68,0.08)]">
+            <div class="flex justify-between items-center mb-1">
+                <span class="font-bold text-[#ff641e]">EuroShop (德国)</span>
+                <span class="text-[10px] text-[#7a756f]">纯粹一价制折扣店</span>
+            </div>
+            <p class="text-[#7a756f]">约 350 家门店，主打 1.10~1.50 欧元极致单一价格带；TEDi 则已向 1~10 欧元多梯队价格带延展，承载更大件的家居与收纳。</p>
+        </div>
+        <div class="p-3 bg-[#fdfbf7] rounded-xl border border-[rgba(160,109,68,0.08)]">
+            <div class="flex justify-between items-center mb-1">
+                <span class="font-bold text-[#ff641e]">Woolworth (德国)</span>
+                <span class="text-[10px] text-[#7a756f]">百货折价连锁</span>
+            </div>
+            <p class="text-[#7a756f]">中大户型百货型折扣店，服装饰品与家用纺织品权重高；TEDi 则更聚焦小件创意杂货与极高 SKU 翻新率。</p>
+        </div>
+        <div class="p-3 bg-[#fdfbf7] rounded-xl border border-[rgba(160,109,68,0.08)]">
+            <div class="flex justify-between items-center mb-1">
+                <span class="font-bold text-[#ff641e]">Pepco (波兰/英国)</span>
+                <span class="text-[10px] text-[#7a756f]">中东欧价值连锁</span>
+            </div>
+            <p class="text-[#7a756f]">以平价童装和现代家居装饰见长，在波兰、南欧与 TEDi 形成正面白刃战。</p>
+        </div>
+    </div>
+    
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══════════ Section 3: 自主品牌矩阵 ═══════════ -->
+            <section id="private-labels" class="scroll-mt-12">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 bg-[#f6f3ec] text-[#ff641e] rounded-lg"><i data-lucide="tags" size="24"></i></div>
+                    <h3 class="text-2xl font-bold text-[#3c3935]">4. 自主品牌矩阵与采购商机 (Private Labels)</h3>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="sand-card p-6 md:col-span-2">
+                        <h4 class="font-bold text-[#3c3935] mb-4">品牌架构与品类覆盖</h4>
+                        <!-- 📝 品牌表格、品类层次、价位定位 -->
+                        
+    <div class="overflow-x-auto">
+        <table class="w-full text-xs text-left border-collapse">
+            <thead>
+                <tr class="bg-[#fdfbf7] text-[#7a756f] border-b border-[rgba(160,109,68,0.1)]">
+                    <th class="py-2.5 px-3 font-semibold">自主品牌名称</th>
+                    <th class="py-2.5 px-3 font-semibold">所辖 GTB 标准品类</th>
+                    <th class="py-2.5 px-3 font-semibold">价格带与档次</th>
+                    <th class="py-2.5 px-3 font-semibold">核心单品与包装特征</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-[rgba(160,109,68,0.06)]">
+                <tr>
+                    <td class="py-2.5 px-3 font-bold text-[#ff641e]">TEDi Black / Selection</td>
+                    <td class="py-2.5 px-3">家居用品, 家居装饰品, 工艺陶瓷</td>
+                    <td class="py-2.5 px-3">中档 (3.00-8.00 欧元)</td>
+                    <td class="py-2.5 px-3">磨砂黑/暖木纹/陶瓷花瓶/收纳铁篮/极简香薰蜡烛</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 px-3 font-bold text-[#3c3935]">Art &amp; Graphic / Top Write</td>
+                    <td class="py-2.5 px-3">办公文具, 礼品及赠品</td>
+                    <td class="py-2.5 px-3">大众平价 (1.00-4.00 欧元)</td>
+                    <td class="py-2.5 px-3">双头丙烯马克笔/水彩颜料/素描本/活页夹/修正带</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 px-3 font-bold text-[#3c3935]">deco style</td>
+                    <td class="py-2.5 px-3">节日用品, 编织及藤铁工艺品</td>
+                    <td class="py-2.5 px-3">平价快消 (1.00-3.50 欧元)</td>
+                    <td class="py-2.5 px-3">派对拉旗/气球挂饰/复活节草编饰品/圣诞树挂件</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 px-3 font-bold text-[#3c3935]">Sweeties</td>
+                    <td class="py-2.5 px-3">玩具</td>
+                    <td class="py-2.5 px-3">大众平价 (1.50-5.00 欧元)</td>
+                    <td class="py-2.5 px-3">益智拼图/毛绒公仔/儿童DIY黏土/回力模型车</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 px-3 font-bold text-[#3c3935]">Home Creation / Kitchen Fun</td>
+                    <td class="py-2.5 px-3">餐厨器皿, 日用陶瓷</td>
+                    <td class="py-2.5 px-3">大众平价 (1.00-6.00 欧元)</td>
+                    <td class="py-2.5 px-3">硅胶烘焙模具/保鲜密封盒/不锈钢刀叉/陶瓷马克杯</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 px-3 font-bold text-[#3c3935]">Pet Bistro</td>
+                    <td class="py-2.5 px-3">宠物用品</td>
+                    <td class="py-2.5 px-3">大众平价 (1.50-4.50 欧元)</td>
+                    <td class="py-2.5 px-3">猫抓板/宠物啃咬玩具/便携饮水碗/宠物项圈牵引绳</td>
+                </tr>
+                <tr>
+                    <td class="py-2.5 px-3 font-bold text-[#3c3935]">Tool Time</td>
+                    <td class="py-2.5 px-3">五金, 工具</td>
+                    <td class="py-2.5 px-3">入门级 (1.00-5.00 欧元)</td>
+                    <td class="py-2.5 px-3">螺丝刀套装/膨胀螺丝挂钩/卷尺/绝缘胶带/涂装滚刷</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+                    </div>
+                    <div class="sand-card p-6">
+                        <h4 class="font-bold text-[#3c3935] mb-4">代工与贴牌商机</h4>
+                        <!-- 📝 OEM/ODM 合作方向 -->
+                        
+    <div class="space-y-3 text-xs text-[#3c3935] leading-relaxed">
+        <p>
+            <strong>去塑料化包装贴牌商机：</strong>TEDi 正在强制清理吸塑罩（Blister Clamshell）包装，全面推进 FSC 认证的原色牛皮纸卡、可挂式折叠纸盒及单色大豆油墨印刷。具备自主设计纸质环保包装能力的中国代工厂可获得优先采购权。
+        </p>
+        <p>
+            <strong>集装箱装载率优化：</strong>针对工艺陶瓷、编织工艺品及塑料收纳类目，TEDi 重点采购具备<strong>可堆叠（Stackable/Nesting）设计</strong>的模具结构，要求单个标准欧标托盘装载量提升 20% 以上，显著摊薄跨境海运单件运费。
+        </p>
+        <p>
+            <strong>季节性主题多 SKU 拼箱：</strong>TEDi 圣诞季、复活节及开学季单次下单通常涵盖 50~100 款不同花色，青睐具备多 SKU 柔性制造与集港统一拼箱出口能力（LCL/FCL 混合装载）的华东/华南工贸一体化企业。
+        </p>
+    </div>
+    
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══════════ Section 4: 组织架构与决策链 ═══════════ -->
+            <section id="org" class="scroll-mt-12">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 bg-[#f6f3ec] text-[#ff641e] rounded-lg"><i data-lucide="users" size="24"></i></div>
+                    <h3 class="text-2xl font-bold text-[#3c3935]">5. 组织架构与采购决策链 (Organization & Decision Chain)</h3>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="sand-card p-6 md:col-span-2">
+                        <h4 class="font-bold text-[#3c3935] mb-4">采购决策深度解构</h4>
+                        <!-- 📝 C级高管、亚洲采购办公室、品类经理、质量/ESG团队 -->
+                        
+    <div class="space-y-4 text-xs text-[#3c3935] leading-relaxed">
+        <p>
+            <strong>采购组织架构与权责分布：</strong>TEDi 的全球采购决策高度集权于德国多特蒙德总部（TEDi Einkauf Non-Food），由执行董事会统一监管，下设五大专业品类买手部（Category Buying Departments）：
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="p-3 bg-[#fdfbf7] rounded-xl border border-[rgba(160,109,68,0.08)]">
+                <strong class="text-[#ff641e] block mb-1">品类买手 (Category Buyers)</strong>
+                <p class="text-[#7a756f]">拥有绝对的选品立项权、初始目标 FOB 价格核定权及首次试单量（通常为 20,000~50,000 件）签署权。</p>
+            </div>
+            <div class="p-3 bg-[#fdfbf7] rounded-xl border border-[rgba(160,109,68,0.08)]">
+                <strong class="text-[#ff641e] block mb-1">质量与合规部 (QA &amp; ESG Team)</strong>
+                <p class="text-[#7a756f]">拥有合规<strong>一票否决权</strong>。负责审核工厂 BSCI 报告、EUDR 地理位置溯源合规文件及第三方检测实验室（TUV/SGS）报告。</p>
+            </div>
+        </div>
+        <p>
+            <strong>在华直采通道与亚洲代表网络：</strong>
+            TEDi 每年派出多批资深买手代表团亲赴中国华南与华东采购前线。其核心线下选品主阵地包括：<strong>广州锦汉家居及礼品展（JINHAN FAIR）</strong>、中国进出口商品交易会（广交会第二期家居装饰/陶瓷与第三期办公文具/玩具）、义乌国际商贸城采购中心及宁波出口贸易服务网路。买手在展会现场直接与具备外贸出口自主权的工厂决策人洽谈核价，并下发打样与验厂指令。
+        </p>
+        <p>
+            <strong>标准化入驻与核价流程：</strong>
+            新品提报 -> 样品寄送与跌落/化学预检 -> 提供工厂 BSCI 审计与 FSC 证书 -> 多特蒙德总部样品评审会（Sample Meeting）决议 -> 下发采购订单（PO）与 EDI 数据对接。
+        </p>
+    </div>
+    
+                    </div>
+                    <div class="sand-card p-6">
+                        <h4 class="font-bold text-[#3c3935] mb-4">关键联系人路径</h4>
+                        <!-- 📝 供应商对接门户、提交路径 -->
+                        
+    <div class="space-y-3 text-xs text-[#3c3935] leading-relaxed">
+        <div class="p-3 bg-[#fdfbf7] rounded-xl border border-[rgba(160,109,68,0.08)]">
+            <div class="font-bold text-[#ff641e] mb-1">官方供应商注册门户</div>
+            <p class="text-[#7a756f] break-all">网址：<a href="https://www.tedi.com/lieferantenportal" target="_blank" class="text-[#ff641e] hover:underline">tedi.com/lieferantenportal</a></p>
+            <p class="text-[11px] text-[#7a756f] mt-1">需在线提交企业基本资质、商事登记副本、BSCI DBID 编号及产品目录 PDF。</p>
+        </div>
+        <div class="p-3 bg-[#fdfbf7] rounded-xl border border-[rgba(160,109,68,0.08)]">
+            <div class="font-bold text-[#3c3935] mb-1">总部采购对接地址</div>
+            <p class="text-[#7a756f]">Einkauf Non-Food, TEDi GmbH &amp; Co. KG<br>Brackeler Hellweg 301, 44309 Dortmund, Germany</p>
+            <p class="text-[11px] text-[#7a756f] mt-1">电话总机: +49 231 55577-0 | 官方邮箱: info@tedi.com</p>
+        </div>
+        <div class="p-3 bg-[#fdfbf7] rounded-xl border border-[rgba(160,109,68,0.08)]">
+            <div class="font-bold text-[#3c3935] mb-1">展会现场直连对接通道</div>
+            <p class="text-[#7a756f]">重点盯防春秋两季广州 JINHAN FAIR（家居/礼品/工艺品）及广交会二三期，买手胸牌通常标有“TEDi Einkauf / Sourcing”。</p>
+        </div>
+    </div>
+    
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══════════ Section 5: 供应链与合规 ═══════════ -->
+            <section id="supply" class="scroll-mt-12">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 bg-[#f6f3ec] text-[#ff641e] rounded-lg"><i data-lucide="globe-2" size="24"></i></div>
+                    <h3 class="text-2xl font-bold text-[#3c3935]">6. 供应链布局与准入合规 (Supply Chain & Compliance)</h3>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="sand-card p-6 md:col-span-2">
+                        <h4 class="font-bold text-[#3c3935] mb-4">对华大宗商品采购估值趋势</h4>
+                        <div id="supplyChart" class="chart-container"></div>
+                        <!-- 📝 采购金额、品类占比趋势分析 -->
+                        
+    <div class="mt-4 text-xs text-[#3c3935] leading-relaxed space-y-2">
+        <p>
+            <strong>对华采购规模稳步攀升：</strong>作为高度依赖中国供应链的欧洲零售商，TEDi 每年直接与间接从中国采购的商品货值估算已达 <strong>16 亿欧元以上（约合 125 亿人民币）</strong>，涉及活跃集装箱逾万标箱（TEU）。
+        </p>
+        <p>
+            <strong>核心产业带采购图谱：</strong>
+            浙江义乌/宁波（办公文具、五金小工具、节日用品、塑料收纳）、广东广州/汕头/潮州（玩具、日用陶瓷、餐厨器皿）、福建泉州德化/福州闽侯（工艺陶瓷、编织及藤铁工艺品、家居装饰品）、山东淄博/曹县（玻璃工艺品、草柳编工艺品）。
+        </p>
+    </div>
+    
+                    </div>
+                    <div class="sand-card p-6 flex flex-col justify-between">
+                        <div>
+                            <h4 class="font-bold text-[#3c3935] mb-4 flex items-center gap-1.5"><i data-lucide="shield-check" size="18" class="text-[#ff641e]"></i> 准入红线</h4>
+                            <!-- 📝 EAC/BSCI/SMETA/EcoVadis 等合规清单 -->
+                            
+    <div class="space-y-3 text-xs text-[#3c3935] leading-relaxed">
+        <div class="p-2.5 bg-[#fdfbf7] rounded-xl border-l-2 border-[#ff641e]">
+            <strong class="text-[#ff641e]">德国供应链尽职调查法 (LkSG)</strong>
+            <p class="text-[11px] text-[#7a756f] mt-0.5">强制要求一阶直接供应商杜绝超时加班、强迫劳动与环境违规，每年需接受独立第三方社会责任抽查。</p>
+        </div>
+        <div class="p-2.5 bg-[#fdfbf7] rounded-xl border-l-2 border-[#ff641e]">
+            <strong class="text-[#ff641e]">欧盟零毁林法案 (EUDR)</strong>
+            <p class="text-[11px] text-[#7a756f] mt-0.5">木制玩具、画框、纸质办公文具及编织藤木制品，必须提供原材料林地 GPS 经纬度地理坐标及无毁林声明。</p>
+        </div>
+        <div class="p-2.5 bg-[#fdfbf7] rounded-xl border-l-2 border-[#ff641e]">
+            <strong class="text-[#ff641e]">社会责任审计 (BSCI / SMETA)</strong>
+            <p class="text-[11px] text-[#7a756f] mt-0.5">工厂必须持有有效的 amfori BSCI 报告（最低 Grade C 且无零容忍项）或 Sedex SMETA 4-Pillar 报告。</p>
+        </div>
+        <div class="p-2.5 bg-[#fdfbf7] rounded-xl border-l-2 border-[#ff641e]">
+            <strong class="text-[#ff641e]">化学与产品安全标准 (REACH/LFGB/EN 71)</strong>
+            <p class="text-[11px] text-[#7a756f] mt-0.5">邻苯二甲酸酯增塑剂 &lt;0.1%；餐厨器皿通过德国 LFGB 食品接触迁移测试；玩具严格符合 EN 71-1/2/3 标准并具备 CE 认证。</p>
+        </div>
+    </div>
+    
+                        </div>
+                        <div class="p-3 bg-[#f6f3ec] border border-[rgba(160,109,68,0.08)] rounded-xl text-[11px] text-[#3c3935] mt-4 leading-relaxed">
+                            <i data-lucide="info" size="14" class="inline mr-1"></i><strong>物流渠道提示：</strong>TEDi 远东海运采购绝大多数采用 FOB 宁波港 / FOB 深圳港 / FOB 上海港条款，指定主流国际货代集运，供应商需严格遵守箱唛条码印刷规范与托盘限高（不超过 1.8 米）。
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══════════ Section 6: 用户舆情与社媒 ═══════════ -->
+            <section id="consumer" class="scroll-mt-12">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 bg-pink-100 text-pink-600 rounded-lg"><i data-lucide="message-square" size="24"></i></div>
+                    <h3 class="text-2xl font-bold text-[#3c3935]">7. 用户舆情与社媒洞察 (Voice of Customer)</h3>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="sand-card p-6 md:col-span-2">
+                        <h4 class="font-bold text-[#3c3935] mb-4">产品差评与设计痛点</h4>
+                        <div class="space-y-4 text-xs">
+                            <!-- 📝 痛点卡片 ×2~3 -->
+                            
+    <div class="p-4 bg-[#fdfbf7] rounded-2xl border border-[rgba(160,109,68,0.08)]">
+        <div class="flex justify-between items-center mb-1.5">
+            <span class="font-bold text-[#ff641e] text-xs">痛点 1: 塑料收纳箱与小五金脆化开裂 / 缺件</span>
+            <span class="text-[10px] text-[#7a756f]">消费者负评重灾区</span>
+        </div>
+        <p class="text-[#7a756f] leading-relaxed">
+            Trustpilot 舆情显示部分低价 PP/PS 塑料收纳盒在低温运输或承重后易发脆断裂；DIY 五金螺丝包存在少件或螺纹滑丝问题。
+        </p>
+    </div>
+    <div class="p-4 bg-[#fdfbf7] rounded-2xl border border-[rgba(160,109,68,0.08)]">
+        <div class="flex justify-between items-center mb-1.5">
+            <span class="font-bold text-[#ff641e] text-xs">痛点 2: 欧盟 RAPEX 召回历史警示 (重金属与增塑剂)</span>
+            <span class="text-[10px] text-[#7a756f]">合规监管红线</span>
+        </div>
+        <p class="text-[#7a756f] leading-relaxed">
+            欧盟 Safety Gate 系统曾通报个别批次儿童玩具增塑剂（DEHP）超标及印花玻璃杯铅镉溶出超标事件，促使 TEDi 大幅强化每批次到港前的第三方实验室抽检力度。
+        </p>
+    </div>
+    <div class="p-4 bg-[#fdfbf7] rounded-2xl border border-[rgba(160,109,68,0.08)]">
+        <div class="flex justify-between items-center mb-1.5">
+            <span class="font-bold text-[#ff641e] text-xs">痛点 3: 节日装饰品掉粉与异味残留</span>
+            <span class="text-[10px] text-[#7a756f]">用户退货主要原因</span>
+        </div>
+        <p class="text-[#7a756f] leading-relaxed">
+            圣诞节与复活节闪粉装饰品附着力不足，严重掉粉；部分 PVC 派对挂饰存在刺鼻气味，易引发环保意识极强的欧洲家庭差评。
+        </p>
+    </div>
+    
+                        </div>
+                    </div>
+                    <div class="sand-card p-6 flex flex-col justify-between">
+                        <div>
+                            <h4 class="font-bold text-[#3c3935] mb-2">社交媒体与营销</h4>
+                            <!-- 📝 社媒内容分析、消费者关注点 -->
+                            
+    <div class="space-y-2 text-xs text-[#3c3935] leading-relaxed">
+        <p>
+            <strong>TikTok 与 Instagram 上狂热的 #tedihaul 潮流：</strong>
+            TEDi 在社媒上拥有庞大的手工艺达人群体。标签 <em>#tedihaul</em> 与 <em>#tedidiy</em> 累计播放量突破数亿次。年轻女性及手工博主热衷于分享“如何用 5 欧元 TEDi 材料改造高端房间美学”的教程。
+        </p>
+        <p>
+            <strong>爆款基因：</strong>莫兰迪色系水彩丙烯画具、藤编复古镜框、透明亚克力桌面收纳盒极易在社媒裂变形成断货效应。
+        </p>
+    </div>
+    
+                        </div>
+                        <div class="space-y-2 text-xs">
+                            <strong class="text-[#3c3935]">中国供应商技术改进方案：</strong>
+                            <!-- 📝 具体改进建议列表 -->
+                            
+    <ul class="space-y-1.5 text-[11px] text-[#7a756f]">
+        <li>• <strong>改性增韧注塑：</strong>在 PP 塑料原料中添加 3%~5% 抗冲击增韧剂，确保耐摔抗低温。</li>
+        <li>• <strong>无铅无镉环保釉彩：</strong>陶瓷与玻璃器皿采用高温环保水性烤花，严格符合 LFGB 与欧盟第 84/500/EEC 号指令。</li>
+        <li>• <strong>水性环保胶水与除味固化：</strong>节日装饰品采用环保水性背胶与真空除味烘干工艺，解决气味痛点。</li>
+    </ul>
+    
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══════════ Section 7: 实战建议 ═══════════ -->
+            <section id="strategy" class="scroll-mt-24 pb-20">
+                <div class="rounded-3xl p-10 relative overflow-hidden" style="background: #3c3935;">
+                    <div class="relative z-10">
+                        <h3 class="text-3xl font-bold mb-6 flex items-center gap-3 text-white">
+                            <i data-lucide="sparkles" class="text-[#ff641e]"></i>
+                            对中国供应商的实战建议 (Strategy)
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <!-- 📝 策略卡片 ×2~4，标题 #ff641e，正文 #3c3935 -->
+                            
+    <div class="p-6 rounded-2xl bg-[#2d3748] border border-slate-600/40 space-y-3">
+        <div class="flex items-center gap-2">
+            <div class="w-2 h-2 rounded-full bg-[#ff641e]"></div>
+            <h4 class="font-bold text-sm text-[#ff641e]">策略一：打造“合规即产品 (Compliance-as-a-Product)”的开发套件</h4>
+        </div>
+        <p class="text-xs text-slate-300 leading-relaxed">
+            初次向 TEDi 买手团队提报时，切忌仅发送无资质的价格单。在样品画册首页面显式附上工厂 <strong>amfori BSCI 审计等级（A/B/C 级）</strong>、<strong>FSC 森林产销监管链认证编号</strong>及 <strong>SGS/TUV 出具的 REACH/LFGB 基础测试报告</strong>，消除德国买手的尽职调查顾虑。
+        </p>
+    </div>
+    <div class="p-6 rounded-2xl bg-[#2d3748] border border-slate-600/40 space-y-3">
+        <div class="flex items-center gap-2">
+            <div class="w-2 h-2 rounded-full bg-[#ff641e]"></div>
+            <h4 class="font-bold text-sm text-[#ff641e]">策略二：包装去塑化创新与“欧标托盘空间极限利用”</h4>
+        </div>
+        <p class="text-xs text-slate-300 leading-relaxed">
+            主动淘汰传统全透明 PVC 吸塑包装，为 TEDi 定制<strong>原色牛皮纸卡、抽屉式卡纸盒与环保大豆油墨印刷</strong>方案。同时对家居收纳与陶瓷器皿进行套叠优化，使单箱外箱体积压缩 15%~20%，在外贸报价单中注明“提升 20% 货柜装载率”，直接击中其物流降本命脉。
+        </p>
+    </div>
+    <div class="p-6 rounded-2xl bg-[#2d3748] border border-slate-600/40 space-y-3">
+        <div class="flex items-center gap-2">
+            <div class="w-2 h-2 rounded-full bg-[#ff641e]"></div>
+            <h4 class="font-bold text-sm text-[#ff641e]">策略三：前瞻锁定 6 个月季节性采购窗口与多 SKU 拼箱</h4>
+        </div>
+        <p class="text-xs text-slate-300 leading-relaxed">
+            严格把握 TEDi 的采购节奏：<strong>圣诞季商品通常在每年 3-5 月定稿下单</strong>，<strong>复活节与春夏园艺商品在 9-11 月下单</strong>。中国工厂应支持单款 3,000~5,000 件低起订量（MOQ）并在集货港整合 10~20 款花色统一出具一张提单（FCL 混装），以极高配合度抢占季节性订单。
+        </p>
+    </div>
+    <div class="p-6 rounded-2xl bg-[#2d3748] border border-slate-600/40 space-y-3">
+        <div class="flex items-center gap-2">
+            <div class="w-2 h-2 rounded-full bg-[#ff641e]"></div>
+            <h4 class="font-bold text-sm text-[#ff641e]">策略四：工厂端条码预贴标与外箱 EDI 数据直连</h4>
+        </div>
+        <p class="text-xs text-slate-300 leading-relaxed">
+            在出厂前严格按照 TEDi 供应商指南完成多语言（德/英/法/波/西等）法定警告说明及 GS1 EAN-13 商品条码的高精度打印粘贴。具备 EDI 自动对账与出货数据直传能力的供应商，能极大缩短其多特蒙德中央分拨中心的验收入库周期，稳固长期战略合作地位。
+        </p>
+    </div>
+    
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ====== Footer ====== -->
+        <footer class="mt-16 pt-8 pb-12 border-t border-[rgba(160,109,68,0.08)] text-center text-xs text-[#7a756f]">
+            <div class="mb-3 leading-relaxed">
+                <p>数据来源：官方发布、商业登记信息、EPR框架合规指南、消费者舆情反馈及行业公开研报。</p>
+                <p class="mt-1">报告生成声明：本报告由 <strong>Market Graphic</strong> 平台分析生成。</p>
+            </div>
+            <div class="mt-4">
+                <a href="https://marketgraphic.cn" target="_blank" rel="noopener noreferrer" class="text-xs text-[#ff641e] hover:underline font-medium tracking-wide">
+                    www.marketgraphic.cn
+                </a>
+            </div>
+        </footer>
+    </main>
+
+    <script>
+        lucide.createIcons();
+
+        // ===== 图表初始化 =====
+        const initCharts = () => {
+            if (typeof echarts === 'undefined') {
+                console.warn('ECharts 未加载，跳过图表渲染');
+                return;
+            }
+
+            // --- 图表 1: 财务数据 (环形图/饼图) ---
+            const chart1Dom = document.getElementById('financeChart1');
+            if (chart1Dom) {
+                const chart1 = echarts.init(chart1Dom);
+                chart1.setOption({
+  tooltip: {
+    trigger: 'item',
+    formatter: '{b}: {c}亿欧元 ({d}%)'
+  },
+  legend: {
+    orient: 'horizontal',
+    bottom: '0%',
+    textStyle: { color: '#3c3935', fontSize: 11 }
+  },
+  color: ['#ff641e', '#a06d44', '#7a756f', '#3c3935', '#00559f', '#e2d9cc'],
+  series: [
+    {
+      name: '品类营收结构',
+      type: 'pie',
+      radius: ['42%', '70%'],
+      center: ['50%', '45%'],
+      avoidLabelOverlap: false,
+      itemStyle: {
+        borderRadius: 8,
+        borderColor: '#fdfbf7',
+        borderWidth: 2
+      },
+      label: {
+        show: false,
+        position: 'center'
+      },
+      emphasis: {
+        label: {
+          show: true,
+          fontSize: 14,
+          fontWeight: 'bold',
+          formatter: '{b}\n{d}%'
+        }
+      },
+      labelLine: {
+        show: false
+      },
+      data: [
+        { value: 9.76, name: '家居用品 (32%)' },
+        { value: 7.32, name: '办公文具 (24%)' },
+        { value: 5.49, name: '玩具及节日用品 (18%)' },
+        { value: 3.66, name: '餐厨器皿及日用陶瓷 (12%)' },
+        { value: 2.44, name: '编织及工艺陶瓷装饰 (8%)' },
+        { value: 1.83, name: '五金工具及宠物用品 (6%)' }
+      ]
+    }
+  ]
+});
+                // 响应式
+                const resize1 = () => chart1.resize();
+                window.addEventListener('resize', resize1);
+            }
+
+            // --- 图表 2: 渠道数据 (柱状图/堆叠图) ---
+            const chart2Dom = document.getElementById('channelChart');
+            if (chart2Dom) {
+                const chart2 = echarts.init(chart2Dom);
+                chart2.setOption({
+  tooltip: {
+    trigger: 'axis',
+    axisPointer: { type: 'shadow' }
+  },
+  legend: {
+    data: ['德国本土门店', '欧洲国际门店', '总门店数量 (目标5000家)'],
+    bottom: '0%',
+    textStyle: { color: '#3c3935', fontSize: 11 }
+  },
+  grid: {
+    left: '3%',
+    right: '4%',
+    bottom: '12%',
+    top: '10%',
+    containLabel: true
+  },
+  xAxis: {
+    type: 'category',
+    data: ['2018', '2020', '2022', '2024', '2026(现今)', '2029(规划)'],
+    axisLine: { lineStyle: { color: '#7a756f' } }
+  },
+  yAxis: [
+    {
+      type: 'value',
+      name: '门店总数 (家)',
+      min: 0,
+      max: 5500,
+      axisLine: { lineStyle: { color: '#7a756f' } },
+      splitLine: { lineStyle: { color: 'rgba(160,109,68,0.1)' } }
+    }
+  ],
+  color: ['#00559f', '#ff641e', '#a06d44'],
+  series: [
+    {
+      name: '德国本土门店',
+      type: 'bar',
+      stack: 'total',
+      emphasis: { focus: 'series' },
+      data: [1550, 1680, 1800, 1880, 1920, 2300]
+    },
+    {
+      name: '欧洲国际门店',
+      type: 'bar',
+      stack: 'total',
+      emphasis: { focus: 'series' },
+      data: [450, 670, 1050, 1420, 1780, 2700]
+    },
+    {
+      name: '总门店数量 (目标5000家)',
+      type: 'line',
+      smooth: true,
+      lineStyle: { width: 3, color: '#ff641e' },
+      symbolSize: 8,
+      data: [2000, 2350, 2850, 3300, 3700, 5000]
+    }
+  ]
+});
+                const resize2 = () => chart2.resize();
+                window.addEventListener('resize', resize2);
+            }
+
+            // --- 图表 3: 采购数据 (趋势图) ---
+            const chart3Dom = document.getElementById('supplyChart');
+            if (chart3Dom) {
+                const chart3 = echarts.init(chart3Dom);
+                chart3.setOption({
+  tooltip: {
+    trigger: 'axis',
+    axisPointer: { type: 'cross' }
+  },
+  legend: {
+    data: ['直接与间接对华采购总估值(百万欧元)', '采购活跃SKU数量(千款)'],
+    bottom: '0%',
+    textStyle: { color: '#3c3935', fontSize: 11 }
+  },
+  grid: {
+    left: '3%',
+    right: '4%',
+    bottom: '12%',
+    top: '10%',
+    containLabel: true
+  },
+  xAxis: {
+    type: 'category',
+    data: ['2020', '2021', '2022', '2023', '2024', '2025', '2026(E)'],
+    axisLine: { lineStyle: { color: '#7a756f' } }
+  },
+  yAxis: [
+    {
+      type: 'value',
+      name: '采购金额 (百万欧元)',
+      min: 500,
+      max: 2000,
+      axisLine: { lineStyle: { color: '#7a756f' } },
+      splitLine: { lineStyle: { color: 'rgba(160,109,68,0.1)' } }
+    },
+    {
+      type: 'value',
+      name: 'SKU款数 (千款)',
+      min: 5,
+      max: 25,
+      position: 'right',
+      axisLine: { lineStyle: { color: '#ff641e' } },
+      splitLine: { show: false }
+    }
+  ],
+  color: ['#ff641e', '#00559f'],
+  series: [
+    {
+      name: '直接与间接对华采购总估值(百万欧元)',
+      type: 'bar',
+      barWidth: '40%',
+      itemStyle: {
+        borderRadius: [6, 6, 0, 0],
+        color: '#ff641e'
+      },
+      data: [820, 940, 1120, 1280, 1450, 1580, 1680]
+    },
+    {
+      name: '采购活跃SKU数量(千款)',
+      type: 'line',
+      yAxisIndex: 1,
+      smooth: true,
+      lineStyle: { width: 3, color: '#00559f' },
+      symbol: 'circle',
+      symbolSize: 8,
+      data: [11.2, 12.5, 14.0, 15.8, 17.5, 18.8, 20.0]
+    }
+  ]
+});
+                const resize3 = () => chart3.resize();
+                window.addEventListener('resize', resize3);
+            }
+        };
+
+        initCharts();
+    </script>
+</body>
+</html>

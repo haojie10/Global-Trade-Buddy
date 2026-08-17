@@ -29,6 +29,23 @@ export default function ReportsPage({ reports: initialReports, userId, userRole,
     }}>
       <Head>
         <title>报告大厅 | Market Graphic</title>
+        <meta name="description" content="Market Graphic 报告大厅 — 覆盖全球主要市场的深度品类准入分析报告与买家 360° 穿透洞察，助力外贸企业精准出海。" />
+        <meta name="keywords" content="出海调研报告, 品类分析, 买家洞察, 全球市场报告, 外贸报告, 跨境电商调研, 外贸智友" />
+        <meta name="author" content="外贸智友 GlobalTradeBuddy" />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href="https://marketgraphic.cn/reports" />
+        {/* Open Graph */}
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="报告大厅 | Market Graphic" />
+        <meta property="og:description" content="覆盖全球主要市场的深度品类准入分析报告与买家 360° 穿透洞察，助力外贸企业精准出海。" />
+        <meta property="og:image" content="https://marketgraphic.cn/images/discover_focus_panorama.jpg" />
+        <meta property="og:url" content="https://marketgraphic.cn/reports" />
+        <meta property="og:site_name" content="Market Graphic" />
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="报告大厅 | Market Graphic" />
+        <meta name="twitter:description" content="覆盖全球主要市场的深度品类准入分析报告与买家洞察。" />
+        <meta name="twitter:image" content="https://marketgraphic.cn/images/discover_focus_panorama.jpg" />
       </Head>
       {/* 全局背景流光光源 */}
       <div className="ambient-glow-container">
@@ -130,7 +147,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       `, [userId]);
       allReports = res.rows.map((row: any) => ({
         id: row.id, title: row.title, category: row.category,
-        market_region: row.market_region, summary: row.summary,
+        market_region: row.market_region,
+        summary: row.summary ? (row.summary.length > 150 ? row.summary.slice(0, 150) + '...' : row.summary) : '',
         industries: row.industries || '',
         isUnlocked: true, isFavorited: row.is_favorited
       }));
@@ -148,7 +166,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       `, [userId]);
       allReports = res.rows.map((row: any) => ({
         id: row.id, title: row.title, category: row.category,
-        market_region: row.market_region, summary: row.summary,
+        market_region: row.market_region,
+        summary: row.summary ? (row.summary.length > 150 ? row.summary.slice(0, 150) + '...' : row.summary) : '',
         industries: row.industries || '',
         isUnlocked: row.is_unlocked, isFavorited: row.is_favorited
       }));
@@ -164,13 +183,15 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       `);
       allReports = res.rows.map((row: any) => ({
         id: row.id, title: row.title, category: row.category,
-        market_region: row.market_region, summary: row.summary,
+        market_region: row.market_region,
+        summary: row.summary ? (row.summary.length > 150 ? row.summary.slice(0, 150) + '...' : row.summary) : '',
         industries: row.industries || '',
         isUnlocked: false, isFavorited: false
       }));
     }
 
-    context.res.setHeader('Cache-Control', 'no-store, must-revalidate');
+
+    context.res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
 
     return {
       props: { reports: allReports, userId, userRole, quota, nickname }
