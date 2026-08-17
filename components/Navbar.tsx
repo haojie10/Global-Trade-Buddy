@@ -298,12 +298,12 @@ export default function Navbar({
               </>
             ) : (
               <div 
-                style={{ position: 'relative' }}
+                style={{ position: 'relative', zIndex: 99999 }}
                 onMouseEnter={() => setShowDropdown(true)}
                 onMouseLeave={() => setShowDropdown(false)}
               >
                 <button 
-                  onClick={onShowAuthModal}
+                  onClick={() => { setShowDropdown(false); onShowAuthModal?.(); }}
                   className="sand-btn"
                   style={{
                     padding: '8px 18px',
@@ -312,7 +312,9 @@ export default function Navbar({
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px'
+                    gap: '6px',
+                    position: 'relative',
+                    zIndex: 99999
                   }}
                 >
                   登录 / 注册
@@ -326,21 +328,22 @@ export default function Navbar({
                       right: 0,
                       top: '100%',
                       paddingTop: '6px',
-                      zIndex: 100
+                      zIndex: 999999,
+                      pointerEvents: 'auto'
                     }}
                   >
                     <div style={{
-                      background: dark ? 'rgba(15, 23, 42, 0.96)' : 'rgba(255, 255, 255, 0.96)',
-                      backdropFilter: 'blur(20px)',
-                      WebkitBackdropFilter: 'blur(20px)',
-                      boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
-                      border: dark ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid rgba(18, 18, 18, 0.08)',
+                      background: dark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255, 255, 255, 0.98)',
+                      backdropFilter: 'blur(25px)',
+                      WebkitBackdropFilter: 'blur(25px)',
+                      boxShadow: '0 12px 35px rgba(0,0,0,0.22)',
+                      border: dark ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(18, 18, 18, 0.1)',
                       borderRadius: '12px',
                       padding: '6px',
-                      width: '130px',
+                      width: '140px',
                       display: 'flex',
                       flexDirection: 'column',
-                      animation: 'navFadeIn 0.2s ease-out'
+                      animation: 'navFadeIn 0.18s ease-out'
                     }}>
                       <button 
                         onClick={() => { setShowDropdown(false); onShowAuthModal?.(); }}
@@ -350,14 +353,17 @@ export default function Navbar({
                           color: 'var(--color-text)',
                           fontSize: '0.9rem',
                           textAlign: 'left',
-                          padding: '9px 14px',
+                          padding: '10px 14px',
                           borderRadius: '8px',
                           width: '100%',
                           cursor: 'pointer',
-                          transition: 'background 0.2s, color 0.2s'
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          transition: 'background 0.15s, color 0.15s'
                         }}
                         onMouseOver={(e) => {
-                          e.currentTarget.style.background = 'rgba(255, 100, 30, 0.1)';
+                          e.currentTarget.style.background = 'rgba(255, 100, 30, 0.12)';
                           e.currentTarget.style.color = 'var(--color-accent)';
                         }}
                         onMouseOut={(e) => {
@@ -375,14 +381,17 @@ export default function Navbar({
                           color: 'var(--color-text)',
                           fontSize: '0.9rem',
                           textAlign: 'left',
-                          padding: '9px 14px',
+                          padding: '10px 14px',
                           borderRadius: '8px',
                           width: '100%',
                           cursor: 'pointer',
-                          transition: 'background 0.2s, color 0.2s'
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          transition: 'background 0.15s, color 0.15s'
                         }}
                         onMouseOver={(e) => {
-                          e.currentTarget.style.background = 'rgba(255, 100, 30, 0.1)';
+                          e.currentTarget.style.background = 'rgba(255, 100, 30, 0.12)';
                           e.currentTarget.style.color = 'var(--color-accent)';
                         }}
                         onMouseOut={(e) => {

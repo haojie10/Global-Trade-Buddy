@@ -209,30 +209,29 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
           translateY = -25;
         }
 
-        sec.style.opacity = opacity.toString();
-        sec.style.transform = `translateY(${translateY}px)`;
-        sec.style.display = opacity === 0 ? 'none' : 'flex';
-      };
-
-      // 划分四幕文案的滚动百分比活跃区间 (让第一幕在小幅滚屏时即刻向上视差升起)
-      updateSection(sec1, 0.0, 0.0, 0.03, 0.15);
-      updateSection(sec2, 0.15, 0.20, 0.45, 0.52);
-      updateSection(sec3, 0.52, 0.58, 0.76, 0.82);
-      updateSection(sec4, 0.82, 0.88, 1.0, 1.0, true);
-
-      animationFrameId = requestAnimationFrame(renderLoop);
+      sec.style.opacity = opacity.toString();
+      sec.style.transform = `translateY(${translateY}px)`;
+      sec.style.display = opacity === 0 ? 'none' : 'flex';
+      sec.style.pointerEvents = opacity > 0.2 ? 'auto' : 'none';
     };
 
-    const handleScroll = () => {
-      const scrollHeight = document.documentElement.scrollHeight;
-      const clientHeight = window.innerHeight;
-      const maxScroll = scrollHeight - clientHeight;
-      if (maxScroll <= 0) return;
-      targetPercent = window.scrollY / maxScroll;
-    };
+    // 划分四幕文案的滚动百分比活跃区间
+    updateSection(sec1, 0.0, 0.0, 0.03, 0.15);
+    updateSection(sec2, 0.15, 0.20, 0.45, 0.52);
+    updateSection(sec3, 0.52, 0.58, 0.76, 0.82);
+    updateSection(sec4, 0.82, 0.88, 1.0, 1.0, true);
 
-    // 页面初次加载时立即主动触发计算
-    handleScroll();
+    animationFrameId = requestAnimationFrame(renderLoop);
+  };
+
+  const handleScroll = () => {
+    const scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
+    const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+    targetPercent = Math.min(1, Math.max(0, scrollY / maxScroll));
+  };
+
+  // 页面初次加载时立即主动触发计算
+  handleScroll();
 
     const handleVideoError = () => {
       setErrorMessage("视频加载失败，请确保 public 目录下有 intro_bg.mp4、main_bg.mp4 和 outro_bg.mp4。");
