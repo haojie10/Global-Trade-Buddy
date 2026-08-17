@@ -152,11 +152,8 @@ export default function Navbar({
                   额度: <b style={{ color: 'var(--color-accent)', fontWeight: 500 }}>{quota}</b> 次
                 </span>
 
-                <div 
-                  style={{ position: 'relative' }}
-                  onMouseEnter={() => setShowDropdown(true)}
-                  onMouseLeave={() => setShowDropdown(false)}
-                >
+                {/* 已登录用户下拉菜单 (CSS Hover 物理桥接) */}
+                <div className="nav-user-dropdown-container">
                   <button 
                     style={{
                       background: 'transparent',
@@ -175,21 +172,18 @@ export default function Navbar({
                     <span style={{ fontSize: '0.6rem', opacity: 0.6 }}>▼</span>
                   </button>
 
-                  {showDropdown && (
+                  <div className="nav-user-dropdown-menu">
                     <div style={{
-                      position: 'absolute',
-                      right: 0,
-                      top: '100%',
-                      background: dark ? 'rgba(9, 8, 8, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-                      backdropFilter: 'blur(20px)',
-                      WebkitBackdropFilter: 'blur(20px)',
-                      boxShadow: dark ? '0 10px 30px rgba(0,0,0,0.5)' : '0 10px 30px rgba(0,0,0,0.08)',
-                      border: dark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(18, 18, 18, 0.05)',
-                      padding: '8px 0',
+                      background: dark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255, 255, 255, 0.98)',
+                      backdropFilter: 'blur(25px)',
+                      WebkitBackdropFilter: 'blur(25px)',
+                      boxShadow: '0 12px 35px rgba(0,0,0,0.22)',
+                      border: dark ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(18, 18, 18, 0.1)',
+                      borderRadius: '12px',
+                      padding: '6px',
                       width: '140px',
                       display: 'flex',
-                      flexDirection: 'column',
-                      animation: 'navFadeIn 0.2s ease-out'
+                      flexDirection: 'column'
                     }}>
                       {userRole === 'admin' && (
                         <Link 
@@ -197,17 +191,18 @@ export default function Navbar({
                           style={{
                             textDecoration: 'none',
                             color: 'var(--color-text)',
-                            fontSize: '0.95rem',
+                            fontSize: '0.92rem',
                             textAlign: 'left',
-                            padding: '10px 16px',
+                            padding: '9px 14px',
+                            borderRadius: '8px',
                             display: 'block',
                             width: '100%',
                             cursor: 'pointer',
-                            transition: 'background 0.2s, color 0.2s',
+                            transition: 'background 0.15s, color 0.15s',
                             boxSizing: 'border-box'
                           }}
                           onMouseOver={(e) => {
-                            e.currentTarget.style.background = 'rgba(255, 100, 30, 0.08)';
+                            e.currentTarget.style.background = 'rgba(255, 100, 30, 0.12)';
                             e.currentTarget.style.color = 'var(--color-accent)';
                           }}
                           onMouseOut={(e) => {
@@ -225,15 +220,16 @@ export default function Navbar({
                             background: 'transparent',
                             border: 'none',
                             color: 'var(--color-text)',
-                            fontSize: '0.95rem',
+                            fontSize: '0.92rem',
                             textAlign: 'left',
-                            padding: '10px 16px',
+                            padding: '9px 14px',
+                            borderRadius: '8px',
                             width: '100%',
                             cursor: 'pointer',
-                            transition: 'background 0.2s, color 0.2s'
+                            transition: 'background 0.15s, color 0.15s'
                           }}
                           onMouseOver={(e) => {
-                            e.currentTarget.style.background = 'rgba(255, 100, 30, 0.08)';
+                            e.currentTarget.style.background = 'rgba(255, 100, 30, 0.12)';
                             e.currentTarget.style.color = 'var(--color-accent)';
                           }}
                           onMouseOut={(e) => {
@@ -245,20 +241,21 @@ export default function Navbar({
                         </button>
                       )}
                       <button 
-                        onClick={() => { setShowDropdown(false); setShowChangePassword(true); }}
+                        onClick={() => setShowChangePassword(true)}
                         style={{
                           background: 'transparent',
                           border: 'none',
                           color: 'var(--color-text)',
-                          fontSize: '0.95rem',
+                          fontSize: '0.92rem',
                           textAlign: 'left',
-                          padding: '10px 16px',
+                          padding: '9px 14px',
+                          borderRadius: '8px',
                           width: '100%',
                           cursor: 'pointer',
-                          transition: 'background 0.2s, color 0.2s'
+                          transition: 'background 0.15s, color 0.15s'
                         }}
                         onMouseOver={(e) => {
-                          e.currentTarget.style.background = 'rgba(255, 100, 30, 0.08)';
+                          e.currentTarget.style.background = 'rgba(255, 100, 30, 0.12)';
                           e.currentTarget.style.color = 'var(--color-accent)';
                         }}
                         onMouseOut={(e) => {
@@ -273,37 +270,33 @@ export default function Navbar({
                         style={{
                           background: 'transparent',
                           border: 'none',
-                          color: 'var(--color-text)',
-                          fontSize: '0.95rem',
+                          color: '#ef4444',
+                          fontSize: '0.92rem',
                           textAlign: 'left',
-                          padding: '10px 16px',
+                          padding: '9px 14px',
+                          borderRadius: '8px',
                           width: '100%',
                           cursor: 'pointer',
-                          transition: 'background 0.2s, color 0.2s'
+                          transition: 'background 0.15s, color 0.15s'
                         }}
                         onMouseOver={(e) => {
-                          e.currentTarget.style.background = 'rgba(255, 100, 30, 0.08)';
-                          e.currentTarget.style.color = 'var(--color-accent)';
+                          e.currentTarget.style.background = 'rgba(239, 68, 68, 0.12)';
                         }}
                         onMouseOut={(e) => {
                           e.currentTarget.style.background = 'transparent';
-                          e.currentTarget.style.color = 'var(--color-text)';
                         }}
                       >
                         退出登录
                       </button>
                     </div>
-                  )}
+                  </div>
                 </div>
               </>
             ) : (
-              <div 
-                style={{ position: 'relative', zIndex: 99999 }}
-                onMouseEnter={() => setShowDropdown(true)}
-                onMouseLeave={() => setShowDropdown(false)}
-              >
+              /* 未登录状态 (CSS Hover 物理桥接 + 点击秒开) */
+              <div className="nav-user-dropdown-container">
                 <button 
-                  onClick={() => { setShowDropdown(false); onShowAuthModal?.(); }}
+                  onClick={() => onShowAuthModal?.()}
                   className="sand-btn"
                   style={{
                     padding: '8px 18px',
@@ -312,98 +305,84 @@ export default function Navbar({
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px',
-                    position: 'relative',
-                    zIndex: 99999
+                    gap: '6px'
                   }}
                 >
                   登录 / 注册
                   <span style={{ fontSize: '0.65rem', opacity: 0.8 }}>▼</span>
                 </button>
 
-                {showDropdown && (
-                  <div 
-                    style={{
-                      position: 'absolute',
-                      right: 0,
-                      top: '100%',
-                      paddingTop: '6px',
-                      zIndex: 999999,
-                      pointerEvents: 'auto'
-                    }}
-                  >
-                    <div style={{
-                      background: dark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255, 255, 255, 0.98)',
-                      backdropFilter: 'blur(25px)',
-                      WebkitBackdropFilter: 'blur(25px)',
-                      boxShadow: '0 12px 35px rgba(0,0,0,0.22)',
-                      border: dark ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(18, 18, 18, 0.1)',
-                      borderRadius: '12px',
-                      padding: '6px',
-                      width: '140px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      animation: 'navFadeIn 0.18s ease-out'
-                    }}>
-                      <button 
-                        onClick={() => { setShowDropdown(false); onShowAuthModal?.(); }}
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: 'var(--color-text)',
-                          fontSize: '0.9rem',
-                          textAlign: 'left',
-                          padding: '10px 14px',
-                          borderRadius: '8px',
-                          width: '100%',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          transition: 'background 0.15s, color 0.15s'
-                        }}
-                        onMouseOver={(e) => {
-                          e.currentTarget.style.background = 'rgba(255, 100, 30, 0.12)';
-                          e.currentTarget.style.color = 'var(--color-accent)';
-                        }}
-                        onMouseOut={(e) => {
-                          e.currentTarget.style.background = 'transparent';
-                          e.currentTarget.style.color = 'var(--color-text)';
-                        }}
-                      >
-                        🔑 登录账号
-                      </button>
-                      <button 
-                        onClick={() => { setShowDropdown(false); onShowAuthModal?.(); }}
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: 'var(--color-text)',
-                          fontSize: '0.9rem',
-                          textAlign: 'left',
-                          padding: '10px 14px',
-                          borderRadius: '8px',
-                          width: '100%',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          transition: 'background 0.15s, color 0.15s'
-                        }}
-                        onMouseOver={(e) => {
-                          e.currentTarget.style.background = 'rgba(255, 100, 30, 0.12)';
-                          e.currentTarget.style.color = 'var(--color-accent)';
-                        }}
-                        onMouseOut={(e) => {
-                          e.currentTarget.style.background = 'transparent';
-                          e.currentTarget.style.color = 'var(--color-text)';
-                        }}
-                      >
-                        ✨ 注册新账号
-                      </button>
-                    </div>
+                <div className="nav-user-dropdown-menu">
+                  <div style={{
+                    background: dark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255, 255, 255, 0.98)',
+                    backdropFilter: 'blur(25px)',
+                    WebkitBackdropFilter: 'blur(25px)',
+                    boxShadow: '0 12px 35px rgba(0,0,0,0.22)',
+                    border: dark ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(18, 18, 18, 0.1)',
+                    borderRadius: '12px',
+                    padding: '6px',
+                    width: '140px',
+                    display: 'flex',
+                    flexDirection: 'column'
+                  }}>
+                    <button 
+                      onClick={() => onShowAuthModal?.()}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'var(--color-text)',
+                        fontSize: '0.9rem',
+                        textAlign: 'left',
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        width: '100%',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        transition: 'background 0.15s, color 0.15s'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.background = 'rgba(255, 100, 30, 0.12)';
+                        e.currentTarget.style.color = 'var(--color-accent)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.color = 'var(--color-text)';
+                      }}
+                    >
+                      🔑 登录账号
+                    </button>
+                    <button 
+                      onClick={() => onShowAuthModal?.()}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'var(--color-text)',
+                        fontSize: '0.9rem',
+                        textAlign: 'left',
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        width: '100%',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        transition: 'background 0.15s, color 0.15s'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.background = 'rgba(255, 100, 30, 0.12)';
+                        e.currentTarget.style.color = 'var(--color-accent)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.color = 'var(--color-text)';
+                      }}
+                    >
+                      ✨ 注册新账号
+                    </button>
                   </div>
-                )}
+                </div>
               </div>
             )}
           </div>
@@ -510,7 +489,7 @@ export default function Navbar({
         onShowAuthModal={onShowAuthModal}
       />
 
-      {/* 注入淡入动画关键帧 */}
+      {/* 注入淡入动画与 CSS Hover 悬浮下拉规则 */}
       <style jsx global>{`
         @keyframes navFadeIn {
           from { opacity: 0; transform: translateY(6px); }
@@ -518,6 +497,36 @@ export default function Navbar({
         }
         .nav-menu-item:hover {
           color: var(--color-accent) !important;
+        }
+
+        /* 登录/用户下拉菜单容器与物理桥接 */
+        .nav-user-dropdown-container {
+          position: relative;
+          display: inline-block;
+          padding-bottom: 12px; /* 物理安全过渡桥，保证划向菜单时不中断 */
+          margin-bottom: -12px;
+          z-index: 99999;
+        }
+
+        .nav-user-dropdown-menu {
+          position: absolute;
+          right: 0;
+          top: 100%;
+          padding-top: 4px;
+          opacity: 0;
+          visibility: hidden;
+          pointer-events: none;
+          transform: translateY(6px);
+          transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.18s;
+          z-index: 999999;
+        }
+
+        /* 鼠标悬停即刻展开，硬件加速渲染，不依赖任何 JS 状态 */
+        .nav-user-dropdown-container:hover .nav-user-dropdown-menu {
+          opacity: 1 !important;
+          visibility: visible !important;
+          pointer-events: auto !important;
+          transform: translateY(0) !important;
         }
       `}</style>
     </div>
