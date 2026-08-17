@@ -46,6 +46,10 @@ export default function AdminReportsManagement() {
   const [totalReports, setTotalReports] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
 
+  // 批量选择与批量删除状态
+  const [selectedReportIds, setSelectedReportIds] = useState<string[]>([]);
+  const [batchDeleting, setBatchDeleting] = useState(false);
+
   // 展开的关系实体面板 ID
   const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
 
@@ -61,6 +65,56 @@ export default function AdminReportsManagement() {
   const [editProducts, setEditProducts] = useState<string[]>(['']);
   const [savingEntities, setSavingEntities] = useState(false);
   const [recalculating, setRecalculating] = useState(false);
+
+  // 全选/单选逻辑
+  const isAllCurrentPageSelected = reports.length > 0 && reports.every(r => selectedReportIds.includes(r.id));
+  const isSomeCurrentPageSelected = reports.some(r => selectedReportIds.includes(r.id)) && !isAllCurrentPageSelected;
+
+  const handleToggleSelectAll = () => {
+    if (isAllCurrentPageSelected) {
+      const currentPageIds = new Set(reports.map(r => r.id));
+      setSelectedReportIds(prev => prev.filter(id => !currentPageIds.has(id)));
+    } else {
+      const newSelected = new Set(selectedReportIds);
+      reports.forEach(r => newSelected.add(r.id));
+      setSelectedReportIds(Array.from(newSelected));
+    }
+  };
+
+  const handleToggleSelectOne = (id: string) => {
+    setSelectedReportIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  // 批量删除处理函数
+  const handleBatchDelete = async () => {
+    if (selectedReportIds.length === 0) return;
+    const count = selectedReportIds.length;
+    if (!confirm(`⚠️ 危险操作：你确定要批量删除选中的 ${count} 篇报告吗？\n\n该操作不可撤销，将同步清除用户的解锁记录、图谱关系连线以及云存储物理图片！`)) {
+      return;
+    }
+    setBatchDeleting(true);
+    try {
+      const res = await fetch('/api/admin/reports/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reportIds: selectedReportIds })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert(`🎉 ${data.message || `成功删除 ${count} 篇报告！`}`);
+        setSelectedReportIds([]);
+        fetchData(currentPage);
+      } else {
+        alert('❌ 批量删除失败: ' + (data.error || '未知错误'));
+      }
+    } catch (err: any) {
+      alert('❌ 网络请求失败: ' + err.message);
+    } finally {
+      setBatchDeleting(false);
+    }
+  };
 
   // 触发全量图谱连线重算
   const handleRecalculateAll = async () => {
@@ -704,11 +758,61 @@ export default function AdminReportsManagement() {
         ) : activeTab === 'list' ? (
           /* 报告列表 */
           <div className="admin-card">
-            <h3 className="admin-card-title">当前报告库列表 ({reports.length} 篇)</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+              <h3 className="admin-card-title" style={{ margin: 0 }}>
+                当前报告库列表 ({reports.length} 篇)
+              </h3>
+
+              {/* 批量操作工具条 */}
+              {selectedReportIds.length > 0 && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  background: 'rgba(239, 68, 68, 0.08)',
+                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                  padding: '6px 14px',
+                  borderRadius: '6px'
+                }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--admin-text)' }}>
+                    已选择 <strong style={{ color: '#f87171' }}>{selectedReportIds.length}</strong> 篇报告
+                  </span>
+                  <button
+                    className="admin-btn admin-btn-danger"
+                    onClick={handleBatchDelete}
+                    disabled={batchDeleting}
+                    style={{ padding: '4px 12px', fontSize: '0.8rem', fontWeight: 600 }}
+                  >
+                    {batchDeleting ? '⏳ 批量删除中...' : `🗑️ 批量删除 (${selectedReportIds.length})`}
+                  </button>
+                  <button
+                    className="admin-btn admin-btn-secondary"
+                    onClick={() => setSelectedReportIds([])}
+                    disabled={batchDeleting}
+                    style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                  >
+                    取消选择
+                  </button>
+                </div>
+              )}
+            </div>
+
             <div className="admin-table-container">
               <table className="admin-table">
                 <thead>
                   <tr>
+                    <th style={{ width: '40px', textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={isAllCurrentPageSelected}
+                        ref={el => {
+                          if (el) el.indeterminate = isSomeCurrentPageSelected;
+                        }}
+                        onChange={handleToggleSelectAll}
+                        style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                        title={isAllCurrentPageSelected ? '取消全选当前页' : '全选当前页'}
+                      />
+                    </th>
                     <th>报告标题</th>
                     <th>报告类别</th>
                     <th>相关行业</th>
@@ -722,6 +826,7 @@ export default function AdminReportsManagement() {
                   {reports.map(rep => {
                     const dateStr = new Date(rep.created_at).toLocaleDateString('zh-CN');
                     const isExpanded = expandedReportId === rep.id;
+                    const isSelected = selectedReportIds.includes(rep.id);
                     const hasEntities = rep.primary_company || 
                       (rep.competitors && rep.competitors.length > 0) ||
                       (rep.suppliers && rep.suppliers.length > 0) ||
@@ -732,7 +837,15 @@ export default function AdminReportsManagement() {
 
                     return (
                       <React.Fragment key={rep.id}>
-                        <tr>
+                        <tr style={{ background: isSelected ? 'rgba(99, 102, 241, 0.08)' : undefined }}>
+                          <td style={{ textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleToggleSelectOne(rep.id)}
+                              style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                            />
+                          </td>
                           <td style={{ fontWeight: '500' }}>
                             <a href={`/reports/${rep.id}`} target="_blank" rel="noreferrer" style={{ color: 'var(--admin-text)', textDecoration: 'none' }}>
                               {rep.title}
@@ -805,7 +918,7 @@ export default function AdminReportsManagement() {
                         {/* 展开的关系实体面板 */}
                         {isExpanded && (
                           <tr className="report-entity-row">
-                            <td colSpan={7} style={{ padding: 0 }}>
+                            <td colSpan={8} style={{ padding: 0 }}>
                               <div className="report-entity-panel">
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                   <div style={{ fontWeight: 600, color: '#ffffff', fontSize: '0.85rem' }}>
