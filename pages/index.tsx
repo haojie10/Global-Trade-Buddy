@@ -99,8 +99,8 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
     let animationFrameId: number;
 
     const renderLoop = () => {
-      // Lerp 滚动进度以实现缓动阻尼感
-      currentRenderPercent += (targetPercent - currentRenderPercent) * 0.08;
+      // Lerp 滚动进度以实现敏捷跟手的阻尼平滑感
+      currentRenderPercent += (targetPercent - currentRenderPercent) * 0.22;
       const scrollPercent = Math.max(0, Math.min(1, currentRenderPercent));
 
       let introOpacity = 0;
@@ -147,7 +147,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
         if (mainVideo && mainVideo.readyState >= 2) {
           const mainPercent = (scrollPercent - 0.05) / 0.88;
           const targetTime = Math.max(0, Math.min(mainDuration - 0.05, mainPercent * mainDuration));
-          currentRenderTime += (targetTime - currentRenderTime) * 0.08;
+          currentRenderTime += (targetTime - currentRenderTime) * 0.22;
           mainVideo.currentTime = currentRenderTime;
         }
       } else {
@@ -163,7 +163,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
       if (mainVideo) mainVideo.style.opacity = mainOpacity.toString();
       if (outroVideo) outroVideo.style.opacity = outroOpacity.toString();
 
-      // 文案浮现/渐隐及视差变换 (引入 activeStart -> activeEnd 的停留平原，加长停留时间)
+      // 文案浮现/渐隐及视差变换 (优化区间以实现即时视差响应)
       const updateSection = (
         sec: HTMLDivElement | null, 
         start: number, 
@@ -179,7 +179,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
         if (scrollPercent >= start && scrollPercent <= end) {
           if (scrollPercent < activeStart) {
             // 淡入段
-            const ratio = (scrollPercent - start) / (activeStart - start);
+            const ratio = (scrollPercent - start) / Math.max(0.01, activeStart - start);
             opacity = ratio;
             translateY = 20 * (1 - ratio);
           } else if (scrollPercent >= activeStart && scrollPercent <= activeEnd) {
@@ -192,14 +192,14 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
               opacity = 1;
               translateY = 0;
             } else {
-              const ratio = (scrollPercent - activeEnd) / (end - activeEnd);
+              const ratio = (scrollPercent - activeEnd) / Math.max(0.01, end - activeEnd);
               opacity = 1 - ratio;
-              translateY = -20 * ratio;
+              translateY = -25 * ratio;
             }
           }
         } else if (scrollPercent > end && !isLast) {
           opacity = 0;
-          translateY = -20;
+          translateY = -25;
         }
 
         sec.style.opacity = opacity.toString();
@@ -207,11 +207,11 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
         sec.style.display = opacity === 0 ? 'none' : 'flex';
       };
 
-      // 划分四幕文案的滚动百分比活跃区间 (设置平滑过渡和长停留区域)
-      updateSection(sec1, 0.0, 0.0, 0.15, 0.23);
-      updateSection(sec2, 0.23, 0.30, 0.52, 0.60);
-      updateSection(sec3, 0.60, 0.67, 0.82, 0.88);
-      updateSection(sec4, 0.88, 0.94, 1.0, 1.0, true);
+      // 划分四幕文案的滚动百分比活跃区间 (让第一幕在 0.05 即可产生即时视差反馈)
+      updateSection(sec1, 0.0, 0.0, 0.05, 0.18);
+      updateSection(sec2, 0.18, 0.25, 0.48, 0.55);
+      updateSection(sec3, 0.55, 0.62, 0.78, 0.84);
+      updateSection(sec4, 0.84, 0.90, 1.0, 1.0, true);
 
       animationFrameId = requestAnimationFrame(renderLoop);
     };
