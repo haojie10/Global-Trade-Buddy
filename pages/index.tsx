@@ -798,11 +798,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       published_at: row.published_at ? row.published_at.toISOString() : null
     }));
 
-    if (userId) {
-      context.res.setHeader('Cache-Control', 'private, no-cache, no-store');
-    } else {
-      context.res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
-    }
+    context.res.setHeader('Cache-Control', 'no-cache, no-store, max-age=0, must-revalidate');
     context.res.setHeader('Vary', 'Cookie');
 
 
