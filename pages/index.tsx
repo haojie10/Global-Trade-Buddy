@@ -37,6 +37,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
   const introRef = useRef<HTMLVideoElement>(null);
   const mainRef = useRef<HTMLVideoElement>(null);
   const outroRef = useRef<HTMLVideoElement>(null);
+  const bgOrbRef = useRef<HTMLDivElement>(null);
 
   const sec1Ref = useRef<HTMLDivElement>(null);
   const sec2Ref = useRef<HTMLDivElement>(null);
@@ -158,10 +159,16 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
         if (mainVideo && !mainVideo.paused) mainVideo.pause();
       }
 
-      // 原生 DOM Opacity 修改，完全避开 React 重绘
+      // 原生 DOM Opacity 及视差背景修改，完全避开 React 重绘
       if (introVideo) introVideo.style.opacity = introOpacity.toString();
       if (mainVideo) mainVideo.style.opacity = mainOpacity.toString();
       if (outroVideo) outroVideo.style.opacity = outroOpacity.toString();
+
+      if (bgOrbRef.current) {
+        const scale = 1 + scrollPercent * 0.4;
+        const translateY = scrollPercent * -60;
+        bgOrbRef.current.style.transform = `scale(${scale}) translateY(${translateY}px)`;
+      }
 
       // 文案浮现/渐隐及视差变换 (优化区间以实现即时视差响应)
       const updateSection = (
@@ -304,14 +311,27 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
         pointerEvents: 'none',
         overflow: 'hidden'
       }}>
-        {/* 覆盖一层暗色及磨砂渐变，让文案更容易看清 */}
+        {/* 动态极光流光底图层: 即使缺少 MP4 视频，仍确保滚屏时呈现极具震撼的 3D 光影视差位移 */}
+        <div 
+          ref={bgOrbRef}
+          style={{
+            position: 'absolute',
+            inset: '-20%',
+            background: 'radial-gradient(ellipse 70% 55% at 50% 20%, rgba(255, 100, 30, 0.28), rgba(2, 132, 199, 0.18), rgba(9, 8, 8, 0))',
+            zIndex: 2,
+            pointerEvents: 'none',
+            willChange: 'transform'
+          }} 
+        />
+
+        {/* 暗色遮罩与深邃质感层 */}
         <div style={{
           position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'radial-gradient(circle at center, rgba(9, 8, 8, 0.4) 0%, rgba(9, 8, 8, 0.9) 80%)',
+          background: 'radial-gradient(circle at center, rgba(9, 8, 8, 0.3) 0%, rgba(9, 8, 8, 0.88) 85%)',
           zIndex: 4,
           pointerEvents: 'none'
         }} />
