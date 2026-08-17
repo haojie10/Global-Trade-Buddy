@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{COMPANY_NAME}} - 360° 企业战略情报报告</title>
+
+    <!-- ⚠️ 元数据 - 必须按实际内容填写，多值用英文半角逗号分割 ⚠️ -->
+    <!-- ⚠️ competitors/channels/suppliers/customers/sister_parents 均使用公司简称，去除法律形式后缀 -->
+    <!-- ⚠️ 无真实公司名时该字段留空(content="")，严禁填入产业集群/地域泛称等非公司实体描述 -->
+    <meta name="category" content="{{CATEGORY}}">
+    <meta name="summary" content="{{SUMMARY}}">
+    <meta name="company_name" content="{{COMPANY_NAME}}">
+    <meta name="company_aliases" content="{{COMPANY_ALIASES}}">
+    <meta name="company_website" content="{{COMPANY_WEBSITE}}">
+    <meta name="competitors" content="{{COMPETITORS}}">
+    <meta name="products" content="{{PRODUCTS}}">
+    <meta name="regions" content="{{REGIONS}}">
+    <meta name="channels" content="{{CHANNELS}}">
+    <meta name="suppliers" content="{{SUPPLIERS}}">
+    <meta name="customers" content="{{CUSTOMERS}}">
+    <meta name="sister_parents" content="{{SISTER_PARENTS}}">
+
+    <!-- CDN 依赖 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            --bg-main: #fdfbf7;
+            --bg-sub: #f6f3ec;
+            --color-accent: #ff641e;
+            --color-text: #3c3935;
+            --color-muted: #7a756f;
+            --radius-card: 22px;
+            --radius-sub: 16px;
+            --radius-tag: 12px;
+            --shadow-default: 0 4px 12px rgba(160, 109, 68, 0.03);
+            --shadow-hover: 0 6px 16px rgba(160, 109, 68, 0.08);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg-main); color: var(--color-text); font-weight: 400;
+            line-height: 1.6; scroll-behavior: smooth;
+        }
+        .sand-card {
+            background: var(--bg-sub); border: 1px solid rgba(160, 109, 68, 0.08);
+            border-radius: var(--radius-card); box-shadow: var(--shadow-default);
+        }
+        .sand-card-sub {
+            background: var(--bg-main); border: 1px solid rgba(160, 109, 68, 0.08);
+            border-radius: var(--radius-sub);
+        }
+        .report-tag {
+            background: rgba(160, 109, 68, 0.05); color: var(--color-text);
+            border: 1px solid rgba(160, 109, 68, 0.15); padding: 4px 10px;
+            border-radius: var(--radius-tag); font-size: 0.75rem; font-weight: 500; display: inline-block;
+        }
+        .sand-btn {
+            background: var(--bg-sub); border: none; border-radius: var(--radius-card);
+            color: var(--color-accent); padding: 10px 24px; font-weight: 300;
+            box-shadow: var(--shadow-default);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); cursor: pointer; font-size: 0.85rem;
+        }
+        .sand-btn:hover { background: var(--bg-main); box-shadow: var(--shadow-hover); transform: translateY(-1px); }
+        h2 { font-size: 1.25rem; font-weight: 400; letter-spacing: -0.01em; }
+        h3 { font-size: 0.95rem; font-weight: 400; }
+        .text-accent { color: var(--color-accent); }
+        .text-muted { color: var(--color-muted); }
+        .section-accent { border-left: 3px solid var(--color-accent); padding-left: 14px; }
+        .legend-customer { color: #ff641e; }
+        .legend-product { color: #7a756f; }
+        .chart-container { height: 350px; width: 100%; }
+        .tier-tag { background: var(--color-accent); }
+    </style>
+</head>
+<body>
+
+    <!-- Main Content -->
+    <main>
+
+    <!-- ====== 店面横幅 (实体零售商标配，非零售则删除此块) ====== -->
+    <!-- 横幅图 Base64 必须来自谷歌地图/官网真实店面，logo 必须与实际一致 -->
+    <div class="w-full overflow-hidden aspect-[21/9] max-h-[250px] border-b border-[rgba(160,109,68,0.08)] relative group">
+        <img src="{{BANNER_IMAGE_BASE64}}" class="w-full h-full object-cover object-center" alt="{{BANNER_ALT}}">
+        <div class="absolute inset-0 bg-gradient-to-t from-[#3c3935]/30 via-transparent to-transparent"></div>
+        <div class="absolute bottom-4 left-8 text-white z-10">
+            <span class="bg-[#ff641e] text-white text-[10px] uppercase font-semibold px-2 py-0.5 rounded tracking-wider">{{BANNER_LOCATION}}</span>
+            <h3 class="text-xl font-bold mt-1 drop-shadow-md text-white">{{BANNER_TITLE}}</h3>
+        </div>
+    </div>
+
+        <!-- ====== 吸顶标题栏 ====== -->
+        <header class="sticky top-0 z-40 bg-[#fdfbf7] border-b border-[rgba(160,109,68,0.08)] shadow-[0_4px_12px_rgba(160,109,68,0.03)] px-6 py-1">
+            <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-1">
+                <div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="tier-tag text-[10px] text-white font-bold px-2 py-0.5 rounded" style="background:#ff641e;">{{TIER_LEVEL}}</span>
+                    </div>
+                    <h2 class="text-xl font-normal text-[#3c3935] tracking-tight">{{COMPANY_NAME}} 企业全维洞察报告</h2>
+                    <p class="text-[#7a756f] mt-1">{{REPORT_SUBTITLE}}</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="flex flex-col items-end gap-0.5">
+                            <span class="text-xs text-[#7a756f] font-medium">Powered by</span>
+                            <span class="text-sm font-semibold text-[#ff641e] tracking-tight">Market Graphic</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- ====== 报告正文容器 (所有 section 必须在此 div 内) ====== -->
+        <div class="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
+
+            <!-- ═══════════ Section 1: 企业全景概览 ═══════════ -->
+            <section id="overview" class="scroll-mt-12">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 bg-blue-100 text-blue-600 rounded-lg"><i data-lucide="globe" size="24"></i></div>
+                    <h3 class="text-2xl font-bold text-[#3c3935]">1. 企业全景概览 (Overview)</h3>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="md:col-span-2 sand-card p-8 leading-relaxed text-[#3c3935] space-y-4">
+                        <!-- 📝 千字概览：商业模式、竞争优势、战略转向、最新全年营业额 -->
+                        {{SECTION_1_OVERVIEW}}
+                        <!-- 📝 子模块：集团组织基础与注册信息 (表格) -->
+                        {{SECTION_1_REGISTRATION_TABLE}}
+                        <!-- 📝 子模块：多元化品牌矩阵定位 -->
+                        {{SECTION_1_BRAND_MATRIX}}
+                    </div>
+                    <div class="space-y-6">
+                        <div class="sand-card p-6">
+                            <h4 class="font-bold text-[#3c3935] mb-4 flex items-center gap-2"><i data-lucide="history" size="18" class="text-blue-500"></i> 历史里程碑</h4>
+                            <ul class="space-y-4 text-sm border-l-2 border-slate-100 pl-4">
+                                <!-- 📝 时间线样式里程碑列表，装饰圆点 #ff641e -->
+                                {{SECTION_1_TIMELINE}}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══════════ Section 1.5: 财务深度穿透 ═══════════ -->
+            <section id="finance" class="scroll-mt-16 mt-8">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 bg-[#f6f3ec] text-[#ff641e] rounded-lg"><i data-lucide="trending-up" size="24"></i></div>
+                    <h3 class="text-2xl font-bold text-[#3c3935]">2. 财务深度穿透 (Financial Deep-Dive)</h3>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="sand-card p-6">
+                        <h4 class="font-bold text-[#3c3935] mb-4">{{FINANCE_CHART1_TITLE}}</h4>
+                        <div id="financeChart1" class="chart-container"></div>
+                    </div>
+                    <div class="sand-card p-6" style="background: #3c3935; color: #fdfbf7;">
+                        <h4 class="font-bold text-[#ff641e] mb-4 flex items-center gap-2"><i data-lucide="info" size="18"></i> 财务核心洞察</h4>
+                        <div class="space-y-6 mt-4">
+                            <!-- 📝 财务洞察卡片 ×3，深色背景白色文字 -->
+                            {{SECTION_2_INSIGHTS}}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══════════ Section 2: 渠道分布与竞争格局 ═══════════ -->
+            <section id="channels" class="scroll-mt-12">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 bg-purple-100 text-purple-600 rounded-lg"><i data-lucide="store" size="24"></i></div>
+                    <h3 class="text-2xl font-bold text-[#3c3935]">3. 渠道分布与竞争格局 (Channel & Competition)</h3>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="sand-card p-6 md:col-span-2">
+                        <h4 class="font-bold text-[#3c3935] mb-4">{{CHANNEL_CHART_TITLE}}</h4>
+                        <div id="channelChart" class="chart-container"></div>
+                        <!-- 📝 渠道分析文字 -->
+                        {{SECTION_3_CHANNEL_ANALYSIS}}
+                    </div>
+                    <div class="sand-card p-6 flex flex-col justify-between">
+                        <div>
+                            <h4 class="font-bold text-[#3c3935] mb-4">竞品对比与市场定位</h4>
+                            <!-- 📝 竞品对比文字 + 链接 -->
+                            {{SECTION_3_COMPETITION}}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══════════ Section 3: 自主品牌矩阵 ═══════════ -->
+            <section id="private-labels" class="scroll-mt-12">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 bg-[#f6f3ec] text-[#ff641e] rounded-lg"><i data-lucide="tags" size="24"></i></div>
+                    <h3 class="text-2xl font-bold text-[#3c3935]">4. 自主品牌矩阵与采购商机 (Private Labels)</h3>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="sand-card p-6 md:col-span-2">
+                        <h4 class="font-bold text-[#3c3935] mb-4">品牌架构与品类覆盖</h4>
+                        <!-- 📝 品牌表格、品类层次、价位定位 -->
+                        {{SECTION_4_BRAND_TABLE}}
+                    </div>
+                    <div class="sand-card p-6">
+                        <h4 class="font-bold text-[#3c3935] mb-4">代工与贴牌商机</h4>
+                        <!-- 📝 OEM/ODM 合作方向 -->
+                        {{SECTION_4_OEM_OPPORTUNITY}}
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══════════ Section 4: 组织架构与决策链 ═══════════ -->
+            <section id="org" class="scroll-mt-12">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 bg-[#f6f3ec] text-[#ff641e] rounded-lg"><i data-lucide="users" size="24"></i></div>
+                    <h3 class="text-2xl font-bold text-[#3c3935]">5. 组织架构与采购决策链 (Organization & Decision Chain)</h3>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="sand-card p-6 md:col-span-2">
+                        <h4 class="font-bold text-[#3c3935] mb-4">采购决策深度解构</h4>
+                        <!-- 📝 C级高管、亚洲采购办公室、品类经理、质量/ESG团队 -->
+                        {{SECTION_5_DECISION_CHAIN}}
+                    </div>
+                    <div class="sand-card p-6">
+                        <h4 class="font-bold text-[#3c3935] mb-4">关键联系人路径</h4>
+                        <!-- 📝 供应商对接门户、提交路径 -->
+                        {{SECTION_5_CONTACT_PATH}}
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══════════ Section 5: 供应链与合规 ═══════════ -->
+            <section id="supply" class="scroll-mt-12">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 bg-[#f6f3ec] text-[#ff641e] rounded-lg"><i data-lucide="globe-2" size="24"></i></div>
+                    <h3 class="text-2xl font-bold text-[#3c3935]">6. 供应链布局与准入合规 (Supply Chain & Compliance)</h3>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="sand-card p-6 md:col-span-2">
+                        <h4 class="font-bold text-[#3c3935] mb-4">对华大宗商品采购估值趋势</h4>
+                        <div id="supplyChart" class="chart-container"></div>
+                        <!-- 📝 采购金额、品类占比趋势分析 -->
+                        {{SECTION_6_PROCUREMENT}}
+                    </div>
+                    <div class="sand-card p-6 flex flex-col justify-between">
+                        <div>
+                            <h4 class="font-bold text-[#3c3935] mb-4 flex items-center gap-1.5"><i data-lucide="shield-check" size="18" class="text-[#ff641e]"></i> 准入红线</h4>
+                            <!-- 📝 EAC/BSCI/SMETA/EcoVadis 等合规清单 -->
+                            {{SECTION_6_COMPLIANCE}}
+                        </div>
+                        <div class="p-3 bg-[#f6f3ec] border border-[rgba(160,109,68,0.08)] rounded-xl text-[11px] text-[#3c3935] mt-4 leading-relaxed">
+                            <i data-lucide="info" size="14" class="inline mr-1"></i><strong>物流渠道提示：</strong>{{SECTION_6_LOGISTICS_TIP}}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══════════ Section 6: 用户舆情与社媒 ═══════════ -->
+            <section id="consumer" class="scroll-mt-12">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-2 bg-pink-100 text-pink-600 rounded-lg"><i data-lucide="message-square" size="24"></i></div>
+                    <h3 class="text-2xl font-bold text-[#3c3935]">7. 用户舆情与社媒洞察 (Voice of Customer)</h3>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="sand-card p-6 md:col-span-2">
+                        <h4 class="font-bold text-[#3c3935] mb-4">产品差评与设计痛点</h4>
+                        <div class="space-y-4 text-xs">
+                            <!-- 📝 痛点卡片 ×2~3 -->
+                            {{SECTION_7_PAIN_POINTS}}
+                        </div>
+                    </div>
+                    <div class="sand-card p-6 flex flex-col justify-between">
+                        <div>
+                            <h4 class="font-bold text-[#3c3935] mb-2">社交媒体与营销</h4>
+                            <!-- 📝 社媒内容分析、消费者关注点 -->
+                            {{SECTION_7_SOCIAL_MEDIA}}
+                        </div>
+                        <div class="space-y-2 text-xs">
+                            <strong class="text-[#3c3935]">中国供应商技术改进方案：</strong>
+                            <!-- 📝 具体改进建议列表 -->
+                            {{SECTION_7_IMPROVEMENTS}}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ═══════════ Section 7: 实战建议 ═══════════ -->
+            <section id="strategy" class="scroll-mt-24 pb-20">
+                <div class="rounded-3xl p-10 relative overflow-hidden" style="background: #3c3935;">
+                    <div class="relative z-10">
+                        <h3 class="text-3xl font-bold mb-6 flex items-center gap-3 text-white">
+                            <i data-lucide="sparkles" class="text-[#ff641e]"></i>
+                            对中国供应商的实战建议 (Strategy)
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <!-- 📝 策略卡片 ×2~4，标题 #ff641e，正文 #3c3935 -->
+                            {{SECTION_8_STRATEGIES}}
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ====== Footer ====== -->
+        <footer class="mt-16 pt-8 border-t border-[rgba(160,109,68,0.08)] text-center text-xs text-[#7a756f]">
+            <div class="mb-2 leading-relaxed">
+                <p>数据来源：官方发布、商业登记信息、EPR框架合规指南、消费者舆情反馈及行业公开研报。</p>
+                <p class="mt-1">报告生成声明：本报告由 <strong>Market Graphic</strong> 平台分析生成。</p>
+            </div>
+        </footer>
+    </main>
+
+    <script>
+        lucide.createIcons();
+
+        // ===== 图表初始化 =====
+        const initCharts = () => {
+            if (typeof echarts === 'undefined') {
+                console.warn('ECharts 未加载，跳过图表渲染');
+                return;
+            }
+
+            // --- 图表 1: 财务数据 (环形图/饼图) ---
+            const chart1Dom = document.getElementById('financeChart1');
+            if (chart1Dom) {
+                const chart1 = echarts.init(chart1Dom);
+                chart1.setOption({{CHART1_OPTION}});
+                // 响应式
+                const resize1 = () => chart1.resize();
+                window.addEventListener('resize', resize1);
+            }
+
+            // --- 图表 2: 渠道数据 (柱状图/堆叠图) ---
+            const chart2Dom = document.getElementById('channelChart');
+            if (chart2Dom) {
+                const chart2 = echarts.init(chart2Dom);
+                chart2.setOption({{CHART2_OPTION}});
+                const resize2 = () => chart2.resize();
+                window.addEventListener('resize', resize2);
+            }
+
+            // --- 图表 3: 采购数据 (趋势图) ---
+            const chart3Dom = document.getElementById('supplyChart');
+            if (chart3Dom) {
+                const chart3 = echarts.init(chart3Dom);
+                chart3.setOption({{CHART3_OPTION}});
+                const resize3 = () => chart3.resize();
+                window.addEventListener('resize', resize3);
+            }
+        };
+
+        initCharts();
+    </script>
+</body>
+</html>

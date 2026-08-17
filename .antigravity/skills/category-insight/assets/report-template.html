@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><!-- REPORT_BROWSER_TITLE --></title>
+
+    <!-- ⚠️ 元数据 - 必须按实际内容填写，多值用英文半角逗号分割 ⚠️ -->
+    <!-- suppliers 使用品牌简称（如 Paulmann，而非 Paulmann Licht GmbH）；customers 同理用简称 -->
+    <meta name="category" content="{{CATEGORY}}">
+    <meta name="summary" content="{{SUMMARY}}">
+    <meta name="company_name" content="{{COMPANY_NAME}}">
+    <meta name="company_aliases" content="{{COMPANY_ALIASES}}">
+    <meta name="company_website" content="{{COMPANY_WEBSITE}}">
+    <meta name="competitors" content="{{COMPETITORS}}">
+    <meta name="products" content="{{PRODUCTS}}">
+    <meta name="regions" content="{{REGIONS}}">
+    <meta name="channels" content="{{CHANNELS}}">
+    <meta name="suppliers" content="{{SUPPLIERS}}">
+    <meta name="customers" content="{{CUSTOMERS}}">
+    <meta name="sister_parents" content="{{SISTER_PARENTS}}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* 主色调，可根据品类及市场快速切换 */
+            /* 1. 蓝色调 (运动/水上)：--primary: #06b6d4, --primary-rgb: 6, 182, 212, --bg-start: #083344 */
+            /* 2. 绿色调 (园艺/环保)：--primary: #10b981, --primary-rgb: 16, 185, 129, --bg-start: #022c22 */
+            /* 3. 紫色调 (科技/风扇)：--primary: #6366f1, --primary-rgb: 99, 102, 241, --bg-start: #0f172a */
+            --primary: #6366f1;
+            --primary-rgb: 99, 102, 241;
+            --secondary: #d97706; /* 辅助点缀色 */
+            --bg-start: #0b0f19;
+            --bg-end: #030712;
+            
+            --panel-bg: rgba(17, 24, 39, 0.45);
+            --panel-border: rgba(255, 255, 255, 0.06);
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --shadow-lg: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg-end);
+            background-image: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding: 2rem 1.5rem;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+
+        /* Header Style */
+        header {
+            text-align: center;
+            margin-bottom: 3.5rem;
+            position: relative;
+            padding: 2.5rem 1.5rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 24px;
+            border: 1px solid var(--panel-border);
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(var(--primary-rgb), 0.15) 0%, transparent 60%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .meta-tag {
+            display: inline-block;
+            background: rgba(var(--primary-rgb), 0.15);
+            color: var(--text-primary);
+            padding: 0.35rem 1rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+            border: 1px solid rgba(var(--primary-rgb), 0.25);
+            position: relative;
+            z-index: 1;
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            background: linear-gradient(to right, #ffffff, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            max-width: 750px;
+            margin: 0 auto 1.5rem auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .meta-info-grid {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            padding-top: 1.2rem;
+            max-width: 650px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .meta-item strong {
+            color: var(--text-secondary);
+        }
+
+        /* Section Global Style */
+        section {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 20px;
+            padding: 2.5rem;
+            margin-bottom: 2.5rem;
+            backdrop-filter: blur(16px);
+            box-shadow: var(--shadow-lg);
+            position: relative;
+        }
+
+        .section-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.75rem;
+            font-weight: 600;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            border-left: 4px solid var(--primary);
+            padding-left: 0.75rem;
+        }
+
+        .section-title span {
+            background: linear-gradient(to right, #fff, var(--text-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Matrix Table Styling */
+        .table-responsive {
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.95rem;
+        }
+
+        th, td {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        th {
+            background-color: rgba(0, 0, 0, 0.4);
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background-color: rgba(255, 255, 255, 0.01);
+        }
+
+        .channel-header {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .channel-header.target { color: #818cf8; }
+        .channel-header.comp-a { color: #f472b6; }
+        .channel-header.comp-b { color: #2dd4bf; }
+
+        .matrix-badge {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
+        }
+
+        .badge-primary { background: rgba(var(--primary-rgb), 0.15); color: var(--text-primary); border: 1px solid rgba(var(--primary-rgb), 0.3); }
+        .badge-warning { background: rgba(217, 119, 6, 0.15); color: #fbbf24; border: 1px solid rgba(217, 119, 6, 0.3); }
+        .badge-accent { background: rgba(20, 184, 166, 0.15); color: #2dd4bf; border: 1px solid rgba(20, 184, 166, 0.3); }
+
+        ul.matrix-list {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        ul.matrix-list li {
+            position: relative;
+            padding-left: 1.1rem;
+            margin-bottom: 0.35rem;
+            font-size: 0.9rem;
+        }
+
+        ul.matrix-list li::before {
+            content: "•";
+            position: absolute;
+            left: 0.2rem;
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        /* Comparison Section Styles */
+        .comp-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 900px) {
+            .comp-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .info-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 16px;
+            padding: 1.75rem;
+            transition: var(--transition);
+        }
+
+        .info-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(var(--primary-rgb), 0.25);
+            box-shadow: 0 10px 20px -10px rgba(var(--primary-rgb), 0.15);
+        }
+
+        .card-subtitle {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            font-size: 1.2rem;
+            margin-bottom: 1.25rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-subtitle svg {
+            color: var(--primary);
+        }
+
+        .bullet-list {
+            list-style: none;
+        }
+
+        .bullet-list li {
+            position: relative;
+            padding-left: 1.5rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+
+        .bullet-list li strong {
+            color: var(--text-primary);
+        }
+
+        .bullet-list li::before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: var(--secondary);
+            font-weight: bold;
+        }
+
+        .pain-points-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.25rem;
+            margin-top: 1.5rem;
+        }
+
+        @media (max-width: 1000px) {
+            .pain-points-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        @media (max-width: 600px) {
+            .pain-points-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .pain-card {
+            background: rgba(239, 68, 68, 0.05);
+            border: 1px solid rgba(239, 68, 68, 0.15);
+            border-radius: 12px;
+            padding: 1.25rem;
+            transition: var(--transition);
+        }
+
+        .pain-card:hover {
+            background: rgba(239, 68, 68, 0.08);
+            border-color: rgba(239, 68, 68, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .pain-title {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            font-size: 1rem;
+            color: #fca5a5;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .pain-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Gap Analysis Styling */
+        .gap-badge {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .gap-list {
+            margin-top: 1rem;
+        }
+
+        .gap-item {
+            padding: 1.25rem;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            transition: var(--transition);
+        }
+
+        .gap-item:hover {
+            background: rgba(255, 255, 255, 0.03);
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        .gap-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            gap: 1rem;
+        }
+
+        .gap-title {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: var(--text-primary);
+        }
+
+        .gap-desc {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+
+        /* Recommendations & Concept Images Styling */
+        .rec-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+        }
+
+        @media (max-width: 950px) {
+            .rec-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .rec-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 18px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: var(--transition);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .rec-card:hover {
+            transform: translateY(-6px);
+            border-color: rgba(var(--primary-rgb), 0.35);
+            box-shadow: 0 15px 30px -10px rgba(var(--primary-rgb), 0.2);
+        }
+
+        .image-wrapper {
+            position: relative;
+            width: 100%;
+            height: 250px;
+            background: #000;
+            overflow: hidden;
+        }
+
+        .image-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: var(--transition);
+        }
+
+        .rec-card:hover .image-wrapper img {
+            transform: scale(1.05);
+        }
+
+        .image-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%);
+            padding: 1.5rem 1rem 0.5rem 1rem;
+            color: #fff;
+        }
+
+        .rec-tag {
+            background: var(--secondary);
+            color: #fff;
+            padding: 0.2rem 0.6rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: 4px;
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        }
+
+        .rec-content {
+            padding: 1.5rem;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .rec-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.15rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+        }
+
+        .rec-description {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.25rem;
+            line-height: 1.5;
+        }
+
+        .feature-bullets {
+            list-style: none;
+            padding-left: 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 1rem;
+        }
+
+        .feature-bullets li {
+            position: relative;
+            padding-left: 1.2rem;
+            margin-bottom: 0.4rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .feature-bullets li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 4rem;
+            margin-bottom: 2rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 2rem;
+        }
+
+        .highlight-text {
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+        /* SVG Icons */
+        .icon {
+            display: inline-block;
+            width: 1.2em;
+            height: 1.2em;
+            stroke-width: 0;
+            stroke: currentColor;
+            fill: currentColor;
+            vertical-align: middle;
+        }
+
+
+        /* Powered by Market Graphic Style */
+        .powered-by {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            z-index: 10;
+        }
+        .powered-by img {
+            height: 14px;
+            vertical-align: middle;
+        }
+        @media (max-width: 768px) {
+            .powered-by {
+                position: static;
+                margin-bottom: 1rem;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部标题区域 -->
+        <header>
+            <div class="powered-by-mg" style="position: absolute; top: 1.5rem; right: 1.5rem; display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--text-muted); z-index: 10;">
+                <svg class="icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px; vertical-align: middle;"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                <span style="font-weight: 600; font-family: 'Outfit', sans-serif; letter-spacing: 0.05em; vertical-align: middle;">Market Graphic</span>
+            </div>
+            <div class="logo-wrapper" style="margin-bottom: 1.25rem; display: flex; justify-content: center; align-items: center;">
+                
+            </div>
+
+            <div class="meta-tag">Category Insight Report</div>
+            <h1><!-- REPORT_TITLE --></h1>
+            <div class="subtitle"><!-- REPORT_SUBTITLE --></div>
+            <div class="meta-info-grid">
+                <div class="meta-item">研究品类：<strong><!-- CATEGORY_NAME --></strong></div>
+                <div class="meta-item">目标市场：<strong><!-- TARGET_MARKET --></strong></div>
+                <div class="meta-item">分析周期：<strong><!-- RUNNING_SEASON --></strong></div>
+            </div>
+        </header>
+
+        <!-- 1. 品类对比矩阵 -->
+        <section id="product-matrix">
+            <h2 class="section-title">
+                <svg class="icon" viewBox="0 0 24 24" style="width: 1.5rem; height: 1.5rem; fill: none; stroke: var(--primary); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+                <span>1. 品类矩阵构建 (Product Matrix)</span>
+            </h2>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 15%;">对比维度</th>
+                            <th style="width: 28%;" class="channel-header target"><!-- CHANNEL_TARGET_NAME --></th>
+                            <th style="width: 28%;" class="channel-header comp-a"><!-- CHANNEL_COMP_A_NAME --></th>
+                            <th style="width: 28%;" class="channel-header comp-b"><!-- CHANNEL_COMP_B_NAME --></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- MATRIX_ROWS -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 2. 差异化对比 -->
+        <section id="differentiation-analysis">
+            <h2 class="section-title">
+                <svg class="icon" viewBox="0 0 24 24" style="width: 1.5rem; height: 1.5rem; fill: none; stroke: var(--primary); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M16 3h5v5"></path><path d="M8 3H3v5"></path><path d="M12 2v20"></path><path d="M3 16v5h5"></path><path d="M21 16v5h5"></path><path d="M3 12h18"></path></svg>
+                <span>2. 差异化深度对比 (Differentiation)</span>
+            </h2>
+            <div class="comp-grid">
+                <!-- 渠道对比 -->
+                <div class="info-card">
+                    <h3 class="card-subtitle">
+                        <svg class="icon" viewBox="0 0 24 24" style="width: 1.2rem; height: 1.2rem; fill: none; stroke: var(--primary); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                        品牌及自营结构差异
+                    </h3>
+                    <ul class="bullet-list">
+                        <!-- BRAND_STRUCTURE_DETAILS -->
+                    </ul>
+                </div>
+
+                <!-- 规格参数对比 -->
+                <div class="info-card">
+                    <h3 class="card-subtitle">
+                        <svg class="icon" viewBox="0 0 24 24" style="width: 1.2rem; height: 1.2rem; fill: none; stroke: var(--primary); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        技术规格与核心卖点代差
+                    </h3>
+                    <ul class="bullet-list">
+                        <!-- TECH_SPEC_DETAILS -->
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 痛点分析 -->
+            <h3 class="card-subtitle" style="margin-top: 2rem;">
+                <svg class="icon" viewBox="0 0 24 24" style="width: 1.2rem; height: 1.2rem; fill: none; stroke: var(--danger); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0 -3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                核心消费者痛点诊断（Pain Points）
+            </h3>
+            <div class="pain-points-grid">
+                <!-- PAIN_POINTS_CARDS -->
+            </div>
+        </section>
+
+        <!-- 3. 空白与机会分析 -->
+        <section id="gap-analysis">
+            <h2 class="section-title">
+                <svg class="icon" viewBox="0 0 24 24" style="width: 1.5rem; height: 1.5rem; fill: none; stroke: var(--primary); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                <span>3. 市场机会与产品空白点 (Gap Analysis)</span>
+            </h2>
+            <div class="gap-list">
+                <!-- GAP_ITEMS -->
+            </div>
+        </section>
+
+        <!-- 4. 研发建议与概念图 -->
+        <section id="recommendations">
+            <h2 class="section-title">
+                <svg class="icon" viewBox="0 0 24 24" style="width: 1.5rem; height: 1.5rem; fill: none; stroke: var(--primary); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+                <span>4. 制造企业研发建议与概念图 (R&D Ideas)</span>
+            </h2>
+            <div class="rec-grid">
+                <!-- RECOMMENDATION_CARDS_WITH_IMAGES -->
+            </div>
+        </section>
+
+        <!-- 页脚 -->
+        <footer class="footer" style="margin-top: 3rem; padding-top: 2rem; border-top: 1px solid rgba(160, 109, 68, 0.08); text-align: center;">
+            <div style="margin-bottom: 1.5rem; font-size: 0.8rem; line-height: 1.6; text-align: left; max-width: 800px; margin-left: auto; margin-right: auto; padding: 1.2rem; background: rgba(160, 109, 68, 0.03); border: 1px solid rgba(160, 109, 68, 0.08); border-radius: 12px; color: var(--text-secondary);">
+                <strong style="color: var(--text-primary); display: block; margin-bottom: 0.5rem;">数据与信息来源：</strong>
+                <ol style="margin-left: 1.2rem; padding-left: 0; color: var(--text-secondary);">
+                    <!-- SOURCES_LIST -->
+                </ol>
+            </div>
+            <div style="color: var(--text-muted); font-size: 0.8rem;">
+                本报告由 <strong style="color: var(--primary);">Market Graphic</strong> 生成并提供研究支持 &copy; 2026 Market Graphic. 保留所有权利。
+            </div>
+        </footer>
+    </div>
+</body>
+</html>
