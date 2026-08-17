@@ -297,73 +297,18 @@ export default function Navbar({
                 </div>
               </>
             ) : (
-              <div 
-                style={{ position: 'relative' }}
-                onMouseEnter={() => setShowDropdown(true)}
-                onMouseLeave={() => setShowDropdown(false)}
+              <button 
+                onClick={onShowAuthModal}
+                className="sand-btn"
+                style={{
+                  padding: '8px 20px',
+                  fontSize: '0.92rem',
+                  borderRadius: 'var(--border-radius)',
+                  cursor: 'pointer'
+                }}
               >
-                <button 
-                  onClick={onShowAuthModal}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--color-text)',
-                    fontSize: '1rem',
-                    cursor: 'pointer',
-                    fontWeight: 400,
-                    padding: '8px 0',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                >
-                  登录
-                  <span style={{ fontSize: '0.6rem', opacity: 0.6 }}>▼</span>
-                </button>
-
-                {showDropdown && (
-                  <div style={{
-                    position: 'absolute',
-                    right: 0,
-                    top: '100%',
-                    background: dark ? 'rgba(9, 8, 8, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-                    backdropFilter: 'blur(20px)',
-                    WebkitBackdropFilter: 'blur(20px)',
-                    boxShadow: dark ? '0 10px 30px rgba(0,0,0,0.5)' : '0 10px 30px rgba(0,0,0,0.08)',
-                    border: dark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(18, 18, 18, 0.05)',
-                    padding: '8px 0',
-                    width: '120px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    animation: 'navFadeIn 0.2s ease-out'
-                  }}>
-                    <button 
-                      onClick={onShowAuthModal}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: 'var(--color-text)',
-                        fontSize: '0.95rem',
-                        textAlign: 'left',
-                        padding: '10px 16px',
-                        width: '100%',
-                        cursor: 'pointer',
-                        transition: 'background 0.2s, color 0.2s'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.background = 'rgba(255, 100, 30, 0.08)';
-                        e.currentTarget.style.color = 'var(--color-accent)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.background = 'transparent';
-                        e.currentTarget.style.color = 'var(--color-text)';
-                      }}
-                    >
-                      登录 / 注册
-                    </button>
-                  </div>
-                )}
-              </div>
+                登录 / 注册
+              </button>
             )}
           </div>
         )}
