@@ -214,11 +214,11 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
         sec.style.display = opacity === 0 ? 'none' : 'flex';
       };
 
-      // 划分四幕文案的滚动百分比活跃区间 (让第一幕在 0.05 即可产生即时视差反馈)
-      updateSection(sec1, 0.0, 0.0, 0.05, 0.18);
-      updateSection(sec2, 0.18, 0.25, 0.48, 0.55);
-      updateSection(sec3, 0.55, 0.62, 0.78, 0.84);
-      updateSection(sec4, 0.84, 0.90, 1.0, 1.0, true);
+      // 划分四幕文案的滚动百分比活跃区间 (让第一幕在小幅滚屏时即刻向上视差升起)
+      updateSection(sec1, 0.0, 0.0, 0.03, 0.15);
+      updateSection(sec2, 0.15, 0.20, 0.45, 0.52);
+      updateSection(sec3, 0.52, 0.58, 0.76, 0.82);
+      updateSection(sec4, 0.82, 0.88, 1.0, 1.0, true);
 
       animationFrameId = requestAnimationFrame(renderLoop);
     };
@@ -230,6 +230,9 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
       if (maxScroll <= 0) return;
       targetPercent = window.scrollY / maxScroll;
     };
+
+    // 页面初次加载时立即主动触发计算
+    handleScroll();
 
     const handleVideoError = () => {
       setErrorMessage("视频加载失败，请确保 public 目录下有 intro_bg.mp4、main_bg.mp4 和 outro_bg.mp4。");

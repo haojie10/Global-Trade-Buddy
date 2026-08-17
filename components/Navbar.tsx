@@ -297,18 +297,105 @@ export default function Navbar({
                 </div>
               </>
             ) : (
-              <button 
-                onClick={onShowAuthModal}
-                className="sand-btn"
-                style={{
-                  padding: '8px 20px',
-                  fontSize: '0.92rem',
-                  borderRadius: 'var(--border-radius)',
-                  cursor: 'pointer'
-                }}
+              <div 
+                style={{ position: 'relative' }}
+                onMouseEnter={() => setShowDropdown(true)}
+                onMouseLeave={() => setShowDropdown(false)}
               >
-                登录 / 注册
-              </button>
+                <button 
+                  onClick={onShowAuthModal}
+                  className="sand-btn"
+                  style={{
+                    padding: '8px 18px',
+                    fontSize: '0.92rem',
+                    borderRadius: 'var(--border-radius)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  登录 / 注册
+                  <span style={{ fontSize: '0.65rem', opacity: 0.8 }}>▼</span>
+                </button>
+
+                {showDropdown && (
+                  <div 
+                    style={{
+                      position: 'absolute',
+                      right: 0,
+                      top: '100%',
+                      paddingTop: '6px',
+                      zIndex: 100
+                    }}
+                  >
+                    <div style={{
+                      background: dark ? 'rgba(15, 23, 42, 0.96)' : 'rgba(255, 255, 255, 0.96)',
+                      backdropFilter: 'blur(20px)',
+                      WebkitBackdropFilter: 'blur(20px)',
+                      boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
+                      border: dark ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid rgba(18, 18, 18, 0.08)',
+                      borderRadius: '12px',
+                      padding: '6px',
+                      width: '130px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      animation: 'navFadeIn 0.2s ease-out'
+                    }}>
+                      <button 
+                        onClick={() => { setShowDropdown(false); onShowAuthModal?.(); }}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: 'var(--color-text)',
+                          fontSize: '0.9rem',
+                          textAlign: 'left',
+                          padding: '9px 14px',
+                          borderRadius: '8px',
+                          width: '100%',
+                          cursor: 'pointer',
+                          transition: 'background 0.2s, color 0.2s'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.background = 'rgba(255, 100, 30, 0.1)';
+                          e.currentTarget.style.color = 'var(--color-accent)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.color = 'var(--color-text)';
+                        }}
+                      >
+                        🔑 登录账号
+                      </button>
+                      <button 
+                        onClick={() => { setShowDropdown(false); onShowAuthModal?.(); }}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: 'var(--color-text)',
+                          fontSize: '0.9rem',
+                          textAlign: 'left',
+                          padding: '9px 14px',
+                          borderRadius: '8px',
+                          width: '100%',
+                          cursor: 'pointer',
+                          transition: 'background 0.2s, color 0.2s'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.background = 'rgba(255, 100, 30, 0.1)';
+                          e.currentTarget.style.color = 'var(--color-accent)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.color = 'var(--color-text)';
+                        }}
+                      >
+                        ✨ 注册新账号
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         )}
