@@ -352,9 +352,9 @@ export default function NewsDetailPage({ news, relatedReports, canonicalUrl, sit
 
             {/* 资讯正文 */}
             <div style={{
-              color: 'var(--color-text)',
-              fontSize: '1.05rem',
-              lineHeight: 1.8
+              color: '#3c3935',
+              fontSize: '0.95rem',
+              lineHeight: 1.65
             }}>
               {renderContent(news.content)}
             </div>

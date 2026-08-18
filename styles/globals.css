@@ -266,8 +266,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .news-content p {
-  line-height: 1.75;
+  line-height: 1.65;
   margin-bottom: 1rem;
+  color: #3c3935;
 }
 
 .report-content-body table {
