@@ -277,21 +277,21 @@ export default function NewsDetailPage({ news, relatedReports, canonicalUrl, sit
           onShowAuthModal={() => setShowAuthModal(true)} 
         />
         <div style={{
-          maxWidth: '800px',
-          margin: '100px auto 40px auto',
-          padding: '0 20px',
+          maxWidth: '900px',
+          margin: '0 auto',
+          padding: '110px 20px 40px 20px',
           fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
         }}>
 
           {/* 资讯主内容卡片 */}
           <article style={{
-            background: 'rgba(255, 255, 255, 0.75)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            border: '1px solid rgba(18, 18, 18, 0.06)',
+            background: 'rgba(255, 255, 255, 0.45)',
+            backdropFilter: 'blur(15px)',
+            WebkitBackdropFilter: 'blur(15px)',
+            border: '1px solid rgba(18, 18, 18, 0.05)',
             borderRadius: 'var(--border-radius)',
-            padding: '40px',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.02)',
+            padding: '24px 30px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.01)',
             marginBottom: '32px'
           }}>
             {/* 标签 */}
@@ -303,7 +303,8 @@ export default function NewsDetailPage({ news, relatedReports, canonicalUrl, sit
                   padding: '4px 10px',
                   fontSize: '0.75rem',
                   fontWeight: 500,
-                  border: '1px solid rgba(46, 91, 255, 0.1)'
+                  border: '1px solid rgba(46, 91, 255, 0.1)',
+                  borderRadius: 'var(--border-radius)'
                 }}>
                   🏷️ {ind}
                 </span>
@@ -315,7 +316,8 @@ export default function NewsDetailPage({ news, relatedReports, canonicalUrl, sit
                   padding: '4px 10px',
                   fontSize: '0.75rem',
                   fontWeight: 500,
-                  border: '1px solid rgba(255, 100, 30, 0.1)'
+                  border: '1px solid rgba(255, 100, 30, 0.1)',
+                  borderRadius: 'var(--border-radius)'
                 }}>
                   🌍 {cty}
                 </span>
@@ -323,11 +325,12 @@ export default function NewsDetailPage({ news, relatedReports, canonicalUrl, sit
             </div>
 
             <h1 className="font-editorial" style={{
-              fontSize: '2.2rem',
+              fontSize: '2.4rem',
               margin: '0 0 16px 0',
               color: 'var(--color-text)',
-              lineHeight: 1.25,
-              fontWeight: 400
+              lineHeight: 1.3,
+              fontWeight: 400,
+              letterSpacing: '-0.015em'
             }}>
               {news.title}
             </h1>
@@ -351,8 +354,7 @@ export default function NewsDetailPage({ news, relatedReports, canonicalUrl, sit
             <div style={{
               color: 'var(--color-text)',
               fontSize: '1.05rem',
-              lineHeight: 1.75,
-              fontWeight: 300
+              lineHeight: 1.8
             }}>
               {renderContent(news.content)}
             </div>
@@ -362,19 +364,18 @@ export default function NewsDetailPage({ news, relatedReports, canonicalUrl, sit
           {relatedReports && relatedReports.length > 0 && (
             <section style={{ marginTop: '48px' }}>
               <h3 className="font-editorial" style={{
-                fontSize: '1.4rem',
-                fontWeight: 400,
+                fontSize: '1.1rem',
+                fontWeight: 300,
                 color: 'var(--color-text)',
-                marginBottom: '20px'
+                marginBottom: '20px',
+                letterSpacing: '-0.3px'
               }}>
                 💡 相关深度出海研报推荐
               </h3>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' }}>
                 {relatedReports.map(rep => (
-                  <div key={rep.id} className="float-on-hover" style={{
-                    background: 'rgba(255, 255, 255, 0.65)',
-                    border: '1px solid rgba(18, 18, 18, 0.06)',
+                  <div key={rep.id} className="report-card" style={{
                     padding: '24px',
                     borderRadius: 'var(--border-radius)',
                     display: 'flex',

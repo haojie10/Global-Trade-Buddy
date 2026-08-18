@@ -170,35 +170,35 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
       />
 
       <div style={{
-        maxWidth: '1280px',
-        margin: '100px auto 60px auto',
-        padding: '0 24px',
+        maxWidth: '1400px',
+        margin: '0 auto',
+        padding: '110px 40px 80px 40px',
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
       }}>
 
         {/* 页面主标题区 */}
-        <div style={{ marginBottom: '32px' }}>
+        <div style={{ marginBottom: '48px' }}>
           <span style={{ color: 'var(--color-accent, #ff641e)', fontSize: '0.85rem', letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 600 }}>
             Daily Global Trade & Retail Feed
           </span>
-          <h1 className="font-editorial" style={{ fontSize: '2.6rem', margin: '8px 0 0 0', fontWeight: 400, color: 'var(--color-text)' }}>
+          <h1 className="font-editorial" style={{ fontSize: '2.8rem', margin: '8px 0 0 0', fontWeight: 400, color: 'var(--color-text)' }}>
             全球出海行业情报大厅
           </h1>
-          <p style={{ color: 'var(--color-muted)', fontSize: '0.95rem', fontWeight: 300, marginTop: '8px' }}>
+          <p style={{ color: 'var(--color-muted)', fontSize: '1rem', fontWeight: 300, marginTop: '8px' }}>
             54 个外贸相关行业实时资讯追踪，深度覆盖海外大买家采购动向、行业协会标准与关税合规变动。
           </p>
         </div>
 
         {/* 筛选与行业资讯订阅面板 */}
         <div id="news-feed-section" style={{
-          background: 'rgba(255, 255, 255, 0.65)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          border: '1px solid rgba(18, 18, 18, 0.06)',
-          padding: '24px',
+          background: 'rgba(255, 255, 255, 0.45)',
+          backdropFilter: 'blur(15px)',
+          WebkitBackdropFilter: 'blur(15px)',
+          border: '1px solid rgba(18, 18, 18, 0.05)',
+          padding: '16px 24px',
           borderRadius: 'var(--border-radius)',
-          marginBottom: '36px',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.02)'
+          marginBottom: '40px',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.01)'
         }}>
           {/* 上层控制栏：关键词搜索 (左侧) + [市场区域下拉 + 快捷操作] (靠右组合) */}
           <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
@@ -211,11 +211,11 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
                 onChange={(e) => { setSearchKeyword(e.target.value); setCurrentPage(1); }}
                 style={{
                   width: '100%',
-                  padding: '10px 16px',
+                  padding: '12px 16px',
                   fontSize: '0.85rem',
-                  background: 'rgba(255, 255, 255, 0.9)',
-                  border: '1px solid rgba(18, 18, 18, 0.1)',
-                  borderRadius: '6px',
+                  background: 'rgba(255, 255, 255, 0.65)',
+                  border: '1px solid rgba(18, 18, 18, 0.08)',
+                  borderRadius: 'var(--border-radius)',
                   outline: 'none',
                   color: 'var(--color-text)'
                 }}
@@ -237,10 +237,10 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
                 value={selectedRegion}
                 onChange={(e) => { setSelectedRegion(e.target.value); setCurrentPage(1); }}
                 style={{
-                  background: 'rgba(255, 255, 255, 0.9)',
-                  border: '1px solid rgba(18, 18, 18, 0.1)',
-                  padding: '9px 14px',
-                  borderRadius: '6px',
+                  background: 'rgba(255, 255, 255, 0.65)',
+                  border: '1px solid rgba(18, 18, 18, 0.08)',
+                  padding: '8px 12px',
+                  borderRadius: 'var(--border-radius)',
                   fontSize: '0.85rem',
                   color: 'var(--color-text)',
                   outline: 'none',
@@ -260,7 +260,7 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
                   color: selectedIndustries.length === 0 ? '#fff' : 'var(--color-text)',
                   border: '1px solid rgba(18, 18, 18, 0.1)',
                   padding: '8px 16px',
-                  borderRadius: '6px',
+                  borderRadius: 'var(--border-radius)',
                   fontSize: '0.8rem',
                   fontWeight: 500,
                   cursor: 'pointer',
@@ -278,7 +278,7 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
                     color: '#ff3b30',
                     border: '1px solid rgba(255, 59, 48, 0.2)',
                     padding: '8px 14px',
-                    borderRadius: '6px',
+                    borderRadius: 'var(--border-radius)',
                     fontSize: '0.8rem',
                     fontWeight: 500,
                     cursor: 'pointer'
@@ -430,7 +430,7 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
                 color: '#fff',
                 border: 'none',
                 padding: '10px 24px',
-                borderRadius: '6px',
+                borderRadius: 'var(--border-radius)',
                 fontSize: '0.85rem',
                 cursor: 'pointer'
               }}
@@ -442,8 +442,8 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
           <>
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
-              gap: '28px',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: '24px',
               marginBottom: '40px'
             }}>
               {paginatedNews.map((art) => {
@@ -457,19 +457,13 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
                 return (
                   <article
                     key={art.id}
-                    className="float-on-hover"
+                    className="report-card"
                     style={{
-                      background: 'rgba(255, 255, 255, 0.65)',
-                      backdropFilter: 'blur(15px)',
-                      WebkitBackdropFilter: 'blur(15px)',
-                      border: '1px solid rgba(18, 18, 18, 0.06)',
                       padding: '28px',
                       borderRadius: 'var(--border-radius)',
                       display: 'flex',
                       flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      boxShadow: '0 10px 30px rgba(0,0,0,0.02)',
-                      transition: 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease'
+                      justifyContent: 'space-between'
                     }}
                   >
                     <div>
@@ -523,11 +517,15 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
 
                       {/* 资讯标题 */}
                       <h2 style={{
-                        fontSize: '1.2rem',
+                        fontSize: '1.05rem',
                         fontWeight: 500,
                         margin: '0 0 12px 0',
                         lineHeight: 1.4,
-                        color: 'var(--color-text)'
+                        color: 'var(--color-text)',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden'
                       }}>
                         <Link href={`/news/${art.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                           {art.title}
@@ -536,13 +534,13 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
 
                       {/* 深度事实摘要 */}
                       <p style={{
-                        fontSize: '0.88rem',
+                        fontSize: '0.85rem',
                         color: 'var(--color-muted)',
-                        lineHeight: 1.6,
+                        lineHeight: 1.5,
                         margin: '0 0 20px 0',
                         fontWeight: 300,
                         display: '-webkit-box',
-                        WebkitLineClamp: 3,
+                        WebkitLineClamp: 2,
                         WebkitBoxOrient: 'vertical',
                         overflow: 'hidden'
                       }}>
@@ -558,8 +556,8 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
                       fontSize: '0.8rem',
                       color: 'var(--color-muted)',
                       borderTop: '1px solid rgba(18,18,18,0.05)',
-                      paddingTop: '14px',
-                      marginTop: '10px'
+                      paddingTop: '16px',
+                      marginTop: '16px'
                     }}>
                       <span>{itemDate}</span>
                       <Link href={`/news/${art.id}`} style={{
@@ -597,7 +595,7 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
                     background: currentPage === 1 ? 'rgba(0,0,0,0.03)' : 'rgba(255, 255, 255, 0.8)',
                     color: currentPage === 1 ? 'var(--color-muted)' : 'var(--color-text)',
                     border: '1px solid rgba(18, 18, 18, 0.1)',
-                    borderRadius: '6px',
+                    borderRadius: 'var(--border-radius)',
                     cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
                     transition: 'all 0.2s'
                   }}
@@ -619,9 +617,9 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
                       background: currentPage === pageNum ? 'var(--color-accent, #ff641e)' : 'rgba(255, 255, 255, 0.8)',
                       color: currentPage === pageNum ? '#fff' : 'var(--color-text)',
                       border: currentPage === pageNum ? '1px solid var(--color-accent, #ff641e)' : '1px solid rgba(18, 18, 18, 0.1)',
-                      borderRadius: '6px',
+                      borderRadius: 'var(--border-radius)',
                       cursor: 'pointer',
-                      fontWeight: currentPage === pageNum ? 600 : 400,
+                      fontWeight: currentPage === pageNum ? 500 : 400,
                       transition: 'all 0.2s'
                     }}
                   >
@@ -638,7 +636,7 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
                     background: currentPage === totalPages ? 'rgba(0,0,0,0.03)' : 'rgba(255, 255, 255, 0.8)',
                     color: currentPage === totalPages ? 'var(--color-muted)' : 'var(--color-text)',
                     border: '1px solid rgba(18, 18, 18, 0.1)',
-                    borderRadius: '6px',
+                    borderRadius: 'var(--border-radius)',
                     cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
                     transition: 'all 0.2s'
                   }}
