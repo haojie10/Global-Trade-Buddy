@@ -106,15 +106,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // NOTE: 角色强制为 'user'，管理员只能通过数据库手动分配，防止注册自封管理员
     const selectedRole = 'user';
     const quota = 10;
+    const defaultMemberType = 'free';
+    const defaultStatus = 'active';
 
     // 对密码进行 bcrypt 哈希处理（cost factor = 10）
     const passwordHash = await bcrypt.hash(password, 10);
 
     const signupRes = await dbClient.query(
-      `INSERT INTO users (email, password, role, free_quota, nickname) 
-       VALUES ($1, $2, $3, $4, $5) 
-       RETURNING id, email, role, free_quota, nickname`,
-      [email, passwordHash, selectedRole, quota, nickname]
+      `INSERT INTO users (email, password, role, free_quota, nickname, member_type, status) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7) 
+       RETURNING id, email, role, free_quota, nickname, member_type, status`,
+      [email, passwordHash, selectedRole, quota, nickname, defaultMemberType, defaultStatus]
     );
 
     const user = signupRes.rows[0];
@@ -129,15 +131,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         email: user.email,
         role: user.role,
         freeQuota: user.free_quota,
-        nickname: user.nickname
+        nickname: user.nickname,
+        memberType: user.member_type,
+        status: user.status
       },
     });
   } catch (err: any) {
+    console.error('[SIGNUP ERROR] 用户注册发生异常:', err);
     if (err.code === '23505') {
       return res.status(400).json({ error: '该邮箱已被注册' });
     }
-    const safeMsg = process.env.NODE_ENV === 'production' ? '服务器内部错误' : err.message;
-    return res.status(500).json({ error: safeMsg });
+    const errorMsg = err.detail || err.message || '注册服务异常，请重试';
+    return res.status(500).json({ error: errorMsg, code: err.code });
   } finally {
     if (dbClient) {
       dbClient.release();
