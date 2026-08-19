@@ -4,20 +4,15 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import pool from '../lib/db';
 import { resolveSsrAuth } from '../lib/ssr-auth';
-import { getUserGraph, GraphNode, GraphLink } from './api/user/graph';
-import Link from 'next/link';
 import dynamic from 'next/dynamic';
-const AdminPanel = dynamic(() => import('../components/AdminPanel'), { ssr: false });
-import ReportList, { PlatformReport } from '../components/ReportList';
+import { PlatformReport } from '../components/ReportList';
 import AuthModal from '../components/AuthModal';
 import Navbar from '../components/Navbar';
-import MGLogo from '../components/MGLogo';
+import { EcosystemRadar, FeatureCards, KnowledgeNetwork, ActionPanel } from '../components/HomeVisuals';
+
+const AdminPanel = dynamic(() => import('../components/AdminPanel'), { ssr: false });
 
 interface HomeProps {
-  graphData: {
-    nodes: GraphNode[];
-    links: GraphLink[];
-  };
   allReports: PlatformReport[];
   userId: string;
   userRole: string;
@@ -26,28 +21,23 @@ interface HomeProps {
   latestArticles: any[];
 }
 
-export default function HomePage({ graphData, allReports, userId, userRole, freeQuota, nickname, latestArticles = [] }: HomeProps) {
+export default function HomePage({ allReports, userId, userRole, freeQuota, nickname, latestArticles = [] }: HomeProps) {
   const [quota, setQuota] = useState(freeQuota);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const router = useRouter();
 
-  // 视频与文案 DOM Refs
-  const introRef = useRef<HTMLVideoElement>(null);
-  const mainRef = useRef<HTMLVideoElement>(null);
-  const outroRef = useRef<HTMLVideoElement>(null);
-  const bgOrbRef = useRef<HTMLDivElement>(null);
-
+  // 4 幕 DOM 容器引用
   const sec1Ref = useRef<HTMLDivElement>(null);
   const sec2Ref = useRef<HTMLDivElement>(null);
   const sec3Ref = useRef<HTMLDivElement>(null);
   const sec4Ref = useRef<HTMLDivElement>(null);
 
-  const [currentSection, setCurrentSection] = useState(1);
-  const [copied, setCopied] = useState(false);
-
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // 第 2 幕内部活跃卡片索引 (0, 1, 2)
+  const [featureActiveIndex, setFeatureActiveIndex] = useState(0);
+  const [currentStep, setCurrentStep] = useState(1);
 
   // 1. 生命周期：捕获 URL 中的邀请人 ID 并缓存到本地
   useEffect(() => {
@@ -71,7 +61,7 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
         .then(res => res.json())
         .then(data => {
           if (data.success) {
-            alert('🎁 恭喜！接受邀请注册成功，你与邀请人均已获赠 3 次报告解锁额度！');
+            alert('恭喜！接受邀请注册成功，你与邀请人均已获赠 3 次报告解锁额度！');
             setQuota(prev => prev + 3);
           }
           localStorage.removeItem('gtb_referrer_id');
@@ -83,12 +73,8 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
     }
   }, [userId]);
 
-  // 3. 滚动与 rAF 帧循环逻辑
+  // 3. 滚动与 rAF 帧循环逻辑 (纯原生 DOM 驱动，极致流畅)
   useEffect(() => {
-    const introVideo = introRef.current;
-    const mainVideo = mainRef.current;
-    const outroVideo = outroRef.current;
-
     const sec1 = sec1Ref.current;
     const sec2 = sec2Ref.current;
     const sec3 = sec3Ref.current;
@@ -96,101 +82,54 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
 
     let targetPercent = 0;
     let currentRenderPercent = 0;
-    let currentRenderTime = 0;
     let animationFrameId: number;
 
     const renderLoop = () => {
-      // Lerp 滚动进度以实现敏捷跟手的阻尼平滑感
-      currentRenderPercent += (targetPercent - currentRenderPercent) * 0.22;
+      // Lerp 平滑阻尼插值
+      currentRenderPercent += (targetPercent - currentRenderPercent) * 0.2;
       const scrollPercent = Math.max(0, Math.min(1, currentRenderPercent));
 
-      let introOpacity = 0;
-      let mainOpacity = 0;
-      let outroOpacity = 0;
-
-      const mainDuration = mainVideo ? mainVideo.duration || 12 : 12;
-
-      // 视频淡入淡出及 CPU 解码资源释放优化
-      if (scrollPercent <= 0) {
-        introOpacity = 1;
-        if (introVideo && introVideo.paused) introVideo.play().catch(() => {});
-        if (mainVideo && !mainVideo.paused) mainVideo.pause();
-        if (outroVideo && !outroVideo.paused) outroVideo.pause();
-      } else if (scrollPercent > 0 && scrollPercent < 0.98) {
-        // 前 5% 粒子淡出，数据聚合淡入
-        if (scrollPercent < 0.05) {
-          const ratio = scrollPercent / 0.05;
-          introOpacity = 1 - ratio;
-          mainOpacity = ratio;
-          
-          if (introVideo && introVideo.paused) introVideo.play().catch(() => {});
-          if (mainVideo && !mainVideo.paused) mainVideo.pause();
-          if (outroVideo && !outroVideo.paused) outroVideo.pause();
-        } 
-        // 后 5% 数据淡出，自转大脑淡入
-        else if (scrollPercent > 0.93) {
-          const ratio = (scrollPercent - 0.93) / 0.05;
-          mainOpacity = 1 - ratio;
-          outroOpacity = ratio;
-          
-          if (introVideo && !introVideo.paused) introVideo.pause();
-          if (mainVideo && !mainVideo.paused) mainVideo.pause();
-          if (outroVideo && outroVideo.paused) outroVideo.play().catch(() => {});
-        } 
-        // 中间完全显示 main 视频，暂停其他视频释放资源
-        else {
-          mainOpacity = 1;
-          if (introVideo && !introVideo.paused) introVideo.pause();
-          if (outroVideo && !outroVideo.paused) outroVideo.pause();
+      // 计算当前所处的全局 Step (1 ~ 4)
+      if (scrollPercent < 0.22) {
+        setCurrentStep(1);
+      } else if (scrollPercent < 0.58) {
+        setCurrentStep(2);
+        // 计算第 2 幕内部 3 个子项的切换进度
+        const sec2Progress = (scrollPercent - 0.22) / 0.36;
+        if (sec2Progress < 0.35) {
+          setFeatureActiveIndex(0);
+        } else if (sec2Progress < 0.7) {
+          setFeatureActiveIndex(1);
+        } else {
+          setFeatureActiveIndex(2);
         }
-
-        // main 视频进度 seek 追随
-        if (mainVideo && mainVideo.readyState >= 2) {
-          const mainPercent = (scrollPercent - 0.05) / 0.88;
-          const targetTime = Math.max(0, Math.min(mainDuration - 0.05, mainPercent * mainDuration));
-          currentRenderTime += (targetTime - currentRenderTime) * 0.22;
-          mainVideo.currentTime = currentRenderTime;
-        }
+      } else if (scrollPercent < 0.82) {
+        setCurrentStep(3);
       } else {
-        // 彻底触底
-        outroOpacity = 1;
-        if (outroVideo && outroVideo.paused) outroVideo.play().catch(() => {});
-        if (introVideo && !introVideo.paused) introVideo.pause();
-        if (mainVideo && !mainVideo.paused) mainVideo.pause();
+        setCurrentStep(4);
       }
 
-      // 原生 DOM Opacity 及视差背景修改，完全避开 React 重绘
-      if (introVideo) introVideo.style.opacity = introOpacity.toString();
-      if (mainVideo) mainVideo.style.opacity = mainOpacity.toString();
-      if (outroVideo) outroVideo.style.opacity = outroOpacity.toString();
-
-      if (bgOrbRef.current) {
-        const scale = 1 + scrollPercent * 0.4;
-        const translateY = scrollPercent * -60;
-        bgOrbRef.current.style.transform = `scale(${scale}) translateY(${translateY}px)`;
-      }
-
-      // 文案浮现/渐隐及视差变换 (优化区间以实现即时视差响应)
+      // 文案与视图的淡入淡出及位移
       const updateSection = (
-        sec: HTMLDivElement | null, 
-        start: number, 
-        activeStart: number, 
-        activeEnd: number, 
-        end: number, 
+        sec: HTMLDivElement | null,
+        start: number,
+        activeStart: number,
+        activeEnd: number,
+        end: number,
         isLast = false
       ) => {
         if (!sec) return;
         let opacity = 0;
-        let translateY = 20;
+        let translateY = 24;
 
         if (scrollPercent >= start && scrollPercent <= end) {
           if (scrollPercent < activeStart) {
             // 淡入段
             const ratio = (scrollPercent - start) / Math.max(0.01, activeStart - start);
             opacity = ratio;
-            translateY = 20 * (1 - ratio);
+            translateY = 24 * (1 - ratio);
           } else if (scrollPercent >= activeStart && scrollPercent <= activeEnd) {
-            // 停留段 (保持 100% 可见)
+            // 停留段 (100% 可见)
             opacity = 1;
             translateY = 0;
           } else {
@@ -201,71 +140,97 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
             } else {
               const ratio = (scrollPercent - activeEnd) / Math.max(0.01, end - activeEnd);
               opacity = 1 - ratio;
-              translateY = -25 * ratio;
+              translateY = -24 * ratio;
             }
           }
         } else if (scrollPercent > end && !isLast) {
           opacity = 0;
-          translateY = -25;
+          translateY = -24;
         }
 
-      sec.style.opacity = opacity.toString();
-      sec.style.transform = `translateY(${translateY}px)`;
-      sec.style.display = opacity === 0 ? 'none' : 'flex';
-      sec.style.pointerEvents = opacity > 0.2 ? 'auto' : 'none';
+        sec.style.opacity = opacity.toString();
+        sec.style.transform = `translateY(${translateY}px)`;
+        sec.style.display = opacity <= 0.001 ? 'none' : 'flex';
+        sec.style.pointerEvents = opacity > 0.3 ? 'auto' : 'none';
+      };
+
+      // 划分四幕文案的滚动活跃区间
+      updateSection(sec1, 0.0, 0.0, 0.16, 0.22);
+      updateSection(sec2, 0.22, 0.26, 0.54, 0.58);
+      updateSection(sec3, 0.58, 0.62, 0.78, 0.82);
+      updateSection(sec4, 0.82, 0.86, 1.0, 1.0, true);
+
+      animationFrameId = requestAnimationFrame(renderLoop);
     };
 
-    // 划分四幕文案的滚动百分比活跃区间
-    updateSection(sec1, 0.0, 0.0, 0.03, 0.15);
-    updateSection(sec2, 0.15, 0.20, 0.45, 0.52);
-    updateSection(sec3, 0.52, 0.58, 0.76, 0.82);
-    updateSection(sec4, 0.82, 0.88, 1.0, 1.0, true);
-
-    animationFrameId = requestAnimationFrame(renderLoop);
-  };
-
-  const handleScroll = () => {
-    const scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
-    const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
-    targetPercent = Math.min(1, Math.max(0, scrollY / maxScroll));
-  };
-
-  // 页面初次加载时立即主动触发计算
-  handleScroll();
-
-    const handleVideoError = () => {
-      setErrorMessage("视频加载失败，请确保 public 目录下有 intro_bg.mp4、main_bg.mp4 和 outro_bg.mp4。");
+    const handleScroll = () => {
+      const scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
+      const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      targetPercent = Math.min(1, Math.max(0, scrollY / maxScroll));
     };
 
-    if (introVideo) introVideo.addEventListener('error', handleVideoError);
-    if (mainVideo) mainVideo.addEventListener('error', handleVideoError);
-    if (outroVideo) outroVideo.addEventListener('error', handleVideoError);
-
+    handleScroll();
     window.addEventListener('scroll', handleScroll, { passive: true });
     animationFrameId = requestAnimationFrame(renderLoop);
 
     return () => {
-      if (introVideo) introVideo.removeEventListener('error', handleVideoError);
-      if (mainVideo) mainVideo.removeEventListener('error', handleVideoError);
-      if (outroVideo) outroVideo.removeEventListener('error', handleVideoError);
       window.removeEventListener('scroll', handleScroll);
       cancelAnimationFrame(animationFrameId);
     };
   }, []);
 
+  // 快速滚动至指定幕
+  const scrollToStep = (stepNumber: number) => {
+    const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+    const targetMap: { [key: number]: number } = {
+      1: 0,
+      2: maxScroll * 0.32,
+      3: maxScroll * 0.68,
+      4: maxScroll
+    };
+    window.scrollTo({
+      top: targetMap[stepNumber] || 0,
+      behavior: 'smooth'
+    });
+  };
+
+  const handleCopyInvite = () => {
+    if (typeof window === 'undefined') return;
+    const link = `${window.location.origin}/?invite=${userId}`;
+    navigator.clipboard.writeText(link)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(() => alert('复制失败，请手动选择输入框内容进行复制。'));
+  };
+
+  // 第二幕 3 项能力列表文案
+  const featureList = [
+    {
+      title: '每周的行业资讯',
+      desc: '紧盯产品创新、高管变更、渠道扩张/缩小、投资扩大/收缩，以及终端用户最真实的痛点反馈。让每一次阅读都直接转化为业务预警。'
+    },
+    {
+      title: '客户360°洞察',
+      desc: '深入了解客户背景，发展历史，所属行业，发展潜力，一键穿透其财务状况、组织架构和核心采购逻辑，并为你提供专业的合作建议。'
+    },
+    {
+      title: '品类360°洞察',
+      desc: '深度解析产品在市场上的表现，分析现有的产品结构，价格带，识别用户痛点，洞悉市场空白点，并为你提供直观的产品开发及推广建议。'
+    }
+  ];
+
   return (
     <div style={{
-      background: '#090808',
-      color: '#ffffff',
-      '--color-text': '#ffffff', // 强制子代组件继承暗色模式文字
-      '--color-muted': 'rgba(255, 255, 255, 0.6)',
-      minHeight: '450vh', // 给足滚动行程
-      fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+      background: 'transparent',
+      color: 'var(--color-text)',
+      minHeight: '400vh',
       position: 'relative'
-    } as React.CSSProperties}>
+    }}>
       <Head>
         <title>Market Graphic - 俯瞰全球市场结构</title>
-        <meta name="description" content="Market Graphic（外贸智友）是 AI 驱动的深度外贸调研平台，提供每日行业资讯、公司 360° 穿透洞察和品类准入分析，助力出海企业精准决策。" />
+        <meta name="description" content="Market Graphic（外贸智友）是 AI 驱动的深度外贸调研平台，提供每周行业资讯、客户 360° 穿透洞察和品类准入分析，助力出海企业精准决策。" />
         <meta name="keywords" content="外贸调研, 出海情报, 品类洞察, 买家分析, 全球市场, 跨境电商, AI 商业智能, 外贸智友, Market Graphic" />
         <meta name="author" content="外贸智友 GlobalTradeBuddy" />
         <meta name="robots" content="index, follow" />
@@ -273,135 +238,23 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
         {/* Open Graph */}
         <meta property="og:type" content="website" />
         <meta property="og:title" content="Market Graphic - 俯瞰全球市场结构" />
-        <meta property="og:description" content="AI 驱动的深度外贸调研平台，每日行业资讯、公司 360° 穿透洞察和品类准入分析，助力出海企业精准决策。" />
+        <meta property="og:description" content="AI 驱动的深度外贸调研平台，每周行业资讯、客户 360° 穿透洞察和品类准入分析。" />
         <meta property="og:image" content="https://marketgraphic.cn/images/discover_focus_panorama.jpg" />
         <meta property="og:url" content="https://marketgraphic.cn" />
         <meta property="og:site_name" content="Market Graphic" />
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Market Graphic - 俯瞰全球市场结构" />
-        <meta name="twitter:description" content="AI 驱动的深度外贸调研平台，每日行业资讯、公司 360° 穿透洞察和品类准入分析。" />
+        <meta name="twitter:description" content="AI 驱动的深度外贸调研平台，每周行业资讯、客户 360° 穿透洞察和品类准入分析。" />
         <meta name="twitter:image" content="https://marketgraphic.cn/images/discover_focus_panorama.jpg" />
-        {/* Schema.org JSON-LD */}
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-          '@context': 'https://schema.org',
-          '@type': 'WebSite',
-          name: 'Market Graphic',
-          alternateName: '外贸智友',
-          url: 'https://marketgraphic.cn',
-          description: 'AI 驱动的深度外贸调研平台，提供每日行业资讯、公司 360° 穿透洞察和品类准入分析。',
-          publisher: {
-            '@type': 'Organization',
-            name: 'Market Graphic',
-            url: 'https://marketgraphic.cn',
-            logo: {
-              '@type': 'ImageObject',
-              url: 'https://marketgraphic.cn/images/mg_logo.png'
-            }
-          }
-        }) }} />
       </Head>
 
-      {/* 1. 底图层: 视口固定播放器 */}
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
-        zIndex: 1,
-        pointerEvents: 'none',
-        overflow: 'hidden'
-      }}>
-        {/* 动态极光流光底图层: 即使缺少 MP4 视频，仍确保滚屏时呈现极具震撼的 3D 光影视差位移 */}
-        <div 
-          ref={bgOrbRef}
-          style={{
-            position: 'absolute',
-            inset: '-20%',
-            background: 'radial-gradient(ellipse 70% 55% at 50% 20%, rgba(255, 100, 30, 0.28), rgba(2, 132, 199, 0.18), rgba(9, 8, 8, 0))',
-            zIndex: 2,
-            pointerEvents: 'none',
-            willChange: 'transform'
-          }} 
-        />
-
-        {/* 暗色遮罩与深邃质感层 */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'radial-gradient(circle at center, rgba(9, 8, 8, 0.3) 0%, rgba(9, 8, 8, 0.88) 85%)',
-          zIndex: 4,
-          pointerEvents: 'none'
-        }} />
-
-        {/* 呼吸流光粒子视频 (首屏) */}
-        <video
-          ref={introRef}
-          src="/intro_bg.mp4"
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            display: 'block',
-            opacity: 1,
-            transition: 'none'
-          }}
-          muted
-          loop
-          playsInline
-          preload="auto"
-        />
-
-        {/* 数据网络交互视频 (主体滚动) */}
-        <video
-          ref={mainRef}
-          src="/main_bg.mp4"
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            display: 'block',
-            opacity: 0,
-            transition: 'none'
-          }}
-          muted
-          playsInline
-          preload="metadata"
-        />
-
-        {/* 商业大脑自转视频 (触底) */}
-        <video
-          ref={outroRef}
-          src="/outro_bg.mp4"
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            display: 'block',
-            opacity: 0,
-            transition: 'none'
-          }}
-          muted
-          loop
-          playsInline
-          preload="none"
-        />
+      {/* 1. 全局柔和环境流光 (同报告大厅一致) */}
+      <div className="ambient-glow-container">
+        <div className="ambient-light ambient-light-1" />
       </div>
 
-      {/* 2. 动态导航栏 */}
+      {/* 2. 顶部导航栏 */}
       <Navbar
         userId={userId}
         userRole={userRole}
@@ -409,11 +262,42 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
         nickname={nickname}
         onShowAuthModal={() => setShowAuthModal(true)}
         onShowUploadModal={() => setShowUploadModal(true)}
-        dark={true} // 启用暗色配置磨砂
-        alwaysTransparent={true} // 主页滚动时保持背景全透明，不变成黑色
       />
 
-      {/* 3. 固定视口沉浸式文案层 */}
+      {/* 3. 页面右侧悬浮步骤指示器 */}
+      <div style={{
+        position: 'fixed',
+        right: '24px',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        zIndex: 40,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px'
+      }}>
+        {[1, 2, 3, 4].map((step) => {
+          const isActive = currentStep === step;
+          return (
+            <button
+              key={step}
+              onClick={() => scrollToStep(step)}
+              title={`跳转至第 ${step} 幕`}
+              style={{
+                width: isActive ? '10px' : '6px',
+                height: isActive ? '28px' : '6px',
+                borderRadius: '10px',
+                background: isActive ? '#ff641e' : 'rgba(18, 18, 18, 0.2)',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                padding: 0
+              }}
+            />
+          );
+        })}
+      </div>
+
+      {/* 4. 固定视口沉浸式 4 幕叙事层 */}
       <div style={{
         position: 'fixed',
         top: 0,
@@ -424,280 +308,262 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
         pointerEvents: 'none',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        padding: '80px 24px 40px 24px',
+        boxSizing: 'border-box'
       }}>
-        <div style={{ pointerEvents: 'auto', width: '100%', height: '100%', position: 'relative' }}>
-          
-          {/* 🎬 第1幕: 痛点引入 */}
+        <div style={{
+          width: '100%',
+          maxWidth: '1280px',
+          height: '100%',
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+
+          {/* 第 1 幕：痛点与 360° 全景视野 */}
           <div ref={sec1Ref} style={{
             position: 'absolute',
             inset: 0,
             display: 'flex',
-            flexDirection: 'column',
             alignItems: 'center',
-            justifyContent: 'center',
-            padding: '0 20px',
-            textAlign: 'center',
+            justifyContent: 'space-between',
+            gap: '48px',
             opacity: 1,
-            transform: 'translateY(0px)',
-            transition: 'none'
+            transform: 'translateY(0px)'
           }}>
-            <div style={{ maxWidth: '850px' }}>
+            {/* 左侧文案 */}
+            <div style={{ flex: '1 1 500px', maxWidth: '620px' }}>
               <span style={{
                 color: '#ff641e',
-                fontSize: '0.9rem',
-                letterSpacing: '4px',
+                fontSize: '0.85rem',
+                letterSpacing: '3px',
                 textTransform: 'uppercase',
                 fontWeight: 600,
                 display: 'block',
-                marginBottom: '16px'
+                marginBottom: '14px'
               }}>
-                The Pain & Gap
+                The 360° Panorama
               </span>
               <h1 style={{
-                fontSize: 'clamp(2rem, 8vw, 3.6rem)',
-                fontWeight: 400,
+                fontSize: 'clamp(2rem, 5vw, 3.2rem)',
+                fontWeight: 600,
                 lineHeight: 1.25,
-                margin: '0 0 24px 0',
-                letterSpacing: '-0.02em',
-                color: '#ffffff'
+                margin: '0 0 20px 0',
+                color: 'var(--color-text)'
               }}>
-                海外找客户、看品类、听新闻，<br />
-                <span style={{ color: '#ff641e' }}>为什么你总是慢人一步？</span>
+                想快人一步了解你的客户吗？
               </h1>
               <p style={{
-                fontSize: '1.25rem',
-                color: 'rgba(255,255,255,0.7)',
-                lineHeight: 1.7,
-                maxWidth: '680px',
-                margin: '0 auto',
-                fontWeight: 300
+                fontSize: '1.02rem',
+                color: '#555555',
+                lineHeight: 1.8,
+                margin: '0 0 24px 0',
+                fontWeight: 400
               }}>
-                在出海大潮中，传统的调研被割裂在孤立的新闻、摸不透的客户底细和散落的头条中。割裂的信息只是噪音，决策慢一步，商机便差之千里。
+                传统的调研被割裂在孤立的新闻、摸不透的客户底细和散落的头条中。割裂的信息只是噪音，决策慢一步，商机便差之千里。
               </p>
-              <div style={{ marginTop: '48px', fontSize: '0.95rem', color: '#ff641e', fontWeight: 500 }}>
-                向下滚动，拉动视频进度条 ▾
+              <p style={{
+                fontSize: '1.02rem',
+                color: '#222222',
+                lineHeight: 1.8,
+                margin: 0,
+                fontWeight: 500
+              }}>
+                <span style={{ color: '#ff641e', fontWeight: 600 }}>Market Graphic</span> 为你提供 360° 的视角，穿透客户在市场中的位置，上游是谁，下游是谁，竞争者是谁，环环相扣，逐步揭示市场网络，让你站在更高的视野俯瞰你所深耕的行业。
+              </p>
+
+              <div style={{
+                marginTop: '36px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '0.85rem',
+                color: '#ff641e',
+                fontWeight: 500,
+                background: 'rgba(255, 100, 30, 0.08)',
+                padding: '6px 16px',
+                borderRadius: '20px'
+              }}>
+                向下滚动，探索平台能力
               </div>
+            </div>
+
+            {/* 右侧纯视觉示意图 */}
+            <div style={{ flex: '1 1 450px', display: 'flex', justifyContent: 'center' }}>
+              <EcosystemRadar />
             </div>
           </div>
 
-          {/* 🎬 第2幕: 三大关键能力 */}
+          {/* 第 2 幕：三大核心能力 (固定标题 + 随滚动向上滑动的示意看板) */}
           <div ref={sec2Ref} style={{
             position: 'absolute',
             inset: 0,
             display: 'none',
-            flexDirection: 'column',
             alignItems: 'center',
-            justifyContent: 'center',
-            padding: '0 40px',
+            justifyContent: 'space-between',
+            gap: '48px',
             opacity: 0,
-            transform: 'translateY(20px)',
-            transition: 'none'
+            transform: 'translateY(24px)'
           }}>
-            <div style={{ textAlign: 'center', marginBottom: '48px' }}>
-              <span style={{ color: '#ff641e', fontSize: '0.85rem', letterSpacing: '3px', textTransform: 'uppercase', fontWeight: 600 }}>
-                Three Core Columns
+            {/* 左侧固定标题与步骤引导 */}
+            <div style={{ flex: '1 1 460px', maxWidth: '520px' }}>
+              <span style={{
+                color: '#ff641e',
+                fontSize: '0.85rem',
+                letterSpacing: '3px',
+                textTransform: 'uppercase',
+                fontWeight: 600,
+                display: 'block',
+                marginBottom: '12px'
+              }}>
+                Core Capabilities
               </span>
-              <h2 style={{ fontSize: 'clamp(1.8rem, 6vw, 2.8rem)', margin: '8px 0 0 0', fontWeight: 400, color: '#ffffff' }}>
-                深度情报穿透力
+              <h2 style={{
+                fontSize: 'clamp(2rem, 5vw, 2.8rem)',
+                fontWeight: 600,
+                lineHeight: 1.25,
+                margin: '0 0 24px 0',
+                color: 'var(--color-text)'
+              }}>
+                Market Graphic 为你带来：
               </h2>
+
+              {/* 3 个能力的阶段说明列表 (根据滚动位置高亮) */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {featureList.map((item, idx) => {
+                  const isCurrent = featureActiveIndex === idx;
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        padding: '14px 18px',
+                        borderRadius: '14px',
+                        background: isCurrent ? '#ffffff' : 'transparent',
+                        border: isCurrent ? '1px solid rgba(255, 100, 30, 0.3)' : '1px solid transparent',
+                        boxShadow: isCurrent ? '0 8px 24px rgba(255, 100, 30, 0.08)' : 'none',
+                        transition: 'all 0.3s ease'
+                      }}
+                    >
+                      <div style={{
+                        fontSize: '1.05rem',
+                        fontWeight: 600,
+                        color: isCurrent ? '#ff641e' : '#666'
+                      }}>
+                        {idx + 1}. {item.title}
+                      </div>
+                      <div style={{
+                        fontSize: '0.86rem',
+                        color: isCurrent ? '#444' : '#888',
+                        lineHeight: 1.6,
+                        marginTop: '6px'
+                      }}>
+                        {item.desc}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-              gap: '24px',
-              maxWidth: '1200px',
-              width: '100%'
-            }}>
-              {/* 卡片 1 */}
-              <div style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.1)', padding: '28px', borderRadius: '16px', backdropFilter: 'blur(10px)' }}>
-                <div style={{ fontSize: '2rem', marginBottom: '12px' }}>📡</div>
-                <h3 style={{ fontSize: '1.25rem', color: '#ffffff', margin: '0 0 8px 0' }}>每日行业资讯 ——「动态雷达」</h3>
-                <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.9rem', lineHeight: 1.5, margin: 0, fontWeight: 300 }}>
-                  紧盯产品创新、高管变更、渠道扩张/缩小、投资扩大/收缩，以及终端用户最真实的痛点反馈。让每一次阅读都直接转化为业务预警。
-                </p>
-              </div>
-              {/* 卡片 2 */}
-              <div style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.1)', padding: '28px', borderRadius: '16px', backdropFilter: 'blur(10px)' }}>
-                <div style={{ fontSize: '2rem', marginBottom: '12px' }}>🎯</div>
-                <h3 style={{ fontSize: '1.25rem', color: '#ffffff', margin: '0 0 8px 0' }}>公司 360° 洞察 ——「交易穿透」</h3>
-                <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.9rem', lineHeight: 1.5, margin: 0, fontWeight: 300 }}>
-                  透视零售模式（面向个人用户）或经销模式（面向企业用户）底牌，一键穿透其财务状况、组织架构和核心采购逻辑。
-                </p>
-              </div>
-              {/* 卡片 3 */}
-              <div style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.1)', padding: '28px', borderRadius: '16px', backdropFilter: 'blur(10px)' }}>
-                <div style={{ fontSize: '2rem', marginBottom: '12px' }}>🗺️</div>
-                <h3 style={{ fontSize: '1.25rem', color: '#ffffff', margin: '0 0 8px 0' }}>品类现状剖析 ——「空白发现」</h3>
-                <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.9rem', lineHeight: 1.5, margin: 0, fontWeight: 300 }}>
-                  深度解构品类市场现状，看清渗透率与竞争格局，指导产品团队和研发团队避开红海，直击那些未被满足的市场空白点。
-                </p>
-              </div>
+            {/* 右侧纯图表示意看板 (随滚动向上滑动) */}
+            <div style={{ flex: '1 1 500px', display: 'flex', justifyContent: 'center' }}>
+              <FeatureCards activeIndex={featureActiveIndex} />
             </div>
           </div>
 
-          {/* 🎬 第3幕: 核心组网 */}
+          {/* 第 3 幕：打造私人专属知识库 (Obsidian 知识图谱动态示意) */}
           <div ref={sec3Ref} style={{
             position: 'absolute',
             inset: 0,
             display: 'none',
-            flexDirection: 'column',
             alignItems: 'center',
-            justifyContent: 'center',
-            padding: '0 20px',
+            justifyContent: 'space-between',
+            gap: '48px',
             opacity: 0,
-            transform: 'translateY(20px)',
-            transition: 'none'
+            transform: 'translateY(24px)'
           }}>
-            <div style={{
-              background: 'rgba(9, 8, 8, 0.85)',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
-              padding: '48px',
-              borderRadius: '24px',
-              maxWidth: '680px',
-              textAlign: 'center',
-              backdropFilter: 'blur(15px)',
-              boxShadow: '0 30px 60px rgba(0,0,0,0.5)'
-            }}>
-              <span style={{ color: '#ff641e', fontSize: '0.8rem', letterSpacing: '2px', fontWeight: 600, textTransform: 'uppercase' }}>
+            {/* 左侧文案 */}
+            <div style={{ flex: '1 1 500px', maxWidth: '600px' }}>
+              <span style={{
+                color: '#ff641e',
+                fontSize: '0.85rem',
+                letterSpacing: '3px',
+                textTransform: 'uppercase',
+                fontWeight: 600,
+                display: 'block',
+                marginBottom: '14px'
+              }}>
                 Personal Knowledge Graph
               </span>
-              <h3 style={{ fontSize: 'clamp(1.5rem, 5.5vw, 2.2rem)', color: '#ffffff', margin: '16px 0 16px 0', fontWeight: 400 }}>
-                这是与您业务共同进化的<br />
-                <span style={{ color: '#ff641e' }}>「私人专属商业大脑」</span>
-              </h3>
-              <p style={{ fontSize: '1.05rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.7, margin: 0, fontWeight: 300 }}>
-                在 MARKET GRAPHIC，资讯、公司和品类绝非孤立存在。每一条你关注的产品动态、每一篇留下的笔记，都会自动交织、结网生长，绘制出完全契合您业务习惯的个性化商业版图。
+              <h2 style={{
+                fontSize: 'clamp(2rem, 5vw, 3rem)',
+                fontWeight: 600,
+                lineHeight: 1.25,
+                margin: '0 0 22px 0',
+                color: 'var(--color-text)'
+              }}>
+                打造你自己的<br />
+                <span style={{ color: '#ff641e' }}>私人专属知识库</span>
+              </h2>
+              <p style={{
+                fontSize: '1.05rem',
+                color: '#555555',
+                lineHeight: 1.8,
+                margin: '0 0 20px 0',
+                fontWeight: 400
+              }}>
+                在 <strong style={{ color: '#121212' }}>MARKET GRAPHIC</strong>，客户360°洞察和品类360°洞察绝非孤立存在。
               </p>
+              <p style={{
+                fontSize: '1.05rem',
+                color: '#222222',
+                lineHeight: 1.8,
+                margin: 0,
+                fontWeight: 500
+              }}>
+                每一条你关注的产品动态、每一篇留下的笔记，都会自动交织、结网生长，绘制出完全契合您业务习惯的个性化商业版图。
+              </p>
+            </div>
+
+            {/* 右侧 Obsidian 动态知识图谱示意 */}
+            <div style={{ flex: '1 1 450px', display: 'flex', justifyContent: 'center' }}>
+              <KnowledgeNetwork />
             </div>
           </div>
 
-          {/* 🎬 第4幕: 团队协同与裂变行动 */}
+          {/* 第 4 幕：开启知识之旅与裂变行动 */}
           <div ref={sec4Ref} style={{
             position: 'absolute',
             inset: 0,
             display: 'none',
-            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '0 20px',
             opacity: 0,
-            transform: 'translateY(20px)',
-            transition: 'none'
+            transform: 'translateY(24px)'
           }}>
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(255, 100, 30, 0.15) 0%, rgba(0, 0, 0, 0.8) 100%)',
-              border: '1px solid rgba(255, 100, 30, 0.25)',
-              padding: '56px 40px',
-              borderRadius: '32px',
-              maxWidth: '900px',
-              textAlign: 'center',
-              backdropFilter: 'blur(15px)',
-              boxShadow: '0 30px 60px rgba(255, 100, 30, 0.05)'
-            }}>
-              <h3 style={{ fontSize: 'clamp(1.6rem, 6vw, 2.4rem)', fontWeight: 400, color: '#ffffff', marginBottom: '16px' }}>
-                一份图谱，打破团队信息墙
-              </h3>
-              <p style={{ color: 'rgba(255,255,255,0.7)', maxWidth: '640px', margin: '0 auto 36px auto', lineHeight: 1.6, fontWeight: 300 }}>
-                销售沉淀的公司线索，关联研发关注的品类痛点，协助决策层总揽全局。现在邀请同行加入，你们将共同获取 **5 次** 深度品类现状剖析额度，共同探索全新商机。
-              </p>
-              
-              {/* 融合动态分享与注册逻辑的裂变面板 */}
-              <div style={{ width: '100%', maxWidth: '520px', margin: '0 auto' }}>
-                {userId ? (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-                    <input
-                      type="text"
-                      readOnly
-                      value={`${typeof window !== 'undefined' ? window.location.origin : ''}/?invite=${userId}`}
-                      style={{
-                        flex: '1 1 280px',
-                        background: 'rgba(255, 255, 255, 0.1)',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                        borderRadius: '30px',
-                        padding: '12px 24px',
-                        fontSize: '0.85rem',
-                        color: '#ffffff',
-                        outline: 'none',
-                        boxSizing: 'border-box',
-                        width: '100%'
-                      }}
-                    />
-                    <button
-                      onClick={() => {
-                        const link = `${window.location.origin}/?invite=${userId}`;
-                        navigator.clipboard.writeText(link)
-                          .then(() => {
-                            setCopied(true);
-                            setTimeout(() => setCopied(false), 2000);
-                          })
-                          .catch(() => alert('复制失败，请手动选择输入框内容进行复制。'));
-                      }}
-                      style={{
-                        background: '#ff641e',
-                        border: 'none',
-                        borderRadius: '30px',
-                        color: '#ffffff',
-                        padding: '12px 28px',
-                        fontSize: '0.85rem',
-                        fontWeight: 500,
-                        cursor: 'pointer',
-                        boxShadow: '0 4px 12px rgba(255, 100, 30, 0.2)',
-                        transition: 'all 0.2s',
-                        flex: '1 1 auto',
-                        width: '100%',
-                        boxSizing: 'border-box'
-                      }}
-                      onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
-                      onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                    >
-                      {copied ? '🎉 复制成功！' : '复制专属链接'}
-                    </button>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
-                    <button
-                      onClick={() => setShowAuthModal(true)}
-                      style={{
-                        background: '#ff641e',
-                        color: '#ffffff',
-                        padding: '16px 36px',
-                        borderRadius: '30px',
-                        border: 'none',
-                        fontSize: '0.95rem',
-                        textDecoration: 'none',
-                        fontWeight: 500,
-                        cursor: 'pointer',
-                        boxShadow: '0 10px 30px rgba(255, 100, 30, 0.3)',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                      onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                    >
-                      免费注册体验 ➔
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
+            <ActionPanel
+              userId={userId}
+              copied={copied}
+              onCopy={handleCopyInvite}
+              onShowAuthModal={() => setShowAuthModal(true)}
+            />
           </div>
 
         </div>
       </div>
 
-
-
       {/* 5. 登录/注册弹窗 & 上传管理后台 */}
-      <AuthModal 
-        isOpen={showAuthModal} 
-        onClose={() => setShowAuthModal(false)} 
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
       />
 
-      <AdminPanel 
-        isOpen={showUploadModal} 
-        onClose={() => setShowUploadModal(false)} 
-        onUploadSuccess={() => window.location.reload()} 
+      <AdminPanel
+        isOpen={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        onUploadSuccess={() => window.location.reload()}
       />
     </div>
   );
@@ -715,9 +581,9 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     const freeQuota = auth.freeQuota;
     const nickname = auth.nickname;
 
-    let graphData: any = { nodes: [], links: [] };
+    let allReports: PlatformReport[] = [];
 
-    // 并发拉取：报告列表 Promise 与 最新资讯 Promise
+    // 并发拉取报告列表与最新资讯
     const reportsPromise = (async () => {
       if (userId) {
         if (userRole === 'admin') {
@@ -727,7 +593,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             FROM reports r
             ORDER BY r.created_at DESC
           `, [userId]);
-          
+
           return reportsRes.rows.map((row: any) => ({
             id: row.id,
             title: row.title,
@@ -746,7 +612,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             ORDER BY r.created_at DESC
             LIMIT 30
           `, [userId]);
-          
+
           return reportsRes.rows.map((row: any) => ({
             id: row.id,
             title: row.title,
@@ -773,7 +639,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       }
     })();
 
-    // 优化：采用单次 LEFT JOIN 消除 3 次标量子查询 (Correlated Subqueries)
     const latestArticlesPromise = dbClient.query(`
       SELECT n.id, n.title, n.summary, n.published_at,
              i.name as industry,
@@ -788,7 +653,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       ORDER BY n.published_at DESC LIMIT 6
     `);
 
-    const [allReports, latestArticlesRes] = await Promise.all([
+    const [allReportsData, latestArticlesRes] = await Promise.all([
       reportsPromise,
       latestArticlesPromise
     ]);
@@ -801,11 +666,9 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     context.res.setHeader('Cache-Control', 'no-cache, no-store, max-age=0, must-revalidate');
     context.res.setHeader('Vary', 'Cookie');
 
-
     return {
       props: {
-        graphData,
-        allReports,
+        allReports: allReportsData,
         userId: userId || '',
         userRole,
         freeQuota,
@@ -817,7 +680,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     console.error('SSR 加载主页失败，原因:', err);
     return {
       props: {
-        graphData: { nodes: [], links: [] },
         allReports: [],
         userId: '',
         userRole: 'guest',
