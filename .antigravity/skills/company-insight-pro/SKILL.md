@@ -48,7 +48,7 @@ description: 360度企业战略情报洞察工具。用于为特定企业生成�
   <meta name="company_website" content="[公司官方网站网址，如 https://www.bauhaus.info]">
   <meta name="competitors" content="[同业竞争对手简称列表，如 OBI, Hornbach, toom]">
   <meta name="products" content="[产品与品类列表，如 建材, 五金工具, 园艺]">
-  <meta name="regions" content="[市场地区列表，如 德国, 欧洲]">
+  <meta name="regions" content="[目标市场国家列表，仅国家/地区名，如 德国, 荷兰, 美国；严禁出现 全球/欧洲/亚洲/美洲/非洲/中东/亚太 等大区泛称]">
   <meta name="channels" content="[产品销售分销渠道简称列表，若主体本身就是渠道商则留空。如无法查证到真实公司名则留空]">
   <meta name="suppliers" content="[核心供应商简称列表（必须为具体公司名，且不得为该报告公司的关联公司），如 Würth, Kärcher。如无法查证到真实公司名则留空]">
   <meta name="customers" content="[核心买方/大客户简称列表（必须为具体公司名，且不得为该报告公司的关联公司），如 德国电信, 法兰克福机场。如无法查证到真实公司名则留空]">
@@ -59,6 +59,7 @@ description: 360度企业战略情报洞察工具。用于为特定企业生成�
   - `competitors`、`channels`、`suppliers`、`customers`、`sister_parents` 这五个实体类 meta 标签中的所有公司名称必须使用**简称**，去除法律形式后缀（GmbH, AG, Ltd., Inc., S.A., S.p.A., B.V., N.V., Co., Corp. 等）。
   - 示例：`Paulmann Licht GmbH` → `Paulmann`、`Ledvance GmbH` → `Ledvance`、`Signify Philips Hue` → `Signify`。
   - **无真实数据则留空（强制要求）**：如果某字段无法通过公开信息查证到真实的公司名称，该字段必须设为空值 `content=""`，**严禁**填入产业集群描述（如"中国广东照明产业集群"）、地域泛称（如"欧洲家具与建材连锁"）、渠道类型描述（如"OEM/ODM中国工厂"）等非公司实体的描述性文字。
+  - **regions 国家化（强制要求）**：`regions` 只允许填写目标市场**国家/地区名**（如 `德国, 荷兰, 美国`；中国香港/中国台湾等地区用规范地区名），**严禁**出现大区泛称（全球、欧洲、亚洲、美洲、非洲、大洋洲、中东、亚太、国际、北欧、西欧、东欧、南欧、中东欧、拉美、东南亚 等）。若企业仅服务单一国家则只写该国名；调研未覆盖的市场一律不写。
 
   **产品品类命名规范（强制要求）：**
   - `products` meta 标签中的品类名称以及报告正文中所有产品/品类的描述，**必须严格对齐** `C:/Users/066/.gemini/config/skills/company-insight-pro/references/GTB产品结构.xlsx`（本 Skill 自带）中的**54个标准行业名称**（即「行业名称 (Category CN)」列）。

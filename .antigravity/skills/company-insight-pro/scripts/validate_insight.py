@@ -92,6 +92,36 @@ def validate_html(html_path):
                 print(f"  [ERROR] 品类 \"{p}\" 不符合 GTB 标准行业名称！请对照标准 54 个分类进行映射。")
                 success = False
                 
+    # 2.5 审计 regions 国家化（仅国家/地区名，禁止大区泛称）
+    if "regions" in meta_values and meta_values["regions"]:
+        print("[*] 正在审计 regions 国家化（仅国家/地区名，禁止大区泛称）...")
+        REGION_BLACKLIST = ["全球", "欧洲", "亚洲", "美洲", "非洲", "大洋洲", "中东", "亚太", "国际",
+                            "北欧", "西欧", "东欧", "南欧", "中东欧", "拉美", "拉丁美洲", "北美", "南美",
+                            "东南亚", "中欧", "独联体", "欧盟", "金砖"]
+        bad_region = [w for w in REGION_BLACKLIST if w in meta_values["regions"]]
+        if bad_region:
+            print(f"  [ERROR] regions 包含大区泛称: {bad_region}！regions 仅允许国家/地区名（如 德国, 荷兰, 美国），请删除大区词。")
+            success = False
+        else:
+            print(f"  [OK] regions 仅含国家/地区名: \"{meta_values['regions']}\"")
+    else:
+        print("[*] 正在审计 regions 国家化...  [WARNING] regions 为空或未检出，请确认是否至少填写目标市场国家名。")
+
+    # 2.6 审计 channels/suppliers/customers 具名公司性（疑似描述性短语 → WARN，强制留空规则见 SKILL.md）
+    DESCRIPTIVE_WORDS = ["渠道", "为主", "待核验", "未公开", "直采", "工程", "零售", "终端", "消费者",
+                         "建筑商", "开发商", "政府", "机构", "酒店", "地产", "采购", "OEM", "标案",
+                         "项目", "用户", "客户", "市场", "定位", "集群", "产业", "连锁"]
+    for m in ["channels", "suppliers", "customers"]:
+        if m in meta_values and meta_values[m]:
+            items = [x.strip() for x in meta_values[m].split(",") if x.strip()]
+            suspicious = [it for it in items if any(w in it for w in DESCRIPTIVE_WORDS)]
+            if suspicious:
+                print(f"  [WARNING] {m} 含疑似非公司实体描述（技能要求仅保留具名公司名/简称，无法查证则留空 content=\"\"）: {suspicious}")
+            else:
+                print(f"  [OK] {m} 各项均为具名公司/简称。")
+        else:
+            print(f"  [OK] {m} 留空（未查证到具名公司，符合规范）。")
+
     # 3. 审计 Emoji 净化
     print("[*] 正在审计正文及标题 Emoji 净化...")
     clean_content = re.sub(r'<!--.*?-->', '', content, flags=re.DOTALL)
