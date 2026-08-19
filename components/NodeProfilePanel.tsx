@@ -151,10 +151,10 @@ export default function NodeProfilePanel({
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        alert('兑换成功！双方各获得 1 次解锁额度奖励。');
+        alert('兑换成功！双方各获得 3 次解锁额度奖励。');
         setInviteCodeInput('');
         if (onQuotaChange && quota !== undefined) {
-          onQuotaChange(quota + 1);
+          onQuotaChange(quota + 3);
         }
       } else {
         alert(data.error || '兑换失败，请检查邀请码，或您已经兑换过。');

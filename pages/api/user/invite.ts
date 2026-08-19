@@ -29,15 +29,15 @@ export async function processInvitation(referrerId: string, inviteeId: string, d
       [referrerId, inviteeId]
     );
 
-    // 3. 邀请人加 1 额度
+    // 3. 邀请人加 3 额度
     await dbClient.query(
-      'UPDATE users SET free_quota = free_quota + 1 WHERE id = $1',
+      'UPDATE users SET free_quota = free_quota + 3 WHERE id = $1',
       [referrerId]
     );
 
-    // 4. 被邀请人加 1 额度 (双向奖励)
+    // 4. 被邀请人加 3 额度 (双向奖励)
     await dbClient.query(
-      'UPDATE users SET free_quota = free_quota + 1 WHERE id = $1',
+      'UPDATE users SET free_quota = free_quota + 3 WHERE id = $1',
       [inviteeId]
     );
 

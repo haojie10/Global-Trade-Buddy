@@ -35,17 +35,23 @@ async function agentReportsHandler(req: NextApiRequest, res: NextApiResponse, db
   if (company && typeof company === 'string') {
     const companyQuery = company.trim();
     
-    // 匹配主体公司实体与报告
+    // 匹配主体公司实体与报告（使用子查询去重，防止别名联表导致多条重复记录）
     const companyRes = await dbClient.query(`
       SELECT r.id, r.title, r.category, r.market_region, r.created_at, e.canonical_name AS primary_company
       FROM reports r
       JOIN report_entities re ON r.id = re.report_id AND re.role = 'primary'
       JOIN entities e ON re.entity_id = e.id
-      LEFT JOIN entity_aliases ea ON e.id = ea.entity_id
-      WHERE (
-        e.canonical_name ILIKE $1 
-        OR ea.alias_name ILIKE $1 
-        OR r.title ILIKE $1
+      WHERE r.id IN (
+        SELECT DISTINCT r2.id
+        FROM reports r2
+        JOIN report_entities re2 ON r2.id = re2.report_id AND re2.role = 'primary'
+        JOIN entities e2 ON re2.entity_id = e2.id
+        LEFT JOIN entity_aliases ea2 ON e2.id = ea2.entity_id
+        WHERE (
+          e2.canonical_name ILIKE $1 
+          OR ea2.alias_name ILIKE $1 
+          OR r2.title ILIKE $1
+        )
       )
       ORDER BY r.created_at DESC
       LIMIT 5

@@ -120,6 +120,9 @@ def main():
             print(f"⚠️ [发现重复/已存在] 平台已存在 {len(matched)} 篇相关报告：")
             for i, rep in enumerate(matched, 1):
                 print(f"  {i}. 《{rep.get('title')}》")
+                print(f"     - 报告 ID (用于覆盖更新): {rep.get('id')}")
+                if rep.get('primary_company'):
+                    print(f"     - 标准主体名: {rep.get('primary_company')}")
                 print(f"     - 类别: {rep.get('category')} | 区域: {rep.get('market_region')}")
                 print(f"     - 发布日期: {rep.get('created_at')}")
                 print(f"     - 查看链接: {rep.get('url')}")

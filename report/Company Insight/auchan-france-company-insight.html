@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auchan - 360° 企业战略情报报告</title>
+
+    <!-- 元数据 - 严格按照 GTB 规范配置 -->
+    <meta name="category" content="customer">
+    <meta name="target_report_id" content="da05bf0d-d524-4883-ab82-0646de67f91b">
+    <meta name="summary" content="Auchan（欧尚）是法国排名前列的跨国综合零售巨头，2024/2025年集团营收约320亿欧元。报告深度解构其在Aura Retail跨国采购联盟下的非食品集采战略、Qilive/Actuel/In Extenso等核心自有品牌矩阵、在华采购组织架构及法国AGEC法案与EUDR合规红线，为中国供应商提供精准出海对接策略。">
+    <meta name="company_name" content="Auchan">
+    <meta name="company_aliases" content="欧尚, Auchan Retail, Auchan Retail International, Elo Group, 欧尚零售">
+    <meta name="company_website" content="https://www.auchan-retail.com">
+    <meta name="competitors" content="E.Leclerc, Carrefour, Intermarché, Lidl, Action">
+    <meta name="products" content="食品, 家用电器, 电子消费品及信息产品, 家居用品, 男女装, 童装, 内衣, 鞋, 园林用品, 个人护理用具, 办公文具, 玩具, 孕婴童用品, 餐厨器皿, 家用纺织品, 工具">
+    <meta name="regions" content="法国, 西班牙, 葡萄牙, 波兰, 罗马尼亚, 乌克兰, 俄罗斯, 匈牙利, 卢森堡, 塞内加尔, 科特迪瓦">
+    <meta name="channels" content="">
+    <meta name="suppliers" content="SEB, Philips, Bic, Dorel, L'Oréal, Danone, Nestlé, Unilever, Kärcher, Smurfit Kappa">
+    <meta name="customers" content="">
+    <meta name="sister_parents" content="Elo Group, Decathlon, Leroy Merlin, Kiabi, Boulanger">
+
+    <!-- CDN 依赖 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            --bg-main: #fdfbf7;
+            --bg-sub: #f6f3ec;
+            --color-accent: #ff641e;
+            --color-text: #3c3935;
+            --color-muted: #7a756f;
+            --radius-card: 22px;
+            --radius-sub: 16px;
+            --radius-tag: 12px;
+            --shadow-default: 0 4px 12px rgba(160, 109, 68, 0.03);
+            --shadow-hover: 0 6px 16px rgba(160, 109, 68, 0.08);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg-main); color: var(--color-text); font-weight: 400;
+            line-height: 1.6; scroll-behavior: smooth;
+        }
+        .sand-card {
+            background: var(--bg-sub); border: 1px solid rgba(160, 109, 68, 0.08);
+            border-radius: var(--radius-card); box-shadow: var(--shadow-default);
+        }
+        .sand-card-sub {
+            background: var(--bg-main); border: 1px solid rgba(160, 109, 68, 0.08);
+            border-radius: var(--radius-sub);
+        }
+        .report-tag {
+            background: rgba(160, 109, 68, 0.05); color: var(--color-text);
+            border: 1px solid rgba(160, 109, 68, 0.15); padding: 4px 10px;
+            border-radius: var(--radius-tag); font-size: 0.75rem; font-weight: 500; display: inline-block;
+        }
+        .sand-btn {
+            background: var(--bg-sub); border: none; border-radius: var(--radius-card);
+            color: var(--color-accent); padding: 10px 24px; font-weight: 300;
+            box-shadow: var(--shadow-default);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); cursor: pointer; font-size: 0.85rem;
+        }
+        .sand-btn:hover { background: var(--bg-main); box-shadow: var(--shadow-hover); transform: translateY(-1px); }
+        h2 { font-size: 1.25rem; font-weight: 400; letter-spacing: -0.01em; }
+        h3 { font-size: 0.95rem; font-weight: 400; }
+        .text-accent { color: var(--color-accent); }
+        .text-muted { color: var(--color-muted); }
+        .section-accent { border-left: 3px solid var(--color-accent); padding-left: 14px; }
+        .legend-customer { color: #ff641e; }
+        .legend-product { color: #7a756f; }
+        .chart-container { height: 350px; width: 100%; }
+        .tier-tag { background: var(--color-accent); }
+    </style>
+</head>
+<body>
+
+    <!-- Main Content -->
+    <main>
+
+    <!-- ====== 店面横幅 (实体零售商) ====== -->
+    <div class="w-full overflow-hidden aspect-[21/9] max-h-[250px] border-b border-[rgba(160,109,68,0.08)] relative group">
+        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAwIDQ1MCIgd2lkdGg9IjEyMDAiIGhlaWdodD0iNDUwIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0ic2t5R3JhZCIgeDE9IjAlIiB5MT0iMCUiIHgyPSIwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMWUyOTNiIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzMzNDE1NSIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZmFjYWRlR3JhZCIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjZjhmYWZjIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iNTAlIiBzdG9wLWNvbG9yPSIjZmZmZmZmIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iI2YxZjVmOSIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iZ2xhc3NHcmFkIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjAlIiB5Mj0iMTAwJSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiMzOGJkZjgiIHN0b3Atb3BhY2l0eT0iMC44Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iNTAlIiBzdG9wLWNvbG9yPSIjMDI4NGM3IiBzdG9wLW9wYWNpdHk9IjAuNiIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMwMzY5YTEiIHN0b3Atb3BhY2l0eT0iMC44NSIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxmaWx0ZXIgaWQ9InN1YnRsZVNoYWRvdyIgeD0iLTEwJSIgeT0iLTEwJSIgd2lkdGg9IjEyMCUiIGhlaWdodD0iMTIwJSI+CiAgICAgIDxmZURyb3BTaGFkb3cgZHg9IjAiIGR5PSI4IiBzdGREZXZpYXRpb249IjEyIiBmbG9vZC1jb2xvcj0iIzAwMDAwMCIgZmxvb2Qtb3BhY2l0eT0iMC4zIi8+CiAgICA8L2ZpbHRlcj4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEyMDAiIGhlaWdodD0iNDUwIiBmaWxsPSJ1cmwoI3NreUdyYWQpIi8+CiAgPHJlY3QgeT0iMzUwIiB3aWR0aD0iMTIwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiMwZjE3MmEiLz4KICA8bGluZSB4MT0iMCIgeTE9IjM1MCIgeDI9IjEyMDAiIHkyPSIzNTAiIHN0cm9rZT0iIzQ3NTU2OSIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPHJlY3QgeD0iNTAiIHk9IjM1NSIgd2lkdGg9IjExMDAiIGhlaWdodD0iOTAiIGZpbGw9IiMxZTI5M2IiIG9wYWNpdHk9IjAuNyIvPgogIAogIDwhLS0gTWFpbiBIeXBlcm1hcmtldCBCdWlsZGluZyAtLT4KICA8cmVjdCB4PSI4MCIgeT0iNzAiIHdpZHRoPSIxMDQwIiBoZWlnaHQ9IjI4MCIgcng9IjgiIGZpbGw9InVybCgjZmFjYWRlR3JhZCkiIGZpbHRlcj0idXJsKCNzdWJ0bGVTaGFkb3cpIi8+CiAgPCEtLSBUb3AgUmVkL0dyZWVuIEFjY2VudCBCYW5kcyAtLT4KICA8cmVjdCB4PSI4MCIgeT0iNzAiIHdpZHRoPSIxMDQwIiBoZWlnaHQ9IjEyIiBmaWxsPSIjZTIwMDFhIi8+CiAgPHJlY3QgeD0iODAiIHk9IjgyIiB3aWR0aD0iMTA0MCIgaGVpZ2h0PSI0IiBmaWxsPSIjMTU4MDNkIi8+CgogIDwhLS0gQXVjaGFuIEJyYW5kIFNpZ25ib2FyZCAtLT4KICA8ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgzMzAsIDEwNSkiPgogICAgPHJlY3QgeD0iLTIwIiB5PSItMTAiIHdpZHRoPSI1NjAiIGhlaWdodD0iOTUiIHJ4PSIxMCIgZmlsbD0iI2ZmZmZmZiIgZmlsdGVyPSJ1cmwoI3N1YnRsZVNoYWRvdykiIHN0cm9rZT0iI2UyZThmMCIgc3Ryb2tlLXdpZHRoPSIxLjUiLz4KICAgIDwhLS0gQXVjaGFuIEJpcmQgSWNvbiAtLT4KICAgIDxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDE1LCA4KSI+CiAgICAgIDxwYXRoIGQ9Ik0gMzggMTYgQyAyNCAxNiAxNCAyNiAxNCA0MCBDIDE0IDUyIDI0IDYyIDM4IDYyIEMgNTIgNjIgNjIgNTIgNjIgNDAgQyA2MiAyNiA1MiAxNiAzOCAxNiBaIiBmaWxsPSIjZTIwMDFhIi8+CiAgICAgIDxwb2x5Z29uIHBvaW50cz0iNTgsMzQgNzIsMzggNTgsNDQiIGZpbGw9IiNmNTllMGIiLz4KICAgICAgPGNpcmNsZSBjeD0iNDgiIGN5PSIzMiIgcj0iNCIgZmlsbD0iI2ZmZmZmZiIvPgogICAgICA8Y2lyY2xlIGN4PSI0OSIgY3k9IjMyIiByPSIyIiBmaWxsPSIjMGYxNzJhIi8+CiAgICAgIDxwYXRoIGQ9Ik0gMjQgNDAgUSAzNSA1MCA0OCA0MCBRIDMzIDQ0IDI0IDQwIFoiIGZpbGw9IiMxNTgwM2QiLz4KICAgICAgPHBhdGggZD0iTSAxOCAzNiBDIDkgMzIgMyA0MiA5IDUwIEMgMTMgNDYgMTYgNDAgMTggMzYgWiIgZmlsbD0iI2UyMDAxYSIvPgogICAgPC9nPgogICAgPCEtLSBBdWNoYW4gUmVkIFR5cG9ncmFwaHkgLS0+CiAgICA8dGV4dCB4PSIxMDUiIHk9IjYwIiBmb250LWZhbWlseT0ic3lzdGVtLXVpLCAtYXBwbGUtc3lzdGVtLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjY0IiBmb250LXdlaWdodD0iODAwIiBmaWxsPSIjZTIwMDFhIiBsZXR0ZXItc3BhY2luZz0iLTIiPkF1Y2hhbjwvdGV4dD4KICAgIDx0ZXh0IHg9IjM1NSIgeT0iNjgiIGZvbnQtZmFtaWx5PSJzeXN0ZW0tdWksIC1hcHBsZS1zeXN0ZW0sIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM0NzU1NjkiIGxldHRlci1zcGFjaW5nPSI0Ij5IWVBFUk1BUkNIw4k8L3RleHQ+CiAgPC9nPgoKICA8IS0tIFN0b3JlIFdpbmRvd3MgJiBFbnRyYW5jZSAtLT4KICA8ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxMjAsIDIxMCkiPgogICAgPCEtLSBFbnRyYW5jZSBBcmVhIC0tPgogICAgPHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjI4MCIgaGVpZ2h0PSIxNDAiIGZpbGw9InVybCgjZ2xhc3NHcmFkKSIgc3Ryb2tlPSIjMzM0MTU1IiBzdHJva2Utd2lkdGg9IjMiLz4KICAgIDxyZWN0IHg9IjQwIiB5PSIyMCIgd2lkdGg9IjIwMCIgaGVpZ2h0PSIxMjAiIHJ4PSI0IiBmaWxsPSIjZmZmZmZmIiBvcGFjaXR5PSIwLjIiLz4KICAgIDxyZWN0IHg9IjkwIiB5PSI1MCIgd2lkdGg9IjEwMCIgaGVpZ2h0PSIyNCIgcng9IjQiIGZpbGw9IiNlMjAwMWEiLz4KICAgIDx0ZXh0IHg9IjE0MCIgeT0iNjYiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjExIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjZmZmZmZmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5FTlRSw4lFIC8gU09SVElFPC90ZXh0PgoKICAgIDwhLS0gQ2VudGVyIERpc3BsYXkgV2luZG93cyAtLT4KICAgIDxyZWN0IHg9IjMxMCIgeT0iMCIgd2lkdGg9IjM0MCIgaGVpZ2h0PSIxNDAiIGZpbGw9InVybCgjZ2xhc3NHcmFkKSIgc3Ryb2tlPSIjMzM0MTU1IiBzdHJva2Utd2lkdGg9IjMiLz4KICAgIDxsaW5lIHgxPSI0ODAiIHkxPSIwIiB4Mj0iNDgwIiB5Mj0iMTQwIiBzdHJva2U9IiMxZTI5M2IiIHN0cm9rZS13aWR0aD0iMiIvPgogICAgPHJlY3QgeD0iMzMwIiB5PSIyNSIgd2lkdGg9IjEzMCIgaGVpZ2h0PSI5NSIgcng9IjQiIGZpbGw9IiNmZmZmZmYiIG9wYWNpdHk9IjAuMTUiLz4KICAgIDxyZWN0IHg9IjQ5NSIgeT0iMjUiIHdpZHRoPSIxMzUiIGhlaWdodD0iOTUiIHJ4PSI0IiBmaWxsPSIjZmZmZmZmIiBvcGFjaXR5PSIwLjE1Ii8+CiAgICA8dGV4dCB4PSIzOTUiIHk9Ijc4IiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iI2ZmZmZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TUFJU09OICZhbXA7IERFQ088L3RleHQ+CiAgICA8dGV4dCB4PSI1NjIiIHk9Ijc4IiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iI2ZmZmZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TVVMVElNw4lESUE8L3RleHQ+CgogICAgPCEtLSBEcml2ZSAmIFNlcnZpY2VzIEFyZWEgLS0+CiAgICA8cmVjdCB4PSI2ODAiIHk9IjAiIHdpZHRoPSIyODAiIGhlaWdodD0iMTQwIiBmaWxsPSJ1cmwoI2dsYXNzR3JhZCkiIHN0cm9rZT0iIzMzNDE1NSIgc3Ryb2tlLXdpZHRoPSIzIi8+CiAgICA8cmVjdCB4PSI3MTAiIHk9IjQwIiB3aWR0aD0iMjIwIiBoZWlnaHQ9IjMwIiByeD0iNiIgZmlsbD0iIzAyODRjNyIvPgogICAgPHRleHQgeD0iODIwIiB5PSI2MCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI4MDAiIGZpbGw9IiNmZmZmZmYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkFVQ0hBTiBEUklWRSAyNC83PC90ZXh0PgogICAgPHRleHQgeD0iODIwIiB5PSIxMTUiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjExIiBmb250LXdlaWdodD0iNjAwIiBmaWxsPSIjY2JkNWUxIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5SZXRyYWl0IEV4cHJlc3MgZW4gNSBtaW48L3RleHQ+CiAgPC9nPgo8L3N2Zz4=" class="w-full h-full object-cover object-center" alt="Auchan 法国现代综合大卖场旗舰店与品牌标识">
+        <div class="absolute inset-0 bg-gradient-to-t from-[#3c3935]/30 via-transparent to-transparent"></div>
+        <div class="absolute bottom-4 left-8 text-white z-10">
+            <span class="bg-[#ff641e] text-white text-[10px] uppercase font-semibold px-2 py-0.5 rounded tracking-wider">LILLE / CROIX, FRANCE</span>
+            <h3 class="text-xl font-bold mt-1 drop-shadow-md text-white">Auchan Retail International 法国现代综合大卖场与汽车自提中心</h3>
+        </div>
+    </div>
+
+        <!-- ====== 吸顶标题栏 ====== -->
+        <header class="sticky top-0 z-40 bg-[#fdfbf7] border-b border-[rgba(160,109,68,0.08)] shadow-[0_4px_12px_rgba(160,109,68,0.03)] px-6 py-3">
+            <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="tier-tag text-[10px] text-white font-bold px-2 py-0.5 rounded">全球 2,896 家门店跨国零售巨头</span>
+                        <span class="text-xs text-[#7a756f]">Elo Group / AFM 穆里耶兹家族核心成员</span>
+                    </div>
+                    <h2 class="text-xl font-normal text-[#3c3935] tracking-tight">Auchan Retail International (法国欧尚) 360° 企业战略情报报告</h2>
+                    <p class="text-[#7a756f] text-xs mt-0.5">2024/2025 财年营业额达 320 亿欧元 | Aura Retail 跨国采购联盟主导非食品集采 | 欧洲多国多业态扩张与远东供应链准入全景解构</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <a href="https://www.auchan-retail.com" target="_blank" rel="noopener noreferrer" class="sand-btn text-xs flex items-center gap-1.5 no-underline">
+                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                        <span>官方门户</span>
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <div class="max-w-6xl mx-auto px-6 py-8 space-y-8">
+
+            <!-- 1. 企业全景概览 -->
+            <section class="sand-card p-6 md:p-8">
+                <div class="flex items-center gap-2 mb-6 section-accent">
+                    <h2 class="text-lg font-normal text-[#3c3935]">1. 企业全景概览与战略定位</h2>
+                </div>
+
+                <!-- 核心数据看板 -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div class="sand-card-sub p-4 text-center">
+                        <p class="text-xs text-[#7a756f] mb-1">2024/2025 全年销售额</p>
+                        <p class="text-xl font-semibold text-[#ff641e]">320 亿欧元</p>
+                        <p class="text-[11px] text-[#7a756f]">约合 2,480 亿人民币 / 345 亿美元</p>
+                    </div>
+                    <div class="sand-card-sub p-4 text-center">
+                        <p class="text-xs text-[#7a756f] mb-1">2024/2025 EBITDA</p>
+                        <p class="text-xl font-semibold text-[#3c3935]">10.0 亿欧元</p>
+                        <p class="text-[11px] text-[#7a756f]">同比强劲增长 +16.1%</p>
+                    </div>
+                    <div class="sand-card-sub p-4 text-center">
+                        <p class="text-xs text-[#7a756f] mb-1">全球销售网点总数</p>
+                        <p class="text-xl font-semibold text-[#3c3935]">2,896 家</p>
+                        <p class="text-[11px] text-[#7a756f]">大卖场 / 超市 / MyAuchan / 自提</p>
+                    </div>
+                    <div class="sand-card-sub p-4 text-center">
+                        <p class="text-xs text-[#7a756f] mb-1">全球员工与覆盖市场</p>
+                        <p class="text-xl font-semibold text-[#3c3935]">150,000+ 人</p>
+                        <p class="text-[11px] text-[#7a756f]">覆盖欧洲与非洲 12 个核心国家</p>
+                    </div>
+                </div>
+
+                <!-- 千字级深度画像 -->
+                <div class="space-y-4 text-sm text-[#3c3935] leading-relaxed mb-6">
+                    <p>
+                        <strong>商业模式与家族控制底色：</strong>Auchan Retail International（欧尚零售国际）创立于 1961 年，总部位于法国北部工业重镇克鲁瓦（Croix）。作为全球知名的跨国多渠道零售巨头，欧尚隶属于法国著名的非上市家族控股集团 <strong>Elo Group</strong>（前身为 Auchan Holding），其实际控制方为欧洲赫赫有名的 <strong>Association Familiale Mulliez（AFM 穆里耶兹家族联合会）</strong>。穆里耶兹家族持有集团约 95% 的股权，其余约 5% 由员工持股计划 Valauchan 持有。家族式私有化架构赋予了欧尚在面对季度波动时罕见的长期战略定力，使其能够持续推进数以十亿欧元计的供应链重构、门店数字化及自有品牌深度研发。
+                    </p>
+                    <p>
+                        <strong>核心基因与业态演进：</strong>欧尚是欧洲“大型综合超市（Hypermarket）”业态的开拓者与定义者之一。其单店面积通常在 8,000 至 15,000 平方米之间，兼具“极度丰富的一站式食品生鲜”与“极具价格穿透力的非食品百货（家用电器、男女装、家居用品、五金工具等）”。2000 年，欧尚在欧洲率先首创了 <strong>"Auchan Drive" 汽车穿梭自提模式</strong>，成为欧洲零售全渠道履约的行业标杆。然而，随着欧洲消费者购买习惯向就近便利、硬折扣店（如 Action, Lidl）以及垂直电商迁移，传统大卖场坪效承压。欧尚自 2024 年起加速推行“Vision 2032”战略转型，任命具有深厚零售运营背景的 Guillaume Darrasse 出任首席执行官（CEO），核心战略聚焦于：大卖场面积精简与动线重构、大力扩张 MyAuchan 邻里便利与加盟店、全面强化自有品牌差异化竞争力，以及通过联合采购联盟降低供应链成本。
+                    </p>
+                    <p>
+                        <strong>全球布局与中国战略转向：</strong>目前欧尚业务遍布全球 12 个国家和地区，其中法国本土贡献了约 32% 的营收，西班牙（以 Alcampo 品牌运营）、葡萄牙、波兰、罗马尼亚等欧洲核心国家贡献了超过 65% 的国际营收，同时在乌克兰、匈牙利、卢森堡及西非（塞内加尔、科特迪瓦）稳步发展。在战略上，欧尚已于 2020 年将中国大陆的实体零售运营业务（高鑫零售股权）转让给阿里巴巴，全面将资本与运营精力收缩回欧洲大本营与高成长新兴市场。但这<strong>绝不意味着欧尚脱离了中国供应链</strong>——恰恰相反，在非食品（Non-Food）与自有品牌（Private Label）领域，欧尚通过设在华东华南的采购代表处及专业的全球集采体系（Auchan International Sourcing），持续每年从中国采购数十亿欧元的家用电器、纺织服装、家居日用与园艺工具，中国依然是其全球最具战略价值的代工与创新制造基地。
+                    </p>
+                </div>
+
+                <!-- 注册信息与官方实体 -->
+                <div class="sand-card-sub p-5 mb-6">
+                    <h3 class="text-xs font-semibold text-[#7a756f] uppercase tracking-wider mb-3">企业官方注册与法定档案</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                        <div><span class="text-[#7a756f]">企业法定全称：</span> <span class="font-medium text-[#3c3935]">Auchan Retail International S.A.</span></div>
+                        <div><span class="text-[#7a756f]">母公司与控股方：</span> <span class="font-medium text-[#3c3935]">Elo Group / Association Familiale Mulliez (AFM)</span></div>
+                        <div><span class="text-[#7a756f]">法国工商注册号 (SIREN)：</span> <span class="font-medium text-[#3c3935]">410 409 460 (International) / 428 834 907 (France)</span></div>
+                        <div><span class="text-[#7a756f]">全球总部法定地址：</span> <span class="font-medium text-[#3c3935]">40 Avenue de Flandre, 59170 Croix, France</span></div>
+                        <div><span class="text-[#7a756f]">官方企业网站：</span> <a href="https://www.auchan-retail.com" target="_blank" rel="noopener noreferrer" class="text-[#ff641e] hover:underline">https://www.auchan-retail.com</a></div>
+                        <div><span class="text-[#7a756f]">法国在线商城：</span> <a href="https://www.auchan.fr" target="_blank" rel="noopener noreferrer" class="text-[#ff641e] hover:underline">https://www.auchan.fr</a></div>
+                    </div>
+                </div>
+
+                <!-- 历史里程碑 -->
+                <div class="sand-card-sub p-5">
+                    <h3 class="text-xs font-semibold text-[#7a756f] uppercase tracking-wider mb-4">企业发展关键里程碑</h3>
+                    <div class="border-l-2 border-[rgba(160,109,68,0.2)] pl-4 space-y-3 text-xs">
+                        <div>
+                            <span class="font-bold text-[#ff641e]">1961 年</span>
+                            <p class="text-[#3c3935] mt-0.5">Gérard Mulliez 在法国鲁贝（Roubaix）的 Hauts-Champs 街区开设第一家欧尚超市，“Auchan”由此谐音得名。</p>
+                        </div>
+                        <div>
+                            <span class="font-bold text-[#ff641e]">1969 年</span>
+                            <p class="text-[#3c3935] mt-0.5">在法国北部隆克（Roncq）开设首座 10,000㎡ 现代大型综合超市（Hypermarket），开创法式大卖场商业模型。</p>
+                        </div>
+                        <div>
+                            <span class="font-bold text-[#ff641e]">1981 年</span>
+                            <p class="text-[#3c3935] mt-0.5">开启国际化扩张步伐，进军西班牙创立 Alcampo 零售品牌，随后陆续拓展葡萄牙、波兰、匈牙利等国。</p>
+                        </div>
+                        <div>
+                            <span class="font-bold text-[#ff641e]">2000 年</span>
+                            <p class="text-[#3c3935] mt-0.5">在法国首创 "Auchan Drive" 汽车自提履约模式，颠覆欧洲线上生鲜与非食品零售交付体验。</p>
+                        </div>
+                        <div>
+                            <span class="font-bold text-[#ff641e]">2020 年</span>
+                            <p class="text-[#3c3935] mt-0.5">战略重组优化资产负债表，将中国大陆零售业务（高鑫零售股权）出售给阿里巴巴，全面回归欧洲基本盘并强化远东集采。</p>
+                        </div>
+                        <div>
+                            <span class="font-bold text-[#ff641e]">2024 - 2025 年</span>
+                            <p class="text-[#3c3935] mt-0.5">联合 Intermarché、Casino 组建 <strong>Aura Retail 跨国采购联盟</strong>，并入驻欧洲 Everest / EPIC 联盟；Guillaume Darrasse 出任 CEO，启动 Vision 2032 转型。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 text-right">
+                    <a href="https://www.auchan-retail.com/en/our-history/" target="_blank" rel="noopener noreferrer" class="text-xs text-[#7a756f] hover:text-[#ff641e] inline-flex items-center gap-1">
+                        <span>数据来源：Auchan Corporate History &amp; Annual Reports</span>
+                        <i data-lucide="external-link" class="w-3 h-3"></i>
+                    </a>
+                </div>
+            </section>
+
+            <!-- 1.5 渠道深挖与竞争格局 -->
+            <section class="sand-card p-6 md:p-8">
+                <div class="flex items-center gap-2 mb-6 section-accent">
+                    <h2 class="text-lg font-normal text-[#3c3935]">1.5 渠道深挖与主要市场竞争格局</h2>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <!-- ECharts 渠道图表 -->
+                    <div class="sand-card-sub p-4 flex flex-col justify-between">
+                        <div class="mb-2">
+                            <h3 class="text-sm font-medium text-[#3c3935]">各零售业态网点数量与营收占比</h3>
+                            <p class="text-xs text-[#7a756f]">Hypermarket / Supermarket / Proximity 多业态结构</p>
+                        </div>
+                        <div id="channelChart" class="chart-container"></div>
+                    </div>
+
+                    <!-- 渠道业态特征与客群画像 -->
+                    <div class="sand-card-sub p-5 space-y-3 text-xs text-[#3c3935]">
+                        <h3 class="text-sm font-medium text-[#3c3935]">各店铺业态定位与消费人群画像</h3>
+                        <div class="p-3 bg-[rgba(160,109,68,0.03)] rounded-lg border border-[rgba(160,109,68,0.08)]">
+                            <span class="font-bold text-[#ff641e]">大型综合超市 (Hypermarkets - 约 540 家)</span>
+                            <p class="text-[#7a756f] mt-1">单店面积 8,000-15,000㎡，SKU 超 50,000 种。承担全品类展示、大宗日用品批发及家电换新。核心客群为郊区家庭型消费者（家庭月采购客单价超 95 欧元）。</p>
+                        </div>
+                        <div class="p-3 bg-[rgba(160,109,68,0.03)] rounded-lg border border-[rgba(160,109,68,0.08)]">
+                            <span class="font-bold text-[#ff641e]">标准超市与 ATAC 软折扣 (Supermarkets - 约 1,100 家)</span>
+                            <p class="text-[#7a756f] mt-1">单店面积 1,000-3,000㎡。主打高频生鲜与精选非食品高频消耗品（厨房用品、文具、洗护）。客群为城镇成熟居民与工薪家庭。</p>
+                        </div>
+                        <div class="p-3 bg-[rgba(160,109,68,0.03)] rounded-lg border border-[rgba(160,109,68,0.08)]">
+                            <span class="font-bold text-[#ff641e]">MyAuchan / 邻里便利店 (Proximity - 约 1,250 家)</span>
+                            <p class="text-[#7a756f] mt-1">单店面积 200-500㎡，广泛布局于市中心、交通枢纽及罗马尼亚 Petrom 加油站。客群为年轻白领与单身青年，即时消费占主导。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 竞争对手横向深度对比 -->
+                <div class="sand-card-sub p-5">
+                    <h3 class="text-xs font-semibold text-[#7a756f] uppercase tracking-wider mb-3">法国及欧洲核心市场竞争对手深度横向对比</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-[rgba(160,109,68,0.15)] text-[#7a756f]">
+                                    <th class="py-2.5 px-3">竞争对手</th>
+                                    <th class="py-2.5 px-3">法国市占率 / 地位</th>
+                                    <th class="py-2.5 px-3">核心竞争壁垒与价格策略</th>
+                                    <th class="py-2.5 px-3">非食品与自有品牌策略</th>
+                                    <th class="py-2.5 px-3">Auchan 差异化反击点</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-[rgba(160,109,68,0.08)] text-[#3c3935]">
+                                <tr>
+                                    <td class="py-2.5 px-3 font-semibold text-[#ff641e]">E.Leclerc</td>
+                                    <td class="py-2.5 px-3">约 24.1%（法国第一）</td>
+                                    <td class="py-2.5 px-3">独立店主加盟制、极致全国低价心智、强大的农产品直采系统</td>
+                                    <td class="py-2.5 px-3">Marque Repère 全品类覆盖，非食品侧重平价消耗品</td>
+                                    <td class="py-2.5 px-3">通过 Aura Retail 联盟拉齐大牌进价，强化 Qilive 与 In Extenso 设计质感</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2.5 px-3 font-semibold">Carrefour (家乐福)</td>
+                                    <td class="py-2.5 px-3">约 19.8%（法国第二）</td>
+                                    <td class="py-2.5 px-3">全渠道多业态成熟、会员忠诚度计划体系完备、拉美/欧洲跨国网络</td>
+                                    <td class="py-2.5 px-3">自有品牌营收占比达 36%，积极拓展 Carrefour Soft/Home</td>
+                                    <td class="py-2.5 px-3">优化 Drive 极速履约与大卖场体验，提高生鲜与高性价比家居软装渗透</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2.5 px-3 font-semibold">Intermarché</td>
+                                    <td class="py-2.5 px-3">约 16.5%（法国第三）</td>
+                                    <td class="py-2.5 px-3">Mousquetaires 模式，拥有 60 余家自建食品加工厂（Agromousquetaires）</td>
+                                    <td class="py-2.5 px-3">食品自产自销优势极强，非食品依赖外部采购联盟</td>
+                                    <td class="py-2.5 px-3"><strong>战略盟友关系</strong>：在 Aura Retail 中 Auchan 主导双方全部非食品集采</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2.5 px-3 font-semibold">Action</td>
+                                    <td class="py-2.5 px-3">非食品折价领头羊</td>
+                                    <td class="py-2.5 px-3">极致动态低价（6,000+ SKU，每周上新 150+ 款，超 1,500 款低于 1 欧元）</td>
+                                    <td class="py-2.5 px-3">100% 非食品与日用百货，抢夺大卖场非食品客流</td>
+                                    <td class="py-2.5 px-3">在超市内设立 Actuel 专区与特价快闪区，强化合规与环保品质保障</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="mt-4 text-right">
+                    <a href="https://www.kantarworldpanel.com" target="_blank" rel="noopener noreferrer" class="text-xs text-[#7a756f] hover:text-[#ff641e] inline-flex items-center gap-1">
+                        <span>数据来源：Kantar Worldpanel France Market Shares &amp; Retail Detail</span>
+                        <i data-lucide="external-link" class="w-3 h-3"></i>
+                    </a>
+                </div>
+            </section>
+
+            <!-- 1.6 自主品牌矩阵分析 -->
+            <section class="sand-card p-6 md:p-8">
+                <div class="flex items-center gap-2 mb-6 section-accent">
+                    <h2 class="text-lg font-normal text-[#3c3935]">1.6 自主品牌矩阵分析与代工商机 (Private Labels)</h2>
+                </div>
+
+                <p class="text-xs text-[#7a756f] mb-4">
+                    欧尚已构建覆盖全生活场景的自主品牌（Own Brands）架构，非食品领域自有品牌销售占比正从 18% 提升至 25%+，是中国制造企业切入欧尚核心供应链的主通道：
+                </p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                    <!-- Qilive -->
+                    <div class="sand-card-sub p-4 border-t-2 border-[#ff641e]">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold text-[#ff641e] text-sm">Qilive</h3>
+                            <span class="report-tag">中端智电 / 科技生活</span>
+                        </div>
+                        <p class="text-xs text-[#7a756f] mb-2"><strong>对齐 GTB 标准品类：</strong>家用电器, 电子消费品及信息产品, 照明产品</p>
+                        <p class="text-xs text-[#3c3935] leading-relaxed">
+                            涵盖厨房小家电（空气炸锅、破壁机、咖啡机）、个护电器、智能电视、蓝牙音频及数码配件。强调极简设计与高性价比。
+                        </p>
+                        <div class="mt-3 pt-2 border-t border-[rgba(160,109,68,0.08)] text-[11px] text-[#ff641e]">
+                            <strong>中国代工契机：</strong>具备 CE/CB/RoHS 认证、符合法国“可维修指数”高分标准的 OEM/ODM 工厂。
+                        </div>
+                    </div>
+
+                    <!-- In Extenso -->
+                    <div class="sand-card-sub p-4 border-t-2 border-[#3c3935]">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold text-[#3c3935] text-sm">In Extenso</h3>
+                            <span class="report-tag">全家服饰 / 环保时尚</span>
+                        </div>
+                        <p class="text-xs text-[#7a756f] mb-2"><strong>对齐 GTB 标准品类：</strong>男女装, 童装, 内衣, 鞋, 服装饰物及配件</p>
+                        <p class="text-xs text-[#3c3935] leading-relaxed">
+                            欧洲家庭基础休闲服饰、婴儿连体衣、有机棉内衣、男女休闲鞋及配饰。注重 OEKO-TEX 环保认证与亲民价格。
+                        </p>
+                        <div class="mt-3 pt-2 border-t border-[rgba(160,109,68,0.08)] text-[11px] text-[#ff641e]">
+                            <strong>中国代工契机：</strong>GOTS/BCI 认证面料供应商、拥有 BSCI 验厂资质的高效成衣及鞋类制造商。
+                        </div>
+                    </div>
+
+                    <!-- Actuel -->
+                    <div class="sand-card-sub p-4 border-t-2 border-[#ff641e]">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold text-[#ff641e] text-sm">Actuel</h3>
+                            <span class="report-tag">现代家居 / 悦己生活</span>
+                        </div>
+                        <p class="text-xs text-[#7a756f] mb-2"><strong>对齐 GTB 标准品类：</strong>家居用品, 餐厨器皿, 家用纺织品, 家居装饰品, 日用陶瓷</p>
+                        <p class="text-xs text-[#3c3935] leading-relaxed">
+                            涵盖锅具餐具、不锈钢刀叉、卫浴收纳、床上四件套、窗帘毯子及香薰摆件。紧跟法式极简北欧美学。
+                        </p>
+                        <div class="mt-3 pt-2 border-t border-[rgba(160,109,68,0.08)] text-[11px] text-[#ff641e]">
+                            <strong>中国代工契机：</strong>符合欧洲食品接触级（LFGB/DGCCRF）标准的餐厨日用品及快时尚家纺企业。
+                        </div>
+                    </div>
+
+                    <!-- Cosmia -->
+                    <div class="sand-card-sub p-4 border-t-2 border-[#7a756f]">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold text-[#3c3935] text-sm">Cosmia</h3>
+                            <span class="report-tag">个人护理 / 纯净美肤</span>
+                        </div>
+                        <p class="text-xs text-[#7a756f] mb-2"><strong>对齐 GTB 标准品类：</strong>个人护理用具</p>
+                        <p class="text-xs text-[#3c3935] leading-relaxed">
+                            个护工具、化妆刷、美妆蛋、去角质手套、棉柔巾、指甲刀套件及沐浴海绵。追求无微塑料与可持续包材。
+                        </p>
+                        <div class="mt-3 pt-2 border-t border-[rgba(160,109,68,0.08)] text-[11px] text-[#ff641e]">
+                            <strong>中国代工契机：</strong>具备 ISO 22716 / GMPC 认证的个护用具与环保包材源头生产商。
+                        </div>
+                    </div>
+
+                    <!-- Gardenstar -->
+                    <div class="sand-card-sub p-4 border-t-2 border-[#15803d]">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold text-[#15803d] text-sm">Gardenstar</h3>
+                            <span class="report-tag">户外园艺 / 庭院生活</span>
+                        </div>
+                        <p class="text-xs text-[#7a756f] mb-2"><strong>对齐 GTB 标准品类：</strong>园林用品, 工具, 家具</p>
+                        <p class="text-xs text-[#3c3935] leading-relaxed">
+                            园艺修剪工具、水管水枪接头、户外烧烤炉（BBQ）、庭院折叠桌椅、遮阳伞及露营工具。
+                        </p>
+                        <div class="mt-3 pt-2 border-t border-[rgba(160,109,68,0.08)] text-[11px] text-[#ff641e]">
+                            <strong>中国代工契机：</strong>FSC 森林认证木制品、五金工具及具备户外防锈耐候涂层制造能力的工厂。
+                        </div>
+                    </div>
+
+                    <!-- Rik & Rok -->
+                    <div class="sand-card-sub p-4 border-t-2 border-[#f59e0b]">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold text-[#f59e0b] text-sm">Rik &amp; Rok</h3>
+                            <span class="report-tag">童趣益智 / 文教启蒙</span>
+                        </div>
+                        <p class="text-xs text-[#7a756f] mb-2"><strong>对齐 GTB 标准品类：</strong>玩具, 孕婴童用品, 办公文具</p>
+                        <p class="text-xs text-[#3c3935] leading-relaxed">
+                            儿童益智拼插玩具、彩笔画材、学生书包、文具盒及欧尚儿童俱乐部专属 IP 文教周边产品。
+                        </p>
+                        <div class="mt-3 pt-2 border-t border-[rgba(160,109,68,0.08)] text-[11px] text-[#ff641e]">
+                            <strong>中国代工契机：</strong>严格通过欧盟 EN71 / CE 安全认证的无毒玩具与学生文具出口企业。
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 text-right">
+                    <a href="https://www.auchan-retail.com/en/our-brands/" target="_blank" rel="noopener noreferrer" class="text-xs text-[#7a756f] hover:text-[#ff641e] inline-flex items-center gap-1">
+                        <span>数据来源：Auchan Own Brands Architecture Guide</span>
+                        <i data-lucide="external-link" class="w-3 h-3"></i>
+                    </a>
+                </div>
+            </section>
+
+            <!-- 2. 财务深度穿透 -->
+            <section class="sand-card p-6 md:p-8">
+                <div class="flex items-center gap-2 mb-6 section-accent">
+                    <h2 class="text-lg font-normal text-[#3c3935]">2. 财务深度穿透与品类营收拆解</h2>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <!-- ECharts 财务与品类图表 -->
+                    <div class="sand-card-sub p-4 flex flex-col justify-between">
+                        <div class="mb-2">
+                            <h3 class="text-sm font-medium text-[#3c3935]">2024/2025 全年营收品类构成分析 (320 亿欧元)</h3>
+                            <p class="text-xs text-[#7a756f]">食品 (72%) vs 非食品核心采购品类 (28%)</p>
+                        </div>
+                        <div id="revenueChart" class="chart-container"></div>
+                    </div>
+
+                    <!-- 财务指标分析与投资动向 -->
+                    <div class="sand-card-sub p-5 space-y-4 text-xs text-[#3c3935]">
+                        <h3 class="text-sm font-medium text-[#3c3935]">财务关键动向与资本支出 (CAPEX)</h3>
+                        <div>
+                            <span class="font-bold text-[#ff641e]">非食品（Non-Food）业务体量与战略地位：</span>
+                            <p class="text-[#7a756f] mt-1">
+                                欧尚非食品类年销售额约 <strong>89.6 亿欧元（折合人民币约 694 亿元）</strong>，占集团总营收的 28%。非食品板块不仅是欧尚区别于传统社区生鲜超市的标志性业务，更是贡献高毛利的重要支柱。其中，家用电器与消费电子贡献约 28 亿欧元，家居与餐厨用品贡献约 24 亿欧元，服装鞋包贡献约 18 亿欧元。
+                            </p>
+                        </div>
+                        <div>
+                            <span class="font-bold text-[#ff641e]">EBITDA 修复与降本增效：</span>
+                            <p class="text-[#7a756f] mt-1">
+                                2024/2025 财年 EBITDA 达到 10.0 亿欧元，同比大幅改善 +16.1%，EBITDA 利润率恢复至 3.1%。主要得益于葡萄牙、波兰等国际市场的强劲表现，以及在法国本土通过剥离亏损门店、与 Intermarché 实施采购协同削减了结构性开支。
+                            </p>
+                        </div>
+                        <div>
+                            <span class="font-bold text-[#ff641e]">未来 3 年 12 亿欧元投资流向：</span>
+                            <p class="text-[#7a756f] mt-1">
+                                集团计划投入 12 亿欧元，重点投向：① 改造 150 家旗舰大卖场，压缩低效货架并开辟仓店一体化自提专区；② 数字化供应链与自动化分拣仓储升级；③ 全面深化 Aura Retail 与 Everest 采购联盟的联合订单谈判，目标降低 2-4% 的综合采购成本。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 text-right">
+                    <a href="https://www.auchan-retail.com/en/investors-and-press/" target="_blank" rel="noopener noreferrer" class="text-xs text-[#7a756f] hover:text-[#ff641e] inline-flex items-center gap-1">
+                        <span>数据来源：Elo Group &amp; Auchan Retail Financial Statements</span>
+                        <i data-lucide="external-link" class="w-3 h-3"></i>
+                    </a>
+                </div>
+            </section>
+
+            <!-- 3. 组织架构与决策链 -->
+            <section class="sand-card p-6 md:p-8">
+                <div class="flex items-center gap-2 mb-6 section-accent">
+                    <h2 class="text-lg font-normal text-[#3c3935]">3. 组织架构、采购实体与供应商准入决策链</h2>
+                </div>
+
+                <!-- 采购组织与跨国联盟结构 -->
+                <div class="sand-card-sub p-5 mb-6">
+                    <h3 class="text-xs font-semibold text-[#7a756f] uppercase tracking-wider mb-4">采购决策核心组织架构 (找哪个部门 / 找谁)</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                        <div class="p-3 bg-[rgba(160,109,68,0.04)] rounded-xl border border-[rgba(160,109,68,0.1)]">
+                            <span class="font-bold text-[#ff641e] block mb-1">C 级高管与采购统筹</span>
+                            <p class="text-[#3c3935]"><strong>Guillaume Darrasse (CEO)</strong> 与首席采购官（CPO）统筹全集团采购政策与全球供应链可持续标准，主导跨国战略集采布局。</p>
+                        </div>
+                        <div class="p-3 bg-[rgba(160,109,68,0.04)] rounded-xl border border-[rgba(160,109,68,0.1)]">
+                            <span class="font-bold text-[#ff641e] block mb-1">Aura Retail 跨国采购联盟</span>
+                            <p class="text-[#3c3935]">由欧尚主导<strong>全联盟非食品（Non-Food）</strong>与自有品牌国际供应商联合谈判，合并 Intermarché 与 Casino 的海量采购配额。</p>
+                        </div>
+                        <div class="p-3 bg-[rgba(160,109,68,0.04)] rounded-xl border border-[rgba(160,109,68,0.1)]">
+                            <span class="font-bold text-[#ff641e] block mb-1">品类总监与品类经理</span>
+                            <p class="text-[#3c3935]">Category Managers 掌握选品、比价、样品送检与上架终审权，按 Home/Deco, Electro, Textile, Garden 细分品类独立考核。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 在华注册采购实体与亚洲办事处 -->
+                <div class="sand-card-sub p-5 mb-6">
+                    <h3 class="text-xs font-semibold text-[#7a756f] uppercase tracking-wider mb-3">在华采购管理代表处与法定实体</h3>
+                    <div class="space-y-3 text-xs text-[#3c3935]">
+                        <p>
+                            <strong>在华主要采购实体背景：</strong>欧尚在华历史采购与进出口管理机构主要登记为 <strong>瓯尚盈特诺（上海）国际贸易有限公司 (Ouchan International Trading Co., Ltd.)</strong> 及 <strong>欧尚国际采购代表处（上海/深圳）</strong>。
+                        </p>
+                        <p>
+                            <strong>亚洲采购中心运作职能 (Auchan International Sourcing)：</strong>目前欧尚通过其设在亚洲的全球集采中心网络（协同香港、上海、深圳及广州的专业验厂与品控代理）开展对华非食品直采。该机构主要行使三大核心权责：① 中国及远东源头 OEM/ODM 工厂的实地初筛与商务初谈；② 供应商 BSCI / SMETA 社会责任与 EcoVadis 碳足迹审核核实；③ 产前样封样与出货前 QA/QC 验货。
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 新产品提案与准入路径流程 -->
+                <div class="sand-card-sub p-5">
+                    <h3 class="text-xs font-semibold text-[#7a756f] uppercase tracking-wider mb-4">中国供应商典型对接与上架流程 (在哪提交)</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs text-center">
+                        <div class="p-3 bg-[rgba(160,109,68,0.03)] rounded-lg border border-[rgba(160,109,68,0.08)]">
+                            <div class="w-6 h-6 rounded-full bg-[#ff641e] text-white flex items-center justify-center mx-auto mb-2 font-bold text-[11px]">1</div>
+                            <span class="font-bold text-[#3c3935] block">官方门户建档</span>
+                            <p class="text-[#7a756f] mt-1 text-[11px]">通过 RangeMe 欧尚专属通道或 Auchan Sourcing 门户提交公司资质与产品目录。</p>
+                        </div>
+                        <div class="p-3 bg-[rgba(160,109,68,0.03)] rounded-lg border border-[rgba(160,109,68,0.08)]">
+                            <div class="w-6 h-6 rounded-full bg-[#ff641e] text-white flex items-center justify-center mx-auto mb-2 font-bold text-[11px]">2</div>
+                            <span class="font-bold text-[#3c3935] block">品类经理初筛与寄样</span>
+                            <p class="text-[#7a756f] mt-1 text-[11px]">品类买手就外观、功能、MOQ、FOB 定价进行比选，并通知寄送测试样品。</p>
+                        </div>
+                        <div class="p-3 bg-[rgba(160,109,68,0.03)] rounded-lg border border-[rgba(160,109,68,0.08)]">
+                            <div class="w-6 h-6 rounded-full bg-[#ff641e] text-white flex items-center justify-center mx-auto mb-2 font-bold text-[11px]">3</div>
+                            <span class="font-bold text-[#3c3935] block">合规与 ESG 审核 (一票否决)</span>
+                            <p class="text-[#7a756f] mt-1 text-[11px]">CSR 部门核查 BSCI/SMETA 报告、EcoVadis 分数及法国 AGEC/Triman 包装设计。</p>
+                        </div>
+                        <div class="p-3 bg-[rgba(160,109,68,0.03)] rounded-lg border border-[rgba(160,109,68,0.08)]">
+                            <div class="w-6 h-6 rounded-full bg-[#ff641e] text-white flex items-center justify-center mx-auto mb-2 font-bold text-[11px]">4</div>
+                            <span class="font-bold text-[#3c3935] block">框架协议签署与下单</span>
+                            <p class="text-[#7a756f] mt-1 text-[11px]">签署年度供货主合同，锁定账期与交付条款，首单排产并启动监装。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 text-right">
+                    <a href="https://www.auchan-retail.com/en/csr/" target="_blank" rel="noopener noreferrer" class="text-xs text-[#7a756f] hover:text-[#ff641e] inline-flex items-center gap-1">
+                        <span>数据来源：Auchan Procurement &amp; Supplier Onboarding Portal</span>
+                        <i data-lucide="external-link" class="w-3 h-3"></i>
+                    </a>
+                </div>
+            </section>
+
+            <!-- 4. 供应链与准入规则 -->
+            <section class="sand-card p-6 md:p-8">
+                <div class="flex items-center gap-2 mb-6 section-accent">
+                    <h2 class="text-lg font-normal text-[#3c3935]">4. 供应链采购地图、对华趋势与合规红线</h2>
+                </div>
+
+                <!-- 采购地图 -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="sand-card-sub p-4 text-center">
+                        <span class="text-xs text-[#7a756f] block mb-1">欧洲本土与近岸采购 (55%)</span>
+                        <p class="text-lg font-bold text-[#3c3935]">生鲜农产与重工包装</p>
+                        <p class="text-xs text-[#7a756f] mt-1">法国、西班牙、葡萄牙及东欧近岸产区</p>
+                    </div>
+                    <div class="sand-card-sub p-4 text-center">
+                        <span class="text-xs text-[#7a756f] block mb-1">远东及亚太直采 (35%)</span>
+                        <p class="text-lg font-bold text-[#ff641e]">非食品制造核心腹地</p>
+                        <p class="text-xs text-[#7a756f] mt-1">中国（占亚太 75%+）、越南、印度、孟加拉</p>
+                    </div>
+                    <div class="sand-card-sub p-4 text-center">
+                        <span class="text-xs text-[#7a756f] block mb-1">美洲与非洲特色产区 (10%)</span>
+                        <p class="text-lg font-bold text-[#3c3935]">生鲜水果与特色原料</p>
+                        <p class="text-xs text-[#7a756f] mt-1">热带水果、可可、咖啡豆直采</p>
+                    </div>
+                </div>
+
+                <!-- ECharts 对华采购趋势柱状图 -->
+                <div class="sand-card-sub p-5 mb-6">
+                    <div class="mb-2">
+                        <h3 class="text-sm font-medium text-[#3c3935]">近 5 年欧尚对华直接与间接采购估值趋势 (2021 - 2025)</h3>
+                        <p class="text-xs text-[#7a756f]">单位：亿欧元 (涵盖家用电器、纺织、家居用品、五金工具等全部对华采购大宗品类)</p>
+                    </div>
+                    <div id="supplyChart" class="chart-container"></div>
+                </div>
+
+                <!-- 主要供应商清单 (强制要求具体公司简称) -->
+                <div class="sand-card-sub p-5 mb-6">
+                    <h3 class="text-xs font-semibold text-[#7a756f] uppercase tracking-wider mb-3">公开披露的核心品牌与战略供应商清单</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                        <div class="flex items-center justify-between p-2.5 bg-[rgba(160,109,68,0.03)] rounded-lg">
+                            <span class="font-semibold text-[#ff641e]">SEB</span>
+                            <span class="text-[#7a756f]">厨房小家电与炊具 (Tefal, Moulinex)</span>
+                        </div>
+                        <div class="flex items-center justify-between p-2.5 bg-[rgba(160,109,68,0.03)] rounded-lg">
+                            <span class="font-semibold text-[#ff641e]">Philips</span>
+                            <span class="text-[#7a756f]">个人护理电器与照明电气</span>
+                        </div>
+                        <div class="flex items-center justify-between p-2.5 bg-[rgba(160,109,68,0.03)] rounded-lg">
+                            <span class="font-semibold text-[#ff641e]">Bic</span>
+                            <span class="text-[#7a756f]">办公文具与一次性剃须刀</span>
+                        </div>
+                        <div class="flex items-center justify-between p-2.5 bg-[rgba(160,109,68,0.03)] rounded-lg">
+                            <span class="font-semibold text-[#ff641e]">Dorel</span>
+                            <span class="text-[#7a756f]">孕婴童推车与安全座椅 (Maxi-Cosi, Bébé Confort)</span>
+                        </div>
+                        <div class="flex items-center justify-between p-2.5 bg-[rgba(160,109,68,0.03)] rounded-lg">
+                            <span class="font-semibold text-[#ff641e]">L'Oréal</span>
+                            <span class="text-[#7a756f]">美妆与个人洗护用品</span>
+                        </div>
+                        <div class="flex items-center justify-between p-2.5 bg-[rgba(160,109,68,0.03)] rounded-lg">
+                            <span class="font-semibold text-[#ff641e]">Danone</span>
+                            <span class="text-[#7a756f]">乳制品与健康饮品</span>
+                        </div>
+                        <div class="flex items-center justify-between p-2.5 bg-[rgba(160,109,68,0.03)] rounded-lg">
+                            <span class="font-semibold text-[#ff641e]">Nestlé</span>
+                            <span class="text-[#7a756f]">包装食品与咖啡饮料</span>
+                        </div>
+                        <div class="flex items-center justify-between p-2.5 bg-[rgba(160,109,68,0.03)] rounded-lg">
+                            <span class="font-semibold text-[#ff641e]">Unilever</span>
+                            <span class="text-[#7a756f]">家居清洁与日化洗涤</span>
+                        </div>
+                        <div class="flex items-center justify-between p-2.5 bg-[rgba(160,109,68,0.03)] rounded-lg">
+                            <span class="font-semibold text-[#ff641e]">Kärcher</span>
+                            <span class="text-[#7a756f]">高压清洗设备与庭院清洁工具</span>
+                        </div>
+                        <div class="flex items-center justify-between p-2.5 bg-[rgba(160,109,68,0.03)] rounded-lg">
+                            <span class="font-semibold text-[#ff641e]">Smurfit Kappa</span>
+                            <span class="text-[#7a756f]">物流瓦楞纸箱与环保货架包装</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 准入与合规红线 -->
+                <div class="sand-card-sub p-5">
+                    <h3 class="text-xs font-semibold text-[#7a756f] uppercase tracking-wider mb-4">供应商强制合规红线与准入门槛</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        <div class="space-y-2">
+                            <h4 class="font-bold text-[#ff641e]">1. 国际社会责任与 ESG 审计要求</h4>
+                            <ul class="list-disc list-inside text-[#7a756f] space-y-1">
+                                <li><strong>BSCI 验厂</strong>：要求达到 Grade C 及以上，童工、强迫劳动零容忍。</li>
+                                <li><strong>SMETA (Sedex 4-Pillar)</strong>：涵盖劳工权益、健康安全、环境管理及商业诚信。</li>
+                                <li><strong>EcoVadis 评级</strong>：要求中国战略供应商达到 50 分以上（铜牌 Bronze 或银牌 Silver）。</li>
+                            </ul>
+                        </div>
+                        <div class="space-y-2">
+                            <h4 class="font-bold text-[#ff641e]">2. 法国及欧盟特定法律红线</h4>
+                            <ul class="list-disc list-inside text-[#7a756f] space-y-1">
+                                <li><strong>法国 AGEC 法案 (循环经济反浪费)</strong>：严禁销毁未售出非食品库存，强制包装 100% 可回收并标注 <strong>Triman 标识</strong>。</li>
+                                <li><strong>可维修指数 (Indice de Réparabilité)</strong>：法国境内销售的家电与电子产品强制标注 1-10 分，低于 6 分将被降级采购。</li>
+                                <li><strong>欧盟 EUDR (零毁林法案)</strong>：涉木材、纸张、橡胶等制品须提供地理坐标溯源。</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 text-right">
+                    <a href="https://www.legifrance.gouv.fr" target="_blank" rel="noopener noreferrer" class="text-xs text-[#7a756f] hover:text-[#ff641e] inline-flex items-center gap-1">
+                        <span>数据来源：French AGEC Law &amp; Auchan ESG Guidelines</span>
+                        <i data-lucide="external-link" class="w-3 h-3"></i>
+                    </a>
+                </div>
+            </section>
+
+            <!-- 5. 用户舆情与社媒洞察 -->
+            <section class="sand-card p-6 md:p-8">
+                <div class="flex items-center gap-2 mb-6 section-accent">
+                    <h2 class="text-lg font-normal text-[#3c3935]">5. 用户舆情与社媒洞察 (Voice of Customer)</h2>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="sand-card-sub p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs font-bold text-[#3c3935]">Trustpilot 法国</span>
+                            <span class="text-xs font-semibold text-[#ff641e]">2.2 / 5.0</span>
+                        </div>
+                        <p class="text-xs text-[#7a756f]">反映售后响应、在线订单退换货及部分高峰期收银排队问题，为欧洲大型商超典型痛点分布。</p>
+                    </div>
+                    <div class="sand-card-sub p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs font-bold text-[#3c3935]">Google Maps 门店均分</span>
+                            <span class="text-xs font-semibold text-[#ff641e]">3.8 / 5.0</span>
+                        </div>
+                        <p class="text-xs text-[#7a756f]">涵盖法国、西班牙 500+ 核心大卖场与超市，生鲜烘焙口碑突出，但非食品陈列导视需优化。</p>
+                    </div>
+                    <div class="sand-card-sub p-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs font-bold text-[#3c3935]">Auchan Drive 自提好评</span>
+                            <span class="text-xs font-semibold text-[#15803d]">4.5 / 5.0</span>
+                        </div>
+                        <p class="text-xs text-[#7a756f]">汽车自提履约准时率超 98%，缺货替代政策受家庭用户欢迎，是欧尚忠诚度最高的服务场景。</p>
+                    </div>
+                </div>
+
+                <!-- 舆情正负向提炼与产品改进 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="sand-card-sub p-4">
+                        <h4 class="text-xs font-bold text-[#15803d] mb-2">核心好评点</h4>
+                        <ul class="text-xs text-[#7a756f] space-y-1.5 list-disc list-inside">
+                            <li>大卖场通道宽敞，生鲜、烘焙与法式熟食口感地道。</li>
+                            <li>In Extenso 儿童服装舒适耐穿，有机棉系列性价比极高。</li>
+                            <li>Drive 汽车自提省时省力，装车服务周到。</li>
+                        </ul>
+                    </div>
+                    <div class="sand-card-sub p-4">
+                        <h4 class="text-xs font-bold text-[#e2001a] mb-2">主要用户痛点与供应商改进方向</h4>
+                        <ul class="text-xs text-[#7a756f] space-y-1.5 list-disc list-inside">
+                            <li><strong>小家电包装塑料过多：</strong>建议供应商改用 100% 蜂窝纸板并附带清晰的 Triman 垃圾分类指导。</li>
+                            <li><strong>非食品区缺货与陈列混乱：</strong>建议提供即开即售的零售货架展示箱（SRP/RRP）。</li>
+                            <li><strong>说明书法语本土化不足：</strong>法文说明书必须清晰，且标注法国官方可维修零件申领通道。</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="mt-4 text-right">
+                    <a href="https://fr.trustpilot.com/review/www.auchan.fr" target="_blank" rel="noopener noreferrer" class="text-xs text-[#7a756f] hover:text-[#ff641e] inline-flex items-center gap-1">
+                        <span>数据来源：Trustpilot France &amp; Google Maps Customer Reviews</span>
+                        <i data-lucide="external-link" class="w-3 h-3"></i>
+                    </a>
+                </div>
+            </section>
+
+            <!-- 6. 实战建议（供应商策略） -->
+            <section class="sand-card p-6 md:p-8">
+                <div class="flex items-center gap-2 mb-6 section-accent">
+                    <h2 class="text-lg font-normal text-[#3c3935]">6. 痛点诊断与中国供应商攻坚实战策略</h2>
+                </div>
+
+                <!-- 欧尚面临的真实痛点 -->
+                <div class="sand-card-sub p-5 mb-6">
+                    <h3 class="text-xs font-semibold text-[#7a756f] uppercase tracking-wider mb-3">欧尚当前核心痛点与外部挑战</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-[#3c3935]">
+                        <div class="p-3 bg-[rgba(160,109,68,0.03)] rounded-lg">
+                            <span class="font-bold text-[#ff641e] block mb-1">硬折扣抢食非食品份额</span>
+                            <p class="text-[#7a756f]">Action、Lidl 在法国高速扩张，以超低价和快周转蚕食了欧尚大卖场的日杂百货客流。</p>
+                        </div>
+                        <div class="p-3 bg-[rgba(160,109,68,0.03)] rounded-lg">
+                            <span class="font-bold text-[#ff641e] block mb-1">法国 AGEC 法案合规重压</span>
+                            <p class="text-[#7a756f]">法国对去塑料化、产品拆解与反销毁开出巨额罚单，欧尚急需供应商提供合规包装解决方案。</p>
+                        </div>
+                        <div class="p-3 bg-[rgba(160,109,68,0.03)] rounded-lg">
+                            <span class="font-bold text-[#ff641e] block mb-1">自有品牌毛利依赖加深</span>
+                            <p class="text-[#7a756f]">在全国性大牌进价博弈艰难的背景下，欧尚亟需通过自有品牌（Qilive/Actuel）拉升综合毛利率。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 三大攻坚战术 -->
+                <div class="space-y-4">
+                    <div class="sand-card-sub p-5 border-l-4 border-[#ff641e]">
+                        <h3 class="text-sm font-bold text-[#3c3935] mb-2">策略一：“法案合规作为第一卖点” —— 破冰法国准入壁垒</h3>
+                        <p class="text-xs text-[#7a756f] leading-relaxed">
+                            中国供应商在提案时，直接将<strong>法国 AGEC 法案适配方案</strong>作为产品标配：① 提供 100% 无塑纸基包装并预印合规的 Triman 标识与分类代码（Info-Tri）；② 针对家用电器与消费电子，提前做好易拆解设计与备件清单，主动测算并提供 <strong>8.0 分以上的高“可维修性指数”（Indice de Réparabilité）</strong>，大幅降低欧尚法务与质检部门的审核阻力。
+                        </p>
+                    </div>
+
+                    <div class="sand-card-sub p-5 border-l-4 border-[#ff641e]">
+                        <h3 class="text-sm font-bold text-[#3c3935] mb-2">策略二：“切入 Qilive 与 Actuel 贴牌” —— 打造极致性价比 ODM 标杆</h3>
+                        <p class="text-xs text-[#7a756f] leading-relaxed">
+                            避开同质化低价战，主动对接 Qilive（智能小家电、多媒体数码配件）与 Actuel（法式轻奢餐厨、收纳、家纺）自有品牌项目。利用中国产业集群的敏捷开模与灵活起订量（MOQ）优势，为欧尚提供“媲美一线大牌工业设计、但终端售价低 30%-40%”的爆款替代方案，帮助欧尚正面抗衡 Action 与硬折扣连锁。
+                        </p>
+                    </div>
+
+                    <div class="sand-card-sub p-5 border-l-4 border-[#ff641e]">
+                        <h3 class="text-sm font-bold text-[#3c3935] mb-2">策略三：“撬动 Aura Retail 联盟红利” —— 实现欧洲多渠道分销乘数效应</h3>
+                        <p class="text-xs text-[#7a756f] leading-relaxed">
+                            由于欧尚在 <strong>Aura Retail 跨国采购联盟</strong>中主导非食品与自有品牌的联合集采，中国供应商一旦成功通过欧尚的供应商代码认证与验厂，不仅能进驻欧尚法国及欧洲全境 2,800+ 门店，更可顺势接入 Intermarché、Casino 等联盟伙伴的渠道货架，获得单次谈判、全欧洲多品牌联销的几何级订单倍增效应。
+                        </p>
+                    </div>
+                </div>
+
+                <div class="mt-4 text-right">
+                    <span class="text-xs text-[#7a756f]">报告分析师：GlobalTradeBuddy 欧洲战略情报研究组</span>
+                </div>
+            </section>
+
+        </div>
+
+    </main>
+
+    <!-- ====== ECharts 脚本初始化 ====== -->
+    <script>
+        // 1. 渠道分布与业态结构图表 (id="channelChart")
+        (function() {
+            var dom = document.getElementById("channelChart");
+            if (!dom) return;
+            var chart = echarts.init(dom);
+            var option = {
+                tooltip: {
+                    trigger: "item",
+                    formatter: "{b}: {c} 家 ({d}%)"
+                },
+                legend: {
+                    bottom: "2%",
+                    left: "center",
+                    textStyle: { color: "#7a756f", fontSize: 11 }
+                },
+                color: ["#ff641e", "#3c3935", "#7a756f"],
+                series: [
+                    {
+                        name: "门店业态分布",
+                        type: "pie",
+                        radius: ["40%", "70%"],
+                        avoidLabelOverlap: false,
+                        itemStyle: {
+                            borderRadius: 8,
+                            borderColor: "#fdfbf7",
+                            borderWidth: 3
+                        },
+                        label: {
+                            show: true,
+                            position: "outside",
+                            formatter: "{b}\n{d}%",
+                            color: "#3c3935",
+                            fontSize: 11
+                        },
+                        data: [
+                            { value: 1250, name: "邻里便利 (MyAuchan / 站店)" },
+                            { value: 1100, name: "标准超市与软折扣 (Supermarkets)" },
+                            { value: 540, name: "大型综合超市 (Hypermarkets)" }
+                        ]
+                    }
+                ]
+            };
+            chart.setOption(option);
+            window.addEventListener("resize", function() { chart.resize(); });
+        })();
+
+        // 2. 2024/2025 全年营收品类构成分析 (id="revenueChart")
+        (function() {
+            var dom = document.getElementById("revenueChart");
+            if (!dom) return;
+            var chart = echarts.init(dom);
+            var option = {
+                tooltip: {
+                    trigger: "axis",
+                    axisPointer: { type: "shadow" },
+                    formatter: "{b}: {c} 亿欧元"
+                },
+                grid: {
+                    left: "3%",
+                    right: "8%",
+                    bottom: "3%",
+                    top: "10%",
+                    containLabel: true
+                },
+                xAxis: {
+                    type: "value",
+                    name: "亿欧元",
+                    axisLine: { lineStyle: { color: "#7a756f" } },
+                    splitLine: { lineStyle: { color: "rgba(160,109,68,0.1)" } }
+                },
+                yAxis: {
+                    type: "category",
+                    data: ["文具/玩具/个护", "男女装/童装/鞋", "家居与餐厨用品", "家用电器/消费电子", "食品与生鲜 (Food)"],
+                    axisLine: { lineStyle: { color: "#7a756f" } }
+                },
+                series: [
+                    {
+                        name: "销售额 (亿欧元)",
+                        type: "bar",
+                        data: [
+                            { value: 19.6, itemStyle: { color: "#7a756f" } },
+                            { value: 18.0, itemStyle: { color: "#7a756f" } },
+                            { value: 24.0, itemStyle: { color: "#ff641e" } },
+                            { value: 28.0, itemStyle: { color: "#ff641e" } },
+                            { value: 230.4, itemStyle: { color: "#3c3935" } }
+                        ],
+                        label: {
+                            show: true,
+                            position: "right",
+                            formatter: "{c} 亿€",
+                            color: "#3c3935",
+                            fontSize: 11
+                        },
+                        barWidth: "45%"
+                    }
+                ]
+            };
+            chart.setOption(option);
+            window.addEventListener("resize", function() { chart.resize(); });
+        })();
+
+        // 3. 近 5 年欧尚对华采购估值趋势柱状图 (id="supplyChart")
+        (function() {
+            var dom = document.getElementById("supplyChart");
+            if (!dom) return;
+            var chart = echarts.init(dom);
+            var option = {
+                tooltip: {
+                    trigger: "axis",
+                    axisPointer: { type: "shadow" },
+                    formatter: "{b}年: {c} 亿欧元"
+                },
+                grid: {
+                    left: "3%",
+                    right: "4%",
+                    bottom: "8%",
+                    top: "12%",
+                    containLabel: true
+                },
+                xAxis: {
+                    type: "category",
+                    data: ["2021", "2022", "2023", "2024", "2025 (E)"],
+                    axisLine: { lineStyle: { color: "#7a756f" } }
+                },
+                yAxis: {
+                    type: "value",
+                    name: "采购估值 (亿欧元)",
+                    min: 20,
+                    max: 45,
+                    axisLine: { lineStyle: { color: "#7a756f" } },
+                    splitLine: { lineStyle: { color: "rgba(160,109,68,0.1)" } }
+                },
+                series: [
+                    {
+                        name: "对华大宗商品采购额",
+                        type: "bar",
+                        data: [31.2, 34.5, 32.8, 35.6, 38.2],
+                        itemStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: "#ff641e" },
+                                { offset: 1, color: "rgba(255, 100, 30, 0.4)" }
+                            ]),
+                            borderRadius: [6, 6, 0, 0]
+                        },
+                        label: {
+                            show: true,
+                            position: "top",
+                            formatter: "{c} 亿€",
+                            color: "#3c3935",
+                            fontSize: 11
+                        },
+                        barWidth: "40%"
+                    }
+                ]
+            };
+            chart.setOption(option);
+            window.addEventListener("resize", function() { chart.resize(); });
+        })();
+
+        // 初始化 Lucide 图标
+        if (window.lucide) {
+            lucide.createIcons();
+        }
+    </script>
+</body>
+</html>

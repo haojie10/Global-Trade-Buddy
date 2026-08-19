@@ -71,8 +71,8 @@ export default function HomePage({ graphData, allReports, userId, userRole, free
         .then(res => res.json())
         .then(data => {
           if (data.success) {
-            alert('🎁 恭喜！接受邀请注册成功，你与邀请人均已获赠 1 次报告解锁额度！');
-            setQuota(prev => prev + 1);
+            alert('🎁 恭喜！接受邀请注册成功，你与邀请人均已获赠 3 次报告解锁额度！');
+            setQuota(prev => prev + 3);
           }
           localStorage.removeItem('gtb_referrer_id');
         })

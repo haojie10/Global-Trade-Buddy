@@ -105,7 +105,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     // NOTE: 角色强制为 'user'，管理员只能通过数据库手动分配，防止注册自封管理员
     const selectedRole = 'user';
-    const quota = 3;
+    const quota = 10;
 
     // 对密码进行 bcrypt 哈希处理（cost factor = 10）
     const passwordHash = await bcrypt.hash(password, 10);

@@ -64,6 +64,8 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     const metaChannels = extractMeta(contentHtml, 'channels');
     const metaSummary = extractMeta(contentHtml, 'summary');
     const metaCategory = extractMeta(contentHtml, 'category');
+    const metaTargetReportId = extractMeta(contentHtml, 'target_report_id');
+    const explicitTargetId = (req.body.target_report_id || req.body.targetReportId || metaTargetReportId || '').trim();
 
     const aliasesList = metaCompanyAliases
       ? metaCompanyAliases.split(/,|，|\/|\||;|；/).map(s => s.trim()).filter(Boolean)
@@ -126,30 +128,60 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
 
     // 4. 元数据去重检查与插入（智能幂等与主体+国家双重覆盖设计）
     let existingReport;
-    if (finalCategory === 'customer' && primaryEntityId) {
-      // 企业洞察报告：优先根据【主体公司 ID + 目标国家】联合查重
-      if (mappedCountries.length > 0) {
-        existingReport = await dbClient.query(
-          `SELECT r.id 
-           FROM reports r
-           JOIN report_countries rc ON r.id = rc.report_id
-           JOIN countries c ON rc.country_id = c.id
-           WHERE r.category = 'customer' 
-             AND r.primary_entity_id = $1 
-             AND c.name = ANY($2::text[])
-           ORDER BY r.created_at ASC 
-           LIMIT 1`,
-          [primaryEntityId, mappedCountries]
-        );
+
+    // 优先：显式指定的 target_report_id
+    if (explicitTargetId) {
+      const explicitRes = await dbClient.query('SELECT id FROM reports WHERE id = $1', [explicitTargetId]);
+      if (explicitRes.rows.length > 0) {
+        existingReport = explicitRes;
       }
-      // 兜底：按主体公司 ID 查重，锁定最早产生的第一版原始 Report ID
-      if (!existingReport || existingReport.rows.length === 0) {
+    }
+
+    if (!existingReport || existingReport.rows.length === 0) {
+      if (finalCategory === 'customer' && primaryEntityId) {
+        // 企业洞察报告：优先根据【主体公司 ID + 目标国家】联合查重
+        if (mappedCountries.length > 0) {
+          existingReport = await dbClient.query(
+            `SELECT r.id 
+             FROM reports r
+             JOIN report_countries rc ON r.id = rc.report_id
+             JOIN countries c ON rc.country_id = c.id
+             WHERE r.category = 'customer' 
+               AND r.primary_entity_id = $1 
+               AND c.name = ANY($2::text[])
+             ORDER BY r.created_at ASC 
+             LIMIT 1`,
+            [primaryEntityId, mappedCountries]
+          );
+        }
+        // 兜底：按主体公司 ID 查重，锁定最早产生的第一版原始 Report ID
+        if (!existingReport || existingReport.rows.length === 0) {
+          existingReport = await dbClient.query(
+            'SELECT id FROM reports WHERE category = $1 AND primary_entity_id = $2 ORDER BY created_at ASC LIMIT 1',
+            ['customer', primaryEntityId]
+          );
+        }
+      }
+    }
+
+    // 再次兜底：按公司所有别名深度双向匹配已有报告
+    if (!existingReport || existingReport.rows.length === 0) {
+      const allPossibleNames = [metaCompanyName, ...aliasesList].filter(Boolean);
+      if (allPossibleNames.length > 0 && finalCategory === 'customer') {
         existingReport = await dbClient.query(
-          'SELECT id FROM reports WHERE category = $1 AND primary_entity_id = $2 ORDER BY created_at ASC LIMIT 1',
-          ['customer', primaryEntityId]
+          `SELECT r.id
+           FROM reports r
+           JOIN report_entities re ON r.id = re.report_id AND re.role = 'primary'
+           JOIN entities e ON re.entity_id = e.id
+           LEFT JOIN entity_aliases ea ON e.id = ea.entity_id
+           WHERE r.category = 'customer' AND (e.canonical_name = ANY($1::text[]) OR ea.alias_name = ANY($1::text[]))
+           ORDER BY r.created_at ASC
+           LIMIT 1`,
+          [allPossibleNames]
         );
       }
     }
+
     if (!existingReport || existingReport.rows.length === 0) {
       // 兜底查重：根据报告标题匹配最早产生的记录
       existingReport = await dbClient.query(
