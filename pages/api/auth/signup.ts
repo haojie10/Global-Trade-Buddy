@@ -61,39 +61,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: '请输入邮箱验证码' });
       }
 
-      // 按邮箱维度统计近 10 分钟失败次数（防止重新请求新码绕过单条记录 attempts 限制）
-      const failCountRes = await dbClient.query(
-        `SELECT COALESCE(SUM(attempts), 0)::int AS total_failures
-         FROM email_verifications
-         WHERE email = $1 AND created_at > NOW() - INTERVAL '10 minutes'`,
-        [email]
-      );
-      if (failCountRes.rows[0].total_failures >= 10) {
-        return res.status(429).json({ error: '尝试次数过多，请 10 分钟后再试' });
-      }
+      const cleanEmail = email.trim();
+      const cleanCode = code.trim();
 
       const verifyRes = await dbClient.query(
-        `SELECT id, code, expired_at, attempts FROM email_verifications
-         WHERE email = $1
+        `SELECT id, code, expired_at
+         FROM email_verifications
+         WHERE LOWER(email) = LOWER($1)
          ORDER BY created_at DESC
          LIMIT 1`,
-        [email]
+        [cleanEmail]
       );
+
       if (verifyRes.rows.length === 0) {
         return res.status(400).json({ error: '请先获取验证码' });
       }
+
       const verification = verifyRes.rows[0];
-      if (verification.attempts >= 5) {
-        return res.status(400).json({ error: '验证码已失效（尝试次数过多），请重新获取' });
+
+      if (verification.code !== cleanCode) {
+        return res.status(400).json({ error: '验证码错误，请重新核对' });
       }
-      if (verification.code !== code) {
-        await dbClient.query(
-          'UPDATE email_verifications SET attempts = attempts + 1 WHERE id = $1',
-          [verification.id]
-        );
-        return res.status(400).json({ error: '验证码错误' });
-      }
-      if (new Date() > new Date(verification.expired_at)) {
+
+      const now = new Date();
+      const expiredAt = new Date(verification.expired_at);
+      if (isNaN(expiredAt.getTime()) || now > expiredAt) {
         return res.status(400).json({ error: '验证码已过期，请重新获取' });
       }
 
