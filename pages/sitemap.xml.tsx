@@ -64,8 +64,9 @@ export const getServerSideProps: GetServerSideProps = async ({ res }) => {
 
     const newsResult = await client.query("SELECT id, published_at FROM news WHERE status='published' ORDER BY published_at DESC");
     newsList = newsResult.rows || [];
-  } catch (error) {
-    console.error('Sitemap 数据生成错误:', error);
+    console.log(`[Sitemap] 成功获取 ${reports.length} 篇研报, ${newsList.length} 篇资讯`);
+  } catch (error: any) {
+    console.error('❌ Sitemap 数据库查询失败:', error?.message || error);
   } finally {
     if (client) {
       client.release();
