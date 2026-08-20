@@ -43,12 +43,12 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     // 1. 元数据及实体提取
     const meta = parseMetadata(contentHtml);
 
-    // 2. 自动提取 HTML 的 meta 标签组装为 manualTags
+    // 2. 自动提取 HTML 的 meta 标签组装为 manualTags（支持多行、单双引号及顺逆序全模式容错）
     const extractMeta = (html: string, name: string): string => {
-      const match = html.match(new RegExp(`<meta[^>]*?name=["']${name}["'][^>]*?content=["']([^"']*)["']`, 'i'));
-      if (match) return match[1].trim();
-      const matchRev = html.match(new RegExp(`<meta[^>]*?content=["']([^"']*)["'][^>]*?name=["']${name}["']`, 'i'));
-      if (matchRev) return matchRev[1].trim();
+      const match = html.match(new RegExp(`<meta[^>]*?name=["']${name}["'][^>]*?content=(["'])([\\s\\S]*?)\\1`, 'i'));
+      if (match) return match[2].trim();
+      const matchRev = html.match(new RegExp(`<meta[^>]*?content=(["'])([\\s\\S]*?)\\1[^>]*?name=["']${name}["']`, 'i'));
+      if (matchRev) return matchRev[2].trim();
       return '';
     };
 
@@ -68,7 +68,7 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     const explicitTargetId = (req.body.target_report_id || req.body.targetReportId || metaTargetReportId || '').trim();
 
     const aliasesList = metaCompanyAliases
-      ? metaCompanyAliases.split(/,|，|\/|\||;|；/).map(s => s.trim()).filter(Boolean)
+      ? metaCompanyAliases.split(/,|，|\/|\||;|；|\n/).map(s => s.trim()).filter(Boolean)
       : [];
 
     const manualTags = {
@@ -232,6 +232,18 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
         [meta.title || title, finalCategory, finalMarketRegion, finalSummary, cleanHtml, primaryEntityId]
       );
       newReportId = insertReportRes.rows[0].id;
+    }
+
+    // 4.1 确保主体公司的全部别名持久化到 entity_aliases 表中
+    if (primaryEntityId && aliasesList.length > 0) {
+      for (const alias of aliasesList) {
+        await dbClient.query(
+          `INSERT INTO entity_aliases (entity_id, alias_name)
+           VALUES ($1, $2)
+           ON CONFLICT (alias_name) DO UPDATE SET entity_id = EXCLUDED.entity_id`,
+          [primaryEntityId, alias]
+        );
+      }
     }
 
     // 5. 保存行业与标准品类关联 (写入 report_industries)

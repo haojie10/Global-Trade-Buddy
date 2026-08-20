@@ -60,9 +60,13 @@ async function updateEntitiesHandler(req: NextApiRequest, res: NextApiResponse, 
       companyList = [primaryCompany.trim()];
     }
 
-    // 2. 组装 manualTags
+    const primaryName = companyList[0] || (primaryCompany ? primaryCompany.trim() : '');
+    const aliasList = companyList.slice(1);
+
+    // 2. 组装 manualTags（显式传入 companyAliases）
     const manualTags = {
-      companies: companyList,
+      companies: primaryName ? [primaryName] : [],
+      companyAliases: aliasList,
       competitors: competitors.filter(Boolean),
       suppliers: suppliers.filter(Boolean),
       customers: customers.filter(Boolean),
@@ -98,6 +102,33 @@ async function updateEntitiesHandler(req: NextApiRequest, res: NextApiResponse, 
     // 5. 更新 reports 主体公司关联与覆盖区域（仅存具体国家）
     const primaryEnt = resolvedEntities.find(e => e.role === 'primary');
     const primaryEntityId = primaryEnt ? primaryEnt.id : null;
+
+    // 5.0 精确同步主体公司的 entity_aliases 别名表（清理被删除的旧别名，插入新别名）
+    if (primaryEntityId) {
+      const currentAliasesRes = await dbClient.query(
+        'SELECT alias_name FROM entity_aliases WHERE entity_id = $1',
+        [primaryEntityId]
+      );
+      const currentAliases = currentAliasesRes.rows.map((r: any) => r.alias_name);
+      
+      const toDelete = currentAliases.filter((name: string) => !aliasList.includes(name));
+      if (toDelete.length > 0) {
+        await dbClient.query(
+          'DELETE FROM entity_aliases WHERE entity_id = $1 AND alias_name = ANY($2)',
+          [primaryEntityId, toDelete]
+        );
+      }
+
+      for (const alias of aliasList) {
+        await dbClient.query(
+          `INSERT INTO entity_aliases (entity_id, alias_name)
+           VALUES ($1, $2)
+           ON CONFLICT (alias_name) DO UPDATE SET entity_id = EXCLUDED.entity_id`,
+          [primaryEntityId, alias]
+        );
+      }
+    }
+
     await dbClient.query(
       'UPDATE reports SET primary_entity_id = $1, market_region = $2 WHERE id = $3',
       [primaryEntityId, marketRegion, reportId]

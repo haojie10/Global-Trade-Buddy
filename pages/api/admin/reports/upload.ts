@@ -23,9 +23,10 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
   // 2. 元数据及实体提取
   const meta = parseMetadata(rawHtml);
 
-  // 提取兼顾 HTML head 里的 company_aliases 标记
-  const metaAliasesMatch = rawHtml.match(/<meta[^>]*?name=["']company_aliases["'][^>]*?content=["']([^"']*?)["']/i);
-  const metaAliases = metaAliasesMatch ? metaAliasesMatch[1].split(/,|，|\/|\||;|；/).map((s: string) => s.trim()).filter(Boolean) : [];
+  // 提取兼顾 HTML head 里的 company_aliases 标记（支持单双引号及多行全容错正则）
+  const metaAliasesMatch = rawHtml.match(/<meta[^>]*?name=["']company_aliases["'][^>]*?content=(["'])([\s\S]*?)\1/i) 
+    || rawHtml.match(/<meta[^>]*?content=(["'])([\s\S]*?)\1[^>]*?name=["']company_aliases["']/i);
+  const metaAliases = metaAliasesMatch ? (metaAliasesMatch[2] || metaAliasesMatch[1] || '').split(/,|，|\/|\||;|；|\n/).map((s: string) => s.trim()).filter(Boolean) : [];
 
   const mergedManualTags = {
     ...manualTags,
@@ -170,6 +171,18 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
       [meta.title, finalCategory, finalMarketRegion, finalSummary, cleanHtml, primaryEntityId]
     );
     newReportId = insertReportRes.rows[0].id;
+  }
+
+  // 4.1 确保主体公司的全部别名持久化到 entity_aliases 表中
+  if (primaryEntityId && mergedManualTags.companyAliases && mergedManualTags.companyAliases.length > 0) {
+    for (const alias of mergedManualTags.companyAliases) {
+      await dbClient.query(
+        `INSERT INTO entity_aliases (entity_id, alias_name)
+         VALUES ($1, $2)
+         ON CONFLICT (alias_name) DO UPDATE SET entity_id = EXCLUDED.entity_id`,
+        [primaryEntityId, alias]
+      );
+    }
   }
 
   // 保存行业与国家关联
