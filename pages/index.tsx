@@ -229,64 +229,89 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
       position: 'relative'
     }}>
       <Head>
-        <title>Market Graphic (外贸智友) - 俯瞰全球市场结构 · AI 深度出海调研平台</title>
-        <meta name="description" content="Market Graphic（外贸智友）是 AI 驱动的深度外贸商业情报与品类调研平台，提供海外买家 360° 供应链穿透洞察、重点品类准入标准分析及每日全球外贸动态，助力中国制造企业精准出海决策。" />
-        <meta name="keywords" content="Market Graphic, 外贸智友, 外贸调研, 出海情报, 海外买家分析, 品类洞察, 供应链穿透, 跨境电商, AI 商业智能, GlobalTradeBuddy" />
-        <meta name="author" content="外贸智友 Market Graphic" />
+        <title>Market Graphic - 俯瞰全球市场结构</title>
+        <meta name="description" content="Market Graphic（外贸智友）是 AI 驱动的深度外贸调研平台，提供每周行业资讯、客户 360° 穿透洞察和品类准入分析，助力出海企业精准决策。" />
+        <meta name="keywords" content="外贸调研, 出海情报, 品类洞察, 买家分析, 全球市场, 跨境电商, AI 商业智能, 外贸智友, Market Graphic" />
+        <meta name="author" content="外贸智友 GlobalTradeBuddy" />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://marketgraphic.cn" />
         {/* Open Graph */}
         <meta property="og:type" content="website" />
-        <meta property="og:title" content="Market Graphic (外贸智友) - 俯瞰全球市场结构 · AI 深度出海调研平台" />
-        <meta property="og:description" content="AI 驱动的深度外贸调研平台，海外买家 360° 供应链穿透洞察、重点品类准入分析与实时行业动态。" />
+        <meta property="og:title" content="Market Graphic - 俯瞰全球市场结构" />
+        <meta property="og:description" content="AI 驱动的深度外贸调研平台，每周行业资讯、客户 360° 穿透洞察和品类准入分析。" />
         <meta property="og:image" content="https://marketgraphic.cn/images/discover_focus_panorama.jpg" />
         <meta property="og:url" content="https://marketgraphic.cn" />
-        <meta property="og:site_name" content="Market Graphic (外贸智友)" />
+        <meta property="og:site_name" content="Market Graphic" />
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Market Graphic (外贸智友) - 俯瞰全球市场结构" />
-        <meta name="twitter:description" content="AI 驱动的深度外贸调研平台，海外买家 360° 供应链穿透洞察与品类准入分析。" />
+        <meta name="twitter:title" content="Market Graphic - 俯瞰全球市场结构" />
+        <meta name="twitter:description" content="AI 驱动的深度外贸调研平台，每周行业资讯、客户 360° 穿透洞察和品类准入分析。" />
         <meta name="twitter:image" content="https://marketgraphic.cn/images/discover_focus_panorama.jpg" />
-
-        {/* 结构化数据 (JSON-LD)：声明官方平台 WebSite 与 Organization 实体 */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              '@context': 'https://schema.org',
-              '@graph': [
-                {
-                  '@type': 'WebSite',
-                  '@id': 'https://marketgraphic.cn/#website',
-                  'url': 'https://marketgraphic.cn',
-                  'name': 'Market Graphic',
-                  'alternateName': ['外贸智友', 'GlobalTradeBuddy', 'MarketGraphic'],
-                  'description': 'AI 驱动的全球出海商业情报与品类调研平台',
-                  'publisher': {
-                    '@id': 'https://marketgraphic.cn/#organization'
-                  },
-                  'potentialAction': {
-                    '@type': 'SearchAction',
-                    'target': 'https://marketgraphic.cn/reports?q={search_term_string}',
-                    'query-input': 'required name=search_term_string'
-                  }
-                },
-                {
-                  '@type': 'Organization',
-                  '@id': 'https://marketgraphic.cn/#organization',
-                  'name': 'Market Graphic (外贸智友)',
-                  'alternateName': ['外贸智友', 'GlobalTradeBuddy'],
-                  'url': 'https://marketgraphic.cn',
-                  'logo': {
-                    '@type': 'ImageObject',
-                    'url': 'https://marketgraphic.cn/images/mg_logo.png'
-                  }
-                }
-              ]
-            })
-          }}
-        />
       </Head>
+
+      {/* 注入全局响应式与移动端专属样式 */}
+      <style jsx global>{`
+        .home-screen-wrapper {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 48px;
+          width: 100%;
+          height: 100%;
+        }
+        .home-screen-left {
+          flex: 1 1 500px;
+          max-width: 620px;
+        }
+        .home-screen-right {
+          flex: 1 1 450px;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+
+        /* 移动端与平板端响应式适配 (< 900px) */
+        @media (max-width: 900px) {
+          .home-viewport-padding {
+            padding: 70px 16px 20px 16px !important;
+          }
+          .home-screen-wrapper {
+            flex-direction: column !important;
+            justify-content: center !important;
+            gap: 18px !important;
+            text-align: center !important;
+          }
+          .home-screen-left {
+            flex: 0 1 auto !important;
+            max-width: 100% !important;
+          }
+          .home-screen-left h1,
+          .home-screen-left h2 {
+            font-size: 1.35rem !important;
+            margin-bottom: 8px !important;
+            line-height: 1.3 !important;
+          }
+          .home-screen-left p {
+            font-size: 0.84rem !important;
+            line-height: 1.5 !important;
+            margin-bottom: 8px !important;
+          }
+          .home-screen-right {
+            flex: 0 1 auto !important;
+            max-width: 280px !important;
+            max-height: 280px !important;
+            transform: scale(0.78);
+            transform-origin: center center;
+          }
+          .home-step-indicator {
+            right: 8px !important;
+            transform: translateY(-50%) scale(0.85) !important;
+          }
+          .home-sec2-list {
+            display: none !important; /* 移动端在第二幕隐藏复杂列表，保留主标题与示意图联动 */
+          }
+        }
+      `}</style>
 
       {/* 1. 全局柔和环境流光 (同报告大厅一致) */}
       <div className="ambient-glow-container">
@@ -304,7 +329,7 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
       />
 
       {/* 3. 页面右侧悬浮步骤指示器 */}
-      <div style={{
+      <div className="home-step-indicator" style={{
         position: 'fixed',
         right: '24px',
         top: '50%',
@@ -337,7 +362,7 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
       </div>
 
       {/* 4. 固定视口沉浸式 4 幕叙事层 */}
-      <div style={{
+      <div className="home-viewport-padding" style={{
         position: 'fixed',
         top: 0,
         left: 0,
@@ -362,18 +387,14 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
         }}>
 
           {/* 第 1 幕：痛点与 360° 全景视野 */}
-          <div ref={sec1Ref} style={{
+          <div ref={sec1Ref} className="home-screen-wrapper" style={{
             position: 'absolute',
             inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '48px',
             opacity: 1,
             transform: 'translateY(0px)'
           }}>
             {/* 左侧文案 */}
-            <div style={{ flex: '1 1 500px', maxWidth: '620px' }}>
+            <div className="home-screen-left">
               <span style={{
                 color: '#ff641e',
                 fontSize: '0.85rem',
@@ -381,32 +402,32 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
                 textTransform: 'uppercase',
                 fontWeight: 600,
                 display: 'block',
-                marginBottom: '14px'
+                marginBottom: '10px'
               }}>
                 The 360° Panorama
               </span>
               <h1 style={{
-                fontSize: 'clamp(1.8rem, 4.5vw, 2.8rem)',
+                fontSize: 'clamp(1.5rem, 4vw, 2.8rem)',
                 fontWeight: 600,
                 lineHeight: 1.28,
-                margin: '0 0 20px 0',
+                margin: '0 0 16px 0',
                 color: 'var(--color-text)'
               }}>
-                俯瞰全球市场结构，快人一步穿透海外客户与品类供应链
+                想快人一步了解你的客户吗？
               </h1>
               <p style={{
-                fontSize: '1.02rem',
+                fontSize: '0.98rem',
                 color: '#555555',
-                lineHeight: 1.8,
-                margin: '0 0 24px 0',
+                lineHeight: 1.7,
+                margin: '0 0 16px 0',
                 fontWeight: 400
               }}>
                 传统的调研被割裂在孤立的新闻、摸不透的客户底细和散落的头条中。割裂的信息只是噪音，决策慢一步，商机便差之千里。
               </p>
               <p style={{
-                fontSize: '1.02rem',
+                fontSize: '0.98rem',
                 color: '#222222',
-                lineHeight: 1.8,
+                lineHeight: 1.7,
                 margin: 0,
                 fontWeight: 500
               }}>
@@ -414,15 +435,15 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
               </p>
 
               <div style={{
-                marginTop: '36px',
+                marginTop: '24px',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px',
-                fontSize: '0.85rem',
+                fontSize: '0.82rem',
                 color: '#ff641e',
                 fontWeight: 500,
                 background: 'rgba(255, 100, 30, 0.08)',
-                padding: '6px 16px',
+                padding: '5px 14px',
                 borderRadius: '20px'
               }}>
                 向下滚动，探索平台能力
@@ -430,24 +451,21 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
             </div>
 
             {/* 右侧纯视觉示意图 */}
-            <div style={{ flex: '1 1 450px', display: 'flex', justifyContent: 'center' }}>
+            <div className="home-screen-right">
               <EcosystemRadar />
             </div>
           </div>
 
           {/* 第 2 幕：三大核心能力 (固定标题 + 随滚动向上滑动的示意看板) */}
-          <div ref={sec2Ref} style={{
+          <div ref={sec2Ref} className="home-screen-wrapper" style={{
             position: 'absolute',
             inset: 0,
             display: 'none',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '48px',
             opacity: 0,
             transform: 'translateY(24px)'
           }}>
             {/* 左侧固定标题与步骤引导 */}
-            <div style={{ flex: '1 1 460px', maxWidth: '520px' }}>
+            <div className="home-screen-left" style={{ maxWidth: '520px' }}>
               <span style={{
                 color: '#ff641e',
                 fontSize: '0.85rem',
@@ -455,29 +473,29 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
                 textTransform: 'uppercase',
                 fontWeight: 600,
                 display: 'block',
-                marginBottom: '12px'
+                marginBottom: '10px'
               }}>
                 Core Capabilities
               </span>
               <h2 style={{
-                fontSize: 'clamp(2rem, 5vw, 2.8rem)',
+                fontSize: 'clamp(1.6rem, 4.5vw, 2.8rem)',
                 fontWeight: 600,
                 lineHeight: 1.25,
-                margin: '0 0 24px 0',
+                margin: '0 0 20px 0',
                 color: 'var(--color-text)'
               }}>
                 Market Graphic 为你带来：
               </h2>
 
               {/* 3 个能力的阶段说明列表 (根据滚动位置高亮) */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div className="home-sec2-list" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {featureList.map((item, idx) => {
                   const isCurrent = featureActiveIndex === idx;
                   return (
                     <div
                       key={idx}
                       style={{
-                        padding: '14px 18px',
+                        padding: '12px 16px',
                         borderRadius: '14px',
                         background: isCurrent ? '#ffffff' : 'transparent',
                         border: isCurrent ? '1px solid rgba(255, 100, 30, 0.3)' : '1px solid transparent',
@@ -486,17 +504,17 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
                       }}
                     >
                       <div style={{
-                        fontSize: '1.05rem',
+                        fontSize: '1rem',
                         fontWeight: 600,
                         color: isCurrent ? '#ff641e' : '#666'
                       }}>
                         {idx + 1}. {item.title}
                       </div>
                       <div style={{
-                        fontSize: '0.86rem',
+                        fontSize: '0.84rem',
                         color: isCurrent ? '#444' : '#888',
-                        lineHeight: 1.6,
-                        marginTop: '6px'
+                        lineHeight: 1.55,
+                        marginTop: '4px'
                       }}>
                         {item.desc}
                       </div>
@@ -507,24 +525,21 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
             </div>
 
             {/* 右侧纯图表示意看板 (随滚动向上滑动) */}
-            <div style={{ flex: '1 1 500px', display: 'flex', justifyContent: 'center' }}>
+            <div className="home-screen-right">
               <FeatureCards activeIndex={featureActiveIndex} />
             </div>
           </div>
 
           {/* 第 3 幕：打造私人专属知识库 (Obsidian 知识图谱动态示意) */}
-          <div ref={sec3Ref} style={{
+          <div ref={sec3Ref} className="home-screen-wrapper" style={{
             position: 'absolute',
             inset: 0,
             display: 'none',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '48px',
             opacity: 0,
             transform: 'translateY(24px)'
           }}>
             {/* 左侧文案 */}
-            <div style={{ flex: '1 1 500px', maxWidth: '600px' }}>
+            <div className="home-screen-left" style={{ maxWidth: '600px' }}>
               <span style={{
                 color: '#ff641e',
                 fontSize: '0.85rem',
@@ -532,33 +547,33 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
                 textTransform: 'uppercase',
                 fontWeight: 600,
                 display: 'block',
-                marginBottom: '14px'
+                marginBottom: '10px'
               }}>
                 Personal Knowledge Graph
               </span>
               <h2 style={{
-                fontSize: 'clamp(2rem, 5vw, 3rem)',
+                fontSize: 'clamp(1.6rem, 4.5vw, 2.8rem)',
                 fontWeight: 600,
                 lineHeight: 1.25,
-                margin: '0 0 22px 0',
+                margin: '0 0 18px 0',
                 color: 'var(--color-text)'
               }}>
                 打造你自己的<br />
                 <span style={{ color: '#ff641e' }}>私人专属知识库</span>
               </h2>
               <p style={{
-                fontSize: '1.05rem',
+                fontSize: '0.98rem',
                 color: '#555555',
-                lineHeight: 1.8,
-                margin: '0 0 20px 0',
+                lineHeight: 1.7,
+                margin: '0 0 16px 0',
                 fontWeight: 400
               }}>
                 在 <strong style={{ color: '#121212' }}>MARKET GRAPHIC</strong>，客户360°洞察和品类360°洞察绝非孤立存在。
               </p>
               <p style={{
-                fontSize: '1.05rem',
+                fontSize: '0.98rem',
                 color: '#222222',
-                lineHeight: 1.8,
+                lineHeight: 1.7,
                 margin: 0,
                 fontWeight: 500
               }}>
@@ -567,7 +582,7 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
             </div>
 
             {/* 右侧 Obsidian 动态知识图谱示意 */}
-            <div style={{ flex: '1 1 450px', display: 'flex', justifyContent: 'center' }}>
+            <div className="home-screen-right">
               <KnowledgeNetwork />
             </div>
           </div>
@@ -579,6 +594,7 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
             display: 'none',
             alignItems: 'center',
             justifyContent: 'center',
+            padding: '0 16px',
             opacity: 0,
             transform: 'translateY(24px)'
           }}>

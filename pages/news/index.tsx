@@ -194,10 +194,7 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
         onShowAuthModal={() => setShowAuthModal(true)} 
       />
 
-      <div style={{
-        maxWidth: '1400px',
-        margin: '0 auto',
-        padding: '110px 40px 80px 40px',
+      <div className="responsive-page-container" style={{
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
       }}>
 

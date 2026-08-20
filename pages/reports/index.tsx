@@ -85,11 +85,7 @@ export default function ReportsPage({ reports: initialReports, userId, userRole,
         onShowAuthModal={() => setShowAuthModal(true)}
       />
 
-      <div style={{
-        maxWidth: '1400px',
-        margin: '0 auto',
-        padding: '110px 40px 80px 40px'
-      }}>
+      <div className="responsive-page-container">
         {/* 页面标题 */}
         <div style={{ marginBottom: '48px' }}>
           <span style={{

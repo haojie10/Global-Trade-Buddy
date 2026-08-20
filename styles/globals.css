@@ -411,3 +411,51 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+/* 全局移动端响应式与防溢出强化 */
+.responsive-page-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 110px 40px 80px 40px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .responsive-page-container {
+    padding: 85px 16px 40px 16px !important;
+  }
+  
+  h1.font-editorial {
+    font-size: 1.85rem !important;
+  }
+
+  .report-filter-container,
+  .news-filter-container {
+    padding: 12px 14px !important;
+    gap: 10px !important;
+  }
+
+  .report-filter-container select,
+  .news-filter-container select {
+    width: 100% !important;
+  }
+}
+
+/* 报告与文章内容区内的表格和图片移动端防溢出保护 */
+.report-content table, 
+.article-content table,
+.rich-text-content table {
+  display: block;
+  max-width: 100% !important;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.report-content img, 
+.article-content img,
+.rich-text-content img {
+  max-width: 100% !important;
+  height: auto !important;
+  border-radius: 8px;
+}
+
+
