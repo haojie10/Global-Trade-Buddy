@@ -75,6 +75,7 @@ async function main() {
       headers: {
         'Content-Type': 'text/plain',
         'Content-Length': Buffer.byteLength(payload)
+      }
     }, (res) => {
       let body = '';
       res.on('data', chunk => body += chunk);
