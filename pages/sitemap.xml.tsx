@@ -53,17 +53,23 @@ function generateSiteMap(reports: any[], newsList: any[], latestDate: string) {
 }
 
 export const getServerSideProps: GetServerSideProps = async ({ res }) => {
-  let reports = [];
-  let newsList = [];
+  let reports: any[] = [];
+  let newsList: any[] = [];
   
+  let client;
   try {
-    const reportsResult = await pool.query('SELECT id, created_at FROM reports ORDER BY created_at DESC');
-    reports = reportsResult.rows;
+    client = await pool.connect();
+    const reportsResult = await client.query('SELECT id, created_at FROM reports ORDER BY created_at DESC');
+    reports = reportsResult.rows || [];
 
-    const newsResult = await pool.query("SELECT id, published_at FROM news WHERE status='published' ORDER BY published_at DESC");
-    newsList = newsResult.rows;
+    const newsResult = await client.query("SELECT id, published_at FROM news WHERE status='published' ORDER BY published_at DESC");
+    newsList = newsResult.rows || [];
   } catch (error) {
-    console.error('Error fetching sitemap data:', error);
+    console.error('Sitemap 数据生成错误:', error);
+  } finally {
+    if (client) {
+      client.release();
+    }
   }
 
   const latestDate = new Date(
