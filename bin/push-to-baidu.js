@@ -75,7 +75,6 @@ async function main() {
       headers: {
         'Content-Type': 'text/plain',
         'Content-Length': Buffer.byteLength(payload)
-      }
     }, (res) => {
       let body = '';
       res.on('data', chunk => body += chunk);
@@ -91,12 +90,15 @@ async function main() {
           }
         } catch (e) {
           console.log('\n百度响应原始内容:', body);
+        } finally {
+          pool.end();
         }
       });
     });
 
     req.on('error', (err) => {
       console.error('❌ 发送推送请求失败:', err.message);
+      pool.end();
     });
 
     req.write(payload);
@@ -104,8 +106,7 @@ async function main() {
 
   } catch (err) {
     console.error('❌ 数据库查询失败:', err);
-  } finally {
-    client.release();
+    pool.end();
   }
 }
 
