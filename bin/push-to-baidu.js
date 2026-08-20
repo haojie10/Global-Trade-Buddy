@@ -1,15 +1,15 @@
 /**
  * Market Graphic (外贸智友) - 百度搜索资源平台主动推送脚本
  * 
- * 作用：一键读取数据库中已发布的所有研报与行业资讯 URL，批量推入百度蜘蛛即时抓取队列。
- * 使用方法：
- *   1. 在 .env 中配置 BAIDU_PUSH_TOKEN=你的百度推送Token
- *   2. 执行: node bin/push-to-baidu.js
+ * 作用：一键读取数据库中已发布的所有研报与行业资讯 URL，推入百度蜘蛛即时抓取队列。
+ * 用法:
+ *   node bin/push-to-baidu.js          (默认推送前 10 条最核心页面，适配百度新站初始每日配额)
+ *   node bin/push-to-baidu.js 50       (推送前 50 条)
+ *   node bin/push-to-baidu.js all      (全量 500+ 条全推)
  */
 
 const { Pool } = require('pg');
 const path = require('path');
-const https = require('https');
 const http = require('http');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
@@ -27,7 +27,7 @@ async function main() {
   console.log(`🎯 目标推送站点: ${DOMAIN}`);
   console.log(`🔑 调用凭证 Token: ${BAIDU_TOKEN ? BAIDU_TOKEN.slice(0, 4) + '****' : '未设置'}\n`);
 
-  const urls = [
+  const allUrls = [
     `${DOMAIN}/`,
     `${DOMAIN}/reports`,
     `${DOMAIN}/news`
@@ -35,40 +35,47 @@ async function main() {
 
   try {
     const client = await pool.connect();
+    let reportsCount = 0;
+    let newsCount = 0;
     try {
-      // 1. 获取所有已发布研报
+      // 1. 获取所有已发布研报（按创建时间倒序）
       const reportsRes = await client.query('SELECT id FROM reports ORDER BY created_at DESC');
+      reportsCount = reportsRes.rows.length;
       reportsRes.rows.forEach(r => {
-        urls.push(`${DOMAIN}/reports/${r.id}`);
+        allUrls.push(`${DOMAIN}/reports/${r.id}`);
       });
 
       // 2. 获取所有已发布资讯
       const newsRes = await client.query("SELECT id FROM news WHERE status = 'published' ORDER BY published_at DESC");
+      newsCount = newsRes.rows.length;
       newsRes.rows.forEach(n => {
-        urls.push(`${DOMAIN}/news/${n.id}`);
+        allUrls.push(`${DOMAIN}/news/${n.id}`);
       });
 
-      console.log(`📊 成功检索到待推送链接共 ${urls.length} 条：`);
-      console.log(`   - 核心主页与大厅: 3 条`);
-      console.log(`   - 深度商业研报: ${reportsRes.rows.length} 篇`);
-      console.log(`   - 行业热点资讯: ${newsRes.rows.length} 篇\n`);
+      console.log(`📊 数据库全量内容索引: 共 ${allUrls.length} 条（研报: ${reportsCount} 篇, 资讯: ${newsCount} 篇）`);
     } finally {
       client.release();
     }
 
-    if (!BAIDU_TOKEN) {
-      console.log('📋 待推送 URL 列表预览 (前 10 条):');
-      urls.slice(0, 10).forEach((u, i) => console.log(`   ${i + 1}. ${u}`));
-      if (urls.length > 10) console.log(`   ... 剩余 ${urls.length - 10} 条`);
-      console.log('\n💡 请配置 BAIDU_PUSH_TOKEN 后再次运行以完成推送。');
-      return;
+    // 解析推送数量限制（默认 10 条适配新站额度）
+    const arg = process.argv[2];
+    let pushUrls = allUrls;
+    if (arg === 'all') {
+      pushUrls = allUrls;
+    } else if (arg && !isNaN(parseInt(arg))) {
+      pushUrls = allUrls.slice(0, parseInt(arg));
+    } else {
+      pushUrls = allUrls.slice(0, 10);
     }
+
+    console.log(`👉 本次选定推送 URL: ${pushUrls.length} 条（包含主站核心大厅及最新核心研报）\n`);
+    pushUrls.forEach((u, i) => console.log(`   ${i + 1}. ${u}`));
 
     // 3. 执行向百度 API 的 POST 推送
     const targetUrl = `http://data.zz.baidu.com/urls?site=${DOMAIN}&token=${BAIDU_TOKEN}`;
-    const payload = urls.join('\n');
+    const payload = pushUrls.join('\n');
 
-    console.log('⏳ 正在向百度蜘蛛提交 URL 列表...');
+    console.log('\n⏳ 正在向百度蜘蛛提交当前批次 URL...');
 
     const req = http.request(targetUrl, {
       method: 'POST',
@@ -84,8 +91,9 @@ async function main() {
           const result = JSON.parse(body);
           if (result.success) {
             console.log('\n🎉 百度推送成功！');
-            console.log(`   - 本次成功推送条数 (success): ${result.success}`);
-            console.log(`   - 当天剩余可推送条数 (remain): ${result.remain}`);
+            console.log(`   - 本次成功接收条数 (success): ${result.success}`);
+            console.log(`   - 今日剩余可用配额 (remain): ${result.remain}`);
+            console.log('\n💡 提示：百度对新站初始分配每日 10 条 API 配额，随着蜘蛛持续抓取，每日配额会自动提升至上千条！');
           } else {
             console.error('\n❌ 百度推送返回错误:', result);
           }
