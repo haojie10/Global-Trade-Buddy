@@ -10,8 +10,8 @@ import Head from 'next/head';
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const isAdmin = router.pathname.startsWith('/admin');
-  const noFooterPages = ['/', '/my-graph'];
-  const showFooter = !isAdmin && !noFooterPages.includes(router.pathname);
+  const isHome = router.pathname === '/';
+  const showFooter = !isAdmin && isHome;
 
   return (
     <ErrorBoundary>

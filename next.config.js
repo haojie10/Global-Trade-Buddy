@@ -6,6 +6,15 @@ const nextConfig = {
   // 仅在 Docker 容器化构建时启用 standalone（如 腾讯云轻量服务器）
   ...(process.env.NEXT_OUTPUT_STANDALONE === 'true' ? { output: 'standalone' } : {}),
 
+  async rewrites() {
+    return [
+      {
+        source: '/baidu_verify_:slug*.html',
+        destination: '/api/verify-baidu',
+      },
+    ];
+  },
+
   async headers() {
     return [
       {
