@@ -25,11 +25,11 @@ function generateSiteMap(reports: any[], newsList: any[], latestDate: string) {
        <changefreq>daily</changefreq>
      </url>
      ${reports
-       .map(({ id, updated_at, created_at }) => {
+       .map(({ id, created_at }) => {
          return `
        <url>
            <loc>${EXTERNAL_DATA_URL}/reports/${id}</loc>
-           <lastmod>${new Date(updated_at || created_at || Date.now()).toISOString()}</lastmod>
+           <lastmod>${new Date(created_at || Date.now()).toISOString()}</lastmod>
            <priority>0.7</priority>
            <changefreq>weekly</changefreq>
        </url>
@@ -57,7 +57,7 @@ export const getServerSideProps: GetServerSideProps = async ({ res }) => {
   let newsList = [];
   
   try {
-    const reportsResult = await pool.query('SELECT id, updated_at, created_at FROM reports ORDER BY updated_at DESC');
+    const reportsResult = await pool.query('SELECT id, created_at FROM reports ORDER BY created_at DESC');
     reports = reportsResult.rows;
 
     const newsResult = await pool.query("SELECT id, published_at FROM news WHERE status='published' ORDER BY published_at DESC");
@@ -67,7 +67,7 @@ export const getServerSideProps: GetServerSideProps = async ({ res }) => {
   }
 
   const latestDate = new Date(
-    reports[0]?.updated_at || newsList[0]?.published_at || Date.now()
+    reports[0]?.created_at || newsList[0]?.published_at || Date.now()
   ).toISOString();
 
   const sitemap = generateSiteMap(reports, newsList, latestDate);
