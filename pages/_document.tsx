@@ -4,9 +4,9 @@ export default function Document() {
   return (
     <Html lang="zh-CN">
       <Head>
-        {/* 搜索引擎站长平台所有权验证 Meta 占位 */}
+        {/* 搜索引擎站长平台所有权验证 Meta */}
         <meta name="baidu-site-verification" content={process.env.NEXT_PUBLIC_BAIDU_SITE_VERIFICATION || "code-verification"} />
-        <meta name="google-site-verification" content={process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || "google-verification"} />
+        <meta name="google-site-verification" content="google0eb32fd071eb9e70" />
 
         {/* 高性能字体预连接与跨源加速 (font-display: swap 保障 0 渲染阻塞与原生视觉完全一致) */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
