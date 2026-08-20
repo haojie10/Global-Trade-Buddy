@@ -13,8 +13,8 @@ const https = require('https');
 const http = require('http');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
-const DOMAIN = 'https://marketgraphic.cn';
-const BAIDU_TOKEN = process.env.BAIDU_PUSH_TOKEN;
+const DOMAIN = process.env.BAIDU_PUSH_SITE || 'https://www.marketgraphic.cn';
+const BAIDU_TOKEN = process.env.BAIDU_PUSH_TOKEN || 'RHoP3e1b7xMRJAzs';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL
@@ -24,14 +24,8 @@ async function main() {
   console.log('====================================================');
   console.log('🚀 Market Graphic - 百度 API 主动推送自动化工具');
   console.log('====================================================\n');
-
-  if (!BAIDU_TOKEN) {
-    console.warn('⚠️  未在 .env 中检测到 BAIDU_PUSH_TOKEN！');
-    console.log('👉 获取方式：');
-    console.log('   1. 登录百度搜索资源平台 (https://ziyuan.baidu.com/)');
-    console.log('   2. 进入【普通收录】 -> 【API提交】获取接口调用凭证 token');
-    console.log('   3. 在 .env 中添加: BAIDU_PUSH_TOKEN=你的Token\n');
-  }
+  console.log(`🎯 目标推送站点: ${DOMAIN}`);
+  console.log(`🔑 调用凭证 Token: ${BAIDU_TOKEN ? BAIDU_TOKEN.slice(0, 4) + '****' : '未设置'}\n`);
 
   const urls = [
     `${DOMAIN}/`,
