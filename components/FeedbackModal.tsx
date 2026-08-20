@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 interface FeedbackModalProps {
   isOpen: boolean;
@@ -15,6 +16,12 @@ export default function FeedbackModal({
   userEmail = '',
   onShowAuthModal
 }: FeedbackModalProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // 主模式: 'custom_report' (调研报告定制) | 'feedback' (平台改善意见)
   const [mainTab, setMainTab] = useState<'custom_report' | 'feedback'>('custom_report');
   
@@ -75,7 +82,7 @@ export default function FeedbackModal({
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,29 +108,29 @@ export default function FeedbackModal({
           return;
         }
         payload = {
-          channel: targetChannel.trim(),
-          productName: productName.trim(),
-          marketRegion: categoryMarket.trim()
+          target_channel: targetChannel.trim(),
+          product_name: productName.trim(),
+          category_market: categoryMarket.trim(),
         };
       } else {
-        if (!companyName.trim() || !companyUrl.trim() || !companyMarket.trim()) {
-          setErrorMsg('请填写完整的目标公司名称、公司官网地址和目标市场');
+        if (!companyName.trim() || !companyMarket.trim()) {
+          setErrorMsg('请填写完整的企业名称和所属市场');
           return;
         }
         payload = {
-          companyName: companyName.trim(),
-          companyUrl: companyUrl.trim(),
-          marketRegion: companyMarket.trim()
+          company_name: companyName.trim(),
+          company_url: companyUrl.trim(),
+          company_market: companyMarket.trim(),
         };
       }
     } else {
       if (!feedbackContent.trim()) {
-        setErrorMsg('请填写具体的平台改善意见内容');
+        setErrorMsg('请填写具体的反馈建议内容');
         return;
       }
       payload = {
         category: feedbackCategory,
-        content: feedbackContent.trim()
+        content: feedbackContent.trim(),
       };
     }
 
@@ -133,10 +140,10 @@ export default function FeedbackModal({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          requestType,
-          contactEmail: boundEmail || '',
-          payload
-        })
+          request_type: requestType,
+          payload,
+          user_email: boundEmail
+        }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -163,31 +170,46 @@ export default function FeedbackModal({
     boxSizing: 'border-box'
   };
 
-  return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'rgba(15, 23, 42, 0.25)',
-      backdropFilter: 'blur(16px)',
-      WebkitBackdropFilter: 'blur(16px)',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: 10000
-    }}>
-      <div style={{
-        background: '#ffffff',
-        borderRadius: '20px',
-        padding: '32px 28px',
-        width: '90%',
-        maxWidth: '460px',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)',
-        position: 'relative',
-        color: '#0f172a'
-      }}>
+  const modalContent = (
+    <div 
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100vw',
+        height: '100vh',
+        background: 'rgba(15, 23, 42, 0.4)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 999999,
+        padding: '24px 16px',
+        boxSizing: 'border-box',
+        overflowY: 'auto'
+      }}
+    >
+      <div 
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: '#ffffff',
+          borderRadius: '24px',
+          padding: '32px 28px',
+          width: '100%',
+          maxWidth: '480px',
+          maxHeight: 'min(90vh, 760px)',
+          overflowY: 'auto',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          position: 'relative',
+          color: '#0f172a',
+          boxSizing: 'border-box'
+        }}
+      >
         {/* 关闭按钮 */}
         <button
           onClick={onClose}
@@ -472,4 +494,6 @@ export default function FeedbackModal({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

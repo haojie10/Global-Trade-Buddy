@@ -458,4 +458,10 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 8px;
 }
 
+/* 报告全屏沉浸阅读时彻底隐藏全局 Footer */
+body.report-fullscreen-active footer {
+  display: none !important;
+}
+
+
 

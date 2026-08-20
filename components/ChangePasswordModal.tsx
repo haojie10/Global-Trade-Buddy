@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 interface ChangePasswordModalProps {
   isOpen: boolean;
@@ -6,12 +7,17 @@ interface ChangePasswordModalProps {
 }
 
 export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProps) {
+  const [mounted, setMounted] = useState(false);
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // 弹框开启或关闭时，自动清空数据
   useEffect(() => {
@@ -22,7 +28,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
     setSuccessMsg('');
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   const inputStyle = {
     background: '#f8fafc',
@@ -106,36 +112,43 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
     }
   };
 
-  return (
+  const modalContent = (
     <div 
       onClick={onClose}
       style={{
         position: 'fixed',
+        inset: 0,
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
-        background: 'rgba(0, 0, 0, 0.4)',
+        width: '100vw',
+        height: '100vh',
+        background: 'rgba(15, 23, 42, 0.4)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 1000
+        zIndex: 999999,
+        padding: '24px 16px',
+        boxSizing: 'border-box',
+        overflowY: 'auto'
       }}
     >
       <div 
         onClick={e => e.stopPropagation()}
         style={{
-          background: 'rgba(255, 255, 255, 0.75)',
-          backdropFilter: 'blur(30px)',
-          WebkitBackdropFilter: 'blur(30px)',
+          background: '#ffffff',
           border: '1px solid rgba(18, 18, 18, 0.08)',
-          borderRadius: 'var(--border-radius)',
-          padding: '40px',
-          width: '400px',
+          borderRadius: '24px',
+          padding: '36px 32px',
+          width: '100%',
+          maxWidth: '420px',
+          maxHeight: 'min(90vh, 700px)',
+          overflowY: 'auto',
           boxSizing: 'border-box',
-          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.05)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
           position: 'relative'
         }}
       >
@@ -210,7 +223,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
               padding: '12px', 
               fontSize: '0.95rem', 
               width: '100%', 
-              marginTop: '8px',
+              marginTop: '8px', 
               cursor: isSubmitting ? 'not-allowed' : 'pointer',
               opacity: isSubmitting ? 0.7 : 1
             }}
@@ -221,4 +234,6 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

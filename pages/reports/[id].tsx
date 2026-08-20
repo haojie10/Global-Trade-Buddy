@@ -161,11 +161,14 @@ export default function ReportDetailPage({
   React.useEffect(() => {
     if (isFullscreen) {
       document.body.style.overflow = 'hidden';
+      document.body.classList.add('report-fullscreen-active');
     } else {
       document.body.style.overflow = 'unset';
+      document.body.classList.remove('report-fullscreen-active');
     }
     return () => {
       document.body.style.overflow = 'unset';
+      document.body.classList.remove('report-fullscreen-active');
     };
   }, [isFullscreen]);
 

@@ -10,6 +10,8 @@ import Head from 'next/head';
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const isAdmin = router.pathname.startsWith('/admin');
+  const noFooterPages = ['/', '/my-graph'];
+  const showFooter = !isAdmin && !noFooterPages.includes(router.pathname);
 
   return (
     <ErrorBoundary>
@@ -26,7 +28,7 @@ export default function App({ Component, pageProps }: AppProps) {
         <div style={{ flex: '1 0 auto' }}>
           <Component {...pageProps} />
         </div>
-        {!isAdmin && <Footer />}
+        {showFooter && <Footer />}
       </div>
     </ErrorBoundary>
   );
