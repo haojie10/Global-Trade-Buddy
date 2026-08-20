@@ -229,24 +229,63 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
       position: 'relative'
     }}>
       <Head>
-        <title>Market Graphic - 俯瞰全球市场结构</title>
-        <meta name="description" content="Market Graphic（外贸智友）是 AI 驱动的深度外贸调研平台，提供每周行业资讯、客户 360° 穿透洞察和品类准入分析，助力出海企业精准决策。" />
-        <meta name="keywords" content="外贸调研, 出海情报, 品类洞察, 买家分析, 全球市场, 跨境电商, AI 商业智能, 外贸智友, Market Graphic" />
-        <meta name="author" content="外贸智友 GlobalTradeBuddy" />
+        <title>Market Graphic (外贸智友) - 俯瞰全球市场结构 · AI 深度出海调研平台</title>
+        <meta name="description" content="Market Graphic（外贸智友）是 AI 驱动的深度外贸商业情报与品类调研平台，提供海外买家 360° 供应链穿透洞察、重点品类准入标准分析及每日全球外贸动态，助力中国制造企业精准出海决策。" />
+        <meta name="keywords" content="Market Graphic, 外贸智友, 外贸调研, 出海情报, 海外买家分析, 品类洞察, 供应链穿透, 跨境电商, AI 商业智能, GlobalTradeBuddy" />
+        <meta name="author" content="外贸智友 Market Graphic" />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://marketgraphic.cn" />
         {/* Open Graph */}
         <meta property="og:type" content="website" />
-        <meta property="og:title" content="Market Graphic - 俯瞰全球市场结构" />
-        <meta property="og:description" content="AI 驱动的深度外贸调研平台，每周行业资讯、客户 360° 穿透洞察和品类准入分析。" />
+        <meta property="og:title" content="Market Graphic (外贸智友) - 俯瞰全球市场结构 · AI 深度出海调研平台" />
+        <meta property="og:description" content="AI 驱动的深度外贸调研平台，海外买家 360° 供应链穿透洞察、重点品类准入分析与实时行业动态。" />
         <meta property="og:image" content="https://marketgraphic.cn/images/discover_focus_panorama.jpg" />
         <meta property="og:url" content="https://marketgraphic.cn" />
-        <meta property="og:site_name" content="Market Graphic" />
+        <meta property="og:site_name" content="Market Graphic (外贸智友)" />
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Market Graphic - 俯瞰全球市场结构" />
-        <meta name="twitter:description" content="AI 驱动的深度外贸调研平台，每周行业资讯、客户 360° 穿透洞察和品类准入分析。" />
+        <meta name="twitter:title" content="Market Graphic (外贸智友) - 俯瞰全球市场结构" />
+        <meta name="twitter:description" content="AI 驱动的深度外贸调研平台，海外买家 360° 供应链穿透洞察与品类准入分析。" />
         <meta name="twitter:image" content="https://marketgraphic.cn/images/discover_focus_panorama.jpg" />
+
+        {/* 结构化数据 (JSON-LD)：声明官方平台 WebSite 与 Organization 实体 */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@graph': [
+                {
+                  '@type': 'WebSite',
+                  '@id': 'https://marketgraphic.cn/#website',
+                  'url': 'https://marketgraphic.cn',
+                  'name': 'Market Graphic',
+                  'alternateName': ['外贸智友', 'GlobalTradeBuddy', 'MarketGraphic'],
+                  'description': 'AI 驱动的全球出海商业情报与品类调研平台',
+                  'publisher': {
+                    '@id': 'https://marketgraphic.cn/#organization'
+                  },
+                  'potentialAction': {
+                    '@type': 'SearchAction',
+                    'target': 'https://marketgraphic.cn/reports?q={search_term_string}',
+                    'query-input': 'required name=search_term_string'
+                  }
+                },
+                {
+                  '@type': 'Organization',
+                  '@id': 'https://marketgraphic.cn/#organization',
+                  'name': 'Market Graphic (外贸智友)',
+                  'alternateName': ['外贸智友', 'GlobalTradeBuddy'],
+                  'url': 'https://marketgraphic.cn',
+                  'logo': {
+                    '@type': 'ImageObject',
+                    'url': 'https://marketgraphic.cn/images/mg_logo.png'
+                  }
+                }
+              ]
+            })
+          }}
+        />
       </Head>
 
       {/* 1. 全局柔和环境流光 (同报告大厅一致) */}
@@ -347,13 +386,13 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
                 The 360° Panorama
               </span>
               <h1 style={{
-                fontSize: 'clamp(2rem, 5vw, 3.2rem)',
+                fontSize: 'clamp(1.8rem, 4.5vw, 2.8rem)',
                 fontWeight: 600,
-                lineHeight: 1.25,
+                lineHeight: 1.28,
                 margin: '0 0 20px 0',
                 color: 'var(--color-text)'
               }}>
-                想快人一步了解你的客户吗？
+                俯瞰全球市场结构，快人一步穿透海外客户与品类供应链
               </h1>
               <p style={{
                 fontSize: '1.02rem',

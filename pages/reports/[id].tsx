@@ -27,6 +27,10 @@ interface ReportDetailProps {
     isUnlocked: boolean;
     content_html: string | null;
   };
+  previewData?: {
+    toc: string[];
+    excerpt: string;
+  };
   related: RelatedReport[];
   canonicalUrl?: string;
   siteUrl?: string;
@@ -40,6 +44,7 @@ interface ReportDetailProps {
 
 export default function ReportDetailPage({
   report, 
+  previewData = { toc: [], excerpt: '' },
   related, 
   canonicalUrl,
   siteUrl,
@@ -259,11 +264,11 @@ export default function ReportDetailPage({
         position: 'relative'
       }}>
         <Head>
-          {/* 基础 TDK (百度/搜狗/360) */}
-          <title>{`${report.title} | 外贸智友 - 深度商业研报`}</title>
+          {/* 基础 TDK (百度/搜狗/360/谷歌) */}
+          <title>{`${report.title} | Market Graphic (外贸智友)`}</title>
           <meta name="description" content={report.summary || '全球出海深度商业与品类调研报告，助力中国外贸企业穿透海外供应链。'} />
-          <meta name="keywords" content={`出海调研, 商业洞察, ${report.category === 'customer' ? '买家洞察' : '品类洞察'}, ${report.market_region}, 外贸报告, 外贸智友, GlobalTradeBuddy`} />
-          <meta name="author" content="外贸智友 GlobalTradeBuddy" />
+          <meta name="keywords" content={`出海调研, 商业洞察, ${report.category === 'customer' ? '买家洞察' : '品类洞察'}, ${report.market_region}, 外贸报告, 外贸智友, Market Graphic, GlobalTradeBuddy`} />
+          <meta name="author" content="外贸智友 Market Graphic" />
           <meta name="robots" content="index, follow" />
           <meta name="applicable-device" content="pc,mobile" />
           {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
@@ -272,20 +277,20 @@ export default function ReportDetailPage({
           <meta name="thumbnail" content={siteUrl ? `${siteUrl}/images/discover_focus_panorama.jpg` : '/images/discover_focus_panorama.jpg'} />
 
           {/* 微信 / QQ 网页分享协议 */}
-          <meta itemProp="name" content={`${report.title} | 外贸智友`} />
+          <meta itemProp="name" content={`${report.title} | Market Graphic (外贸智友)`} />
           <meta itemProp="description" content={report.summary || '全球出海深度商业与品类调研报告，助力中国外贸企业穿透海外供应链。'} />
           <meta itemProp="image" content={siteUrl ? `${siteUrl}/images/discover_focus_panorama.jpg` : '/images/discover_focus_panorama.jpg'} />
 
           {/* 微信/微博/知乎/抖音通用 OpenGraph */}
           <meta property="og:type" content="article" />
-          <meta property="og:title" content={`${report.title} | 外贸智友`} />
+          <meta property="og:title" content={`${report.title} | Market Graphic (外贸智友)`} />
           <meta property="og:description" content={report.summary || '全球出海深度商业与品类调研报告，助力中国外贸企业穿透海外供应链。'} />
           <meta property="og:image" content={siteUrl ? `${siteUrl}/images/discover_focus_panorama.jpg` : '/images/discover_focus_panorama.jpg'} />
           {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
-          <meta property="og:site_name" content="外贸智友 GlobalTradeBuddy" />
+          <meta property="og:site_name" content="Market Graphic (外贸智友)" />
 
           <meta name="twitter:card" content="summary_large_image" />
-          <meta name="twitter:title" content={`${report.title} | 外贸智友`} />
+          <meta name="twitter:title" content={`${report.title} | Market Graphic (外贸智友)`} />
           <meta name="twitter:description" content={report.summary || `${report.title} — 深度商业研报`} />
           <meta name="twitter:image" content={siteUrl ? `${siteUrl}/images/discover_focus_panorama.jpg` : '/images/discover_focus_panorama.jpg'} />
 
@@ -294,14 +299,15 @@ export default function ReportDetailPage({
             '@type': 'Article',
             headline: report.title,
             description: report.summary || `${report.title} — 深度商业研报`,
+            image: [siteUrl ? `${siteUrl}/images/discover_focus_panorama.jpg` : 'https://marketgraphic.cn/images/discover_focus_panorama.jpg'],
             author: {
               '@type': 'Organization',
-              name: '外贸智友 GlobalTradeBuddy',
+              name: '外贸智友 Market Graphic',
               url: 'https://marketgraphic.cn'
             },
             publisher: {
               '@type': 'Organization',
-              name: 'Market Graphic',
+              name: 'Market Graphic (外贸智友)',
               url: 'https://marketgraphic.cn',
               logo: {
                 '@type': 'ImageObject',
@@ -655,55 +661,177 @@ export default function ReportDetailPage({
                 </div>
               </div>
             ) : (
-              // 未解锁：呈现高斯模糊与引导解锁弹窗
-              <div>
-                <div style={{ filter: 'blur(8px)', userSelect: 'none', pointerEvents: 'none', opacity: 0.15, lineHeight: 1.8, color: 'var(--color-muted)' }}>
-                  <p>这里是高度敏感的外贸客户交易细节及供应链核心数据分析...</p>
-                  <p>包含该买家在过去三年的采购总量、核心供应商分布、以及针对各大关税政策的应对变化调整。</p>
-                  <p>在海关数据记录中，该客户具有明显的采购周期性特征，且主要的议价权在以下决策人名下...</p>
-                </div>
-                
-                {/* 解锁弹窗 */}
-                <div style={{
-                  position: 'absolute',
-                  top: '50px',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  width: '90%',
-                  maxWidth: '450px',
-                  background: 'rgba(253, 251, 247, 0.75)',
-                  border: 'none',
-                  borderRadius: 'var(--border-radius)',
-                  padding: '36px 30px',
-                  textAlign: 'center',
-                  boxShadow: '0 20px 45px rgba(160, 109, 68, 0.06)',
-                  zIndex: 10,
-                  backdropFilter: 'blur(20px)',
-                  WebkitBackdropFilter: 'blur(20px)',
-                  color: 'var(--color-text)'
-                }}>
-                  <h3 style={{ margin: '0 0 10px 0', fontSize: '1.25rem', fontWeight: 300, letterSpacing: '-0.3px' }}>解锁报告阅读全文</h3>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--color-muted)', marginBottom: '24px', lineHeight: 1.5, fontWeight: 300 }}>
-                    此报告为付费增值资讯。您可以消耗 1 次免费额度，或通过微信/支付宝扫码付费解锁。
+              // 未解锁状态：展现结构化研报全景大纲、前导核心摘要与引导解锁卡片（既对爬虫友好，又严格保护付费数据）
+              <div style={{ position: 'relative' }}>
+                {/* 1. 结构化大纲与核心导读公开展示区 */}
+                <div
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.65)',
+                    backdropFilter: 'blur(15px)',
+                    WebkitBackdropFilter: 'blur(15px)',
+                    border: '1px solid rgba(18, 18, 18, 0.08)',
+                    borderRadius: 'var(--border-radius)',
+                    padding: '32px 36px',
+                    marginBottom: '32px',
+                    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.02)'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                    <span style={{ fontSize: '1.1rem' }}>📌</span>
+                    <h3 style={{ fontSize: '1.15rem', fontWeight: 600, color: 'var(--color-text)', margin: 0 }}>
+                      研报核心分析维度与前导摘要
+                    </h3>
+                  </div>
+
+                  {/* 核心导读文本 */}
+                  <p style={{
+                    fontSize: '0.92rem',
+                    lineHeight: 1.8,
+                    color: 'var(--color-text)',
+                    margin: '0 0 24px 0',
+                    fontWeight: 300,
+                    textAlign: 'justify'
+                  }}>
+                    {previewData.excerpt || report.summary || '本篇商业洞察研报基于全球公开海关提单、企业官方财报及国际行业协会公报进行多维事实交叉验证，深度剖析目标市场供应链网络、买家采购偏好与核心准入技术标准。'}
                   </p>
-                  <button 
-                    onClick={handleUnlock}
-                    className="accent-glow"
-                    style={{
-                      padding: '14px 28px',
-                      fontSize: '0.95rem',
-                      fontWeight: 500,
-                      width: '100%',
-                      background: 'var(--color-accent)',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: 'var(--border-radius)',
-                      cursor: 'pointer',
-                      transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
-                    }}
-                  >
-                    {userId ? '立即解锁报告 (消耗 1 次额度)' : '请先登录后再解锁'}
-                  </button>
+
+                  {/* 研报全景大纲目录速览 */}
+                  {previewData.toc && previewData.toc.length > 0 && (
+                    <div>
+                      <div style={{
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                        color: 'var(--color-muted)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '1px',
+                        marginBottom: '14px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}>
+                        <span>📑</span> 研报包含的核心分析章节大纲 (Table of Contents)
+                      </div>
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                          gap: '12px'
+                        }}
+                      >
+                        {previewData.toc.map((chapter, idx) => (
+                          <div
+                            key={idx}
+                            style={{
+                              backgroundColor: '#ffffff',
+                              border: '1px solid rgba(18, 18, 18, 0.06)',
+                              borderRadius: '8px',
+                              padding: '12px 16px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '10px',
+                              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.01)'
+                            }}
+                          >
+                            <span
+                              style={{
+                                width: '22px',
+                                height: '22px',
+                                borderRadius: '50%',
+                                backgroundColor: 'rgba(255, 100, 30, 0.1)',
+                                color: 'var(--color-accent, #ff641e)',
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0
+                              }}
+                            >
+                              {idx + 1}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: '0.88rem',
+                                color: 'var(--color-text)',
+                                fontWeight: 400,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              {chapter}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. 付费深度数据遮罩与解锁卡片 */}
+                <div style={{ position: 'relative', minHeight: '280px' }}>
+                  <div style={{ filter: 'blur(8px)', userSelect: 'none', pointerEvents: 'none', opacity: 0.18, lineHeight: 1.9, color: 'var(--color-muted)' }}>
+                    <p>【高敏感核心供应链数据】该买家在过去三年的核心供货网络拓扑分布，涵盖关键工厂出货周期与议价能力权重分析...</p>
+                    <p>【深度财务与交易风险穿透】针对欧盟最新环保与碳关税政策调整，目标买家在下半年的集中直采类目与规格偏好演进模型...</p>
+                    <p>【交互式全景图表】包含上游供应商梯队图谱、同行竞争矩阵对比及各核心决策人商务接洽要点...</p>
+                  </div>
+                  
+                  {/* 解锁弹窗 */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '20px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: '90%',
+                    maxWidth: '460px',
+                    background: 'rgba(253, 251, 247, 0.92)',
+                    border: '1px solid rgba(18, 18, 18, 0.08)',
+                    borderRadius: 'var(--border-radius)',
+                    padding: '36px 32px',
+                    textAlign: 'center',
+                    boxShadow: '0 20px 50px rgba(0, 0, 0, 0.1)',
+                    zIndex: 10,
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                    color: 'var(--color-text)'
+                  }}>
+                    <div style={{
+                      width: '44px',
+                      height: '44px',
+                      borderRadius: '12px',
+                      backgroundColor: 'rgba(255, 100, 30, 0.1)',
+                      color: 'var(--color-accent, #ff641e)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      margin: '0 auto 16px auto',
+                      fontSize: '1.3rem'
+                    }}>
+                      🔒
+                    </div>
+                    <h3 style={{ margin: '0 0 10px 0', fontSize: '1.25rem', fontWeight: 600, letterSpacing: '-0.3px' }}>解锁研报阅读完整深度情报</h3>
+                    <p style={{ fontSize: '0.86rem', color: 'var(--color-muted)', marginBottom: '24px', lineHeight: 1.6, fontWeight: 300 }}>
+                      此研报包含完整的高保真交互式图表、供应链穿透网络与供应商决策要点。您可以消耗 1 次免费额度直接解锁。
+                    </p>
+                    <button 
+                      onClick={handleUnlock}
+                      className="accent-glow"
+                      style={{
+                        padding: '14px 28px',
+                        fontSize: '0.95rem',
+                        fontWeight: 500,
+                        width: '100%',
+                        background: 'var(--color-accent)',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: 'var(--border-radius)',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+                      }}
+                    >
+                      {userId ? '立即解锁研报 (消耗 1 次额度)' : '请先登录后再解锁研报'}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -843,7 +971,28 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     const freeQuota = auth.freeQuota;
     const nickname = auth.nickname;
 
+function extractPublicPreview(contentHtml: string | null) {
+  if (!contentHtml) return { toc: [], excerpt: '' };
+  
+  // 提取章节标题 h2 / h3
+  const headingMatches = contentHtml.match(/<h[23][^>]*>(.*?)<\/h[23]>/gi) || [];
+  const toc = headingMatches.map(h => {
+    return h.replace(/<[^>]+>/g, '').trim();
+  }).filter(t => t.length > 2 && t.length < 80).slice(0, 8);
+
+  // 提取正文实质段落
+  const pMatches = contentHtml.match(/<p[^>]*>(.*?)<\/p>/gi) || [];
+  const cleanParagraphs = pMatches
+    .map(p => p.replace(/<[^>]+>/g, '').trim())
+    .filter(p => p.length > 25 && !p.includes('版权') && !p.includes('保留所有权利') && !p.includes('免责'))
+    .slice(0, 2);
+
+  const excerpt = cleanParagraphs.join(' ');
+  return { toc, excerpt };
+}
+
     let report: any = null;
+    let previewData = { toc: [] as string[], excerpt: '' };
     let related: RelatedReport[] = [];
     let isFavorite = false;
     let noteContent = '';
@@ -858,6 +1007,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
           );
           if (reportRes.rows.length === 0) return null;
           const rep = reportRes.rows[0];
+          previewData = extractPublicPreview(rep.content_html);
           return {
             id: rep.id,
             title: rep.title,
@@ -868,15 +1018,20 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
             content_html: localizeReportHtml(rep.content_html)
           };
         } else {
-          return await getReportDetail(userId, id as string, dbClient);
+          const detail = await getReportDetail(userId, id as string, dbClient);
+          if (detail && detail.content_html) {
+            previewData = extractPublicPreview(detail.content_html);
+          }
+          return detail;
         }
       } else {
         const reportRes = await dbClient.query(
-          'SELECT id, title, category, market_region, summary FROM reports WHERE id = $1',
+          'SELECT id, title, category, market_region, summary, content_html FROM reports WHERE id = $1',
           [id]
         );
         if (reportRes.rows.length === 0) return null;
         const rep = reportRes.rows[0];
+        previewData = extractPublicPreview(rep.content_html);
         return {
           id: rep.id,
           title: rep.title,
@@ -1008,6 +1163,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     return {
       props: {
         report,
+        previewData,
         related,
         canonicalUrl,
         siteUrl,

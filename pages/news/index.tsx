@@ -125,11 +125,11 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
   return (
     <WatermarkContainer text={userId ? `外贸智友 - 用户: ${nickname || userId.substring(0, 8)}` : '外贸智友 - 游客浏览模式'}>
       <Head>
-        {/* 基础 TDK (百度/搜狗/360) */}
-        <title>每日外贸资讯与全球行业热点大厅 | 外贸智友</title>
-        <meta name="description" content="实时追踪全球外贸热点、关税政策调整、海运费波动及海外零售动态，助中国制造企业敏锐捕捉出海商机与前沿趋势。" />
-        <meta name="keywords" content="外贸资讯, 全球市场热点, 关税调整, 海运运价, 跨境电商, 出海调研, 外贸智友, GlobalTradeBuddy" />
-        <meta name="author" content="外贸智友 GlobalTradeBuddy" />
+        {/* 基础 TDK (百度/搜狗/360/谷歌) */}
+        <title>每日外贸行业热点资讯大厅 | Market Graphic (外贸智友)</title>
+        <meta name="description" content="实时追踪全球外贸热点、关税政策调整、海运费波动及海外零售商超动态，助中国出海制造企业敏锐捕捉出海商机与前沿趋势。" />
+        <meta name="keywords" content="外贸资讯, 全球市场热点, 关税调整, 海运运价, 跨境电商, 出海调研, 外贸智友, Market Graphic, GlobalTradeBuddy" />
+        <meta name="author" content="外贸智友 Market Graphic" />
         <meta name="robots" content="index, follow" />
         <meta name="applicable-device" content="pc,mobile" />
         {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
@@ -138,22 +138,47 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
         <meta name="thumbnail" content={ogImageUrl} />
 
         {/* 微信 / QQ 分享协议 */}
-        <meta itemProp="name" content="每日外贸资讯与全球行业热点大厅 | 外贸智友" />
+        <meta itemProp="name" content="每日外贸行业热点资讯大厅 | Market Graphic (外贸智友)" />
         <meta itemProp="description" content="实时追踪全球外贸热点、关税政策调整、海运费波动及海外零售动态，助中国制造企业敏锐捕捉出海商机与前沿趋势。" />
         <meta itemProp="image" content={ogImageUrl} />
 
         {/* 微信/微博/知乎/抖音通用 OpenGraph */}
         <meta property="og:type" content="website" />
-        <meta property="og:title" content="每日外贸资讯与全球行业热点大厅 | 外贸智友" />
+        <meta property="og:title" content="每日外贸行业热点资讯大厅 | Market Graphic (外贸智友)" />
         <meta property="og:description" content="实时追踪全球外贸热点、关税政策调整、海运费波动及海外零售动态，助中国制造企业敏锐捕捉出海商机与前沿趋势。" />
         <meta property="og:image" content={ogImageUrl} />
         {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
-        <meta property="og:site_name" content="外贸智友 GlobalTradeBuddy" />
+        <meta property="og:site_name" content="Market Graphic (外贸智友)" />
 
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="每日外贸资讯与全球行业热点大厅 | 外贸智友" />
+        <meta name="twitter:title" content="每日外贸行业热点资讯大厅 | Market Graphic (外贸智友)" />
         <meta name="twitter:description" content="实时追踪全球外贸热点、关税政策调整、海运费波动及海外零售动态，助中国制造企业敏锐捕捉出海商机与前沿趋势。" />
         <meta name="twitter:image" content={ogImageUrl} />
+
+        {/* 面包屑结构化数据 */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'BreadcrumbList',
+              itemListElement: [
+                {
+                  '@type': 'ListItem',
+                  position: 1,
+                  name: '首页',
+                  item: 'https://marketgraphic.cn'
+                },
+                {
+                  '@type': 'ListItem',
+                  position: 2,
+                  name: '每日外贸资讯',
+                  item: 'https://marketgraphic.cn/news'
+                }
+              ]
+            })
+          }}
+        />
       </Head>
 
       {/* 微信首图兜底 */}

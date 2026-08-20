@@ -1,21 +1,82 @@
 import React, { useEffect, useRef } from 'react';
 
 /**
- * 第 1 幕：360° 商业生态穿透罗盘 (纯视觉示意图)
+ * 第 1 幕：360° 商业生态穿透罗盘 (立体球体环绕自转示意图)
  */
 export function EcosystemRadar() {
   return (
     <div style={{
       position: 'relative',
       width: '100%',
-      maxWidth: '480px',
+      maxWidth: '460px',
       aspectRatio: '1 / 1',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       margin: '0 auto'
     }}>
-      {/* 罗盘底盘与动态轨道 */}
+      <style>{`
+        @keyframes radarOrbitClockwise {
+          0% {
+            transform: rotate(0deg);
+          }
+          100% {
+            transform: rotate(360deg);
+          }
+        }
+        @keyframes radarCounterRotate {
+          0% {
+            transform: rotate(0deg);
+          }
+          100% {
+            transform: rotate(-360deg);
+          }
+        }
+        @keyframes pulseCoreGlow {
+          0%, 100% {
+            transform: scale(1);
+            box-shadow: 0 14px 32px rgba(255, 100, 30, 0.22), 0 2px 8px rgba(0,0,0,0.04);
+          }
+          50% {
+            transform: scale(1.03);
+            box-shadow: 0 18px 40px rgba(255, 100, 30, 0.32), 0 4px 12px rgba(0,0,0,0.06);
+          }
+        }
+        @keyframes waveFloat {
+          0%, 100% {
+            transform: translateY(0px);
+          }
+          50% {
+            transform: translateY(-4px);
+          }
+        }
+        @keyframes laserScanVertical {
+          0% {
+            top: 15%;
+            opacity: 0.2;
+          }
+          50% {
+            top: 75%;
+            opacity: 0.9;
+          }
+          100% {
+            top: 15%;
+            opacity: 0.2;
+          }
+        }
+        @keyframes rippleExpand {
+          0% {
+            transform: scale(0.85);
+            opacity: 0.8;
+          }
+          100% {
+            transform: scale(1.4);
+            opacity: 0;
+          }
+        }
+      `}</style>
+
+      {/* 静态底盘与动态轨道网格 */}
       <svg
         viewBox="0 0 400 400"
         style={{
@@ -28,51 +89,41 @@ export function EcosystemRadar() {
       >
         <defs>
           <radialGradient id="radarGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#ff641e" stopOpacity="0.14" />
+            <stop offset="0%" stopColor="#ff641e" stopOpacity="0.12" />
             <stop offset="65%" stopColor="#ff641e" stopOpacity="0.02" />
             <stop offset="100%" stopColor="#ff641e" stopOpacity="0" />
           </radialGradient>
-          <linearGradient id="orbitGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#ff641e" stopOpacity="0.5" />
-            <stop offset="100%" stopColor="#121212" stopOpacity="0.08" />
-          </linearGradient>
         </defs>
 
         {/* 动态雷达扫描渐变区 */}
         <circle cx="200" cy="200" r="185" fill="url(#radarGlow)" />
 
         {/* 同心圆轨道 */}
-        <circle cx="200" cy="200" r="175" fill="none" stroke="rgba(18, 18, 18, 0.05)" strokeWidth="1" strokeDasharray="3 3" />
-        <circle cx="200" cy="200" r="125" fill="none" stroke="rgba(18, 18, 18, 0.08)" strokeWidth="1" />
-        <circle cx="200" cy="200" r="70" fill="none" stroke="rgba(255, 100, 30, 0.25)" strokeWidth="1.5" strokeDasharray="5 3" />
+        <circle cx="200" cy="200" r="175" fill="none" stroke="rgba(18, 18, 18, 0.04)" strokeWidth="1" strokeDasharray="3 3" />
+        <circle cx="200" cy="200" r="130" fill="none" stroke="rgba(18, 18, 18, 0.08)" strokeWidth="1.2" />
+        <circle cx="200" cy="200" r="75" fill="none" stroke="rgba(255, 100, 30, 0.2)" strokeWidth="1.2" strokeDasharray="4 3" />
 
-        {/* 极坐标网格刻度射线 */}
-        <line x1="200" y1="20" x2="200" y2="380" stroke="rgba(18, 18, 18, 0.05)" strokeWidth="1" />
-        <line x1="20" y1="200" x2="380" y2="200" stroke="rgba(18, 18, 18, 0.05)" strokeWidth="1" />
-        <line x1="75" y1="75" x2="325" y2="325" stroke="rgba(18, 18, 18, 0.03)" strokeWidth="1" strokeDasharray="2 2" />
-        <line x1="325" y1="75" x2="75" y2="325" stroke="rgba(18, 18, 18, 0.03)" strokeWidth="1" strokeDasharray="2 2" />
+        {/* 极坐标十字刻度线 */}
+        <line x1="200" y1="20" x2="200" y2="380" stroke="rgba(18, 18, 18, 0.04)" strokeWidth="1" />
+        <line x1="20" y1="200" x2="380" y2="200" stroke="rgba(18, 18, 18, 0.04)" strokeWidth="1" />
+        <line x1="75" y1="75" x2="325" y2="325" stroke="rgba(18, 18, 18, 0.025)" strokeWidth="1" strokeDasharray="2 2" />
+        <line x1="325" y1="75" x2="75" y2="325" stroke="rgba(18, 18, 18, 0.025)" strokeWidth="1" strokeDasharray="2 2" />
 
-        {/* 动态引力连线 */}
-        <line x1="200" y1="200" x2="200" y2="60" stroke="url(#orbitGrad)" strokeWidth="1.5" strokeDasharray="4 2" />
-        <line x1="200" y1="200" x2="335" y2="200" stroke="url(#orbitGrad)" strokeWidth="1.5" strokeDasharray="4 2" />
-        <line x1="200" y1="200" x2="200" y2="340" stroke="url(#orbitGrad)" strokeWidth="1.5" strokeDasharray="4 2" />
-        <line x1="200" y1="200" x2="65" y2="200" stroke="url(#orbitGrad)" strokeWidth="1.5" strokeDasharray="4 2" />
-
-        {/* 环形刻度微点 */}
+        {/* 轨道刻度微点 */}
         {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => {
           const rad = (deg * Math.PI) / 180;
-          const cx = 200 + Math.cos(rad) * 125;
-          const cy = 200 + Math.sin(rad) * 125;
-          return <circle key={deg} cx={cx} cy={cy} r="2" fill="rgba(18, 18, 18, 0.2)" />;
+          const cx = 200 + Math.cos(rad) * 130;
+          const cy = 200 + Math.sin(rad) * 130;
+          return <circle key={deg} cx={cx} cy={cy} r="2" fill="rgba(18, 18, 18, 0.15)" />;
         })}
       </svg>
 
       {/* 中心核心：目标客户 */}
       <div style={{
         position: 'relative',
-        zIndex: 3,
-        background: '#ffffff',
-        border: '2px solid #ff641e',
+        zIndex: 10,
+        background: 'radial-gradient(circle at 35% 35%, #ffffff 0%, #fafafc 70%, #f0f0f4 100%)',
+        border: '1.5px solid rgba(255, 100, 30, 0.6)',
         borderRadius: '50%',
         width: '94px',
         height: '94px',
@@ -80,8 +131,9 @@ export function EcosystemRadar() {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        boxShadow: '0 14px 32px rgba(255, 100, 30, 0.22), 0 2px 8px rgba(0,0,0,0.04)',
-        textAlign: 'center'
+        boxShadow: '0 14px 32px rgba(255, 100, 30, 0.22), 0 2px 8px rgba(0,0,0,0.04), inset 0 2px 4px rgba(255,255,255,0.9)',
+        textAlign: 'center',
+        animation: 'pulseCoreGlow 4s ease-in-out infinite'
       }}>
         <div style={{
           width: '7px',
@@ -89,284 +141,474 @@ export function EcosystemRadar() {
           borderRadius: '50%',
           background: '#ff641e',
           marginBottom: '4px',
-          boxShadow: '0 0 6px #ff641e'
+          boxShadow: '0 0 8px #ff641e'
         }} />
-        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#121212' }}>
+        <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#121212' }}>
           目标客户
         </span>
-        <span style={{ fontSize: '0.62rem', color: '#ff641e', fontWeight: 600, letterSpacing: '0.5px' }}>
+        <span style={{ fontSize: '0.6rem', color: '#ff641e', fontWeight: 500, letterSpacing: '0.5px' }}>
           360° CORE
         </span>
       </div>
 
-      {/* 节点 1：上游供应链 (Top) */}
+      {/* 顺时针旋转容器 (半径 130px，承载 4 个立体球体) */}
       <div style={{
         position: 'absolute',
-        top: '8%',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 2,
-        background: '#ffffff',
-        border: '1px solid rgba(18, 18, 18, 0.08)',
-        borderRadius: '16px',
-        padding: '6px 14px',
+        inset: 0,
+        width: '100%',
+        height: '100%',
         display: 'flex',
         alignItems: 'center',
-        gap: '6px',
-        boxShadow: '0 6px 16px rgba(0, 0, 0, 0.05)'
+        justifyContent: 'center',
+        animation: 'radarOrbitClockwise 36s linear infinite',
+        pointerEvents: 'none'
       }}>
-        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#121212' }} />
-        <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#121212' }}>上游供应链</span>
-      </div>
+        {/* 动态引力连线 SVG */}
+        <svg
+          viewBox="0 0 400 400"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            overflow: 'visible',
+            pointerEvents: 'none'
+          }}
+        >
+          <line x1="200" y1="200" x2="200" y2="70" stroke="rgba(255, 100, 30, 0.35)" strokeWidth="1.2" strokeDasharray="3 2" />
+          <line x1="200" y1="200" x2="330" y2="200" stroke="rgba(18, 18, 18, 0.1)" strokeWidth="1.2" strokeDasharray="3 2" />
+          <line x1="200" y1="200" x2="200" y2="330" stroke="rgba(18, 18, 18, 0.1)" strokeWidth="1.2" strokeDasharray="3 2" />
+          <line x1="200" y1="200" x2="70" y2="200" stroke="rgba(18, 18, 18, 0.1)" strokeWidth="1.2" strokeDasharray="3 2" />
+        </svg>
 
-      {/* 节点 2：下游买家渠道 (Right) */}
-      <div style={{
-        position: 'absolute',
-        right: '4%',
-        top: '50%',
-        transform: 'translateY(-50%)',
-        zIndex: 2,
-        background: '#ffffff',
-        border: '1px solid rgba(18, 18, 18, 0.08)',
-        borderRadius: '16px',
-        padding: '6px 14px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        boxShadow: '0 6px 16px rgba(0, 0, 0, 0.05)'
-      }}>
-        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#121212' }} />
-        <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#121212' }}>下游买家与渠道</span>
-      </div>
+        {/* 球体通用样式生成 */}
+        {(() => {
+          const sphereStyle: React.CSSProperties = {
+            position: 'absolute',
+            width: '72px',
+            height: '72px',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle at 32% 28%, #ffffff 0%, #f6f6f8 50%, #e9e9ee 100%)',
+            boxShadow: '0 12px 28px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04), inset 0 2px 4px rgba(255, 255, 255, 0.95), inset 0 -2px 5px rgba(0, 0, 0, 0.06)',
+            border: '1px solid rgba(255, 255, 255, 0.9)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center',
+            animation: 'radarCounterRotate 36s linear infinite',
+            pointerEvents: 'auto'
+          };
 
-      {/* 节点 3：核心竞争对手 (Left) */}
-      <div style={{
-        position: 'absolute',
-        left: '4%',
-        top: '50%',
-        transform: 'translateY(-50%)',
-        zIndex: 2,
-        background: '#ffffff',
-        border: '1px solid rgba(18, 18, 18, 0.08)',
-        borderRadius: '16px',
-        padding: '6px 14px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        boxShadow: '0 6px 16px rgba(0, 0, 0, 0.05)'
-      }}>
-        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#121212' }} />
-        <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#121212' }}>核心竞争格局</span>
-      </div>
+          const textStyle: React.CSSProperties = {
+            fontSize: '0.78rem',
+            fontWeight: 350,
+            color: '#555555',
+            lineHeight: 1.25,
+            letterSpacing: '1px',
+            userSelect: 'none'
+          };
 
-      {/* 节点 4：市场空白商机 (Bottom) */}
-      <div style={{
-        position: 'absolute',
-        bottom: '8%',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 2,
-        background: '#ffffff',
-        border: '1.5px solid rgba(255, 100, 30, 0.4)',
-        borderRadius: '16px',
-        padding: '6px 14px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        boxShadow: '0 6px 20px rgba(255, 100, 30, 0.12)'
-      }}>
-        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ff641e' }} />
-        <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#ff641e' }}>市场空白商机</span>
+          return (
+            <>
+              {/* 1. 上游供应 (Top: 0°) */}
+              <div style={{ ...sphereStyle, top: '70px', left: '200px', transform: 'translate(-50%, -50%)' }}>
+                <div style={textStyle}>
+                  <div>上游</div>
+                  <div>供应</div>
+                </div>
+              </div>
+
+              {/* 2. 竞争格局 (Right: 90°) */}
+              <div style={{ ...sphereStyle, top: '200px', left: '330px', transform: 'translate(-50%, -50%)' }}>
+                <div style={textStyle}>
+                  <div>竞争</div>
+                  <div>格局</div>
+                </div>
+              </div>
+
+              {/* 3. 下游渠道 (Bottom: 180°) */}
+              <div style={{ ...sphereStyle, top: '330px', left: '200px', transform: 'translate(-50%, -50%)' }}>
+                <div style={textStyle}>
+                  <div>下游</div>
+                  <div>渠道</div>
+                </div>
+              </div>
+
+              {/* 4. 市场商机 (Left: 270°) */}
+              <div style={{
+                ...sphereStyle,
+                top: '200px',
+                left: '70px',
+                transform: 'translate(-50%, -50%)',
+                border: '1px solid rgba(255, 100, 30, 0.3)',
+                boxShadow: '0 12px 28px rgba(255, 100, 30, 0.12), 0 2px 6px rgba(0, 0, 0, 0.04), inset 0 2px 4px rgba(255, 255, 255, 0.95), inset 0 -2px 5px rgba(255, 100, 30, 0.08)'
+              }}>
+                <div style={{ ...textStyle, color: '#444444' }}>
+                  <div>市场</div>
+                  <div>商机</div>
+                </div>
+              </div>
+            </>
+          );
+        })()}
       </div>
     </div>
   );
 }
 
 /**
- * 第 2 幕：三大核心能力纯视觉图表看板 (上滑轮播)
+ * 第 2 幕：三大核心能力纯视觉正方形示意图 (1:1 统一画幅上滑轮播)
  */
 export function FeatureCards({ activeIndex }: { activeIndex: number }) {
   const visualCards = [
-    // 示意图 1：每周行业资讯 —— 动态雷达与预警看板
+    // 示意图 1：每周行业资讯 ──「多轨情报动态雷达波形图」 (1:1 正方形)
     {
       id: 0,
-      title: '实时动态雷达看板',
-      tag: '动态预警',
-      content: (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {/* 波形与扫描状态 */}
-          <div style={{
-            background: 'rgba(0, 0, 0, 0.02)',
-            border: '1px solid rgba(0, 0, 0, 0.06)',
-            borderRadius: '12px',
-            padding: '12px 16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      visual: (
+        <div style={{
+          position: 'relative',
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          padding: '24px',
+          boxSizing: 'border-box'
+        }}>
+          {/* 顶部：动态脉冲波形与雷达扫描小罗盘 */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{
-                width: '10px',
-                height: '10px',
+                width: '8px',
+                height: '8px',
                 borderRadius: '50%',
                 background: '#ff641e',
                 boxShadow: '0 0 8px #ff641e'
               }} />
-              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#121212' }}>全网情报雷达监控中</span>
+              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#121212', letterSpacing: '0.5px' }}>
+                RADAR STREAM 24H
+              </span>
             </div>
-            <span style={{ fontSize: '0.72rem', color: '#666', fontFamily: 'monospace' }}>24H ACTIVE</span>
+            <span style={{
+              fontSize: '0.68rem',
+              color: '#ff641e',
+              background: 'rgba(255, 100, 30, 0.08)',
+              border: '1px solid rgba(255, 100, 30, 0.2)',
+              padding: '2px 8px',
+              borderRadius: '8px',
+              fontWeight: 500
+            }}>
+              实时情报流
+            </span>
           </div>
 
-          {/* 3 条态势监控流 */}
-          <div style={{
-            background: '#ffffff',
-            border: '1px solid rgba(255, 100, 30, 0.25)',
-            borderRadius: '10px',
-            padding: '12px 14px',
-            boxShadow: '0 4px 12px rgba(255, 100, 30, 0.06)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#121212' }}>北美头部渠道直采配额扩增</span>
-              <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#ff641e', background: 'rgba(255,100,30,0.1)', padding: '2px 8px', borderRadius: '8px' }}>渠道预警</span>
-            </div>
-            <div style={{ fontSize: '0.72rem', color: '#888' }}>监测到沃尔玛 / Target 东南亚直采份额同比 +18%</div>
+          {/* 中部：SVG 实时动态正弦波形 */}
+          <div style={{ position: 'relative', width: '100%', height: '80px', margin: '4px 0' }}>
+            <svg viewBox="0 0 300 80" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+              <defs>
+                <linearGradient id="waveGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#121212" stopOpacity="0.1" />
+                  <stop offset="50%" stopColor="#ff641e" stopOpacity="0.8" />
+                  <stop offset="100%" stopColor="#121212" stopOpacity="0.1" />
+                </linearGradient>
+              </defs>
+              {/* 背景参考网格 */}
+              <line x1="0" y1="40" x2="300" y2="40" stroke="rgba(0,0,0,0.04)" strokeWidth="1" strokeDasharray="3 3" />
+              {/* 波形曲线 */}
+              <path
+                d="M 0 40 Q 35 15 75 40 T 150 40 T 225 20 T 300 40"
+                fill="none"
+                stroke="url(#waveGrad)"
+                strokeWidth="2"
+                style={{ animation: 'waveFloat 3s ease-in-out infinite' }}
+              />
+              <path
+                d="M 0 40 Q 45 60 95 40 T 180 50 T 260 30 T 300 40"
+                fill="none"
+                stroke="rgba(18, 18, 18, 0.15)"
+                strokeWidth="1.2"
+                strokeDasharray="4 2"
+              />
+              {/* 脉冲高亮点 */}
+              <circle cx="150" cy="40" r="4" fill="#ff641e" />
+              <circle cx="225" cy="20" r="3" fill="#121212" />
+            </svg>
           </div>
 
-          <div style={{
-            background: '#ffffff',
-            border: '1px solid rgba(0, 0, 0, 0.08)',
-            borderRadius: '10px',
-            padding: '12px 14px'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#121212' }}>欧盟环保包装准入新规生效</span>
-              <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#666', background: 'rgba(0,0,0,0.06)', padding: '2px 8px', borderRadius: '8px' }}>准入法规</span>
-            </div>
-            <div style={{ fontSize: '0.72rem', color: '#888' }}>塑料降解检测标准收紧，涉及 12 类出口商品</div>
-          </div>
-
-          <div style={{
-            background: '#ffffff',
-            border: '1px solid rgba(0, 0, 0, 0.08)',
-            borderRadius: '10px',
-            padding: '12px 14px'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#121212' }}>核心竞对高管变动与供应链重组</span>
-              <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#666', background: 'rgba(0,0,0,0.06)', padding: '2px 8px', borderRadius: '8px' }}>人事动向</span>
-            </div>
-            <div style={{ fontSize: '0.72rem', color: '#888' }}>亚太区采购总监履新，开启新一轮供应商招募</div>
+          {/* 下部：3 条立体情报监测轨道 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {[
+              { label: '产品创新与设计预警', width: '85%', color: '#ff641e', status: 'ACTIVE' },
+              { label: '渠道采购与配额扩增', width: '70%', color: '#121212', status: 'TRACKING' },
+              { label: '高管变动与供应链重组', width: '60%', color: '#666666', status: 'ALERT' }
+            ].map((track, i) => (
+              <div
+                key={i}
+                style={{
+                  background: 'rgba(0, 0, 0, 0.02)',
+                  border: '1px solid rgba(0, 0, 0, 0.05)',
+                  borderRadius: '10px',
+                  padding: '8px 12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '8px'
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#555', marginBottom: '4px' }}>
+                    <span>{track.label}</span>
+                    <span style={{ fontSize: '0.65rem', fontFamily: 'monospace', color: track.color === '#ff641e' ? '#ff641e' : '#888' }}>{track.status}</span>
+                  </div>
+                  <div style={{ height: '4px', background: 'rgba(0,0,0,0.06)', borderRadius: '2px', overflow: 'hidden' }}>
+                    <div style={{ width: track.width, height: '100%', background: track.color, borderRadius: '2px' }} />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )
     },
 
-    // 示意图 2：客户 360° 洞察 —— 买家画像与决策链穿透
+    // 示意图 2：客户 360° 洞察 ──「3D 悬浮透视分层穿透架构」 (1:1 正方形)
     {
       id: 1,
-      title: '买家 360° 穿透画像',
-      tag: '买家穿透',
-      content: (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {/* 财务与规模指标 */}
+      visual: (
+        <div style={{
+          position: 'relative',
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '24px',
+          boxSizing: 'border-box'
+        }}>
+          {/* 顶部状态标识 */}
+          <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ff641e' }} />
+              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#121212', letterSpacing: '0.5px' }}>
+                BUYER PENETRATION
+              </span>
+            </div>
+            <span style={{
+              fontSize: '0.68rem',
+              color: '#ff641e',
+              background: 'rgba(255, 100, 30, 0.08)',
+              border: '1px solid rgba(255, 100, 30, 0.2)',
+              padding: '2px 8px',
+              borderRadius: '8px',
+              fontWeight: 500
+            }}>
+              3 层穿透透视图
+            </span>
+          </div>
+
+          {/* 中部：3D 悬浮分层透视结构 */}
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '10px',
-            textAlign: 'center'
+            position: 'relative',
+            width: '100%',
+            height: '240px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-around',
+            alignItems: 'center'
           }}>
-            <div style={{ background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.06)', borderRadius: '10px', padding: '10px 4px' }}>
-              <div style={{ fontSize: '0.68rem', color: '#888', marginBottom: '2px' }}>财务健康度</div>
-              <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#121212' }}>AA+ 优良</div>
+            {/* 垂直发光穿透轴线 */}
+            <div style={{
+              position: 'absolute',
+              top: '10%',
+              bottom: '10%',
+              width: '2px',
+              background: 'linear-gradient(to bottom, rgba(255,100,30,0.1), #ff641e, rgba(255,100,30,0.1))',
+              zIndex: 1,
+              left: '50%',
+              transform: 'translateX(-50%)'
+            }} />
+
+            {/* 激光穿透扫描指示光球 */}
+            <div style={{
+              position: 'absolute',
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: '#ff641e',
+              boxShadow: '0 0 10px #ff641e',
+              zIndex: 10,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              animation: 'laserScanVertical 4s ease-in-out infinite'
+            }} />
+
+            {/* 第 1 层：决策架构拓扑层 */}
+            <div style={{
+              position: 'relative',
+              zIndex: 3,
+              width: '88%',
+              background: 'radial-gradient(circle at 30% 30%, #ffffff 0%, #f6f6f8 100%)',
+              border: '1px solid rgba(18, 18, 18, 0.08)',
+              borderRadius: '12px',
+              padding: '10px 14px',
+              boxShadow: '0 6px 16px rgba(0,0,0,0.04), inset 0 1px 2px rgba(255,255,255,0.9)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#121212' }}>① 决策架构链</div>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'rgba(0,0,0,0.06)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', color: '#666' }}>VP</span>
+                <span style={{ color: '#ff641e', fontSize: '0.7rem' }}>→</span>
+                <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'rgba(255,100,30,0.15)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', color: '#ff641e', fontWeight: 600 }}>总监</span>
+                <span style={{ color: '#ff641e', fontSize: '0.7rem' }}>→</span>
+                <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'rgba(0,0,0,0.06)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', color: '#666' }}>买手</span>
+              </div>
             </div>
-            <div style={{ background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.06)', borderRadius: '10px', padding: '10px 4px' }}>
-              <div style={{ fontSize: '0.68rem', color: '#888', marginBottom: '2px' }}>年采购规模</div>
-              <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#ff641e' }}>$2.4B</div>
+
+            {/* 第 2 层：财务状况体质层 */}
+            <div style={{
+              position: 'relative',
+              zIndex: 3,
+              width: '88%',
+              background: 'radial-gradient(circle at 30% 30%, #ffffff 0%, #f6f6f8 100%)',
+              border: '1px solid rgba(255, 100, 30, 0.25)',
+              borderRadius: '12px',
+              padding: '10px 14px',
+              boxShadow: '0 6px 16px rgba(255,100,30,0.06), inset 0 1px 2px rgba(255,255,255,0.9)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#ff641e' }}>② 财务健康评级</div>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#121212' }}>AA+</span>
+                <span style={{ fontSize: '0.68rem', color: '#888' }}>预算规模 $2.4B</span>
+              </div>
             </div>
-            <div style={{ background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.06)', borderRadius: '10px', padding: '10px 4px' }}>
-              <div style={{ fontSize: '0.68rem', color: '#888', marginBottom: '2px' }}>合作匹配度</div>
-              <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#10b981' }}>94% 契合</div>
+
+            {/* 第 3 层：核心采购逻辑层 */}
+            <div style={{
+              position: 'relative',
+              zIndex: 3,
+              width: '88%',
+              background: 'radial-gradient(circle at 30% 30%, #ffffff 0%, #f6f6f8 100%)',
+              border: '1px solid rgba(18, 18, 18, 0.08)',
+              borderRadius: '12px',
+              padding: '10px 14px',
+              boxShadow: '0 6px 16px rgba(0,0,0,0.04), inset 0 1px 2px rgba(255,255,255,0.9)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#121212' }}>③ 采购逻辑匹配</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: '48px', height: '6px', background: 'rgba(0,0,0,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+                  <div style={{ width: '92%', height: '100%', background: '#10b981' }} />
+                </div>
+                <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#10b981' }}>92%</span>
+              </div>
             </div>
           </div>
 
-          {/* 决策链组织架构穿透图 */}
-          <div style={{
-            background: '#ffffff',
-            border: '1px solid rgba(0,0,0,0.08)',
-            borderRadius: '12px',
-            padding: '14px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px'
-          }}>
-            <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#888', letterSpacing: '0.5px' }}>
-              核心采购决策链拓扑
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-              <div style={{ flex: 1, background: 'rgba(0,0,0,0.04)', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#121212' }}>VP 决策层</div>
-                <div style={{ fontSize: '0.65rem', color: '#888' }}>预算终审</div>
-              </div>
-              <span style={{ color: '#ff641e', fontWeight: 700 }}>➔</span>
-              <div style={{ flex: 1, background: 'rgba(255,100,30,0.08)', border: '1px solid rgba(255,100,30,0.2)', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#ff641e' }}>品类总监</div>
-                <div style={{ fontSize: '0.65rem', color: '#ff641e' }}>选品立项</div>
-              </div>
-              <span style={{ color: '#ff641e', fontWeight: 700 }}>➔</span>
-              <div style={{ flex: 1, background: 'rgba(0,0,0,0.04)', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#121212' }}>采购经理</div>
-                <div style={{ fontSize: '0.65rem', color: '#888' }}>验厂核价</div>
-              </div>
-            </div>
+          <div style={{ fontSize: '0.68rem', color: '#999' }}>
+            层层穿透 · 构筑立体客户画像
           </div>
         </div>
       )
     },
 
-    // 示意图 3：品类 360° 洞察 —— 价格带分布与空白蓝海发现
+    // 示意图 3：品类 360° 洞察 ──「价格带分布与蓝海空白突破矩阵」 (1:1 正方形)
     {
       id: 2,
-      title: '品类价格带与空白矩阵',
-      tag: '空白发现',
-      content: (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {/* 价格带分布图 */}
-          <div style={{
-            background: '#ffffff',
-            border: '1px solid rgba(0,0,0,0.08)',
-            borderRadius: '12px',
-            padding: '14px'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.75rem' }}>
-              <span style={{ color: '#666' }}>市场主流区间 ($15 - $35)</span>
-              <span style={{ color: '#ff641e', fontWeight: 600 }}>高溢价蓝海空白 ($45 - $60)</span>
+      visual: (
+        <div style={{
+          position: 'relative',
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          padding: '24px',
+          boxSizing: 'border-box'
+        }}>
+          {/* 顶部状态标识 */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ff641e' }} />
+              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#121212', letterSpacing: '0.5px' }}>
+                WHITE SPACE MATRIX
+              </span>
             </div>
-
-            {/* 条形分布示意 */}
-            <div style={{ height: '24px', background: 'rgba(0,0,0,0.05)', borderRadius: '6px', overflow: 'hidden', display: 'flex', position: 'relative' }}>
-              <div style={{ width: '55%', background: 'rgba(18, 18, 18, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', color: '#fff' }}>
-                红海密集区 (68% 供给)
-              </div>
-              <div style={{ width: '30%', background: '#ff641e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', color: '#fff', fontWeight: 600 }}>
-                空白商机点
-              </div>
-              <div style={{ width: '15%', background: 'rgba(18, 18, 18, 0.1)' }} />
-            </div>
+            <span style={{
+              fontSize: '0.68rem',
+              color: '#ff641e',
+              background: 'rgba(255, 100, 30, 0.08)',
+              border: '1px solid rgba(255, 100, 30, 0.2)',
+              padding: '2px 8px',
+              borderRadius: '8px',
+              fontWeight: 500
+            }}>
+              蓝海空白定位
+            </span>
           </div>
 
-          {/* 研发升级建议微卡 */}
+          {/* 中部：坐标系与散点聚类示意图 */}
           <div style={{
-            background: 'linear-gradient(135deg, rgba(255,100,30,0.05) 0%, rgba(0,0,0,0.02) 100%)',
-            border: '1px solid rgba(255,100,30,0.2)',
+            position: 'relative',
+            width: '100%',
+            height: '180px',
+            background: 'rgba(0,0,0,0.015)',
+            border: '1px solid rgba(0,0,0,0.06)',
             borderRadius: '12px',
-            padding: '12px 14px'
+            padding: '12px',
+            boxSizing: 'border-box'
           }}>
-            <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#121212', marginBottom: '4px' }}>
-              产品研发与准入指引
-            </div>
-            <div style={{ fontSize: '0.72rem', color: '#666', lineHeight: 1.5 }}>
-              主推差异化耐用材质与环保设计，规避 $20 以下低毛利价格战，直取北美中高端客群。
-            </div>
+            {/* 坐标轴与网格 */}
+            <svg viewBox="0 0 280 150" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+              {/* 坐标轴 */}
+              <line x1="25" y1="130" x2="270" y2="130" stroke="rgba(0,0,0,0.15)" strokeWidth="1" />
+              <line x1="25" y1="10" x2="25" y2="130" stroke="rgba(0,0,0,0.15)" strokeWidth="1" />
+
+              {/* 坐标轴刻度标签 */}
+              <text x="25" y="144" fontSize="8" fill="#888">$10</text>
+              <text x="100" y="144" fontSize="8" fill="#888">$30</text>
+              <text x="190" y="144" fontSize="8" fill="#ff641e" fontWeight="600">$55 (高溢价)</text>
+              <text x="260" y="144" fontSize="8" fill="#888">$80</text>
+
+              {/* 红海供给密集区 (左侧散点群) */}
+              {[
+                [45, 50], [55, 75], [60, 40], [70, 85], [75, 60], [85, 45], [90, 70], [95, 95]
+              ].map(([cx, cy], idx) => (
+                <circle key={idx} cx={cx} cy={cy} r="4" fill="rgba(18, 18, 18, 0.25)" />
+              ))}
+              <text x="50" y="30" fontSize="8" fill="#888">红海低价竞争区</text>
+
+              {/* 蓝海空白点 (右侧高光橙色脉冲焦点) */}
+              <circle cx="195" cy="45" r="18" fill="rgba(255, 100, 30, 0.12)" style={{ animation: 'rippleExpand 2.5s infinite' }} />
+              <circle cx="195" cy="45" r="8" fill="#ff641e" />
+              <circle cx="195" cy="45" r="4" fill="#ffffff" />
+              <text x="160" y="22" fontSize="9" fill="#ff641e" fontWeight="bold">未满足蓝海空白</text>
+
+              {/* 突破指引虚线 */}
+              <path d="M 95 70 Q 140 70 195 45" fill="none" stroke="#ff641e" strokeWidth="1.5" strokeDasharray="3 2" />
+            </svg>
+          </div>
+
+          {/* 底部：直观指引微指标 */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            background: 'rgba(255, 100, 30, 0.05)',
+            border: '1px solid rgba(255, 100, 30, 0.15)',
+            borderRadius: '8px',
+            padding: '6px 12px',
+            fontSize: '0.72rem'
+          }}>
+            <span style={{ color: '#666' }}>主流密集带 ($15 - $35)</span>
+            <span style={{ color: '#ff641e', fontWeight: 600 }}>指引：锁定 $45+ 溢价区间</span>
           </div>
         </div>
       )
@@ -377,8 +619,8 @@ export function FeatureCards({ activeIndex }: { activeIndex: number }) {
     <div style={{
       position: 'relative',
       width: '100%',
-      maxWidth: '520px',
-      minHeight: '360px',
+      maxWidth: '440px',
+      aspectRatio: '1 / 1', // 统一完全正方形画幅
       margin: '0 auto'
     }}>
       {visualCards.map((card, index) => {
@@ -386,13 +628,13 @@ export function FeatureCards({ activeIndex }: { activeIndex: number }) {
         const isActive = index === activeIndex;
         const isPast = index < activeIndex;
 
-        let translateY = offset * 24;
+        let translateY = offset * 28;
         let scale = 1 - Math.abs(offset) * 0.05;
-        let opacity = isActive ? 1 : (isPast ? 0 : 0.3);
+        let opacity = isActive ? 1 : (isPast ? 0 : 0.25);
         let pointerEvents: 'auto' | 'none' = isActive ? 'auto' : 'none';
 
         if (isPast) {
-          translateY = -60;
+          translateY = -70;
           opacity = 0;
         }
 
@@ -401,43 +643,23 @@ export function FeatureCards({ activeIndex }: { activeIndex: number }) {
             key={card.id}
             style={{
               position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              background: '#ffffff',
-              border: isActive ? '1.5px solid rgba(255, 100, 30, 0.35)' : '1px solid rgba(18, 18, 18, 0.08)',
-              borderRadius: '20px',
-              padding: '24px 22px',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              background: 'radial-gradient(circle at 35% 30%, #ffffff 0%, #fafafc 60%, #f2f2f6 100%)',
+              border: isActive ? '1.5px solid rgba(255, 100, 30, 0.4)' : '1px solid rgba(18, 18, 18, 0.08)',
+              borderRadius: '24px',
               boxShadow: isActive
-                ? '0 20px 48px rgba(255, 100, 30, 0.1), 0 6px 16px rgba(0,0,0,0.03)'
-                : '0 6px 16px rgba(0,0,0,0.02)',
+                ? '0 24px 54px rgba(255, 100, 30, 0.12), 0 6px 18px rgba(0,0,0,0.04), inset 0 2px 4px rgba(255,255,255,0.95)'
+                : '0 8px 24px rgba(0,0,0,0.03)',
               transform: `translateY(${translateY}px) scale(${scale})`,
               opacity,
               pointerEvents,
-              transition: 'all 0.45s cubic-bezier(0.16, 1, 0.3, 1)',
+              transition: 'all 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
               zIndex: 10 - Math.abs(offset)
             }}
           >
-            {/* 卡片顶部标题栏 */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <span style={{ fontSize: '1.05rem', fontWeight: 600, color: '#121212' }}>
-                {card.title}
-              </span>
-              <span style={{
-                fontSize: '0.7rem',
-                fontWeight: 600,
-                color: '#ff641e',
-                background: 'rgba(255, 100, 30, 0.08)',
-                padding: '3px 10px',
-                borderRadius: '10px',
-                border: '1px solid rgba(255, 100, 30, 0.15)'
-              }}>
-                {card.tag}
-              </span>
-            </div>
-
-            {/* 卡片内部纯图表示意内容 */}
-            {card.content}
+            {card.visual}
           </div>
         );
       })}
@@ -572,10 +794,7 @@ export function KnowledgeNetwork() {
       alignItems: 'center',
       justifyContent: 'center',
       margin: '0 auto',
-      background: 'rgba(255, 255, 255, 0.6)',
-      borderRadius: '24px',
-      border: '1px solid rgba(18, 18, 18, 0.06)',
-      boxShadow: '0 16px 40px rgba(0, 0, 0, 0.03)'
+      background: 'transparent'
     }}>
       <canvas
         ref={canvasRef}

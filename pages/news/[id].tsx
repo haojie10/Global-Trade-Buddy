@@ -184,11 +184,11 @@ export default function NewsDetailPage({ news, relatedReports, canonicalUrl, sit
     return (
       <WatermarkContainer text={userId ? `外贸智友 - 用户: ${nickname || userId.substring(0, 8)}` : '外贸智友 - 游客浏览模式'}>
         <Head>
-          {/* 1. 基础 SEO / TDK (针对百度、搜狗、360等国内搜索引擎) */}
-          <title>{`${news.title} | 外贸智友 - 行业热点情报`}</title>
+          {/* 1. 基础 SEO / TDK (针对百度、搜狗、360等国内搜索引擎及谷歌) */}
+          <title>{`${news.title} | Market Graphic (外贸智友)`}</title>
           <meta name="description" content={plainSummary} />
           <meta name="keywords" content={keywordsList} />
-          <meta name="author" content="外贸智友 GlobalTradeBuddy" />
+          <meta name="author" content="外贸智友 Market Graphic" />
           <meta name="robots" content="index, follow" />
           <meta name="applicable-device" content="pc,mobile" />
           <meta name="format-detection" content="telephone=no" />
@@ -198,25 +198,25 @@ export default function NewsDetailPage({ news, relatedReports, canonicalUrl, sit
           <meta name="thumbnail" content={ogImageUrl} />
 
           {/* 3. 腾讯系 / 微信 / QQ 网页分享卡片协议 (itemprop 标准) */}
-          <meta itemProp="name" content={news.title} />
+          <meta itemProp="name" content={`${news.title} | Market Graphic (外贸智友)`} />
           <meta itemProp="description" content={plainSummary} />
           <meta itemProp="image" content={ogImageUrl} />
 
           {/* 4. 国内主流社交平台标准 OpenGraph 协议 (微信、知乎、微博、今日头条、抖音) */}
           <meta property="og:type" content="article" />
-          <meta property="og:title" content={news.title} />
+          <meta property="og:title" content={`${news.title} | Market Graphic (外贸智友)`} />
           <meta property="og:description" content={plainSummary} />
           <meta property="og:image" content={ogImageUrl} />
           <meta property="og:image:alt" content={news.title} />
           {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
-          <meta property="og:site_name" content="外贸智友 GlobalTradeBuddy" />
+          <meta property="og:site_name" content="Market Graphic (外贸智友)" />
           {news.published_at && <meta property="article:published_time" content={news.published_at} />}
           {news.industries && <meta property="article:section" content={news.industries} />}
           {news.countries && <meta property="article:tag" content={news.countries} />}
 
           {/* Twitter Card */}
           <meta name="twitter:card" content="summary_large_image" />
-          <meta name="twitter:title" content={`${news.title} | 外贸智友`} />
+          <meta name="twitter:title" content={`${news.title} | Market Graphic (外贸智友)`} />
           <meta name="twitter:description" content={plainSummary} />
           <meta name="twitter:image" content={ogImageUrl} />
 
