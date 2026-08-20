@@ -234,7 +234,7 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
         <meta name="keywords" content="Market Graphic, 外贸智友, 外贸调研, 出海情报, 海外买家分析, 品类洞察, 供应链穿透, 跨境电商, AI 商业智能, GlobalTradeBuddy" />
         <meta name="author" content="外贸智友 Market Graphic" />
         <meta name="robots" content="index, follow" />
-        <meta name="google-site-verification" content="google0eb32fd071eb9e70" />
+        <meta name="google-site-verification" content="Zc_oto1WeXeyLsH7pP1F0HelY1dWT0EUPMIEHZcbtEY" />
         <link rel="canonical" href="https://marketgraphic.cn" />
         {/* Open Graph */}
         <meta property="og:type" content="website" />
