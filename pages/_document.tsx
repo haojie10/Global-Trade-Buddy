@@ -5,7 +5,7 @@ export default function Document() {
     <Html lang="zh-CN">
       <Head>
         {/* 搜索引擎站长平台所有权验证 Meta */}
-        <meta name="baidu-site-verification" content={process.env.NEXT_PUBLIC_BAIDU_SITE_VERIFICATION || "code-verification"} />
+        <meta name="baidu-site-verification" content="codeva-f5tW4LkOnX" />
         <meta name="google-site-verification" content="Zc_oto1WeXeyLsH7pP1F0HelY1dWT0EUPMIEHZcbtEY" />
 
         {/* 高性能字体预连接与跨源加速 (font-display: swap 保障 0 渲染阻塞与原生视觉完全一致) */}
