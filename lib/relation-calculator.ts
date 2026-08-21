@@ -342,10 +342,93 @@ export async function computeRelationsForReport(
 }
 
 /**
+ * 自动修复与自愈核心实体及别名污染
+ */
+export async function healContaminatedEntities(dbClient: PoolClient) {
+  try {
+    // 1. 确保独立核心实体存在
+    const upsertEntity = async (name: string, type: string) => {
+      const res = await dbClient.query(
+        `INSERT INTO entities (canonical_name, entity_type)
+         VALUES ($1, $2)
+         ON CONFLICT (canonical_name) DO UPDATE SET entity_type = EXCLUDED.entity_type
+         RETURNING id`,
+        [name, type]
+      );
+      return res.rows[0].id;
+    };
+
+    const aldiNordId = await upsertEntity('ALDI Einkauf SE & Co. oHG', 'company');
+    const aldiSudId = await upsertEntity('ALDI SÜD', 'company');
+    const walmartId = await upsertEntity('Walmart', 'company');
+    const dgId = await upsertEntity('Dollar General', 'company');
+    const traderJoesId = await upsertEntity("Trader Joe's", 'company');
+
+    // 2. 严格重置并分配各实体的合法别名
+    const setAliases = async (entityId: string, aliases: string[]) => {
+      for (const a of aliases) {
+        await dbClient.query(
+          `INSERT INTO entity_aliases (entity_id, alias_name)
+           VALUES ($1, $2)
+           ON CONFLICT (alias_name) DO UPDATE SET entity_id = EXCLUDED.entity_id`,
+          [entityId, a]
+        );
+      }
+    };
+
+    await setAliases(walmartId, ['沃尔玛', 'Wal-Mart', 'Walmart Inc.']);
+    await setAliases(dgId, ['达乐', 'DG', 'Dollar General Corporation', 'Yellow Banana']);
+    await setAliases(aldiSudId, ['ALDI Süd', 'Aldi Süd', 'ALDI South', 'ALDI SOUTH Group', '阿尔迪南', '阿尔迪南区', 'aldi-sued.de', 'Aldi Australia', 'ALDI Australia', 'Aldi Foods Pty Ltd']);
+
+    const validNordAliases = ['ALDI Nord', '阿尔迪北', '阿尔迪北方', 'ALDI Nord Group', 'Unternehmensgruppe ALDI Nord', 'aldi-nord.de', 'ALDI NORD', 'Aldi Gruppe', 'ALDI', 'Aldi'];
+    await setAliases(aldiNordId, validNordAliases);
+
+    // 清理 ALDI Nord 下所有不属于它的被污染别名
+    await dbClient.query(
+      `DELETE FROM entity_aliases WHERE entity_id = $1 AND alias_name NOT = ANY($2)`,
+      [aldiNordId, validNordAliases]
+    );
+
+    // 3. 修复 ALDI Nord 报告的关联实体（恢复 ALDI SÜD 作为姐妹公司）
+    const repRes = await dbClient.query(
+      "SELECT id FROM reports WHERE title ILIKE '%ALDI Nord%'"
+    );
+
+    for (const report of repRes.rows) {
+      const reportId = report.id;
+      await dbClient.query('UPDATE reports SET primary_entity_id = $1 WHERE id = $2', [aldiNordId, reportId]);
+      await dbClient.query(
+        `INSERT INTO report_entities (report_id, entity_id, role, source)
+         VALUES ($1, $2, 'primary', 'manual')
+         ON CONFLICT (report_id, entity_id) DO UPDATE SET role = 'primary', source = 'manual'`,
+        [reportId, aldiNordId]
+      );
+      await dbClient.query(
+        `INSERT INTO report_entities (report_id, entity_id, role, source)
+         VALUES ($1, $2, 'sister_parent', 'manual')
+         ON CONFLICT (report_id, entity_id) DO UPDATE SET role = 'sister_parent', source = 'manual'`,
+        [reportId, aldiSudId]
+      );
+      await dbClient.query(
+        `INSERT INTO report_entities (report_id, entity_id, role, source)
+         VALUES ($1, $2, 'sister_parent', 'manual')
+         ON CONFLICT (report_id, entity_id) DO UPDATE SET role = 'sister_parent', source = 'manual'`,
+        [reportId, traderJoesId]
+      );
+    }
+  } catch (e) {
+    console.error('healContaminatedEntities error:', e);
+  }
+}
+
+/**
  * 全量重算图谱中所有报告的关系
  */
 export async function recalculateAllRelations(dbClient: PoolClient): Promise<{ totalReports: number; totalRelations: number }> {
   try {
+    // 0. 执行核心实体与别名自愈清洗（修复历史过度吞并与污染）
+    await healContaminatedEntities(dbClient);
+
     // 1. 清空 relations 表
     await dbClient.query('TRUNCATE TABLE relations');
 

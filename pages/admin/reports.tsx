@@ -116,9 +116,9 @@ export default function AdminReportsManagement() {
     }
   };
 
-  // 触发全量图谱连线重算
+  // 触发全量图谱连线重算与实体自愈
   const handleRecalculateAll = async () => {
-    if (!confirm('确认执行全量图谱连线重算？系统将根据最新的关系规则与市场重合限制，重算库中所有报告之间的图谱连线。')) {
+    if (!confirm('确认执行全量图谱连线重算？\n\n系统将自动执行：\n1. 实体污染清洗与别名自愈（恢复 ALDI SÜD、沃尔玛、达乐等独立实体）；\n2. 修复 ALDI Nord 等报告的姐妹公司与主体别名；\n3. 根据最新关系规则重算库中所有报告之间的图谱连线。')) {
       return;
     }
     setRecalculating(true);
@@ -126,7 +126,7 @@ export default function AdminReportsManagement() {
       const res = await fetch('/api/admin/reports/recalculate-relations', { method: 'POST' });
       const data = await res.json();
       if (res.ok) {
-        alert(data.message || '🎉 全量图谱连线重算成功！');
+        alert(data.message || '🎉 全量图谱连线重算与实体自愈成功！');
         fetchData(currentPage);
       } else {
         alert('❌ 重算失败: ' + (data.error || '未知错误'));
@@ -135,30 +135,6 @@ export default function AdminReportsManagement() {
       alert('❌ 网络错误，全量重算失败: ' + err.message);
     } finally {
       setRecalculating(false);
-    }
-  };
-
-  const [healingEntities, setHealingEntities] = useState(false);
-
-  // 触发实体污染与别名自愈修复
-  const handleHealEntities = async () => {
-    if (!confirm('确认执行实体与别名自愈修复？\n\n系统将自动执行：\n1. 剥离被错误交叉污染的沃尔玛、达乐等大型实体别名；\n2. 独立恢复 ALDI SÜD、Walmart、Dollar General 为干净的独立实体；\n3. 严格规范 ALDI Nord 的合法别名；\n4. 自动将 ALDI SÜD 与 Trader Joe\'s 重新关联为姐妹公司并重算连线。')) {
-      return;
-    }
-    setHealingEntities(true);
-    try {
-      const res = await fetch('/api/admin/reports/heal-entities', { method: 'POST' });
-      const data = await res.json();
-      if (res.ok) {
-        alert(data.message || '🎉 实体污染清洗与拓扑自愈修复成功！');
-        fetchData(currentPage);
-      } else {
-        alert('❌ 修复失败: ' + (data.error || '未知错误'));
-      }
-    } catch (err: any) {
-      alert('❌ 网络错误，修复失败: ' + err.message);
-    } finally {
-      setHealingEntities(false);
     }
   };
 
@@ -763,15 +739,7 @@ export default function AdminReportsManagement() {
               disabled={recalculating}
               style={{ background: 'rgba(59, 130, 246, 0.1)', borderColor: 'rgba(59, 130, 246, 0.3)', color: '#60a5fa' }}
             >
-              {recalculating ? '🔄 重算中...' : '🔄 全量重算图谱'}
-            </button>
-            <button
-              className="admin-btn admin-btn-secondary"
-              onClick={handleHealEntities}
-              disabled={healingEntities}
-              style={{ background: 'rgba(16, 185, 129, 0.1)', borderColor: 'rgba(16, 185, 129, 0.3)', color: '#34d399' }}
-            >
-              {healingEntities ? '🩹 修复中...' : '🩹 修复实体与别名'}
+              {recalculating ? '🔄 重算与自愈中...' : '🔄 全量重算图谱 (含实体自愈)'}
             </button>
             <button
               className="admin-btn admin-btn-secondary"
