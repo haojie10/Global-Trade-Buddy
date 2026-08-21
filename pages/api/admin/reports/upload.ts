@@ -28,12 +28,20 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
     || rawHtml.match(/<meta[^>]*?content=(["'])([\s\S]*?)\1[^>]*?name=["']company_aliases["']/i);
   const metaAliases = metaAliasesMatch ? (metaAliasesMatch[2] || metaAliasesMatch[1] || '').split(/,|，|\/|\||;|；|\n/).map((s: string) => s.trim()).filter(Boolean) : [];
 
+  const formAliases = (manualTags?.companies && Array.isArray(manualTags.companies) && manualTags.companies.length > 1)
+    ? manualTags.companies.slice(1).map((s: string) => s.trim()).filter(Boolean)
+    : [];
+
+  const finalCompanyAliases = Array.from(new Set([
+    ...formAliases,
+    ...(manualTags?.companyAliases || []),
+    ...metaAliases
+  ]));
+
   const mergedManualTags = {
     ...manualTags,
-    companyAliases: Array.from(new Set([
-      ...(manualTags?.companyAliases || []),
-      ...metaAliases
-    ]))
+    companies: manualTags?.companies && manualTags.companies.length > 0 ? [manualTags.companies[0].trim()] : (meta.primary_subject ? [meta.primary_subject] : []),
+    companyAliases: finalCompanyAliases
   };
 
   // 处理手动标记的地区标签（仅保留具体国家，剔除大洲大区词汇）
@@ -173,14 +181,26 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
     newReportId = insertReportRes.rows[0].id;
   }
 
-  // 4.1 确保主体公司的全部别名持久化到 entity_aliases 表中
-  if (primaryEntityId && mergedManualTags.companyAliases && mergedManualTags.companyAliases.length > 0) {
-    for (const alias of mergedManualTags.companyAliases) {
+  // 4.1 确保主体公司的全部别名严格对齐持久化到 entity_aliases 表中（清理不属于本次的旧别名）
+  if (primaryEntityId) {
+    const validAliases = mergedManualTags.companyAliases || [];
+    if (validAliases.length > 0) {
       await dbClient.query(
-        `INSERT INTO entity_aliases (entity_id, alias_name)
-         VALUES ($1, $2)
-         ON CONFLICT (alias_name) DO UPDATE SET entity_id = EXCLUDED.entity_id`,
-        [primaryEntityId, alias]
+        'DELETE FROM entity_aliases WHERE entity_id = $1 AND alias_name != ALL($2)',
+        [primaryEntityId, validAliases]
+      );
+      for (const alias of validAliases) {
+        await dbClient.query(
+          `INSERT INTO entity_aliases (entity_id, alias_name)
+           VALUES ($1, $2)
+           ON CONFLICT (alias_name) DO UPDATE SET entity_id = EXCLUDED.entity_id`,
+          [primaryEntityId, alias]
+        );
+      }
+    } else {
+      await dbClient.query(
+        'DELETE FROM entity_aliases WHERE entity_id = $1',
+        [primaryEntityId]
       );
     }
   }
