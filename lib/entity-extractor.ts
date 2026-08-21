@@ -180,125 +180,25 @@ export async function extractAndNormalizeEntities(
         // 记录标准实体
         matchedEntities.set(primaryEntityId, { id: primaryEntityId, canonical_name: primaryCanonicalName, entity_type: 'company' });
 
-        // 将第 2 个及以后的公司名称以及 manualTags.companyAliases 自动作为第一个公司的别称写入别名表，并触发自动消歧合并
+        // 将第 2 个及以后的公司名称以及 manualTags.companyAliases 安全注册为该公司的别称
         const allAliasTags = Array.from(new Set([
           ...companyTags.slice(1),
           ...(manualTags.companyAliases || [])
         ])).map(s => s.trim()).filter(Boolean);
 
         for (const aliasTag of allAliasTags) {
-          let existingEntityId = '';
+          // 安全插入别名，如果别名已存在则更新绑定到当前实体，严禁级联删除或吞并其他实体
+          await dbClient.query(
+            `INSERT INTO entity_aliases (entity_id, alias_name)
+             VALUES ($1, $2)
+             ON CONFLICT (alias_name) DO UPDATE SET entity_id = EXCLUDED.entity_id`,
+            [primaryEntityId, aliasTag]
+          );
 
-          // 检索已知实体和别称中是否已经有匹配此别名的实体
-          for (const ent of entityMap.values()) {
-            const matchesLower = Array.from(ent.matches).map(x => x.toLowerCase());
-            if (matchesLower.includes(aliasTag.toLowerCase())) {
-              existingEntityId = ent.id;
-              break;
-            }
-          }
-
-          if (existingEntityId) {
-            if (existingEntityId !== primaryEntityId) {
-              // 自动执行实体合并与消歧逻辑：
-              // 当管理员在 companies 标签里显式把 aliasTag 指定为 primaryEntityId 公司的别称，
-              // 但数据库却已存在另一个独立实体时，说明两个实体在物理上是同一个。我们需要执行数据迁移合并。
-              console.log(`Auto merging entity "${existingEntityId}" into target primary entity "${primaryEntityId}" (alias match: "${aliasTag}")`);
-
-              // 1. 将旧实体的所有别称和新别名全部迁移到新标准实体下
-              await dbClient.query(
-                `UPDATE entity_aliases SET entity_id = $1 WHERE entity_id = $2`,
-                [primaryEntityId, existingEntityId]
-              );
-              await dbClient.query(
-                `INSERT INTO entity_aliases (entity_id, alias_name)
-                 VALUES ($1, $2)
-                 ON CONFLICT (alias_name) DO UPDATE SET entity_id = EXCLUDED.entity_id`,
-                [primaryEntityId, aliasTag]
-              );
-
-              // 2. 将旧实体的报告引用映射转移给新标准实体
-              const repEnts = await dbClient.query(
-                `SELECT report_id, role FROM report_entities WHERE entity_id = $1`,
-                [existingEntityId]
-              );
-              for (const re of repEnts.rows) {
-                await dbClient.query(
-                  `INSERT INTO report_entities (report_id, entity_id, role)
-                   VALUES ($1, $2, $3)
-                   ON CONFLICT (report_id, entity_id) DO UPDATE SET role = EXCLUDED.role`,
-                  [re.report_id, primaryEntityId, re.role]
-                );
-              }
-              await dbClient.query(
-                `DELETE FROM report_entities WHERE entity_id = $1`,
-                [existingEntityId]
-              );
-
-              // 3. 将旧实体的实体关系 (entity_relations) 转移给新标准实体
-              const relsA = await dbClient.query(
-                `SELECT entity_id_b, relation_type, market_region FROM entity_relations WHERE entity_id_a = $1`,
-                [existingEntityId]
-              );
-              for (const rel of relsA.rows) {
-                await dbClient.query(
-                  `INSERT INTO entity_relations (entity_id_a, entity_id_b, relation_type, market_region)
-                   VALUES ($1, $2, $3, $4)
-                   ON CONFLICT (entity_id_a, entity_id_b, relation_type, market_region) DO NOTHING`,
-                  [primaryEntityId, rel.entity_id_b, rel.relation_type, rel.market_region]
-                );
-              }
-              const relsB = await dbClient.query(
-                `SELECT entity_id_a, relation_type, market_region FROM entity_relations WHERE entity_id_b = $1`,
-                [existingEntityId]
-              );
-              for (const rel of relsB.rows) {
-                await dbClient.query(
-                  `INSERT INTO entity_relations (entity_id_a, entity_id_b, relation_type, market_region)
-                   VALUES ($1, $2, $3, $4)
-                   ON CONFLICT (entity_id_a, entity_id_b, relation_type, market_region) DO NOTHING`,
-                  [rel.entity_id_a, primaryEntityId, rel.relation_type, rel.market_region]
-                );
-              }
-              await dbClient.query(
-                `DELETE FROM entity_relations WHERE entity_id_a = $1 OR entity_id_b = $1`,
-                [existingEntityId]
-              );
-
-              // 4. 从 entities 表中物理删除该旧实体
-              await dbClient.query(
-                `DELETE FROM entities WHERE id = $1`,
-                [existingEntityId]
-              );
-
-              // 同步清除已匹配实体缓存，防止脏数据带入后续操作引发外键冲突
-              matchedEntities.delete(existingEntityId);
-
-              // 5. 更新缓存，将原有实体的匹配名集合和当前别名称合并入主缓存
-              const primaryCached = entityMap.get(primaryEntityId);
-              const oldCached = entityMap.get(existingEntityId);
-              if (primaryCached && oldCached) {
-                for (const m of oldCached.matches) {
-                  primaryCached.matches.add(m);
-                }
-                primaryCached.matches.add(aliasTag);
-              }
-              entityMap.delete(existingEntityId);
-            }
-          } else {
-            // 不存在任何同名实体或别称，正常注册别名
-            await dbClient.query(
-              `INSERT INTO entity_aliases (entity_id, alias_name)
-               VALUES ($1, $2)
-               ON CONFLICT (alias_name) DO NOTHING`,
-              [primaryEntityId, aliasTag]
-            );
-
-            // 动态扩充缓存
-            const cachedEnt = entityMap.get(primaryEntityId);
-            if (cachedEnt) {
-              cachedEnt.matches.add(aliasTag);
-            }
+          // 动态扩充缓存
+          const cachedEnt = entityMap.get(primaryEntityId);
+          if (cachedEnt) {
+            cachedEnt.matches.add(aliasTag);
           }
         }
       }
