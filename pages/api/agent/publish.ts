@@ -234,25 +234,18 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
       newReportId = insertReportRes.rows[0].id;
     }
 
-    // 4.1 确保主体公司的全部别名严格对齐持久化到 entity_aliases 表中（清理不属于本次的旧别名）
+    // 4.1 确保主体公司的全部别名严格对齐持久化到 entity_aliases 表中（先清空旧别名，再重新插入当前别名）
     if (primaryEntityId) {
-      if (aliasesList.length > 0) {
+      await dbClient.query(
+        'DELETE FROM entity_aliases WHERE entity_id = $1',
+        [primaryEntityId]
+      );
+      for (const alias of aliasesList) {
         await dbClient.query(
-          'DELETE FROM entity_aliases WHERE entity_id = $1 AND alias_name != ALL($2)',
-          [primaryEntityId, aliasesList]
-        );
-        for (const alias of aliasesList) {
-          await dbClient.query(
-            `INSERT INTO entity_aliases (entity_id, alias_name)
-             VALUES ($1, $2)
-             ON CONFLICT (alias_name) DO UPDATE SET entity_id = EXCLUDED.entity_id`,
-            [primaryEntityId, alias]
-          );
-        }
-      } else {
-        await dbClient.query(
-          'DELETE FROM entity_aliases WHERE entity_id = $1',
-          [primaryEntityId]
+          `INSERT INTO entity_aliases (entity_id, alias_name)
+           VALUES ($1, $2)
+           ON CONFLICT (alias_name) DO UPDATE SET entity_id = EXCLUDED.entity_id`,
+          [primaryEntityId, alias]
         );
       }
     }

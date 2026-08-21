@@ -103,25 +103,18 @@ async function updateEntitiesHandler(req: NextApiRequest, res: NextApiResponse, 
     const primaryEnt = resolvedEntities.find(e => e.role === 'primary');
     const primaryEntityId = primaryEnt ? primaryEnt.id : null;
 
-    // 5.0 精确同步主体公司的 entity_aliases 别名表（清理被删除的旧别名，插入新别名）
+    // 5.0 精确同步主体公司的 entity_aliases 别名表（先彻底清空该主体的旧别名，再重新插入当前表单别名）
     if (primaryEntityId) {
-      if (aliasList.length > 0) {
+      await dbClient.query(
+        'DELETE FROM entity_aliases WHERE entity_id = $1',
+        [primaryEntityId]
+      );
+      for (const alias of aliasList) {
         await dbClient.query(
-          'DELETE FROM entity_aliases WHERE entity_id = $1 AND alias_name != ALL($2)',
-          [primaryEntityId, aliasList]
-        );
-        for (const alias of aliasList) {
-          await dbClient.query(
-            `INSERT INTO entity_aliases (entity_id, alias_name)
-             VALUES ($1, $2)
-             ON CONFLICT (alias_name) DO UPDATE SET entity_id = EXCLUDED.entity_id`,
-            [primaryEntityId, alias]
-          );
-        }
-      } else {
-        await dbClient.query(
-          'DELETE FROM entity_aliases WHERE entity_id = $1',
-          [primaryEntityId]
+          `INSERT INTO entity_aliases (entity_id, alias_name)
+           VALUES ($1, $2)
+           ON CONFLICT (alias_name) DO UPDATE SET entity_id = EXCLUDED.entity_id`,
+          [primaryEntityId, alias]
         );
       }
     }

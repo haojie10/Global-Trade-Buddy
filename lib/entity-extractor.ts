@@ -130,6 +130,8 @@ export async function extractAndNormalizeEntities(
 
   const matchedEntities = new Map<string, { id: string; canonical_name: string; entity_type: string }>();
 
+  let primaryEntityId = '';
+
   // 2. 处理手动标记的实体 (以 Meta 标签为唯一权威来源，支持简称 -> 标准名映射)
   if (manualTags) {
     // 2.1 特殊处理公司标签：如果有多个公司标签，则取第一个作为标准名称，其余全部自动作为其别称并入数据库别称表，不在图上显示多个圆点
@@ -137,7 +139,6 @@ export async function extractAndNormalizeEntities(
       const companyTags = manualTags.companies.map((c: string) => c.trim()).filter(Boolean);
       if (companyTags.length > 0) {
         const primaryTag = companyTags[0];
-        let primaryEntityId = '';
         let primaryCanonicalName = primaryTag;
 
         // 检查是否已有同名实体或已有的别称
@@ -223,6 +224,10 @@ export async function extractAndNormalizeEntities(
         // 查找是否已存在于已知实体或别名中 (匹配简称 -> 标准全称)
         let foundEntity: { id: string; canonical_name: string; entity_type: string } | null = null;
         for (const ent of entityMap.values()) {
+          // 安全保护：非主体关系标签（如 sisters/competitors/suppliers）绝不能错误匹配为主体实体本身
+          if (primaryEntityId && ent.id === primaryEntityId) {
+            continue;
+          }
           if (ent.matches.has(tag)) {
             foundEntity = { id: ent.id, canonical_name: ent.canonical_name, entity_type: ent.entity_type };
             break;
