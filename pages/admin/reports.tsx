@@ -46,6 +46,11 @@ export default function AdminReportsManagement() {
   const [totalReports, setTotalReports] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
 
+  // 搜索与筛选状态
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [activeSearchQuery, setActiveSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('All');
+
   // 批量选择与批量删除状态
   const [selectedReportIds, setSelectedReportIds] = useState<string[]>([]);
   const [batchDeleting, setBatchDeleting] = useState(false);
@@ -223,11 +228,22 @@ export default function AdminReportsManagement() {
     }
   }, [manualRegions, countries]);
 
-  const fetchData = async (targetPage = currentPage) => {
+  const fetchData = async (targetPage = currentPage, keyword = activeSearchQuery, cat = categoryFilter) => {
     setLoading(true);
     try {
-      // 1. 获取报告列表 (包含标签与实体及分页)
-      const repRes = await fetch(`/api/admin/reports/list?page=${targetPage}&pageSize=${pageSize}`);
+      // 1. 获取报告列表 (包含标签与实体、搜索与分页)
+      const params = new URLSearchParams({
+        page: String(targetPage),
+        pageSize: String(pageSize)
+      });
+      if (keyword.trim()) {
+        params.set('search', keyword.trim());
+      }
+      if (cat && cat !== 'All') {
+        params.set('category', cat);
+      }
+
+      const repRes = await fetch(`/api/admin/reports/list?${params.toString()}`);
       if (repRes.ok) {
         const repData = await repRes.json();
         // 对齐数据格式
@@ -279,6 +295,30 @@ export default function AdminReportsManagement() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // 搜索处理函数
+  const handleSearch = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setActiveSearchQuery(searchKeyword);
+    setCurrentPage(1);
+    fetchData(1, searchKeyword, categoryFilter);
+  };
+
+  // 重置搜索
+  const handleResetSearch = () => {
+    setSearchKeyword('');
+    setActiveSearchQuery('');
+    setCategoryFilter('All');
+    setCurrentPage(1);
+    fetchData(1, '', 'All');
+  };
+
+  // 分类筛选切换
+  const handleCategoryChange = (newCat: string) => {
+    setCategoryFilter(newCat);
+    setCurrentPage(1);
+    fetchData(1, activeSearchQuery, newCat);
   };
 
   // 处理删除报告
@@ -766,44 +806,142 @@ export default function AdminReportsManagement() {
         ) : activeTab === 'list' ? (
           /* 报告列表 */
           <div className="admin-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
-              <h3 className="admin-card-title" style={{ margin: 0 }}>
-                当前报告库列表 ({reports.length} 篇)
-              </h3>
+            {/* 搜索与筛选工具栏 */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '16px',
+              paddingBottom: '14px',
+              borderBottom: '1px solid var(--admin-border)',
+              flexWrap: 'wrap',
+              gap: '12px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 className="admin-card-title" style={{ margin: 0 }}>
+                  当前报告库列表
+                </h3>
+                <span style={{
+                  fontSize: '0.8rem',
+                  color: 'var(--admin-text-secondary)',
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  padding: '2px 8px',
+                  borderRadius: '12px'
+                }}>
+                  {totalReports} 篇
+                </span>
+              </div>
 
-              {/* 批量操作工具条 */}
-              {selectedReportIds.length > 0 && (
-                <div style={{
+              {/* 搜索表单 */}
+              <form
+                onSubmit={handleSearch}
+                style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '12px',
-                  background: 'rgba(239, 68, 68, 0.08)',
-                  border: '1px solid rgba(239, 68, 68, 0.25)',
-                  padding: '6px 14px',
-                  borderRadius: '6px'
-                }}>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--admin-text)' }}>
-                    已选择 <strong style={{ color: '#f87171' }}>{selectedReportIds.length}</strong> 篇报告
-                  </span>
-                  <button
-                    className="admin-btn admin-btn-danger"
-                    onClick={handleBatchDelete}
-                    disabled={batchDeleting}
-                    style={{ padding: '4px 12px', fontSize: '0.8rem', fontWeight: 600 }}
-                  >
-                    {batchDeleting ? '⏳ 批量删除中...' : `🗑️ 批量删除 (${selectedReportIds.length})`}
-                  </button>
-                  <button
-                    className="admin-btn admin-btn-secondary"
-                    onClick={() => setSelectedReportIds([])}
-                    disabled={batchDeleting}
-                    style={{ padding: '4px 8px', fontSize: '0.75rem' }}
-                  >
-                    取消选择
-                  </button>
+                  gap: '8px',
+                  flexWrap: 'wrap',
+                  flex: '1 1 320px',
+                  justifyContent: 'flex-end'
+                }}
+              >
+                {/* 分类下拉筛选 */}
+                <select
+                  className="admin-input"
+                  value={categoryFilter}
+                  onChange={(e) => handleCategoryChange(e.target.value)}
+                  style={{
+                    padding: '6px 10px',
+                    fontSize: '0.85rem',
+                    width: 'auto',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="All">📂 全部分类</option>
+                  <option value="customer">🏢 目标买家</option>
+                  <option value="category">📦 市场品类</option>
+                </select>
+
+                {/* 搜索关键字输入框 */}
+                <div style={{ position: 'relative', width: '280px' }}>
+                  <input
+                    type="text"
+                    className="admin-input"
+                    placeholder="搜索标题 / 公司 / 别名 / 国家 / 行业..."
+                    value={searchKeyword}
+                    onChange={(e) => setSearchKeyword(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '6px 10px',
+                      fontSize: '0.85rem'
+                    }}
+                  />
                 </div>
-              )}
+
+                {/* 搜索按钮 */}
+                <button
+                  type="submit"
+                  className="admin-btn"
+                  style={{
+                    padding: '6px 14px',
+                    fontSize: '0.85rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  🔍 搜索
+                </button>
+
+                {/* 重置/清空按钮 */}
+                {(searchKeyword || activeSearchQuery || categoryFilter !== 'All') && (
+                  <button
+                    type="button"
+                    className="admin-btn admin-btn-secondary"
+                    onClick={handleResetSearch}
+                    style={{
+                      padding: '6px 10px',
+                      fontSize: '0.85rem'
+                    }}
+                  >
+                    ✕ 清空
+                  </button>
+                )}
+              </form>
             </div>
+
+            {/* 批量操作工具条 */}
+            {selectedReportIds.length > 0 && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                background: 'rgba(239, 68, 68, 0.08)',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                padding: '6px 14px',
+                borderRadius: '6px',
+                marginBottom: '14px'
+              }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--admin-text)' }}>
+                  已选择 <strong style={{ color: '#f87171' }}>{selectedReportIds.length}</strong> 篇报告
+                </span>
+                <button
+                  className="admin-btn admin-btn-danger"
+                  onClick={handleBatchDelete}
+                  disabled={batchDeleting}
+                  style={{ padding: '4px 12px', fontSize: '0.8rem', fontWeight: 600 }}
+                >
+                  {batchDeleting ? '⏳ 批量删除中...' : `🗑️ 批量删除 (${selectedReportIds.length})`}
+                </button>
+                <button
+                  className="admin-btn admin-btn-secondary"
+                  onClick={() => setSelectedReportIds([])}
+                  disabled={batchDeleting}
+                  style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                >
+                  取消选择
+                </button>
+              </div>
+            )}
 
             <div className="admin-table-container">
               <table className="admin-table">
@@ -1136,7 +1274,7 @@ export default function AdminReportsManagement() {
                     disabled={currentPage <= 1 || loading}
                     onClick={() => {
                       const newP = currentPage - 1;
-                      fetchData(newP);
+                      fetchData(newP, activeSearchQuery, categoryFilter);
                     }}
                   >
                     ◀ 上一页
@@ -1153,7 +1291,7 @@ export default function AdminReportsManagement() {
                     disabled={currentPage >= totalPages || loading}
                     onClick={() => {
                       const newP = currentPage + 1;
-                      fetchData(newP);
+                      fetchData(newP, activeSearchQuery, categoryFilter);
                     }}
                   >
                     下一页 ▶

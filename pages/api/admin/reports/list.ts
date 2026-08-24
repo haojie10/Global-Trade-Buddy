@@ -21,7 +21,14 @@ async function reportsListHandler(req: NextApiRequest, res: NextApiResponse, dbC
   let paramIndex = 1;
 
   if (search) {
-    whereClauses.push(`(r.title ILIKE $${paramIndex} OR r.market_region ILIKE $${paramIndex})`);
+    whereClauses.push(`(
+      r.title ILIKE $${paramIndex} 
+      OR r.market_region ILIKE $${paramIndex}
+      OR EXISTS (SELECT 1 FROM report_industries ri JOIN industries ind ON ri.industry_id = ind.id WHERE ri.report_id = r.id AND ind.name ILIKE $${paramIndex})
+      OR EXISTS (SELECT 1 FROM report_countries rc JOIN countries c ON rc.country_id = c.id WHERE rc.report_id = r.id AND c.name ILIKE $${paramIndex})
+      OR EXISTS (SELECT 1 FROM report_entities re JOIN entities e ON re.entity_id = e.id WHERE re.report_id = r.id AND e.canonical_name ILIKE $${paramIndex})
+      OR EXISTS (SELECT 1 FROM report_entities re JOIN entity_aliases ea ON re.entity_id = ea.entity_id WHERE re.report_id = r.id AND ea.alias_name ILIKE $${paramIndex})
+    )`);
     queryParams.push(`%${search}%`);
     paramIndex++;
   }
