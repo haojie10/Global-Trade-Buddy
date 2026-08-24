@@ -61,7 +61,7 @@ async function reportsListHandler(req: NextApiRequest, res: NextApiResponse, dbC
     const [entitiesRes, edgesRes] = await Promise.all([
       dbClient.query(
         `SELECT re.report_id, e.id as entity_id, e.canonical_name, e.entity_type, re.role, re.source,
-                (SELECT STRING_AGG(ea.alias_name, '|||') FROM entity_aliases ea WHERE ea.entity_id = e.id) as aliases
+                (SELECT STRING_AGG(rea.alias_name, '|||') FROM report_entity_aliases rea WHERE rea.report_id = re.report_id AND rea.entity_id = e.id) as aliases
          FROM report_entities re
          JOIN entities e ON re.entity_id = e.id
          WHERE re.report_id = ANY($1)`,

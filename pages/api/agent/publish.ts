@@ -235,6 +235,7 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     }
 
     // 4.1 确保主体公司的全部别名严格对齐持久化到 entity_aliases 表中（先清空旧别名，再重新插入当前别名）
+    // 注：全局 entity_aliases 仅作为「名称 -> 实体」匹配字典；展示层以 report_entity_aliases 为准
     if (primaryEntityId) {
       await dbClient.query(
         'DELETE FROM entity_aliases WHERE entity_id = $1',
@@ -246,6 +247,20 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
            VALUES ($1, $2)
            ON CONFLICT (alias_name) DO UPDATE SET entity_id = EXCLUDED.entity_id`,
           [primaryEntityId, alias]
+        );
+      }
+
+      // 按报告维度持久化别名（所见即所得：本报告展示什么，就存什么）
+      await dbClient.query(
+        'DELETE FROM report_entity_aliases WHERE report_id = $1 AND entity_id = $2',
+        [newReportId, primaryEntityId]
+      );
+      for (const alias of aliasesList) {
+        await dbClient.query(
+          `INSERT INTO report_entity_aliases (report_id, entity_id, alias_name)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (report_id, entity_id, alias_name) DO NOTHING`,
+          [newReportId, primaryEntityId, alias]
         );
       }
     }
