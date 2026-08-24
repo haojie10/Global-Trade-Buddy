@@ -400,7 +400,15 @@ export default function AdminReportsManagement() {
         })
       });
       if (res.ok) {
-        alert('🎉 关系实体及图谱连线重新计算并更新成功！');
+        const data = await res.json();
+        let msg = '🎉 关系实体及图谱连线重新计算并更新成功！';
+        if (data.renamedEntities && data.renamedEntities.length > 0) {
+          msg += '\n\n✏️ 已更名：\n' + data.renamedEntities.join('\n');
+        }
+        if (data.skippedRenames && data.skippedRenames.length > 0) {
+          msg += '\n\n⚠️ 以下更名未执行：\n' + data.skippedRenames.join('\n');
+        }
+        alert(msg);
         setEditingEntitiesReport(null);
         fetchData();
       } else {

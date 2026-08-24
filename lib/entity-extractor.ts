@@ -102,7 +102,7 @@ export async function extractAndNormalizeEntities(
   },
   primarySubject?: string,
   category?: string
-): Promise<{ id: string; canonical_name: string; role: string; source: 'manual' | 'auto' }[]> {
+): Promise<{ id: string; canonical_name: string; role: string; source: 'manual' | 'auto'; rawTag?: string }[]> {
   // 1. 从 entities 和 entity_aliases 表读取所有已知的实体名和别名
   const entitiesRes = await dbClient.query(`
     SELECT e.id, e.canonical_name, e.entity_type, ea.alias_name
@@ -129,6 +129,9 @@ export async function extractAndNormalizeEntities(
   }
 
   const matchedEntities = new Map<string, { id: string; canonical_name: string; entity_type: string }>();
+
+  // 记录每个实体是由哪个原始标签匹配/创建的（供调用方做"所见即所得"更名）
+  const rawTagMap = new Map<string, string>();
 
   let primaryEntityId = '';
 
@@ -180,6 +183,7 @@ export async function extractAndNormalizeEntities(
 
         // 记录标准实体
         matchedEntities.set(primaryEntityId, { id: primaryEntityId, canonical_name: primaryCanonicalName, entity_type: 'company' });
+        rawTagMap.set(primaryEntityId, primaryTag);
 
         // 将第 2 个及以后的公司名称以及 manualTags.companyAliases 安全注册为该公司的别称
         const allAliasTags = Array.from(new Set([
@@ -236,6 +240,7 @@ export async function extractAndNormalizeEntities(
 
         if (foundEntity) {
           matchedEntities.set(foundEntity.id, foundEntity);
+          rawTagMap.set(foundEntity.id, tag);
         } else {
           // 不存在，则自动写入 entities 表，扩充词库
           const insertRes = await dbClient.query(
@@ -248,6 +253,7 @@ export async function extractAndNormalizeEntities(
           const entId = insertRes.rows[0].id;
           const newEntity = { id: entId, canonical_name: tag, entity_type: cat.type };
           matchedEntities.set(entId, newEntity);
+          rawTagMap.set(entId, tag);
           
           // 动态加入内存缓存，防止本次事务后续重复插入
           entityMap.set(entId, {
@@ -286,7 +292,7 @@ export async function extractAndNormalizeEntities(
 
 
 
-  const result: { id: string; canonical_name: string; role: string; source: 'manual' | 'auto' }[] = [];
+  const result: { id: string; canonical_name: string; role: string; source: 'manual' | 'auto'; rawTag?: string }[] = [];
   for (const ent of matchedEntities.values()) {
     if (BLACKLIST.includes(ent.canonical_name)) {
       continue;
@@ -371,7 +377,8 @@ export async function extractAndNormalizeEntities(
       id: ent.id,
       canonical_name: ent.canonical_name,
       role,
-      source
+      source,
+      rawTag: rawTagMap.get(ent.id)
     });
   }
 

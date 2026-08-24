@@ -166,6 +166,40 @@ async function updateEntitiesHandler(req: NextApiRequest, res: NextApiResponse, 
       }
     }
 
+    // 5.2 实体更名（所见即所得）：以管理员在编辑表单中填写的名称为最终标准名
+    // 注：实体是全局共享的，更名后所有引用该实体的报告显示名会同步更新；旧标准名降级为别名以保留匹配能力
+    const renamedEntities: string[] = [];
+    const skippedRenames: string[] = [];
+    for (const ent of resolvedEntities) {
+      const typedName = ent.rawTag?.trim();
+      if (!typedName || typedName === ent.canonical_name) continue;
+
+      // 防冲突：若目标名称已被其他实体占用，则跳过并在响应中显式告知（不做静默合并）
+      const dupRes = await dbClient.query(
+        'SELECT id FROM entities WHERE canonical_name = $1 AND id <> $2',
+        [typedName, ent.id]
+      );
+      if (dupRes.rows.length > 0) {
+        skippedRenames.push(`${ent.canonical_name} → ${typedName}（目标名称已存在于其他实体，请先在实体管理中合并）`);
+        continue;
+      }
+
+      const oldCanonical = ent.canonical_name;
+      await dbClient.query(
+        'UPDATE entities SET canonical_name = $1 WHERE id = $2',
+        [typedName, ent.id]
+      );
+      // 旧标准名保留为该实体的别名，保证历史及未来文本仍能匹配到同一实体
+      await dbClient.query(
+        `INSERT INTO entity_aliases (entity_id, alias_name)
+         VALUES ($1, $2)
+         ON CONFLICT (alias_name) DO UPDATE SET entity_id = EXCLUDED.entity_id`,
+        [ent.id, oldCanonical]
+      );
+      renamedEntities.push(`${oldCanonical} → ${typedName}`);
+      ent.canonical_name = typedName;
+    }
+
     // 6. 调用共享模块重算该报告相关的 relations 图谱连线
     const currentEntMap = new Map<string, ReportEntityItem>();
     for (const ent of resolvedEntities) {
@@ -191,7 +225,9 @@ async function updateEntitiesHandler(req: NextApiRequest, res: NextApiResponse, 
 
     return res.status(200).json({
       success: true,
-      message: '关系实体及图谱连线重新计算并更新成功！'
+      message: '关系实体及图谱连线重新计算并更新成功！',
+      renamedEntities,
+      skippedRenames
     });
   } catch (err: any) {
     await dbClient.query('ROLLBACK');
