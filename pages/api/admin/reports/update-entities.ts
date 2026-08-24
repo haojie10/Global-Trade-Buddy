@@ -64,6 +64,7 @@ async function updateEntitiesHandler(req: NextApiRequest, res: NextApiResponse, 
     const aliasList = companyList.slice(1);
 
     // 2. 组装 manualTags（显式传入 companyAliases）
+    // 注意：键名必须与 extractAndNormalizeEntities 的 manualTags 类型定义严格一致（sisters，而非 sister_parents）
     const manualTags = {
       companies: primaryName ? [primaryName] : [],
       companyAliases: aliasList,
@@ -71,10 +72,14 @@ async function updateEntitiesHandler(req: NextApiRequest, res: NextApiResponse, 
       suppliers: suppliers.filter(Boolean),
       customers: customers.filter(Boolean),
       channels: channels.filter(Boolean),
-      sister_parents: sisters.filter(Boolean),
+      sisters: sisters.filter(Boolean),
       products: products.filter(Boolean),
       regions: cleanCountries
     };
+
+    // 必须先开启事务：extractAndNormalizeEntities 内部会写 entities/entity_aliases，
+    // 若放在 BEGIN 之前，这些写入将以 autocommit 方式提交，后续 ROLLBACK 无法覆盖，产生脏数据
+    await dbClient.query('BEGIN');
 
     // 3. 提取并归一化实体
     const resolvedEntities = await extractAndNormalizeEntities(
@@ -85,8 +90,6 @@ async function updateEntitiesHandler(req: NextApiRequest, res: NextApiResponse, 
       undefined,
       category
     );
-
-    await dbClient.query('BEGIN');
 
     // 4. 更新 report_entities
     await dbClient.query('DELETE FROM report_entities WHERE report_id = $1', [reportId]);
