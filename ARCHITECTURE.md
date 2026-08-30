@@ -52,6 +52,14 @@
 - **定时任务**：每日凌晨 3:00 自动触发 `bin/backup-db-to-cos.js`。
 - **备份链路**：导出 PostgreSQL 全量数据库镜像 → gzip 压缩与加密 saving → 上传至腾讯云 COS `database-backups/` 目录。
 
+### 5. 百度 SEO 自动推送机制 (Baidu SEO Auto Push)
+- **定时任务**：每日早上 8:30 自动触发 `bin/push-to-baidu.js`。
+- **推送策略**：
+  1. 核心枢纽页：`/`, `/reports`, `/news`
+  2. 优先推送：当日或最新生成的报告和新闻（未推送过的 `baidu_pushed_at IS NULL` 优先）
+  3. 智能补充：若当日新增量小于配额，自动按轮询顺序提取历史最久未更新的报告，用满每日 API 配额
+  4. 状态同步：百度接口返回成功后，自动更新数据库记录的 `baidu_pushed_at` 时间戳。
+
 ---
 
 ## 三、 绝对禁止使用服务 (Deprecated Services - DO NOT USE)
