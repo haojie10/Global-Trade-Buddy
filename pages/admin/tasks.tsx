@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
+import { getSession } from '../../lib/auth';
 import AdminLayout from '../../components/admin/AdminLayout';
 
 interface TaskItem {
@@ -122,9 +124,9 @@ export default function AdminTasksPage() {
       if (listRes.ok) {
         const lData = await listRes.json();
         if (lData.success) {
-          setTasks(lData.tasks);
-          setTotal(lData.total);
-          setTotalPages(lData.totalPages);
+          setTasks(lData.tasks || []);
+          setTotal(lData.total || 0);
+          setTotalPages(lData.totalPages || 1);
           if (lData.filterOptions) {
             setBatchOptions(lData.filterOptions.batches || []);
             setCountryOptions(lData.filterOptions.countries || []);
@@ -169,7 +171,7 @@ export default function AdminTasksPage() {
     }
   };
 
-  // 状态流转 (重置为 pending / 暂停 / 激活)
+  // 状态流转 (暂停 / 激活)
   const handleUpdateStatus = async (task: TaskItem, newStatus: string) => {
     try {
       const res = await fetch('/api/admin/tasks/update', {
@@ -334,14 +336,14 @@ export default function AdminTasksPage() {
         <title>调研调度中心 | GTB Admin</title>
       </Head>
 
-      <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
+      <div style={{ padding: '24px', maxWidth: '1440px', margin: '0 auto', color: 'var(--admin-text)' }}>
         {/* 顶部标题与快速操作 */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <div>
-            <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', margin: '0 0 6px 0', color: 'var(--admin-text)' }}>
+            <h1 style={{ fontSize: '1.6rem', fontWeight: 700, margin: '0 0 6px 0', color: 'var(--admin-text)' }}>
               🤖 企业调研任务调度中心
             </h1>
-            <p style={{ margin: 0, color: 'var(--admin-muted)', fontSize: '0.9rem' }}>
+            <p style={{ margin: 0, color: 'var(--admin-text-secondary)', fontSize: '0.85rem' }}>
               分布式多 Worker 原子防撞调度 · 客户清单自增长与裂变发现 · 统一任务监控与排期管理
             </p>
           </div>
@@ -350,16 +352,14 @@ export default function AdminTasksPage() {
             <button
               onClick={() => setShowAddModal(true)}
               style={{
-                background: 'var(--admin-card-bg)',
+                background: 'var(--admin-bg-card)',
                 border: '1px solid var(--admin-border)',
                 color: 'var(--admin-text)',
                 padding: '8px 16px',
                 borderRadius: '8px',
                 cursor: 'pointer',
-                fontWeight: '500',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
+                fontWeight: 500,
+                fontSize: '0.85rem'
               }}
             >
               ➕ 单条新增客户
@@ -373,11 +373,9 @@ export default function AdminTasksPage() {
                 padding: '8px 18px',
                 borderRadius: '8px',
                 cursor: 'pointer',
-                fontWeight: '600',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                boxShadow: '0 2px 6px rgba(255, 100, 30, 0.2)'
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                boxShadow: '0 4px 12px rgba(124, 111, 255, 0.3)'
               }}
             >
               📥 批量导入客户 (去重)
@@ -388,70 +386,70 @@ export default function AdminTasksPage() {
         {/* 统计指标卡片大屏 */}
         {stats && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-            <div style={{ background: 'var(--admin-card-bg)', border: '1px solid var(--admin-border)', borderRadius: '12px', padding: '18px' }}>
-              <div style={{ color: 'var(--admin-muted)', fontSize: '0.85rem', marginBottom: '8px' }}>🌐 客户总池量</div>
+            <div style={{ background: 'var(--admin-bg-card)', border: '1px solid var(--admin-border)', borderRadius: '12px', padding: '18px' }}>
+              <div style={{ color: 'var(--admin-text-secondary)', fontSize: '0.85rem', marginBottom: '8px' }}>🌐 客户总池量</div>
               <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--admin-text)' }}>{stats.total}</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--admin-muted)', marginTop: '4px' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--admin-text-secondary)', marginTop: '4px' }}>
                 种子: {stats.sourceBreakdown.batch_import} | 裂变: {stats.sourceBreakdown.competitor_discovery}
               </div>
             </div>
 
-            <div style={{ background: 'var(--admin-card-bg)', border: '1px solid var(--admin-border)', borderRadius: '12px', padding: '18px' }}>
-              <div style={{ color: 'var(--admin-muted)', fontSize: '0.85rem', marginBottom: '8px' }}>✅ 调研完成度</div>
-              <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#10b981' }}>
-                {stats.completed} <span style={{ fontSize: '1rem', fontWeight: 'normal', color: 'var(--admin-muted)' }}>({stats.progressPercent})</span>
+            <div style={{ background: 'var(--admin-bg-card)', border: '1px solid var(--admin-border)', borderRadius: '12px', padding: '18px' }}>
+              <div style={{ color: 'var(--admin-text-secondary)', fontSize: '0.85rem', marginBottom: '8px' }}>✅ 调研完成度</div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--admin-success)' }}>
+                {stats.completed} <span style={{ fontSize: '1rem', fontWeight: 'normal', color: 'var(--admin-text-secondary)' }}>({stats.progressPercent})</span>
               </div>
               <div style={{ height: '6px', background: 'rgba(16, 185, 129, 0.15)', borderRadius: '3px', marginTop: '8px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: stats.progressPercent, background: '#10b981', borderRadius: '3px' }}></div>
+                <div style={{ height: '100%', width: stats.progressPercent, background: 'var(--admin-success)', borderRadius: '3px' }}></div>
               </div>
             </div>
 
-            <div style={{ background: 'var(--admin-card-bg)', border: '1px solid var(--admin-border)', borderRadius: '12px', padding: '18px' }}>
-              <div style={{ color: 'var(--admin-muted)', fontSize: '0.85rem', marginBottom: '8px' }}>⚡ 正在调研中 (Workers)</div>
-              <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#3b82f6' }}>{stats.running}</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--admin-muted)', marginTop: '4px' }}>
+            <div style={{ background: 'var(--admin-bg-card)', border: '1px solid var(--admin-border)', borderRadius: '12px', padding: '18px' }}>
+              <div style={{ color: 'var(--admin-text-secondary)', fontSize: '0.85rem', marginBottom: '8px' }}>⚡ 正在调研中 (Workers)</div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#60a5fa' }}>{stats.running}</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--admin-text-secondary)', marginTop: '4px' }}>
                 活跃机器: {stats.activeWorkers.length} 台
               </div>
             </div>
 
-            <div style={{ background: 'var(--admin-card-bg)', border: '1px solid var(--admin-border)', borderRadius: '12px', padding: '18px' }}>
-              <div style={{ color: 'var(--admin-muted)', fontSize: '0.85rem', marginBottom: '8px' }}>⏳ 排队待调研</div>
-              <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#f59e0b' }}>{stats.pending}</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--admin-muted)', marginTop: '4px' }}>
+            <div style={{ background: 'var(--admin-bg-card)', border: '1px solid var(--admin-border)', borderRadius: '12px', padding: '18px' }}>
+              <div style={{ color: 'var(--admin-text-secondary)', fontSize: '0.85rem', marginBottom: '8px' }}>⏳ 排队待调研</div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--admin-warning)' }}>{stats.pending}</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--admin-text-secondary)', marginTop: '4px' }}>
                 已暂停: {stats.paused} | 异常: {stats.failed}
               </div>
             </div>
 
             <div style={{
-              background: stats.timeoutCount > 0 ? 'rgba(239, 68, 68, 0.05)' : 'var(--admin-card-bg)',
-              border: stats.timeoutCount > 0 ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid var(--admin-border)',
+              background: stats.timeoutCount > 0 ? 'rgba(239, 68, 68, 0.08)' : 'var(--admin-bg-card)',
+              border: stats.timeoutCount > 0 ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid var(--admin-border)',
               borderRadius: '12px',
               padding: '18px'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ color: stats.timeoutCount > 0 ? '#ef4444' : 'var(--admin-muted)', fontSize: '0.85rem' }}>⚠️ 疑似超时 (&gt;30m)</span>
+                <span style={{ color: stats.timeoutCount > 0 ? 'var(--admin-error)' : 'var(--admin-text-secondary)', fontSize: '0.85rem' }}>⚠️ 疑似超时 (&gt;30m)</span>
                 {stats.timeoutCount > 0 && (
                   <button
                     onClick={handleResetAllTimeout}
                     style={{
-                      background: '#ef4444',
+                      background: 'var(--admin-error)',
                       color: '#fff',
                       border: 'none',
                       padding: '2px 8px',
                       borderRadius: '4px',
                       fontSize: '0.75rem',
                       cursor: 'pointer',
-                      fontWeight: '500'
+                      fontWeight: 500
                     }}
                   >
                     一键重置
                   </button>
                 )}
               </div>
-              <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: stats.timeoutCount > 0 ? '#ef4444' : 'var(--admin-text)' }}>
+              <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: stats.timeoutCount > 0 ? 'var(--admin-error)' : 'var(--admin-text)' }}>
                 {stats.timeoutCount}
               </div>
-              <div style={{ fontSize: '0.75rem', color: stats.timeoutCount > 0 ? '#ef4444' : 'var(--admin-muted)', marginTop: '4px' }}>
+              <div style={{ fontSize: '0.75rem', color: stats.timeoutCount > 0 ? 'var(--admin-error)' : 'var(--admin-text-secondary)', marginTop: '4px' }}>
                 {stats.timeoutCount > 0 ? '存在长时未提交任务，需人工确认' : '调度运转正常无悬挂'}
               </div>
             </div>
@@ -460,7 +458,7 @@ export default function AdminTasksPage() {
 
         {/* 筛选与搜索工具条 */}
         <div style={{
-          background: 'var(--admin-card-bg)',
+          background: 'var(--admin-bg-card)',
           border: '1px solid var(--admin-border)',
           borderRadius: '12px',
           padding: '16px',
@@ -555,7 +553,7 @@ export default function AdminTasksPage() {
             )}
 
             {/* 仅看超时勾选 */}
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: onlyTimeout ? '#ef4444' : 'var(--admin-muted)', cursor: 'pointer' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: onlyTimeout ? 'var(--admin-error)' : 'var(--admin-text-secondary)', cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 checked={onlyTimeout}
@@ -585,7 +583,7 @@ export default function AdminTasksPage() {
             <button
               type="submit"
               style={{
-                background: 'var(--admin-card-bg)',
+                background: 'var(--admin-bg)',
                 border: '1px solid var(--admin-border)',
                 color: 'var(--admin-text)',
                 padding: '6px 14px',
@@ -600,7 +598,7 @@ export default function AdminTasksPage() {
               type="button"
               onClick={() => fetchData(page)}
               style={{
-                background: 'var(--admin-card-bg)',
+                background: 'var(--admin-bg)',
                 border: '1px solid var(--admin-border)',
                 color: 'var(--admin-text)',
                 padding: '6px 10px',
@@ -617,15 +615,14 @@ export default function AdminTasksPage() {
 
         {/* 任务列表主表格 */}
         <div style={{
-          background: 'var(--admin-card-bg)',
+          background: 'var(--admin-bg-card)',
           border: '1px solid var(--admin-border)',
           borderRadius: '12px',
-          overflow: 'hidden',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
+          overflow: 'hidden'
         }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
             <thead>
-              <tr style={{ background: 'rgba(0,0,0,0.02)', borderBottom: '1px solid var(--admin-border)', color: 'var(--admin-muted)' }}>
+              <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--admin-border)', color: 'var(--admin-text-secondary)' }}>
                 <th style={{ padding: '12px 16px', width: '90px' }}>序号</th>
                 <th style={{ padding: '12px 16px', width: '80px' }}>优先级</th>
                 <th style={{ padding: '12px 16px' }}>公司主体 / 官网</th>
@@ -638,13 +635,13 @@ export default function AdminTasksPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: 'var(--admin-muted)' }}>
+                  <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: 'var(--admin-text-secondary)' }}>
                     ⏳ 正在加载任务清单...
                   </td>
                 </tr>
               ) : tasks.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: 'var(--admin-muted)' }}>
+                  <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: 'var(--admin-text-secondary)' }}>
                     📭 暂无符合条件的客户任务
                   </td>
                 </tr>
@@ -656,15 +653,14 @@ export default function AdminTasksPage() {
                       key={task.id}
                       style={{
                         borderBottom: '1px solid var(--admin-border)',
-                        background: task.is_timeout ? 'rgba(239, 68, 68, 0.03)' : isPinned ? 'rgba(255, 100, 30, 0.03)' : 'transparent',
-                        transition: 'background 0.2s'
+                        background: task.is_timeout ? 'rgba(239, 68, 68, 0.05)' : isPinned ? 'rgba(124, 111, 255, 0.08)' : 'transparent'
                       }}
                     >
                       {/* 序号 */}
                       <td style={{ padding: '12px 16px', fontWeight: 'bold' }}>
                         <span
                           onClick={() => { setEditingSeqTask(task); setNewSeqVal(task.seq_no); }}
-                          style={{ cursor: 'pointer', borderBottom: '1px dashed var(--admin-muted)' }}
+                          style={{ cursor: 'pointer', borderBottom: '1px dashed var(--admin-text-secondary)' }}
                           title="点击可修改序号"
                         >
                           #{task.seq_no}
@@ -674,11 +670,11 @@ export default function AdminTasksPage() {
                       {/* 优先级 / 置顶 */}
                       <td style={{ padding: '12px 16px' }}>
                         {isPinned ? (
-                          <span style={{ background: '#ff641e', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold' }}>
+                          <span style={{ background: 'var(--admin-accent)', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold' }}>
                             📌 TOP
                           </span>
                         ) : (
-                          <span style={{ color: 'var(--admin-muted)', fontSize: '0.8rem' }}>
+                          <span style={{ color: 'var(--admin-text-secondary)', fontSize: '0.8rem' }}>
                             {task.priority}
                           </span>
                         )}
@@ -686,7 +682,7 @@ export default function AdminTasksPage() {
 
                       {/* 公司名称与官网 */}
                       <td style={{ padding: '12px 16px' }}>
-                        <div style={{ fontWeight: '600', color: 'var(--admin-text)', fontSize: '0.95rem' }}>
+                        <div style={{ fontWeight: 600, color: 'var(--admin-text)', fontSize: '0.92rem' }}>
                           {task.company_name}
                         </div>
                         {task.website && (
@@ -694,7 +690,7 @@ export default function AdminTasksPage() {
                             href={task.website}
                             target="_blank"
                             rel="noreferrer"
-                            style={{ fontSize: '0.75rem', color: '#3b82f6', textDecoration: 'none', wordBreak: 'break-all' }}
+                            style={{ fontSize: '0.75rem', color: 'var(--admin-accent-light)', textDecoration: 'none', wordBreak: 'break-all' }}
                           >
                             🔗 {task.website.replace(/^https?:\/\//, '')}
                           </a>
@@ -703,7 +699,7 @@ export default function AdminTasksPage() {
 
                       {/* 国家 */}
                       <td style={{ padding: '12px 16px', color: 'var(--admin-text)' }}>
-                        <span style={{ background: 'rgba(0,0,0,0.05)', padding: '3px 8px', borderRadius: '6px', fontSize: '0.8rem' }}>
+                        <span style={{ background: 'rgba(255,255,255,0.05)', padding: '3px 8px', borderRadius: '6px', fontSize: '0.8rem' }}>
                           📍 {task.country}
                         </span>
                       </td>
@@ -712,16 +708,16 @@ export default function AdminTasksPage() {
                       <td style={{ padding: '12px 16px', fontSize: '0.8rem' }}>
                         {task.source_type === 'competitor_discovery' ? (
                           <div>
-                            <span style={{ color: '#8b5cf6', fontWeight: '500' }}>✨ 竞品裂变</span>
+                            <span style={{ color: '#c084fc', fontWeight: 500 }}>✨ 竞品裂变</span>
                             {task.source_company_name && (
-                              <div style={{ color: 'var(--admin-muted)', fontSize: '0.75rem' }}>
+                              <div style={{ color: 'var(--admin-text-secondary)', fontSize: '0.75rem' }}>
                                 来自: {task.source_company_name}
                               </div>
                             )}
                           </div>
                         ) : (
                           <div>
-                            <span style={{ color: 'var(--admin-muted)' }}>📦 {task.batch_name}</span>
+                            <span style={{ color: 'var(--admin-text-secondary)' }}>📦 {task.batch_name}</span>
                           </div>
                         )}
                       </td>
@@ -730,7 +726,7 @@ export default function AdminTasksPage() {
                       <td style={{ padding: '12px 16px' }}>
                         {task.status === 'completed' && (
                           <div>
-                            <span style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '3px 8px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '500' }}>
+                            <span style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--admin-success)', padding: '3px 8px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 500 }}>
                               ✅ 调研完毕
                             </span>
                             {task.report_id && (
@@ -739,7 +735,7 @@ export default function AdminTasksPage() {
                                   href={`/reports/${task.report_id}`}
                                   target="_blank"
                                   rel="noreferrer"
-                                  style={{ color: '#3b82f6', fontSize: '0.75rem', textDecoration: 'none' }}
+                                  style={{ color: 'var(--admin-accent-light)', fontSize: '0.75rem', textDecoration: 'none' }}
                                 >
                                   📄 查看报告
                                 </a>
@@ -751,17 +747,17 @@ export default function AdminTasksPage() {
                         {task.status === 'running' && (
                           <div>
                             <span style={{
-                              background: task.is_timeout ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)',
-                              color: task.is_timeout ? '#ef4444' : '#3b82f6',
+                              background: task.is_timeout ? 'rgba(239, 68, 68, 0.15)' : 'rgba(96, 165, 250, 0.15)',
+                              color: task.is_timeout ? 'var(--admin-error)' : '#60a5fa',
                               padding: '3px 8px',
                               borderRadius: '6px',
                               fontSize: '0.8rem',
-                              fontWeight: '500'
+                              fontWeight: 500
                             }}>
                               {task.is_timeout ? `⚠️ 超时 (${task.running_minutes}m)` : `⚡ 调研中 (${task.running_minutes}m)`}
                             </span>
                             {task.assigned_worker && (
-                              <div style={{ fontSize: '0.72rem', color: 'var(--admin-muted)', marginTop: '2px' }}>
+                              <div style={{ fontSize: '0.72rem', color: 'var(--admin-text-secondary)', marginTop: '2px' }}>
                                 💻 {task.assigned_worker}
                               </div>
                             )}
@@ -769,18 +765,18 @@ export default function AdminTasksPage() {
                         )}
 
                         {task.status === 'pending' && (
-                          <span style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', padding: '3px 8px', borderRadius: '6px', fontSize: '0.8rem' }}>
+                          <span style={{ background: 'rgba(245, 158, 11, 0.15)', color: 'var(--admin-warning)', padding: '3px 8px', borderRadius: '6px', fontSize: '0.8rem' }}>
                             ⏳ 排队待调研
                           </span>
                         )}
 
                         {task.status === 'failed' && (
                           <div>
-                            <span style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '3px 8px', borderRadius: '6px', fontSize: '0.8rem' }}>
+                            <span style={{ background: 'rgba(239, 68, 68, 0.15)', color: 'var(--admin-error)', padding: '3px 8px', borderRadius: '6px', fontSize: '0.8rem' }}>
                               ❌ 调研异常
                             </span>
                             {task.error_message && (
-                              <div style={{ fontSize: '0.72rem', color: '#ef4444', marginTop: '2px', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={task.error_message}>
+                              <div style={{ fontSize: '0.72rem', color: 'var(--admin-error)', marginTop: '2px', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={task.error_message}>
                                 {task.error_message}
                               </div>
                             )}
@@ -788,7 +784,7 @@ export default function AdminTasksPage() {
                         )}
 
                         {task.status === 'paused' && (
-                          <span style={{ background: 'rgba(107, 114, 128, 0.1)', color: '#6b7280', padding: '3px 8px', borderRadius: '6px', fontSize: '0.8rem' }}>
+                          <span style={{ background: 'rgba(255, 255, 255, 0.08)', color: 'var(--admin-text-secondary)', padding: '3px 8px', borderRadius: '6px', fontSize: '0.8rem' }}>
                             ⏸️ 已暂停
                           </span>
                         )}
@@ -800,9 +796,9 @@ export default function AdminTasksPage() {
                           <button
                             onClick={() => handleTogglePin(task)}
                             style={{
-                              background: 'var(--admin-card-bg)',
+                              background: 'var(--admin-bg)',
                               border: '1px solid var(--admin-border)',
-                              color: isPinned ? '#ff641e' : 'var(--admin-text)',
+                              color: isPinned ? 'var(--admin-accent-light)' : 'var(--admin-text)',
                               padding: '4px 8px',
                               borderRadius: '4px',
                               fontSize: '0.75rem',
@@ -817,9 +813,9 @@ export default function AdminTasksPage() {
                             <button
                               onClick={() => handleResetSingleTask(task)}
                               style={{
-                                background: 'rgba(59, 130, 246, 0.1)',
-                                border: '1px solid rgba(59, 130, 246, 0.2)',
-                                color: '#3b82f6',
+                                background: 'rgba(96, 165, 250, 0.15)',
+                                border: '1px solid rgba(96, 165, 250, 0.3)',
+                                color: '#60a5fa',
                                 padding: '4px 8px',
                                 borderRadius: '4px',
                                 fontSize: '0.75rem',
@@ -835,9 +831,9 @@ export default function AdminTasksPage() {
                             <button
                               onClick={() => handleUpdateStatus(task, 'paused')}
                               style={{
-                                background: 'var(--admin-card-bg)',
+                                background: 'var(--admin-bg)',
                                 border: '1px solid var(--admin-border)',
-                                color: 'var(--admin-muted)',
+                                color: 'var(--admin-text-secondary)',
                                 padding: '4px 8px',
                                 borderRadius: '4px',
                                 fontSize: '0.75rem',
@@ -853,9 +849,9 @@ export default function AdminTasksPage() {
                             <button
                               onClick={() => handleUpdateStatus(task, 'pending')}
                               style={{
-                                background: 'rgba(16, 185, 129, 0.1)',
-                                border: '1px solid rgba(16, 185, 129, 0.2)',
-                                color: '#10b981',
+                                background: 'rgba(16, 185, 129, 0.15)',
+                                border: '1px solid rgba(16, 185, 129, 0.3)',
+                                color: 'var(--admin-success)',
                                 padding: '4px 8px',
                                 borderRadius: '4px',
                                 fontSize: '0.75rem',
@@ -883,7 +879,7 @@ export default function AdminTasksPage() {
             padding: '14px 20px',
             borderTop: '1px solid var(--admin-border)',
             fontSize: '0.85rem',
-            color: 'var(--admin-muted)'
+            color: 'var(--admin-text-secondary)'
           }}>
             <div>
               共 {total} 条客户记录 · 当前第 {page} / {totalPages || 1} 页
@@ -929,7 +925,7 @@ export default function AdminTasksPage() {
           <div style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.5)',
+            background: 'rgba(0,0,0,0.7)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -937,19 +933,19 @@ export default function AdminTasksPage() {
             padding: '20px'
           }}>
             <div style={{
-              background: 'var(--admin-card-bg)',
+              background: 'var(--admin-bg-card)',
               border: '1px solid var(--admin-border)',
               borderRadius: '16px',
               width: '100%',
               maxWidth: '640px',
               padding: '24px',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
+              boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--admin-text)' }}>📥 批量导入客户清单 (自动去重)</h3>
                 <button
                   onClick={() => setShowImportModal(false)}
-                  style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: 'var(--admin-muted)' }}
+                  style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: 'var(--admin-text-secondary)' }}
                 >
                   ✕
                 </button>
@@ -957,7 +953,7 @@ export default function AdminTasksPage() {
 
               <form onSubmit={handleImportSubmit}>
                 <div style={{ marginBottom: '14px' }}>
-                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--admin-muted)', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--admin-text-secondary)', marginBottom: '6px' }}>
                     批次名称:
                   </label>
                   <input
@@ -977,7 +973,7 @@ export default function AdminTasksPage() {
                 </div>
 
                 <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--admin-muted)', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--admin-text-secondary)', marginBottom: '6px' }}>
                     粘贴 Markdown 表格或数据文本 (自动识别序号、公司名、国家、网址):
                   </label>
                   <textarea
@@ -999,7 +995,7 @@ export default function AdminTasksPage() {
                     }}
                     required
                   />
-                  <div style={{ fontSize: '0.75rem', color: 'var(--admin-muted)', marginTop: '4px' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--admin-text-secondary)', marginTop: '4px' }}>
                     💡 提示：系统将自动与已有报告和当前任务池比对，已存在的客户自动跳过，无需担心重复！
                   </div>
                 </div>
@@ -1028,7 +1024,7 @@ export default function AdminTasksPage() {
                       border: 'none',
                       borderRadius: '8px',
                       color: '#fff',
-                      fontWeight: '600',
+                      fontWeight: 600,
                       cursor: importing ? 'not-allowed' : 'pointer',
                       opacity: importing ? 0.6 : 1
                     }}
@@ -1046,7 +1042,7 @@ export default function AdminTasksPage() {
           <div style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.5)',
+            background: 'rgba(0,0,0,0.7)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1054,19 +1050,19 @@ export default function AdminTasksPage() {
             padding: '20px'
           }}>
             <div style={{
-              background: 'var(--admin-card-bg)',
+              background: 'var(--admin-bg-card)',
               border: '1px solid var(--admin-border)',
               borderRadius: '16px',
               width: '100%',
               maxWidth: '480px',
               padding: '24px',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
+              boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--admin-text)' }}>➕ 新增待调研客户</h3>
                 <button
                   onClick={() => setShowAddModal(false)}
-                  style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: 'var(--admin-muted)' }}
+                  style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: 'var(--admin-text-secondary)' }}
                 >
                   ✕
                 </button>
@@ -1074,7 +1070,7 @@ export default function AdminTasksPage() {
 
               <form onSubmit={handleAddSubmit}>
                 <div style={{ marginBottom: '12px' }}>
-                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--admin-muted)', marginBottom: '4px' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--admin-text-secondary)', marginBottom: '4px' }}>
                     公司名称 (*必填):
                   </label>
                   <input
@@ -1095,7 +1091,7 @@ export default function AdminTasksPage() {
                 </div>
 
                 <div style={{ marginBottom: '12px' }}>
-                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--admin-muted)', marginBottom: '4px' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--admin-text-secondary)', marginBottom: '4px' }}>
                     所属国家:
                   </label>
                   <input
@@ -1115,7 +1111,7 @@ export default function AdminTasksPage() {
                 </div>
 
                 <div style={{ marginBottom: '12px' }}>
-                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--admin-muted)', marginBottom: '4px' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--admin-text-secondary)', marginBottom: '4px' }}>
                     官方网站:
                   </label>
                   <input
@@ -1157,7 +1153,7 @@ export default function AdminTasksPage() {
                       border: 'none',
                       borderRadius: '8px',
                       color: '#fff',
-                      fontWeight: '600',
+                      fontWeight: 600,
                       cursor: 'pointer'
                     }}
                   >
@@ -1174,7 +1170,7 @@ export default function AdminTasksPage() {
           <div style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.5)',
+            background: 'rgba(0,0,0,0.7)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1182,13 +1178,13 @@ export default function AdminTasksPage() {
             padding: '20px'
           }}>
             <div style={{
-              background: 'var(--admin-card-bg)',
+              background: 'var(--admin-bg-card)',
               border: '1px solid var(--admin-border)',
               borderRadius: '16px',
               width: '100%',
               maxWidth: '360px',
               padding: '20px',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
+              boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
             }}>
               <h4 style={{ margin: '0 0 12px 0', color: 'var(--admin-text)' }}>
                 修改 #{editingSeqTask.company_name} 的序号
@@ -1232,7 +1228,7 @@ export default function AdminTasksPage() {
                     border: 'none',
                     borderRadius: '6px',
                     color: '#fff',
-                    fontWeight: '600',
+                    fontWeight: 600,
                     cursor: 'pointer'
                   }}
                 >
@@ -1246,3 +1242,20 @@ export default function AdminTasksPage() {
     </AdminLayout>
   );
 }
+
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const session = getSession(context.req as any);
+
+  if (!session || session.role !== 'admin') {
+    return {
+      redirect: {
+        destination: '/',
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: {}
+  };
+};
