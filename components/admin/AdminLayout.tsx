@@ -25,6 +25,7 @@ export default function AdminLayout({ children, currentPage }: AdminLayoutProps)
 
   const navItems = [
     { name: '📊 数据总览', id: 'overview', path: '/admin' },
+    { name: '🤖 调研调度中心', id: 'tasks', path: '/admin/tasks' },
     { name: '📋 内容分析', id: 'content', path: '/admin/content' },
     { name: '👥 用户管理', id: 'users', path: '/admin/users' },
     { name: '🔥 趋势洞察', id: 'trends', path: '/admin/trends' },

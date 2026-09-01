@@ -7,6 +7,7 @@ import { uploadImage, cleanOrphanedImages } from '../../../lib/storage';
 import { RETAILER_ENTITIES } from '../../../lib/entity-constants';
 import { filterCountriesOnly } from '../../../lib/country-helpers';
 import { computeRelationsForReport, ReportEntityItem } from '../../../lib/relation-calculator';
+import { discoverAndQueueCompetitors } from '../../../lib/competitor-discoverer';
 
 async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
   const authHeader = req.headers.authorization;
@@ -413,6 +414,22 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     );
 
     await dbClient.query('COMMIT');
+
+    // 事务提交成功后，安全触发竞品自动裂变发现（完全独立 try-catch 保护，不阻塞/不影响主流程）
+    if (finalCategory === 'customer' && metaCompetitors) {
+      try {
+        const sourceComp = metaCompanyName || primaryEntNameA || title;
+        await discoverAndQueueCompetitors(
+          dbClient,
+          metaCompetitors,
+          sourceComp,
+          newReportId,
+          finalMarketRegion || '全球'
+        );
+      } catch (discErr: any) {
+        console.error('[WARN] publish: 竞品自动发现处理异常 (已安全隔离):', discErr.message);
+      }
+    }
 
     // 事务提交成功后，异步清理更新前的孤儿图片（不阻塞响应）
     if (oldContentHtmlForUpdate !== null) {
