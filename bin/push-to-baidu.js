@@ -214,42 +214,58 @@ async function main() {
       return;
     }
 
-    // 4. 执行实际推送
-    const urlsToPush = pushQueue.map(item => item.url);
-    console.log(`📡 正在向百度主动推送接口发送数据 (${urlsToPush.length} 条)...`);
-    const result = await postUrlsToBaidu(SITE_PARAM, TOKEN, urlsToPush);
+    // 4. 执行实际推送（支持超出配额时自适应递减重试）
+    let activeQueue = [...pushQueue];
+    let result = null;
+    let pushSuccess = false;
 
-    console.log(`\n📬 百度接口响应结果 (HTTP ${result.statusCode}):`);
-    console.log(JSON.stringify(result.data || result.raw, null, 2));
+    while (activeQueue.length > 0) {
+      const urlsToPush = activeQueue.map(item => item.url);
+      console.log(`📡 尝试向百度接口推送 ${urlsToPush.length} 条 URL...`);
+      result = await postUrlsToBaidu(SITE_PARAM, TOKEN, urlsToPush);
 
-    if (result.data && result.data.success !== undefined) {
-      console.log(`\n🎉 推送成功！本次成功接收: ${result.data.success} 条，今日剩余配额: ${result.data.remain} 条`);
-      
-      // 5. 更新已推送记录的时间戳 (若数据库连接可用)
-      if (dbConnected && pool) {
-        const reportIds = pushQueue.filter(i => i.type === 'report' && i.id).map(i => i.id);
-        const newsIds = pushQueue.filter(i => i.type === 'news' && i.id).map(i => i.id);
-
-        if (reportIds.length > 0) {
-          await pool.query(
-            `UPDATE reports SET baidu_pushed_at = NOW() WHERE id = ANY($1::uuid[])`,
-            [reportIds]
-          );
-          console.log(`✅ 已更新 ${reportIds.length} 篇报告的 baidu_pushed_at 时间戳`);
+      if (result.data && result.data.success !== undefined) {
+        pushSuccess = true;
+        console.log(`\n📬 百度接口响应结果 (HTTP ${result.statusCode}):`);
+        console.log(JSON.stringify(result.data, null, 2));
+        console.log(`\n🎉 推送成功！本次成功接收: ${result.data.success} 条，今日剩余配额: ${result.data.remain} 条`);
+        break;
+      } else if (result.data && result.data.message === 'over quota') {
+        if (activeQueue.length > 1) {
+          const nextCount = Math.floor(activeQueue.length / 2);
+          console.warn(`⚠️ 提交 ${activeQueue.length} 条超过百度当日剩余配额，正在降级尝试提交前 ${nextCount} 条...`);
+          activeQueue = activeQueue.slice(0, nextCount);
+        } else {
+          console.error(`\n❌ 百度当日全部推送配额已耗尽 (配额为 0 条)。`);
+          console.log(`💡 提示：百度 API 提交配额会在每日 00:00 自动重置，定时脚本将在明天凌晨自动恢复推送！`);
+          break;
         }
-
-        if (newsIds.length > 0) {
-          await pool.query(
-            `UPDATE news SET baidu_pushed_at = NOW() WHERE id = ANY($1::uuid[])`,
-            [newsIds]
-          );
-          console.log(`✅ 已更新 ${newsIds.length} 条资讯的 baidu_pushed_at 时间戳`);
-        }
+      } else {
+        console.error(`\n❌ 百度接口返回错误:`, result.data || result.raw);
+        break;
       }
-    } else if (result.data && result.data.error) {
-      console.error(`\n❌ 百度接口返回错误 [${result.data.error}]: ${result.data.message}`);
-    } else {
-      console.warn('\n⚠️ 百度返回非预期响应:', result.raw);
+    }
+
+    // 5. 更新已推送记录的时间戳 (若数据库连接可用且推送成功)
+    if (pushSuccess && dbConnected && pool) {
+      const reportIds = activeQueue.filter(i => i.type === 'report' && i.id).map(i => i.id);
+      const newsIds = activeQueue.filter(i => i.type === 'news' && i.id).map(i => i.id);
+
+      if (reportIds.length > 0) {
+        await pool.query(
+          `UPDATE reports SET baidu_pushed_at = NOW() WHERE id = ANY($1::uuid[])`,
+          [reportIds]
+        );
+        console.log(`✅ 已更新 ${reportIds.length} 篇报告的 baidu_pushed_at 时间戳`);
+      }
+
+      if (newsIds.length > 0) {
+        await pool.query(
+          `UPDATE news SET baidu_pushed_at = NOW() WHERE id = ANY($1::uuid[])`,
+          [newsIds]
+        );
+        console.log(`✅ 已更新 ${newsIds.length} 条资讯的 baidu_pushed_at 时间戳`);
+      }
     }
 
   } catch (error) {
