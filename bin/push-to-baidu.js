@@ -122,10 +122,14 @@ async function main() {
       }
     }
 
-    // 1. 添加核心静态枢纽页
-    addUrl(`${BASE_URL}/`, 'static');
-    addUrl(`${BASE_URL}/reports`, 'static');
-    addUrl(`${BASE_URL}/news`, 'static');
+    const includeStatic = args.includes('--include-static');
+
+    // 1. 如果显式指定了 --include-static，才添加核心静态枢纽页（默认不添加，配额 100% 留给全新研报与资讯）
+    if (includeStatic) {
+      addUrl(`${BASE_URL}/`, 'static');
+      addUrl(`${BASE_URL}/reports`, 'static');
+      addUrl(`${BASE_URL}/news`, 'static');
+    }
 
     // 2. 若数据库可用，通过数据库进行精准优先级与增量分析
     if (pool) {
