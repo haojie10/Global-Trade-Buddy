@@ -130,6 +130,10 @@ async function main() {
     // 2. 若数据库可用，通过数据库进行精准优先级与增量分析
     if (pool) {
       try {
+        // 自动确保所需字段存在
+        await pool.query(`ALTER TABLE reports ADD COLUMN IF NOT EXISTS baidu_pushed_at TIMESTAMP WITH TIME ZONE;`);
+        await pool.query(`ALTER TABLE news ADD COLUMN IF NOT EXISTS baidu_pushed_at TIMESTAMP WITH TIME ZONE;`);
+
         // 2.1 优先查询【从未推送过】的最新报告 (baidu_pushed_at IS NULL)
         if (pushQueue.length < PUSH_LIMIT) {
           const remainingQuota = PUSH_LIMIT - pushQueue.length;
@@ -162,7 +166,7 @@ async function main() {
           const oldestPushedReports = await pool.query(
             `SELECT id, baidu_pushed_at FROM reports 
              WHERE baidu_pushed_at IS NOT NULL 
-             ORDER BY baidu_pushed_at ASC, updated_at DESC 
+             ORDER BY baidu_pushed_at ASC, created_at DESC 
              LIMIT $1`,
             [remainingQuota]
           );
