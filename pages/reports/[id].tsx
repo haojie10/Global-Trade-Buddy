@@ -514,7 +514,7 @@ export default function ReportDetailPage({
                       border: 'none',
                       display: 'block'
                     }}
-                    sandbox="allow-scripts allow-popups"
+                    sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
                   />
 
                   {/* 智能悬浮全屏控制按钮：仅在未全屏时悬浮在报告窗口右下角 */}

@@ -34,9 +34,13 @@ async function reportsListHandler(req: NextApiRequest, res: NextApiResponse, dbC
   }
 
   if (category && category !== 'All') {
-    whereClauses.push(`r.category = $${paramIndex}`);
-    queryParams.push(category);
-    paramIndex++;
+    if (category === 'product' || category === 'category') {
+      whereClauses.push(`r.category IN ('product', 'category')`);
+    } else {
+      whereClauses.push(`r.category = $${paramIndex}`);
+      queryParams.push(category);
+      paramIndex++;
+    }
   }
 
   const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';

@@ -885,8 +885,8 @@ export default function AdminReportsManagement() {
                   }}
                 >
                   <option value="All">📂 全部分类</option>
-                  <option value="customer">🏢 目标买家</option>
-                  <option value="category">📦 市场品类</option>
+                  <option value="customer">🏢 客户研报</option>
+                  <option value="product">📦 品类报告</option>
                 </select>
 
                 {/* 搜索关键字输入框 */}
@@ -1027,7 +1027,7 @@ export default function AdminReportsManagement() {
                           </td>
                           <td>
                             <span className={`admin-badge ${rep.category === 'customer' ? 'admin-badge-success' : 'admin-badge-info'}`}>
-                              {rep.category === 'customer' ? '客户研报' : '品类分析'}
+                              {rep.category === 'customer' ? '🏢 客户研报' : '📦 品类报告'}
                             </span>
                           </td>
                           <td>
