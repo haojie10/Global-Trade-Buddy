@@ -70,6 +70,7 @@ export default function AdminReportsManagement() {
   const [editProducts, setEditProducts] = useState<string[]>(['']);
   const [savingEntities, setSavingEntities] = useState(false);
   const [recalculating, setRecalculating] = useState(false);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   // 全选/单选逻辑
   const isAllCurrentPageSelected = reports.length > 0 && reports.every(r => selectedReportIds.includes(r.id));
@@ -319,6 +320,33 @@ export default function AdminReportsManagement() {
     setCategoryFilter(newCat);
     setCurrentPage(1);
     fetchData(1, activeSearchQuery, newCat);
+  };
+
+  // 下载单篇报告 HTML 文件
+  const handleDownloadReport = async (reportId: string, title: string) => {
+    setDownloadingId(reportId);
+    try {
+      const res = await fetch(`/api/admin/reports/download?id=${reportId}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert('❌ 下载失败: ' + (data.error || '网络异常'));
+        return;
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const sanitizedTitle = (title || 'report').replace(/[\\/:*?"<>|]/g, '_').trim();
+      a.download = `${sanitizedTitle}.html`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err: any) {
+      alert('❌ 下载失败: ' + err.message);
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   // 处理删除报告
@@ -1036,7 +1064,16 @@ export default function AdminReportsManagement() {
                             </span>
                           </td>
                           <td>{dateStr}</td>
-                          <td style={{ textAlign: 'right' }}>
+                          <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                            <button
+                              className="admin-btn admin-btn-secondary"
+                              style={{ padding: '4px 10px', fontSize: '0.75rem', marginRight: '6px' }}
+                              onClick={() => handleDownloadReport(rep.id, rep.title)}
+                              disabled={downloadingId === rep.id}
+                              title="下载完整脱水 HTML 报告文件"
+                            >
+                              {downloadingId === rep.id ? '⏳ 下载中...' : '📥 下载 HTML'}
+                            </button>
                             <button
                               className="admin-btn admin-btn-secondary"
                               style={{ padding: '4px 10px', fontSize: '0.75rem', marginRight: '6px' }}
