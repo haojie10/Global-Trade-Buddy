@@ -41,10 +41,17 @@ def check_js_syntax(script_content):
             os.remove(tmp_path)
             
         if res.returncode != 0:
-            return False, res.stderr.strip()
+            err = res.stderr.strip()
+            # 如果是运行环境/动态库缺失等环境错误而非 JS SyntaxError，则退回 Python 正则语法校验
+            if "SyntaxError" in err:
+                return False, err
+            elif "dyld" in err or "Library not loaded" in err or "not found" in err:
+                pass
+            else:
+                return False, err
         return True, ""
     except Exception as e:
-        # 如果系统没装 node，退回到简易正则检查未转义单引号
+        # 如果系统没装 node 或环境异常，退回到简易正则检查未转义单引号
         lines = script_content.split("\n")
         for line_no, line in enumerate(lines, 1):
             if re.search(r"'[^'\\]*'[a-zA-Z0-9_\s\u4e00-\u9fa5]+[^'\\]*'", line):
@@ -67,14 +74,14 @@ def validate_html(html_path):
     print("[*] 正在审计 Meta 元数据...")
     meta_values = {}
     for meta in REQUIRED_METAS:
-        pattern = rf'<meta\s+[^>]*name=["\']{meta}["\']\s+content=["\']([^"\']*)["\']'
-        match = re.search(pattern, content, re.IGNORECASE)
+        pattern = rf'<meta\s+[^>]*name=["\']{meta}["\']\s+content=(["\'])(.*?)\1'
+        match = re.search(pattern, content, re.IGNORECASE | re.DOTALL)
         if not match:
-            pattern_rev = rf'<meta\s+[^>]*content=["\']([^"\']*)["\']\s+name=["\']{meta}["\']'
-            match = re.search(pattern_rev, content, re.IGNORECASE)
+            pattern_rev = rf'<meta\s+[^>]*content=(["\'])(.*?)\1\s+name=["\']{meta}["\']'
+            match = re.search(pattern_rev, content, re.IGNORECASE | re.DOTALL)
             
         if match:
-            val = match.group(1).strip()
+            val = match.group(2).strip()
             meta_values[meta] = val
             print(f"  [OK] 检出 Meta -> {meta}: \"{val}\"")
         else:

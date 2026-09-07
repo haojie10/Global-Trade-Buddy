@@ -117,6 +117,20 @@
         <!-- ====== 报告正文容器 (所有 section 必须在此 div 内) ====== -->
         <div class="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
 
+            <!-- ═══════════ 核心执行摘要 / 研报导读 ═══════════ -->
+            <section id="executive-summary" class="scroll-mt-12 sand-card p-6 md:p-8 border-l-4 border-[#ff641e] relative overflow-hidden">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="p-2 bg-[#f6f3ec] text-[#ff641e] rounded-lg"><i data-lucide="compass" size="22"></i></div>
+                    <div>
+                        <h3 class="text-xl font-bold text-[#3c3935]">核心执行摘要与战略导读 (Executive Summary)</h3>
+                        <p class="text-xs text-[#7a756f] mt-0.5">30 秒快速掌握本报告核心结论、在华采购对接点与供应链出海机会</p>
+                    </div>
+                </div>
+                <div class="text-sm leading-relaxed text-[#3c3935] space-y-3">
+                    {{EXECUTIVE_SUMMARY}}
+                </div>
+            </section>
+
             <!-- ═══════════ Section 1: 企业全景概览 ═══════════ -->
             <section id="overview" class="scroll-mt-12">
                 <div class="flex items-center gap-3 mb-6">

@@ -27,13 +27,31 @@ def load_env(env_path):
                 env_vars[key.strip()] = val.strip()
     return env_vars
 
+def find_and_load_env():
+    cur = os.path.dirname(os.path.abspath(__file__))
+    candidates = [
+        os.path.join(os.getcwd(), '.env'),
+        r"d:\我的APP\Globaltradebuddy\.env"
+    ]
+    for _ in range(5):
+        candidates.append(os.path.join(cur, '.env'))
+        cur = os.path.dirname(cur)
+        
+    for p in candidates:
+        if os.path.exists(p):
+            return load_env(p)
+    return {}
+
+import ssl
+
 def extract_meta(html, name):
-    match = re.search(r'<meta[^>]*?name=["\']{}["\'][^>]*?content=["\']([^"\']*)["\']'.format(name), html, re.IGNORECASE)
+    # 支持双引号和单引号包裹，并避免内容中的单引号导致截断
+    match = re.search(r'<meta[^>]*?name=["\']' + re.escape(name) + r'["\'][^>]*?content=(["\'])(.*?)\1', html, re.IGNORECASE | re.DOTALL)
     if match:
-        return match[1].strip()
-    match_rev = re.search(r'<meta[^>]*?content=["\']([^"\']*)["\'][^>]*?name=["\']{}["\']'.format(name), html, re.IGNORECASE)
+        return match.group(2).strip()
+    match_rev = re.search(r'<meta[^>]*?content=(["\'])(.*?)\1[^>]*?name=["\']' + re.escape(name) + r'["\']', html, re.IGNORECASE | re.DOTALL)
     if match_rev:
-        return match_rev[1].strip()
+        return match_rev.group(2).strip()
     return ''
 
 def publish_report_file(html_path, target_url=None, api_key=None):
@@ -119,8 +137,9 @@ def publish_report_file(html_path, target_url=None, api_key=None):
     print(f"[INFO] Target endpoint: {endpoint}")
     print(f"[INFO] Company: {company_name or 'N/A'}, Title: {title}")
 
+    ctx = ssl._create_unverified_context()
     try:
-        with urllib.request.urlopen(req, timeout=90) as response:
+        with urllib.request.urlopen(req, timeout=90, context=ctx) as response:
             res_body = response.read().decode('utf-8')
             res_json = json.loads(res_body)
             print(f"[OK] Report published successfully! ID: {res_json.get('id')}")
