@@ -80,7 +80,7 @@ async function handler(
   const newRecord = insertRes.rows[0];
 
   // 方案 A：即时向管理员邮箱发送邮件提醒
-  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || process.env.SMTP_USER;
+  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || '838048181@qq.com';
   if (adminEmail) {
     let typeTitle = '用户需求';
     let detailHtml = '';
