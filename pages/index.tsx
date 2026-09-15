@@ -163,12 +163,12 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
       updateSection(sec3, 0.58, 0.62, 0.78, 0.82);
       updateSection(sec4, 0.82, 0.86, 1.0, 1.0, true);
 
-      // 当滚动进入最底端 (scrollPercent > 0.88) 时，视口整体随滚动平滑向上抬起，让出空间给底部 Footer，与主页一起向上滚动
+      // 当滚动进入最底端 (scrollPercent > 0.88) 时，视口整体随滚动平滑微幅向上抬起，让出空间给紧凑的底部 Footer
       if (viewport) {
         let viewportShiftY = 0;
         if (scrollPercent > 0.88) {
           const shiftRatio = Math.min(1, (scrollPercent - 0.88) / 0.12);
-          viewportShiftY = -shiftRatio * 420;
+          viewportShiftY = -shiftRatio * 110;
         }
         viewport.style.transform = `translateY(${viewportShiftY}px)`;
       }
@@ -238,7 +238,7 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
     <div style={{
       background: 'transparent',
       color: 'var(--color-text)',
-      minHeight: '460vh',
+      minHeight: '430vh',
       position: 'relative'
     }}>
       <Head>
