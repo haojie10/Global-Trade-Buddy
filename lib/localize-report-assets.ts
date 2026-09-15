@@ -42,12 +42,17 @@ export function localizeReportHtml(html: string | null | undefined): string {
 <style>
   img { cursor: zoom-in !important; transition: opacity 0.2s ease, transform 0.2s ease; }
   img:hover { opacity: 0.95; }
+  a img, .powered-by-mg img, footer img, .no-zoom { cursor: pointer !important; }
 </style>
 <script>
   // 1. 图片点击预览事件
   document.addEventListener('click', function(e) {
     var target = e.target;
     if (target && target.tagName === 'IMG') {
+      // 过滤超链接内的图片、Header/Footer Logo 或显式标记不放大的图片
+      if (target.closest('a') || target.closest('.powered-by-mg') || target.closest('footer') || target.classList.contains('no-zoom')) {
+        return;
+      }
       window.parent.postMessage({ type: 'GTB_PREVIEW_IMAGE', src: target.src }, '*');
     }
   });
