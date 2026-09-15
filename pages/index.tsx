@@ -8,6 +8,7 @@ import dynamic from 'next/dynamic';
 import { PlatformReport } from '../components/ReportList';
 import AuthModal from '../components/AuthModal';
 import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 import { EcosystemRadar, FeatureCards, KnowledgeNetwork, ActionPanel } from '../components/HomeVisuals';
 
 const AdminPanel = dynamic(() => import('../components/AdminPanel'), { ssr: false });
@@ -29,7 +30,8 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
 
   const router = useRouter();
 
-  // 4 幕 DOM 容器引用
+  // 视口容器与 4 幕 DOM 容器引用
+  const viewportRef = useRef<HTMLDivElement>(null);
   const sec1Ref = useRef<HTMLDivElement>(null);
   const sec2Ref = useRef<HTMLDivElement>(null);
   const sec3Ref = useRef<HTMLDivElement>(null);
@@ -79,6 +81,7 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
     const sec2 = sec2Ref.current;
     const sec3 = sec3Ref.current;
     const sec4 = sec4Ref.current;
+    const viewport = viewportRef.current;
 
     let targetPercent = 0;
     let currentRenderPercent = 0;
@@ -160,6 +163,16 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
       updateSection(sec3, 0.58, 0.62, 0.78, 0.82);
       updateSection(sec4, 0.82, 0.86, 1.0, 1.0, true);
 
+      // 当滚动进入最底端 (scrollPercent > 0.88) 时，视口整体随滚动平滑向上抬起，让出空间给底部 Footer，与主页一起向上滚动
+      if (viewport) {
+        let viewportShiftY = 0;
+        if (scrollPercent > 0.88) {
+          const shiftRatio = Math.min(1, (scrollPercent - 0.88) / 0.12);
+          viewportShiftY = -shiftRatio * 420;
+        }
+        viewport.style.transform = `translateY(${viewportShiftY}px)`;
+      }
+
       animationFrameId = requestAnimationFrame(renderLoop);
     };
 
@@ -186,7 +199,7 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
       1: 0,
       2: maxScroll * 0.32,
       3: maxScroll * 0.68,
-      4: maxScroll
+      4: maxScroll * 0.88
     };
     window.scrollTo({
       top: targetMap[stepNumber] || 0,
@@ -225,7 +238,7 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
     <div style={{
       background: 'transparent',
       color: 'var(--color-text)',
-      minHeight: '400vh',
+      minHeight: '460vh',
       position: 'relative'
     }}>
       <Head>
@@ -249,45 +262,6 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
         <meta name="twitter:title" content="Market Graphic (外贸智友) - 俯瞰全球市场结构" />
         <meta name="twitter:description" content="AI 驱动的深度外贸调研平台，海外买家 360° 供应链穿透洞察与品类准入分析。" />
         <meta name="twitter:image" content="https://marketgraphic.cn/images/discover_focus_panorama.jpg" />
-
-        {/* 结构化数据 (JSON-LD) */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              '@context': 'https://schema.org',
-              '@graph': [
-                {
-                  '@type': 'WebSite',
-                  '@id': 'https://marketgraphic.cn/#website',
-                  'url': 'https://marketgraphic.cn',
-                  'name': 'Market Graphic',
-                  'alternateName': ['外贸智友', 'GlobalTradeBuddy', 'MarketGraphic'],
-                  'description': 'AI 驱动的全球出海商业情报与品类调研平台',
-                  'publisher': {
-                    '@id': 'https://marketgraphic.cn/#organization'
-                  },
-                  'potentialAction': {
-                    '@type': 'SearchAction',
-                    'target': 'https://marketgraphic.cn/reports?q={search_term_string}',
-                    'query-input': 'required name=search_term_string'
-                  }
-                },
-                {
-                  '@type': 'Organization',
-                  '@id': 'https://marketgraphic.cn/#organization',
-                  'name': 'Market Graphic (外贸智友)',
-                  'alternateName': ['外贸智友', 'GlobalTradeBuddy'],
-                  'url': 'https://marketgraphic.cn',
-                  'logo': {
-                    '@type': 'ImageObject',
-                    'url': 'https://marketgraphic.cn/images/mg_logo.png'
-                  }
-                }
-              ]
-            })
-          }}
-        />
       </Head>
 
       {/* 注入全局响应式与移动端专属样式 */}
@@ -349,7 +323,7 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
             transform: translateY(-50%) scale(0.85) !important;
           }
           .home-sec2-list {
-            display: none !important; /* 移动端在第二幕隐藏复杂列表，保留主标题与示意图联动 */
+            display: none !important;
           }
         }
       `}</style>
@@ -402,21 +376,26 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
         })}
       </div>
 
-      {/* 4. 固定视口沉浸式 4 幕叙事层 */}
-      <div className="home-viewport-padding" style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
-        zIndex: 10,
-        pointerEvents: 'none',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '80px 24px 40px 24px',
-        boxSizing: 'border-box'
-      }}>
+      {/* 4. 固定视口沉浸式 4 幕叙事层 (在最后一段随滚动向上平移抬起，让出空间给底部的 Footer) */}
+      <div 
+        ref={viewportRef}
+        className="home-viewport-padding" 
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          zIndex: 10,
+          pointerEvents: 'none',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '80px 24px 40px 24px',
+          boxSizing: 'border-box',
+          willChange: 'transform'
+        }}
+      >
         <div style={{
           width: '100%',
           maxWidth: '1280px',
@@ -628,7 +607,7 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
             </div>
           </div>
 
-          {/* 第 4 幕：开启知识之旅与裂变行动 */}
+          {/* 第 4 幕：开启知识之旅与裂变行动 (CTA 卡片) */}
           <div ref={sec4Ref} style={{
             position: 'absolute',
             inset: 0,
@@ -650,7 +629,19 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
         </div>
       </div>
 
-      {/* 5. 登录/注册弹窗 & 上传管理后台 */}
+      {/* 5. 底部权威链接 Footer：自然位于页面滚动流的最底端，跟随页面滚动自然升起 */}
+      <div style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        width: '100%',
+        zIndex: 20
+      }}>
+        <Footer />
+      </div>
+
+      {/* 6. 登录/注册弹窗 & 上传管理后台 */}
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
