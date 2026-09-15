@@ -7,6 +7,7 @@ interface FeedbackModalProps {
   userId?: string | null;
   userEmail?: string;
   onShowAuthModal?: () => void;
+  initialTab?: 'custom_report' | 'feedback';
 }
 
 export default function FeedbackModal({
@@ -14,7 +15,8 @@ export default function FeedbackModal({
   onClose,
   userId,
   userEmail = '',
-  onShowAuthModal
+  onShowAuthModal,
+  initialTab = 'custom_report'
 }: FeedbackModalProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -23,7 +25,7 @@ export default function FeedbackModal({
   }, []);
 
   // 主模式: 'custom_report' (调研报告定制) | 'feedback' (平台改善意见)
-  const [mainTab, setMainTab] = useState<'custom_report' | 'feedback'>('custom_report');
+  const [mainTab, setMainTab] = useState<'custom_report' | 'feedback'>(initialTab);
   
   // 研报定制类型: 'category_insight' (渠道品类调研) | 'company_insight' (企业战略洞察)
   const [reportSubTab, setReportSubTab] = useState<'category_insight' | 'company_insight'>('category_insight');
@@ -76,11 +78,15 @@ export default function FeedbackModal({
   const { isLoggedIn, email: boundEmail } = getClientLoginState();
 
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen) {
+      if (initialTab) {
+        setMainTab(initialTab);
+      }
+    } else {
       setErrorMsg('');
       setIsSuccess(false);
     }
-  }, [isOpen]);
+  }, [isOpen, initialTab]);
 
   if (!isOpen || !mounted) return null;
 
@@ -228,7 +234,7 @@ export default function FeedbackModal({
         </button>
 
         <h2 style={{ fontSize: '1.35rem', fontWeight: 600, marginBottom: '20px', textAlign: 'center', color: '#0f172a' }}>
-          需求反馈与研报定制
+          {mainTab === 'custom_report' ? '出海研报定向定制' : '产品问题与建议反馈'}
         </h2>
 
         {/* 成功状态展示 */}
