@@ -511,7 +511,7 @@ export default function Navbar({
         userId={userId}
         userEmail={userEmail}
         onShowAuthModal={onShowAuthModal}
-        initialTab={feedbackModalTab}
+        mode={feedbackModalTab}
       />
 
       {/* 注入淡入动画与 CSS Hover 悬浮下拉规则 */}

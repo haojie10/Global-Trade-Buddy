@@ -31,6 +31,7 @@ export default function AdminLayout({ children, currentPage }: AdminLayoutProps)
     { name: '🔥 趋势洞察', id: 'trends', path: '/admin/trends' },
     { name: '📤 报告管理', id: 'reports', path: '/admin/reports' },
     { name: '📰 资讯管理', id: 'news', path: '/admin/news' },
+    { name: '📨 定制与反馈', id: 'requests', path: '/admin/requests' },
     { name: '🔗 邀请转化', id: 'referrals', path: '/admin/referrals' },
   ];
 
