@@ -272,6 +272,7 @@ export default function AdminTasksPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           batch_name: importBatchName,
+          source_type: 'batch_import',
           markdown_text: importMarkdown,
           priority: 100
         })
@@ -305,7 +306,8 @@ export default function AdminTasksPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           batch_name: newCompany.batch_name,
-          tasks: [newCompany],
+          source_type: 'manual',
+          tasks: [{ ...newCompany, source_type: 'manual' }],
           priority: newCompany.priority
         })
       });

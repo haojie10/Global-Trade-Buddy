@@ -42,9 +42,15 @@ async function listTasksHandler(req: NextApiRequest, res: NextApiResponse, dbCli
     }
 
     if (source_type && source_type !== 'All') {
-      whereConditions.push(`source_type = $${paramIndex}`);
-      queryParams.push(source_type);
-      paramIndex++;
+      if (source_type === 'manual') {
+        whereConditions.push(`(source_type = 'manual' OR batch_name = '手动新增客户' OR batch_name LIKE '%手动%')`);
+      } else if (source_type === 'batch_import') {
+        whereConditions.push(`(source_type = 'batch_import' AND batch_name != '手动新增客户' AND batch_name NOT LIKE '%手动%')`);
+      } else {
+        whereConditions.push(`source_type = $${paramIndex}`);
+        queryParams.push(source_type);
+        paramIndex++;
+      }
     }
 
     if (country && country !== 'All') {

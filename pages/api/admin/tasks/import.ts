@@ -59,7 +59,8 @@ async function importTasksHandler(req: NextApiRequest, res: NextApiResponse, dbC
     batch_name = '手动导入批次',
     tasks = [],
     markdown_text = '',
-    priority = 100 // 手动导入默认高优先级
+    priority = 100, // 手动导入默认高优先级
+    source_type: bodySourceType
   } = req.body || {};
 
   let inputItems: TaskInputItem[] = [];
@@ -139,6 +140,7 @@ async function importTasksHandler(req: NextApiRequest, res: NextApiResponse, dbC
 
       const assignSeq = item.seq_no !== undefined && item.seq_no > 0 ? item.seq_no : ++currentSeq;
       const finalPriority = item.priority !== undefined ? item.priority : priority;
+      const finalSourceType = (item as any).source_type || bodySourceType || (Array.isArray(tasks) && tasks.length > 0 ? 'manual' : 'batch_import');
 
       await dbClient.query(
         `INSERT INTO research_tasks (
@@ -153,7 +155,7 @@ async function importTasksHandler(req: NextApiRequest, res: NextApiResponse, dbC
           report_url,
           source_type,
           priority
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'batch_import', $10)`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
         [
           assignSeq,
           batch_name,
@@ -164,6 +166,7 @@ async function importTasksHandler(req: NextApiRequest, res: NextApiResponse, dbC
           taskStatus,
           reportId,
           reportUrl,
+          finalSourceType,
           finalPriority
         ]
       );

@@ -44,10 +44,14 @@ async function tasksStatsHandler(req: NextApiRequest, res: NextApiResponse, dbCl
     // 3. 来源渠道聚合统计
     const sourceRes = await dbClient.query(`
       SELECT 
-        source_type,
+        CASE 
+          WHEN source_type = 'manual' OR batch_name = '手动新增客户' OR batch_name LIKE '%手动%' THEN 'manual'
+          WHEN source_type = 'competitor_discovery' THEN 'competitor_discovery'
+          ELSE 'batch_import'
+        END AS source_type,
         COUNT(*)::int AS count
       FROM research_tasks
-      GROUP BY source_type
+      GROUP BY 1
     `);
 
     const sourceMap: Record<string, number> = {

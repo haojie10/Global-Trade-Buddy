@@ -276,7 +276,9 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     for (const indName of autoIndustries) {
       const mapped = getStandardCategory(indName);
       if (mapped) {
-        mappedNames.push(mapped);
+        if (!mappedNames.includes(mapped)) {
+          mappedNames.push(mapped);
+        }
       } else {
         ignoredCategories.push(indName);
       }
