@@ -26,6 +26,9 @@ async function listTasksHandler(req: NextApiRequest, res: NextApiResponse, dbCli
   const offset = (pageNum - 1) * sizeNum;
 
   try {
+    // 自动确保 tag 列存在（避免生产服务器因未手动执行 SQL 迁移而报 column tag does not exist 错误）
+    await dbClient.query('ALTER TABLE research_tasks ADD COLUMN IF NOT EXISTS tag VARCHAR(50);').catch(() => {});
+
     const whereConditions: string[] = ['1=1'];
     const queryParams: any[] = [];
     let paramIndex = 1;

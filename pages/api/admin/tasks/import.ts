@@ -79,6 +79,7 @@ async function importTasksHandler(req: NextApiRequest, res: NextApiResponse, dbC
   }
 
   try {
+    await dbClient.query('ALTER TABLE research_tasks ADD COLUMN IF NOT EXISTS tag VARCHAR(50);').catch(() => {});
     await dbClient.query('BEGIN');
 
     const added: { company_name: string; seq_no?: number; status: string }[] = [];

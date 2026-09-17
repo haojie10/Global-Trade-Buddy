@@ -38,6 +38,7 @@ async function claimHandler(req: NextApiRequest, res: NextApiResponse, dbClient:
   const tagVal = tag && String(tag).trim() ? String(tag).trim() : null;
 
   try {
+    await dbClient.query('ALTER TABLE research_tasks ADD COLUMN IF NOT EXISTS tag VARCHAR(50);').catch(() => {});
     await dbClient.query('BEGIN');
 
     // 核心行级排他锁原子抢单 SQL

@@ -28,6 +28,7 @@ async function updateTaskHandler(req: NextApiRequest, res: NextApiResponse, dbCl
   }
 
   try {
+    await dbClient.query('ALTER TABLE research_tasks ADD COLUMN IF NOT EXISTS tag VARCHAR(50);').catch(() => {});
     let updateRes;
 
     if (action === 'batch_set_tag') {
