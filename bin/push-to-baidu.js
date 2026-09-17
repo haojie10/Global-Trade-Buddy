@@ -122,17 +122,31 @@ async function main() {
       }
     }
 
+    // 0. 支持手动传入指定 URL（如 node bin/push-to-baidu.js https://www.marketgraphic.cn/reports/xxx 或 /reports/xxx）
+    const explicitUrls = args.filter(a => !a.startsWith('--') && (a.startsWith('http') || a.startsWith('/')));
+    if (explicitUrls.length > 0) {
+      console.log(`🎯 检测到手动指定的 URL (${explicitUrls.length} 条):`);
+      explicitUrls.forEach(raw => {
+        const fullUrl = raw.startsWith('http') ? raw : `${BASE_URL}${raw.startsWith('/') ? '' : '/'}${raw}`;
+        const matchReport = fullUrl.match(/\/reports\/([a-f0-9-]+)/i);
+        const matchNews = fullUrl.match(/\/news\/([a-f0-9-]+)/i);
+        const type = matchReport ? 'report' : (matchNews ? 'news' : 'custom');
+        const id = matchReport ? matchReport[1] : (matchNews ? matchNews[1] : undefined);
+        addUrl(fullUrl, type, id);
+      });
+    }
+
     const includeStatic = args.includes('--include-static');
 
     // 1. 如果显式指定了 --include-static，才添加核心静态枢纽页（默认不添加，配额 100% 留给全新研报与资讯）
-    if (includeStatic) {
+    if (includeStatic && pushQueue.length < PUSH_LIMIT) {
       addUrl(`${BASE_URL}/`, 'static');
       addUrl(`${BASE_URL}/reports`, 'static');
       addUrl(`${BASE_URL}/news`, 'static');
     }
 
-    // 2. 若数据库可用，通过数据库进行精准优先级与增量分析
-    if (pool) {
+    // 2. 若未手动指定 URL 且数据库可用，通过数据库进行精准优先级与增量分析
+    if (explicitUrls.length === 0 && pool) {
       try {
         // 自动确保所需字段存在
         await pool.query(`ALTER TABLE reports ADD COLUMN IF NOT EXISTS baidu_pushed_at TIMESTAMP WITH TIME ZONE;`);
