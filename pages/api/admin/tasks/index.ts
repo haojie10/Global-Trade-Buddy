@@ -16,6 +16,7 @@ async function listTasksHandler(req: NextApiRequest, res: NextApiResponse, dbCli
     batch_name,
     source_type,
     country,
+    tag,
     search,
     only_timeout
   } = req.query;
@@ -59,11 +60,22 @@ async function listTasksHandler(req: NextApiRequest, res: NextApiResponse, dbCli
       paramIndex++;
     }
 
+    if (tag && tag !== 'All') {
+      if (tag === '__none__') {
+        whereConditions.push(`(tag IS NULL OR tag = '')`);
+      } else {
+        whereConditions.push(`tag = $${paramIndex}`);
+        queryParams.push(tag);
+        paramIndex++;
+      }
+    }
+
     if (search && String(search).trim()) {
       whereConditions.push(`(
         LOWER(company_name) LIKE $${paramIndex} 
         OR LOWER(COALESCE(source_company_name, '')) LIKE $${paramIndex}
         OR LOWER(COALESCE(website, '')) LIKE $${paramIndex}
+        OR LOWER(COALESCE(tag, '')) LIKE $${paramIndex}
         OR CAST(seq_no AS TEXT) = $${paramIndex + 1}
       )`);
       queryParams.push(`%${String(search).trim().toLowerCase()}%`);
@@ -105,6 +117,7 @@ async function listTasksHandler(req: NextApiRequest, res: NextApiResponse, dbCli
         source_report_id,
         source_company_name,
         priority,
+        tag,
         created_at,
         updated_at,
         CASE 
@@ -123,9 +136,10 @@ async function listTasksHandler(req: NextApiRequest, res: NextApiResponse, dbCli
       [...queryParams, sizeNum, offset]
     );
 
-    // 提取所有可用筛选选项 (去重批次、来源、国家)
+    // 提取所有可用筛选选项 (去重批次、来源、国家、标签)
     const batchesRes = await dbClient.query(`SELECT DISTINCT batch_name FROM research_tasks WHERE batch_name IS NOT NULL ORDER BY batch_name ASC`);
     const countriesRes = await dbClient.query(`SELECT DISTINCT country FROM research_tasks WHERE country IS NOT NULL ORDER BY country ASC`);
+    const tagsRes = await dbClient.query(`SELECT DISTINCT tag FROM research_tasks WHERE tag IS NOT NULL AND tag != '' ORDER BY tag ASC`);
 
     return res.status(200).json({
       success: true,
@@ -137,6 +151,7 @@ async function listTasksHandler(req: NextApiRequest, res: NextApiResponse, dbCli
       filterOptions: {
         batches: batchesRes.rows.map(r => r.batch_name),
         countries: countriesRes.rows.map(r => r.country),
+        tags: tagsRes.rows.map(r => r.tag),
         sourceTypes: ['manual', 'batch_import', 'competitor_discovery']
       }
     });

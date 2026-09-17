@@ -27,13 +27,15 @@ async function claimHandler(req: NextApiRequest, res: NextApiResponse, dbClient:
     min_seq = null,
     max_seq = null,
     batch_name = null,
-    source_type = null
+    source_type = null,
+    tag = null
   } = req.body || {};
 
   const minSeqVal = min_seq !== null && min_seq !== undefined && !isNaN(Number(min_seq)) ? Number(min_seq) : null;
   const maxSeqVal = max_seq !== null && max_seq !== undefined && !isNaN(Number(max_seq)) ? Number(max_seq) : null;
   const batchVal = batch_name && String(batch_name).trim() ? String(batch_name).trim() : null;
   const sourceVal = source_type && String(source_type).trim() ? String(source_type).trim() : null;
+  const tagVal = tag && String(tag).trim() ? String(tag).trim() : null;
 
   try {
     await dbClient.query('BEGIN');
@@ -53,12 +55,13 @@ async function claimHandler(req: NextApiRequest, res: NextApiResponse, dbClient:
              AND ($3::int IS NULL OR seq_no <= $3)
              AND ($4::varchar IS NULL OR batch_name = $4)
              AND ($5::varchar IS NULL OR source_type = $5)
+             AND ($6::varchar IS NULL OR tag = $6)
            ORDER BY priority DESC, seq_no ASC
            FOR UPDATE SKIP LOCKED
            LIMIT 1
        )
-       RETURNING id, seq_no, batch_name, company_name, country, website, industry, priority, source_type, source_company_name`,
-      [String(worker_name).trim(), minSeqVal, maxSeqVal, batchVal, sourceVal]
+       RETURNING id, seq_no, batch_name, company_name, country, website, industry, priority, source_type, source_company_name, tag`,
+      [String(worker_name).trim(), minSeqVal, maxSeqVal, batchVal, sourceVal, tagVal]
     );
 
     await dbClient.query('COMMIT');

@@ -11,6 +11,8 @@ interface TaskInputItem {
   website?: string;
   industry?: string;
   priority?: number;
+  source_type?: 'manual' | 'batch_import' | 'competitor_discovery';
+  tag?: string;
 }
 
 /**
@@ -60,7 +62,8 @@ async function importTasksHandler(req: NextApiRequest, res: NextApiResponse, dbC
     tasks = [],
     markdown_text = '',
     priority = 100, // 手动导入默认高优先级
-    source_type: bodySourceType
+    source_type: bodySourceType,
+    tag: bodyTag
   } = req.body || {};
 
   let inputItems: TaskInputItem[] = [];
@@ -140,7 +143,8 @@ async function importTasksHandler(req: NextApiRequest, res: NextApiResponse, dbC
 
       const assignSeq = item.seq_no !== undefined && item.seq_no > 0 ? item.seq_no : ++currentSeq;
       const finalPriority = item.priority !== undefined ? item.priority : priority;
-      const finalSourceType = (item as any).source_type || bodySourceType || (Array.isArray(tasks) && tasks.length > 0 ? 'manual' : 'batch_import');
+      const finalSourceType = item.source_type || bodySourceType || (Array.isArray(tasks) && tasks.length > 0 ? 'manual' : 'batch_import');
+      const finalTag = item.tag || bodyTag || null;
 
       await dbClient.query(
         `INSERT INTO research_tasks (
@@ -154,8 +158,9 @@ async function importTasksHandler(req: NextApiRequest, res: NextApiResponse, dbC
           report_id,
           report_url,
           source_type,
-          priority
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+          priority,
+          tag
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
         [
           assignSeq,
           batch_name,
@@ -167,7 +172,8 @@ async function importTasksHandler(req: NextApiRequest, res: NextApiResponse, dbC
           reportId,
           reportUrl,
           finalSourceType,
-          finalPriority
+          finalPriority,
+          finalTag
         ]
       );
 

@@ -11,6 +11,7 @@ async function updateTaskHandler(req: NextApiRequest, res: NextApiResponse, dbCl
 
   const {
     task_id,
+    task_ids,
     action,
     seq_no,
     priority,
@@ -18,17 +19,41 @@ async function updateTaskHandler(req: NextApiRequest, res: NextApiResponse, dbCl
     company_name,
     country,
     website,
-    industry
+    industry,
+    tag
   } = req.body || {};
 
-  if (!task_id) {
-    return res.status(400).json({ error: 'Missing required parameter: task_id' });
+  if (!task_id && (!task_ids || !Array.isArray(task_ids) || task_ids.length === 0)) {
+    return res.status(400).json({ error: 'Missing required parameter: task_id or task_ids' });
   }
 
   try {
     let updateRes;
 
-    if (action === 'pin') {
+    if (action === 'batch_set_tag') {
+      // 批量设置调度标签
+      const finalTag = tag && String(tag).trim() ? String(tag).trim() : null;
+      updateRes = await dbClient.query(
+        `UPDATE research_tasks
+         SET tag = $1, updated_at = NOW()
+         WHERE id = ANY($2::uuid[]) RETURNING *`,
+        [finalTag, task_ids || [task_id]]
+      );
+      return res.status(200).json({
+        success: true,
+        message: `已成功为 ${updateRes.rows.length} 条任务更新调度标签`,
+        updatedCount: updateRes.rows.length
+      });
+    } else if (action === 'set_tag') {
+      // 单条设置调度标签
+      const finalTag = tag && String(tag).trim() ? String(tag).trim() : null;
+      updateRes = await dbClient.query(
+        `UPDATE research_tasks
+         SET tag = $1, updated_at = NOW()
+         WHERE id = $2 RETURNING *`,
+        [finalTag, task_id]
+      );
+    } else if (action === 'pin') {
       // 置顶: priority 设置为 999
       updateRes = await dbClient.query(
         `UPDATE research_tasks
@@ -63,6 +88,7 @@ async function updateTaskHandler(req: NextApiRequest, res: NextApiResponse, dbCl
       );
     } else if (action === 'edit') {
       // 综合编辑字段
+      const finalTag = tag !== undefined ? (tag && String(tag).trim() ? String(tag).trim() : null) : undefined;
       updateRes = await dbClient.query(
         `UPDATE research_tasks
          SET company_name = COALESCE($1, company_name),
@@ -72,9 +98,10 @@ async function updateTaskHandler(req: NextApiRequest, res: NextApiResponse, dbCl
              priority = COALESCE($5, priority),
              seq_no = COALESCE($6, seq_no),
              status = COALESCE($7, status),
+             tag = CASE WHEN $8::boolean THEN $9 ELSE tag END,
              updated_at = NOW()
-         WHERE id = $8 RETURNING *`,
-        [company_name, country, website, industry, priority, seq_no, status, task_id]
+         WHERE id = $10 RETURNING *`,
+        [company_name, country, website, industry, priority, seq_no, status, finalTag !== undefined, finalTag || null, task_id]
       );
     } else {
       return res.status(400).json({ error: 'Invalid update action or parameters' });

@@ -23,6 +23,7 @@ interface TaskItem {
   source_report_id: string | null;
   source_company_name: string | null;
   priority: number;
+  tag: string | null;
   created_at: string;
   updated_at: string;
   is_timeout: boolean;
@@ -69,16 +70,29 @@ export default function AdminTasksPage() {
   const [sourceFilter, setSourceFilter] = useState('All');
   const [batchFilter, setBatchFilter] = useState('All');
   const [countryFilter, setCountryFilter] = useState('All');
+  const [tagFilter, setTagFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [onlyTimeout, setOnlyTimeout] = useState(false);
 
   // 筛选器下拉选项
   const [batchOptions, setBatchOptions] = useState<string[]>([]);
   const [countryOptions, setCountryOptions] = useState<string[]>([]);
+  const [tagOptions, setTagOptions] = useState<string[]>([]);
+
+  // 批量操作多选状态
+  const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
+  const [showBatchTagModal, setShowBatchTagModal] = useState(false);
+  const [batchTagInput, setBatchTagInput] = useState('');
+  const [batchTagSubmitting, setBatchTagSubmitting] = useState(false);
+
+  // 快捷单条编辑标签
+  const [quickTagTask, setQuickTagTask] = useState<TaskItem | null>(null);
+  const [quickTagInput, setQuickTagInput] = useState('');
 
   // 导入模态框状态
   const [showImportModal, setShowImportModal] = useState(false);
   const [importBatchName, setImportBatchName] = useState('渠道地图2026');
+  const [importTag, setImportTag] = useState('');
   const [importMarkdown, setImportMarkdown] = useState('');
   const [importing, setImporting] = useState(false);
 
@@ -89,6 +103,7 @@ export default function AdminTasksPage() {
     country: '全球',
     website: '',
     industry: '',
+    tag: '',
     priority: 100,
     batch_name: '手动新增客户'
   });
@@ -116,6 +131,7 @@ export default function AdminTasksPage() {
         source_type: sourceFilter,
         batch_name: batchFilter,
         country: countryFilter,
+        tag: tagFilter,
         search: searchQuery,
         only_timeout: onlyTimeout ? 'true' : 'false'
       });
@@ -130,6 +146,7 @@ export default function AdminTasksPage() {
           if (lData.filterOptions) {
             setBatchOptions(lData.filterOptions.batches || []);
             setCountryOptions(lData.filterOptions.countries || []);
+            setTagOptions(lData.filterOptions.tags || []);
           }
         }
       }
@@ -142,7 +159,7 @@ export default function AdminTasksPage() {
 
   useEffect(() => {
     fetchData(1);
-  }, [statusFilter, sourceFilter, batchFilter, countryFilter, onlyTimeout]);
+  }, [statusFilter, sourceFilter, batchFilter, countryFilter, tagFilter, onlyTimeout]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -258,6 +275,85 @@ export default function AdminTasksPage() {
     }
   };
 
+  // 全选/单选逻辑
+  const isAllCurrentPageSelected = tasks.length > 0 && tasks.every(t => selectedTaskIds.includes(t.id));
+  const isSomeCurrentPageSelected = tasks.some(t => selectedTaskIds.includes(t.id)) && !isAllCurrentPageSelected;
+
+  const handleToggleSelectAll = () => {
+    if (isAllCurrentPageSelected) {
+      const currentPageIds = new Set(tasks.map(t => t.id));
+      setSelectedTaskIds(selectedTaskIds.filter(id => !currentPageIds.has(id)));
+    } else {
+      const allIds = Array.from(new Set([...selectedTaskIds, ...tasks.map(t => t.id)]));
+      setSelectedTaskIds(allIds);
+    }
+  };
+
+  const handleToggleSelectOne = (taskId: string) => {
+    if (selectedTaskIds.includes(taskId)) {
+      setSelectedTaskIds(selectedTaskIds.filter(id => id !== taskId));
+    } else {
+      setSelectedTaskIds([...selectedTaskIds, taskId]);
+    }
+  };
+
+  // 批量设置调度标签
+  const handleBatchSetTag = async () => {
+    if (selectedTaskIds.length === 0) return;
+    setBatchTagSubmitting(true);
+    try {
+      const res = await fetch('/api/admin/tasks/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          task_ids: selectedTaskIds,
+          action: 'batch_set_tag',
+          tag: batchTagInput.trim() || null
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert(`🎉 ${data.message}`);
+        setShowBatchTagModal(false);
+        setSelectedTaskIds([]);
+        setBatchTagInput('');
+        fetchData(page);
+      } else {
+        alert('❌ 批量设置标签失败: ' + (data.error || '未知错误'));
+      }
+    } catch (err: any) {
+      alert('网络错误: ' + err.message);
+    } finally {
+      setBatchTagSubmitting(false);
+    }
+  };
+
+  // 快捷单条保存标签
+  const handleQuickSaveTag = async () => {
+    if (!quickTagTask) return;
+    try {
+      const res = await fetch('/api/admin/tasks/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          task_id: quickTagTask.id,
+          action: 'set_tag',
+          tag: quickTagInput.trim() || null
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setQuickTagTask(null);
+        setQuickTagInput('');
+        fetchData(page);
+      } else {
+        alert('❌ 设置标签失败: ' + (data.error || '未知错误'));
+      }
+    } catch (err: any) {
+      alert('网络错误: ' + err.message);
+    }
+  };
+
   // 批量导入提交
   const handleImportSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -273,6 +369,7 @@ export default function AdminTasksPage() {
         body: JSON.stringify({
           batch_name: importBatchName,
           source_type: 'batch_import',
+          tag: importTag.trim() || null,
           markdown_text: importMarkdown,
           priority: 100
         })
@@ -282,6 +379,7 @@ export default function AdminTasksPage() {
         alert(`🎉 导入成功！\n成功新增: ${data.addedCount} 家\n自动去重跳过: ${data.skippedCount} 家`);
         setShowImportModal(false);
         setImportMarkdown('');
+        setImportTag('');
         fetchData(1);
       } else {
         alert('❌ 导入失败: ' + (data.error || '未知错误'));
@@ -307,7 +405,8 @@ export default function AdminTasksPage() {
         body: JSON.stringify({
           batch_name: newCompany.batch_name,
           source_type: 'manual',
-          tasks: [{ ...newCompany, source_type: 'manual' }],
+          tag: newCompany.tag.trim() || null,
+          tasks: [{ ...newCompany, source_type: 'manual', tag: newCompany.tag.trim() || null }],
           priority: newCompany.priority
         })
       });
@@ -320,6 +419,7 @@ export default function AdminTasksPage() {
           country: '全球',
           website: '',
           industry: '',
+          tag: '',
           priority: 100,
           batch_name: '手动新增客户'
         });
@@ -554,6 +654,26 @@ export default function AdminTasksPage() {
               </select>
             )}
 
+            {/* 🏷️ 调度标签筛选 */}
+            <select
+              value={tagFilter}
+              onChange={(e) => { setTagFilter(e.target.value); setPage(1); }}
+              style={{
+                background: 'var(--admin-bg)',
+                border: '1px solid var(--admin-border)',
+                color: 'var(--admin-text)',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                fontSize: '0.85rem'
+              }}
+            >
+              <option value="All">🏷️ 全部标签</option>
+              <option value="__none__">⚪ 未分配标签 (无标签)</option>
+              {tagOptions.map(t => (
+                <option key={t} value={t}>🏷️ {t}</option>
+              ))}
+            </select>
+
             {/* 仅看超时勾选 */}
             <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: onlyTimeout ? 'var(--admin-error)' : 'var(--admin-text-secondary)', cursor: 'pointer' }}>
               <input
@@ -615,6 +735,53 @@ export default function AdminTasksPage() {
           </form>
         </div>
 
+        {/* 批量操作提示条 */}
+        {selectedTaskIds.length > 0 && (
+          <div style={{
+            background: 'rgba(99, 102, 241, 0.12)',
+            border: '1px solid rgba(99, 102, 241, 0.3)',
+            borderRadius: '10px',
+            padding: '10px 16px',
+            marginBottom: '14px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '10px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontWeight: 600, color: 'var(--admin-accent-light)' }}>
+                ✓ 已勾选 {selectedTaskIds.length} 项客户任务
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedTaskIds([])}
+                style={{ background: 'none', border: 'none', color: 'var(--admin-text-secondary)', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline' }}
+              >
+                取消勾选
+              </button>
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => { setBatchTagInput(''); setShowBatchTagModal(true); }}
+                style={{
+                  background: 'var(--admin-accent)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '6px 14px',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                🏷️ 批量设置调度标签
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* 任务列表主表格 */}
         <div style={{
           background: 'var(--admin-bg-card)',
@@ -625,41 +792,63 @@ export default function AdminTasksPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
             <thead>
               <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--admin-border)', color: 'var(--admin-text-secondary)' }}>
-                <th style={{ padding: '12px 16px', width: '90px' }}>序号</th>
-                <th style={{ padding: '12px 16px', width: '80px' }}>优先级</th>
-                <th style={{ padding: '12px 16px' }}>公司主体 / 官网</th>
-                <th style={{ padding: '12px 16px', width: '110px' }}>目标国家</th>
-                <th style={{ padding: '12px 16px', width: '180px' }}>来源批次 / 追溯</th>
-                <th style={{ padding: '12px 16px', width: '160px' }}>状态 / Worker</th>
-                <th style={{ padding: '12px 16px', width: '180px', textAlign: 'center' }}>操作</th>
+                <th style={{ padding: '12px 14px', width: '40px', textAlign: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={isAllCurrentPageSelected}
+                    ref={el => { if (el) el.indeterminate = isSomeCurrentPageSelected; }}
+                    onChange={handleToggleSelectAll}
+                    style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                    title={isAllCurrentPageSelected ? '取消全选当前页' : '全选当前页'}
+                  />
+                </th>
+                <th style={{ padding: '12px 14px', width: '80px' }}>序号</th>
+                <th style={{ padding: '12px 14px', width: '80px' }}>优先级</th>
+                <th style={{ padding: '12px 14px' }}>公司主体 / 官网</th>
+                <th style={{ padding: '12px 14px', width: '100px' }}>目标国家</th>
+                <th style={{ padding: '12px 14px', width: '130px' }}>🏷️ 调度标签</th>
+                <th style={{ padding: '12px 14px', width: '160px' }}>来源批次 / 追溯</th>
+                <th style={{ padding: '12px 14px', width: '150px' }}>状态 / Worker</th>
+                <th style={{ padding: '12px 14px', width: '170px', textAlign: 'center' }}>操作</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: 'var(--admin-text-secondary)' }}>
+                  <td colSpan={9} style={{ padding: '40px', textAlign: 'center', color: 'var(--admin-text-secondary)' }}>
                     ⏳ 正在加载任务清单...
                   </td>
                 </tr>
               ) : tasks.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: 'var(--admin-text-secondary)' }}>
+                  <td colSpan={9} style={{ padding: '40px', textAlign: 'center', color: 'var(--admin-text-secondary)' }}>
                     📭 暂无符合条件的客户任务
                   </td>
                 </tr>
               ) : (
                 tasks.map((task) => {
                   const isPinned = task.priority >= 900;
+                  const isSelected = selectedTaskIds.includes(task.id);
                   return (
                     <tr
                       key={task.id}
                       style={{
                         borderBottom: '1px solid var(--admin-border)',
-                        background: task.is_timeout ? 'rgba(239, 68, 68, 0.05)' : isPinned ? 'rgba(124, 111, 255, 0.08)' : 'transparent'
+                        background: isSelected ? 'rgba(99, 102, 241, 0.08)' : task.is_timeout ? 'rgba(239, 68, 68, 0.05)' : isPinned ? 'rgba(124, 111, 255, 0.08)' : 'transparent'
                       }}
                     >
+                      {/* 多选框 */}
+                      <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleToggleSelectOne(task.id)}
+                          style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                        />
+                      </td>
+
                       {/* 序号 */}
-                      <td style={{ padding: '12px 16px', fontWeight: 'bold' }}>
+                      <td style={{ padding: '12px 14px', fontWeight: 'bold' }}>
                         <span
                           onClick={() => { setEditingSeqTask(task); setNewSeqVal(task.seq_no); }}
                           style={{ cursor: 'pointer', borderBottom: '1px dashed var(--admin-text-secondary)' }}
@@ -670,7 +859,7 @@ export default function AdminTasksPage() {
                       </td>
 
                       {/* 优先级 / 置顶 */}
-                      <td style={{ padding: '12px 16px' }}>
+                      <td style={{ padding: '12px 14px' }}>
                         {isPinned ? (
                           <span style={{ background: 'var(--admin-accent)', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold' }}>
                             📌 TOP
@@ -683,7 +872,7 @@ export default function AdminTasksPage() {
                       </td>
 
                       {/* 公司名称与官网 */}
-                      <td style={{ padding: '12px 16px' }}>
+                      <td style={{ padding: '12px 14px' }}>
                         <div style={{ fontWeight: 600, color: 'var(--admin-text)', fontSize: '0.92rem' }}>
                           {task.company_name}
                         </div>
@@ -700,14 +889,55 @@ export default function AdminTasksPage() {
                       </td>
 
                       {/* 国家 */}
-                      <td style={{ padding: '12px 16px', color: 'var(--admin-text)' }}>
+                      <td style={{ padding: '12px 14px', color: 'var(--admin-text)' }}>
                         <span style={{ background: 'rgba(255,255,255,0.05)', padding: '3px 8px', borderRadius: '6px', fontSize: '0.8rem' }}>
                           📍 {task.country}
                         </span>
                       </td>
 
+                      {/* 🏷️ 调度标签 */}
+                      <td style={{ padding: '12px 14px' }}>
+                        {task.tag ? (
+                          <span
+                            onClick={() => { setQuickTagTask(task); setQuickTagInput(task.tag || ''); }}
+                            style={{
+                              background: 'rgba(99, 102, 241, 0.15)',
+                              color: 'var(--admin-accent-light)',
+                              border: '1px solid rgba(99, 102, 241, 0.3)',
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              fontSize: '0.8rem',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                            title="点击修改此任务的调度标签"
+                          >
+                            🏷️ {task.tag}
+                          </span>
+                        ) : (
+                          <span
+                            onClick={() => { setQuickTagTask(task); setQuickTagInput(''); }}
+                            style={{
+                              color: 'var(--admin-text-secondary)',
+                              fontSize: '0.78rem',
+                              cursor: 'pointer',
+                              opacity: 0.6,
+                              border: '1px dashed rgba(255,255,255,0.15)',
+                              padding: '2px 6px',
+                              borderRadius: '4px'
+                            }}
+                            title="点击为此任务设置调度标签"
+                          >
+                            + 设标签
+                          </span>
+                        )}
+                      </td>
+
                       {/* 来源批次与裂变追溯 */}
-                      <td style={{ padding: '12px 16px', fontSize: '0.8rem' }}>
+                      <td style={{ padding: '12px 14px', fontSize: '0.8rem' }}>
                         {task.source_type === 'competitor_discovery' ? (
                           <div>
                             <span style={{ color: '#c084fc', fontWeight: 500 }}>✨ 竞品裂变</span>
@@ -725,7 +955,7 @@ export default function AdminTasksPage() {
                       </td>
 
                       {/* 状态与 Worker */}
-                      <td style={{ padding: '12px 16px' }}>
+                      <td style={{ padding: '12px 14px' }}>
                         {task.status === 'completed' && (
                           <div>
                             <span style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--admin-success)', padding: '3px 8px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 500 }}>
@@ -974,6 +1204,26 @@ export default function AdminTasksPage() {
                   />
                 </div>
 
+                <div style={{ marginBottom: '14px' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--admin-text-secondary)', marginBottom: '6px' }}>
+                    🏷️ 调度标签 (可选，如: Agent-1 / 美区专线 / HomeDepot):
+                  </label>
+                  <input
+                    type="text"
+                    value={importTag}
+                    onChange={(e) => setImportTag(e.target.value)}
+                    placeholder="不填则为公共未标记任务"
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      background: 'var(--admin-bg)',
+                      border: '1px solid var(--admin-border)',
+                      borderRadius: '8px',
+                      color: 'var(--admin-text)'
+                    }}
+                  />
+                </div>
+
                 <div style={{ marginBottom: '16px' }}>
                   <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--admin-text-secondary)', marginBottom: '6px' }}>
                     粘贴 Markdown 表格或数据文本 (自动识别序号、公司名、国家、网址):
@@ -1132,6 +1382,26 @@ export default function AdminTasksPage() {
                   />
                 </div>
 
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--admin-text-secondary)', marginBottom: '4px' }}>
+                    🏷️ 调度标签 (可选，如: Agent-1 / 欧洲组):
+                  </label>
+                  <input
+                    type="text"
+                    value={newCompany.tag}
+                    onChange={(e) => setNewCompany({ ...newCompany, tag: e.target.value })}
+                    placeholder="不填则为公共未指定任务"
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      background: 'var(--admin-bg)',
+                      border: '1px solid var(--admin-border)',
+                      borderRadius: '8px',
+                      color: 'var(--admin-text)'
+                    }}
+                  />
+                </div>
+
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
                   <button
                     type="button"
@@ -1163,6 +1433,228 @@ export default function AdminTasksPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* 批量设置调度标签模态框 */}
+        {showBatchTagModal && (
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}>
+            <div style={{
+              background: 'var(--admin-bg-card)',
+              border: '1px solid var(--admin-border)',
+              borderRadius: '16px',
+              width: '100%',
+              maxWidth: '420px',
+              padding: '24px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
+            }}>
+              <h3 style={{ margin: '0 0 12px 0', fontSize: '1.15rem', color: 'var(--admin-text)' }}>
+                🏷️ 批量设置调度标签
+              </h3>
+              <p style={{ fontSize: '0.85rem', color: 'var(--admin-text-secondary)', marginBottom: '16px' }}>
+                将为已勾选的 <strong style={{ color: 'var(--admin-accent-light)' }}>{selectedTaskIds.length}</strong> 条客户任务批量分配/修改调度标签：
+              </p>
+
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--admin-text-secondary)', marginBottom: '6px' }}>
+                  输入标签名称 (如: Agent-1 / 美区专线 / 清空留空):
+                </label>
+                <input
+                  type="text"
+                  value={batchTagInput}
+                  onChange={(e) => setBatchTagInput(e.target.value)}
+                  placeholder="留空保存则为清空标签"
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    background: 'var(--admin-bg)',
+                    border: '1px solid var(--admin-border)',
+                    borderRadius: '8px',
+                    color: 'var(--admin-text)'
+                  }}
+                  autoFocus
+                />
+              </div>
+
+              {/* 快捷选择已有标签 */}
+              {tagOptions.length > 0 && (
+                <div style={{ marginBottom: '18px' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--admin-text-secondary)', marginBottom: '6px' }}>
+                    或点击快速填入已有标签：
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {tagOptions.map(t => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setBatchTagInput(t)}
+                        style={{
+                          background: 'rgba(255,255,255,0.06)',
+                          border: '1px solid var(--admin-border)',
+                          color: 'var(--admin-text)',
+                          padding: '3px 8px',
+                          borderRadius: '4px',
+                          fontSize: '0.78rem',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowBatchTagModal(false)}
+                  style={{
+                    padding: '8px 16px',
+                    background: 'var(--admin-bg)',
+                    border: '1px solid var(--admin-border)',
+                    borderRadius: '8px',
+                    color: 'var(--admin-text)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  disabled={batchTagSubmitting}
+                  onClick={handleBatchSetTag}
+                  style={{
+                    padding: '8px 20px',
+                    background: 'var(--admin-accent)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    color: '#fff',
+                    fontWeight: 600,
+                    cursor: batchTagSubmitting ? 'not-allowed' : 'pointer',
+                    opacity: batchTagSubmitting ? 0.6 : 1
+                  }}
+                >
+                  {batchTagSubmitting ? '正在更新...' : '确认批量设置'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 单条快捷修改标签模态框 */}
+        {quickTagTask && (
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}>
+            <div style={{
+              background: 'var(--admin-bg-card)',
+              border: '1px solid var(--admin-border)',
+              borderRadius: '16px',
+              width: '100%',
+              maxWidth: '380px',
+              padding: '22px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
+            }}>
+              <h4 style={{ margin: '0 0 10px 0', color: 'var(--admin-text)', fontSize: '1.05rem' }}>
+                🏷️ 设置【{quickTagTask.company_name}】调度标签
+              </h4>
+              <p style={{ fontSize: '0.8rem', color: 'var(--admin-text-secondary)', marginBottom: '14px' }}>
+                指定该客户所属的 Agent 分组或调研专线：
+              </p>
+              <input
+                type="text"
+                value={quickTagInput}
+                onChange={(e) => setQuickTagInput(e.target.value)}
+                placeholder="如: Agent-1 (留空保存则为清空标签)"
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  background: 'var(--admin-bg)',
+                  border: '1px solid var(--admin-border)',
+                  borderRadius: '8px',
+                  color: 'var(--admin-text)',
+                  marginBottom: '14px'
+                }}
+                autoFocus
+              />
+
+              {tagOptions.length > 0 && (
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--admin-text-secondary)', marginBottom: '6px' }}>
+                    快速填入已有标签：
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {tagOptions.map(t => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setQuickTagInput(t)}
+                        style={{
+                          background: 'rgba(255,255,255,0.06)',
+                          border: '1px solid var(--admin-border)',
+                          color: 'var(--admin-text)',
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          fontSize: '0.75rem',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setQuickTagTask(null)}
+                  style={{
+                    padding: '6px 14px',
+                    background: 'var(--admin-bg)',
+                    border: '1px solid var(--admin-border)',
+                    borderRadius: '6px',
+                    color: 'var(--admin-text)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  onClick={handleQuickSaveTag}
+                  style={{
+                    padding: '6px 16px',
+                    background: 'var(--admin-accent)',
+                    border: 'none',
+                    borderRadius: '6px',
+                    color: '#fff',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  保存标签
+                </button>
+              </div>
             </div>
           </div>
         )}
