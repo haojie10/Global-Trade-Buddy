@@ -35,13 +35,16 @@ export interface CompetitorInput {
   name: string;
   country?: string;
   website?: string;
+  /** 公司简介/业态标签，如"便利店"、"照明公司" */
+  description?: string;
 }
 
 /**
  * 解析竞争对手元数据字符串
  * 支持以下格式：
  * 1. 基础逗号分隔: "TEDi, Europris, Normal, Flying Tiger Copenhagen"
- * 2. 增强竖线/详情格式: "TEDi|德国|https://tedi.com, Europris|挪威|https://europris.no"
+ * 2. 增强竖线/详情格式: "TEDi|德国|https://tedi.com|折扣零售商, Europris|挪威|https://europris.no|杂货连锁"
+ *    管道段位: 名称|国家|网站|简介（后三段均可省略）
  */
 export function parseCompetitorString(rawCompetitors: string, defaultCountry = '全球'): CompetitorInput[] {
   if (!rawCompetitors || !rawCompetitors.trim()) return [];
@@ -62,6 +65,7 @@ export function parseCompetitorString(rawCompetitors: string, defaultCountry = '
           name,
           country: parts[1] || defaultCountry,
           website: parts[2] || undefined,
+          description: parts[3] || undefined,
         });
       }
     } else {
@@ -153,18 +157,20 @@ export async function discoverAndQueueCompetitors(
         company_name,
         country,
         website,
+        industry,
         status,
         source_type,
         source_report_id,
         source_company_name,
         priority
-      ) VALUES ($1, $2, $3, $4, 'pending', 'competitor_discovery', $5, $6, 20)
+      ) VALUES ($1, $2, $3, $4, $5, 'pending', 'competitor_discovery', $6, $7, 20)
       ON CONFLICT DO NOTHING`,
       [
         batchName,
         compName,
         comp.country || sourceCountry,
         comp.website || null,
+        comp.description || null,
         sourceReportId,
         sourceCompanyName
       ]

@@ -876,6 +876,11 @@ export default function AdminTasksPage() {
                         <div style={{ fontWeight: 600, color: 'var(--admin-text)', fontSize: '0.92rem' }}>
                           {task.company_name}
                         </div>
+                        {task.industry && (
+                          <div style={{ fontSize: '0.75rem', color: 'var(--admin-text-secondary)', marginTop: '2px' }}>
+                            🏢 {task.industry}
+                          </div>
+                        )}
                         {task.website && (
                           <a
                             href={task.website}
