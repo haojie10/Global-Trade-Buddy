@@ -943,13 +943,39 @@ export default function AdminTasksPage() {
                             <span style={{ color: '#c084fc', fontWeight: 500 }}>✨ 竞品裂变</span>
                             {task.source_company_name && (
                               <div style={{ color: 'var(--admin-text-secondary)', fontSize: '0.75rem' }}>
-                                来自: {task.source_company_name}
+                                来自:{' '}
+                                {task.source_report_id ? (
+                                  <a
+                                    href={`/reports/${task.source_report_id}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    style={{ color: '#c084fc', textDecoration: 'underline', cursor: 'pointer' }}
+                                    title="查看源报告"
+                                  >
+                                    {task.source_company_name}
+                                  </a>
+                                ) : (
+                                  task.source_company_name
+                                )}
                               </div>
                             )}
                           </div>
                         ) : (
                           <div>
                             <span style={{ color: 'var(--admin-text-secondary)' }}>📦 {task.batch_name}</span>
+                          </div>
+                        )}
+                        {/* 已完成任务：显示调研成果报告链接 */}
+                        {task.report_id && (
+                          <div style={{ marginTop: '4px' }}>
+                            <a
+                              href={task.report_url || `/reports/${task.report_id}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{ color: 'var(--admin-accent-light)', textDecoration: 'none', fontSize: '0.75rem' }}
+                            >
+                              📄 查看报告
+                            </a>
                           </div>
                         )}
                       </td>
