@@ -160,32 +160,36 @@ export async function createTestUser(
     email?: string;
     role?: string;
     freeQuota?: number;
+    downloadQuota?: number;
+    memberType?: string;
     password?: string;
     nickname?: string;
   }
 ) {
   const email = options.email || null;
   const role = options.role || 'user';
-  const freeQuota = options.freeQuota !== undefined ? options.freeQuota : 3;
+  const freeQuota = options.freeQuota !== undefined ? options.freeQuota : 10;
+  const downloadQuota = options.downloadQuota !== undefined ? options.downloadQuota : 5;
+  const memberType = options.memberType || 'free';
   const phone = options.phoneNumber || null;
   const password = options.password || null;
   const nickname = options.nickname || '测试业务员';
 
   if (options.id) {
     const query = `
-      INSERT INTO users (id, phone_number, email, role, free_quota, password, nickname)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING id, phone_number, email, role, free_quota, nickname
+      INSERT INTO users (id, phone_number, email, role, free_quota, download_quota, member_type, password, nickname)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING id, phone_number, email, role, free_quota, download_quota, member_type, nickname
     `;
-    const res = await client.query(query, [options.id, phone, email, role, freeQuota, password, nickname]);
+    const res = await client.query(query, [options.id, phone, email, role, freeQuota, downloadQuota, memberType, password, nickname]);
     return res.rows[0];
   } else {
     const query = `
-      INSERT INTO users (phone_number, email, role, free_quota, password, nickname)
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING id, phone_number, email, role, free_quota, nickname
+      INSERT INTO users (phone_number, email, role, free_quota, download_quota, member_type, password, nickname)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING id, phone_number, email, role, free_quota, download_quota, member_type, nickname
     `;
-    const res = await client.query(query, [phone, email, role, freeQuota, password, nickname]);
+    const res = await client.query(query, [phone, email, role, freeQuota, downloadQuota, memberType, password, nickname]);
     return res.rows[0];
   }
 }

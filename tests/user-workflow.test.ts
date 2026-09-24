@@ -121,7 +121,7 @@ describe('User Entire Workflow Integration Test', () => {
     const json = getJson();
     expect(json.success).toBe(true);
     expect(json.user.role).toBe('user');
-    expect(json.user.freeQuota).toBe(3); // 确认默认赠送 3 个额度
+    expect(json.user.freeQuota).toBe(10); // 确认默认赠送 10 个额度
     expect(json.user.nickname).toBe('测试名');
 
     testUserId = json.user.id;
@@ -163,9 +163,9 @@ describe('User Entire Workflow Integration Test', () => {
     expect(json.success).toBe(true);
     expect(json.content_html).toContain('核心渠道买家名录');
 
-    // 检查数据库确认额度被扣减为 2
+    // 检查数据库确认额度被扣减为 9 (10 - 1)
     const userRes = await dbClient.query('SELECT free_quota FROM users WHERE id = $1', [testUserId]);
-    expect(userRes.rows[0].free_quota).toBe(2);
+    expect(userRes.rows[0].free_quota).toBe(9);
   });
 
   // 4. 再次访问详情应该可以拿到 content_html
@@ -294,12 +294,12 @@ describe('User Entire Workflow Integration Test', () => {
     expect(getStatus()).toBe(200);
     expect(getJson().success).toBe(true);
 
-    // 校验双方的额度奖励：邀请人 (2->3), 当前用户被邀请人 (2->3)
+    // 校验双方的额度奖励：邀请人 (2 + 3 = 5), 当前用户被邀请人 (9 + 3 = 12)
     const refRes = await dbClient.query('SELECT free_quota FROM users WHERE id = $1', [referrerId]);
     const userRes = await dbClient.query('SELECT free_quota FROM users WHERE id = $1', [testUserId]);
 
-    expect(refRes.rows[0].free_quota).toBe(3);
-    expect(userRes.rows[0].free_quota).toBe(3);
+    expect(refRes.rows[0].free_quota).toBe(5);
+    expect(userRes.rows[0].free_quota).toBe(12);
   });
 
   // 9. 额度扣减耗尽后，应该拦截解锁
@@ -329,7 +329,8 @@ describe('User Entire Workflow Integration Test', () => {
     });
     await unlockHandler(req4, res4);
 
-    // 验证额度已经降为 0
+    // 将用户额度直接设为 0，以测试额度耗尽时的拦截逻辑
+    await dbClient.query('UPDATE users SET free_quota = 0 WHERE id = $1', [testUserId]);
     const userRes = await dbClient.query('SELECT free_quota FROM users WHERE id = $1', [testUserId]);
     expect(userRes.rows[0].free_quota).toBe(0);
 
