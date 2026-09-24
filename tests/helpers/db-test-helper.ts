@@ -135,6 +135,7 @@ export function mockReqRes(options: {
 
   let statusVal = 200;
   let jsonVal: any = null;
+  let dataVal: any = null;
   const res = {
     status(code: number) {
       statusVal = code;
@@ -142,6 +143,11 @@ export function mockReqRes(options: {
     },
     json(data: any) {
       jsonVal = data;
+      dataVal = data;
+      return this;
+    },
+    send(data: any) {
+      dataVal = data;
       return this;
     },
     setHeader() {
@@ -149,7 +155,7 @@ export function mockReqRes(options: {
     }
   } as any;
 
-  return { req, res, getStatus: () => statusVal, getJson: () => jsonVal };
+  return { req, res, getStatus: () => statusVal, getJson: () => jsonVal, getData: () => dataVal };
 }
 
 export async function createTestUser(
