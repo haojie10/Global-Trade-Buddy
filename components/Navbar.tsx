@@ -3,29 +3,36 @@ import Link from 'next/link';
 import MGLogo from './MGLogo';
 import ChangePasswordModal from './ChangePasswordModal';
 import FeedbackModal from './FeedbackModal';
+import PromotionalBanner from './PromotionalBanner';
 
 interface NavbarProps {
   userId?: string | null;
   userRole?: string;
   quota?: number;
+  downloadQuota?: number;
+  memberType?: string;
   nickname?: string;
   userEmail?: string;
   onShowAuthModal?: () => void;
   onShowUploadModal?: () => void;
   dark?: boolean;
   alwaysTransparent?: boolean;
+  hidePromotionalBanner?: boolean;
 }
 
 export default function Navbar({
   userId,
   userRole,
   quota,
+  downloadQuota = 0,
+  memberType = 'free',
   nickname,
   userEmail,
   onShowAuthModal,
   onShowUploadModal,
   dark = false,
-  alwaysTransparent = false
+  alwaysTransparent = false,
+  hidePromotionalBanner = false
 }: NavbarProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -100,6 +107,12 @@ export default function Navbar({
           ? (dark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(18, 18, 18, 0.05)') 
           : 'none',
     }}>
+      {!hidePromotionalBanner && (
+        <PromotionalBanner
+          userId={userId}
+          onClaim={() => onShowAuthModal?.()}
+        />
+      )}
       <header style={{
         background: 'transparent',
         padding: isMobile ? '12px 24px' : '16px 40px',
@@ -166,9 +179,26 @@ export default function Navbar({
           <div style={{ display: 'flex', alignItems: 'center', gap: '24px', fontSize: '1rem' }}>
             {userId ? (
               <>
-                <span style={{ color: 'var(--color-text)', fontWeight: 400 }}>
-                  额度: <b style={{ color: 'var(--color-accent)', fontWeight: 500 }}>{quota}</b> 次
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {memberType === 'pro' && (
+                    <span style={{
+                      background: 'linear-gradient(135deg, #ff641e, #ea580c)',
+                      color: '#ffffff',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      padding: '2px 7px',
+                      borderRadius: '5px',
+                      letterSpacing: '0.5px'
+                    }}>
+                      👑 PRO
+                    </span>
+                  )}
+                  <span style={{ color: 'var(--color-text)', fontWeight: 400, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>⚡ <b style={{ color: 'var(--color-accent)', fontWeight: 600 }}>{quota ?? 0}</b> 次</span>
+                    <span style={{ opacity: 0.35 }}>|</span>
+                    <span>📥 <b style={{ color: '#10b981', fontWeight: 600 }}>{downloadQuota ?? 0}</b> 份</span>
+                  </span>
+                </div>
 
                 {/* 已登录用户下拉菜单 (CSS Hover 物理桥接) */}
                 <div className="nav-user-dropdown-container">
@@ -311,94 +341,119 @@ export default function Navbar({
                 </div>
               </>
             ) : (
-              /* 未登录状态 (CSS Hover 物理桥接 + 点击秒开) */
-              <div className="nav-user-dropdown-container">
-                <button 
+              /* 未登录状态 (带推广期专属礼包引导气泡) */
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div 
                   onClick={() => onShowAuthModal?.()}
-                  className="sand-btn"
                   style={{
-                    padding: '8px 18px',
-                    fontSize: '0.92rem',
-                    borderRadius: 'var(--border-radius)',
+                    background: 'rgba(255, 100, 30, 0.12)',
+                    border: '1px solid rgba(255, 100, 30, 0.35)',
+                    color: 'var(--color-accent)',
+                    padding: '5px 12px',
+                    borderRadius: '20px',
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
                     cursor: 'pointer',
-                    display: 'flex',
+                    display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '6px'
+                    gap: '4px',
+                    transition: 'all 0.2s ease',
+                    boxShadow: '0 2px 8px rgba(255, 100, 30, 0.15)'
                   }}
+                  onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(255, 100, 30, 0.22)')}
+                  onMouseOut={(e) => (e.currentTarget.style.background = 'rgba(255, 100, 30, 0.12)')}
                 >
-                  登录 / 注册
-                  <span style={{ fontSize: '0.65rem', opacity: 0.8 }}>▼</span>
-                </button>
+                  <span>🎁 注册立送 10解锁+5下载</span>
+                </div>
 
-                <div className="nav-user-dropdown-menu">
-                  <div style={{
-                    background: dark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255, 255, 255, 0.98)',
-                    backdropFilter: 'blur(25px)',
-                    WebkitBackdropFilter: 'blur(25px)',
-                    boxShadow: '0 12px 35px rgba(0,0,0,0.22)',
-                    border: dark ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(18, 18, 18, 0.1)',
-                    borderRadius: '12px',
-                    padding: '6px',
-                    width: '140px',
-                    display: 'flex',
-                    flexDirection: 'column'
-                  }}>
-                    <button 
-                      onClick={() => onShowAuthModal?.()}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: 'var(--color-text)',
-                        fontSize: '0.9rem',
-                        textAlign: 'left',
-                        padding: '10px 14px',
-                        borderRadius: '8px',
-                        width: '100%',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        transition: 'background 0.15s, color 0.15s'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.background = 'rgba(255, 100, 30, 0.12)';
-                        e.currentTarget.style.color = 'var(--color-accent)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.background = 'transparent';
-                        e.currentTarget.style.color = 'var(--color-text)';
-                      }}
-                    >
-                      🔑 登录账号
-                    </button>
-                    <button 
-                      onClick={() => onShowAuthModal?.()}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: 'var(--color-text)',
-                        fontSize: '0.9rem',
-                        textAlign: 'left',
-                        padding: '10px 14px',
-                        borderRadius: '8px',
-                        width: '100%',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        transition: 'background 0.15s, color 0.15s'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.background = 'rgba(255, 100, 30, 0.12)';
-                        e.currentTarget.style.color = 'var(--color-accent)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.background = 'transparent';
-                        e.currentTarget.style.color = 'var(--color-text)';
-                      }}
-                    >
-                      ✨ 注册新账号
-                    </button>
+                <div className="nav-user-dropdown-container">
+                  <button 
+                    onClick={() => onShowAuthModal?.()}
+                    className="sand-btn"
+                    style={{
+                      padding: '8px 18px',
+                      fontSize: '0.92rem',
+                      borderRadius: 'var(--border-radius)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    登录 / 注册
+                    <span style={{ fontSize: '0.65rem', opacity: 0.8 }}>▼</span>
+                  </button>
+
+                  <div className="nav-user-dropdown-menu">
+                    <div style={{
+                      background: dark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255, 255, 255, 0.98)',
+                      backdropFilter: 'blur(25px)',
+                      WebkitBackdropFilter: 'blur(25px)',
+                      boxShadow: '0 12px 35px rgba(0,0,0,0.22)',
+                      border: dark ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(18, 18, 18, 0.1)',
+                      borderRadius: '12px',
+                      padding: '6px',
+                      width: '140px',
+                      display: 'flex',
+                      flexDirection: 'column'
+                    }}>
+                      <button 
+                        onClick={() => onShowAuthModal?.()}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: 'var(--color-text)',
+                          fontSize: '0.9rem',
+                          textAlign: 'left',
+                          padding: '10px 14px',
+                          borderRadius: '8px',
+                          width: '100%',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          transition: 'background 0.15s, color 0.15s'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.background = 'rgba(255, 100, 30, 0.12)';
+                          e.currentTarget.style.color = 'var(--color-accent)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.color = 'var(--color-text)';
+                        }}
+                      >
+                        🔑 登录账号
+                      </button>
+                      <button 
+                        onClick={() => onShowAuthModal?.()}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: 'var(--color-text)',
+                          fontSize: '0.9rem',
+                          textAlign: 'left',
+                          padding: '10px 14px',
+                          borderRadius: '8px',
+                          width: '100%',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          transition: 'background 0.15s, color 0.15s'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.background = 'rgba(255, 100, 30, 0.12)';
+                          e.currentTarget.style.color = 'var(--color-accent)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.color = 'var(--color-text)';
+                        }}
+                      >
+                        ✨ 注册新账号
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -232,6 +232,25 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         <form onSubmit={handleAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {authMode === 'signup' ? (
             <>
+              <div style={{
+                background: 'rgba(255, 100, 30, 0.08)',
+                border: '1px solid rgba(255, 100, 30, 0.25)',
+                borderRadius: '8px',
+                padding: '10px 14px',
+                fontSize: '0.85rem',
+                color: '#c2410c',
+                lineHeight: 1.5,
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '8px'
+              }}>
+                <span style={{ fontSize: '1rem', lineHeight: 1 }}>🎁</span>
+                <div>
+                  <b style={{ color: '#ea580c' }}>推广期特权：</b>
+                  完成注册立享 <b>10 份在线研报解锁</b> + <b>5 份 HTML 完整离线报告下载</b> 额度！
+                </div>
+              </div>
+
               <input 
                 id="auth-nickname"
                 name="nickname"

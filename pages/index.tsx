@@ -9,6 +9,8 @@ import { PlatformReport } from '../components/ReportList';
 import AuthModal from '../components/AuthModal';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import PromotionalBanner from '../components/PromotionalBanner';
+import MembershipTiersSection from '../components/MembershipTiersSection';
 import { EcosystemRadar, FeatureCards, KnowledgeNetwork, ActionPanel } from '../components/HomeVisuals';
 
 const AdminPanel = dynamic(() => import('../components/AdminPanel'), { ssr: false });
@@ -18,11 +20,22 @@ interface HomeProps {
   userId: string;
   userRole: string;
   freeQuota: number;
+  downloadQuota: number;
+  memberType: string;
   nickname?: string;
   latestArticles: any[];
 }
 
-export default function HomePage({ allReports, userId, userRole, freeQuota, nickname, latestArticles = [] }: HomeProps) {
+export default function HomePage({
+  allReports,
+  userId,
+  userRole,
+  freeQuota,
+  downloadQuota = 0,
+  memberType = 'free',
+  nickname,
+  latestArticles = []
+}: HomeProps) {
   const [quota, setQuota] = useState(freeQuota);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -238,7 +251,7 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
     <div style={{
       background: 'transparent',
       color: 'var(--color-text)',
-      minHeight: '430vh',
+      minHeight: '480vh',
       position: 'relative'
     }}>
       <Head>
@@ -338,6 +351,8 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
         userId={userId}
         userRole={userRole}
         quota={quota}
+        downloadQuota={downloadQuota}
+        memberType={memberType}
         nickname={nickname}
         onShowAuthModal={() => setShowAuthModal(true)}
         onShowUploadModal={() => setShowUploadModal(true)}
@@ -629,7 +644,7 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
         </div>
       </div>
 
-      {/* 5. 底部权威链接 Footer：自然位于页面滚动流的最底端，跟随页面滚动自然升起 */}
+      {/* 5. 推广期会员权益与额度对比矩阵 + 底部权威链接 Footer */}
       <div style={{
         position: 'absolute',
         bottom: 0,
@@ -638,6 +653,12 @@ export default function HomePage({ allReports, userId, userRole, freeQuota, nick
         width: '100%',
         zIndex: 20
       }}>
+        <MembershipTiersSection
+          userId={userId}
+          userRole={userRole}
+          memberType={memberType}
+          onShowAuthModal={() => setShowAuthModal(true)}
+        />
         <Footer />
       </div>
 
@@ -759,6 +780,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         userId: userId || '',
         userRole,
         freeQuota,
+        downloadQuota: auth.downloadQuota || 0,
+        memberType: auth.memberType || 'free',
         nickname,
         latestArticles
       }
@@ -771,6 +794,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         userId: '',
         userRole: 'guest',
         freeQuota: 0,
+        downloadQuota: 0,
+        memberType: 'free',
         nickname: '',
         latestArticles: []
       }

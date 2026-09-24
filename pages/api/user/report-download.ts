@@ -271,5 +271,5 @@ async function reportDownloadHandler(req: NextApiRequest, res: NextApiResponse, 
 }
 
 export default withDb(reportDownloadHandler, {
-  resourceName: 'api:user:report-download'
+  methods: ['GET', 'POST']
 });

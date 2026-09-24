@@ -12,5 +12,6 @@ export default defineConfig({
     globalSetup: './tests/helpers/test-setup.ts',
     exclude: ['**/node_modules/**', '**/dist/**', '**/.worktrees/**', '**/.next/**'],
     testTimeout: 30000,
+    fileParallelism: false,
   },
 });
