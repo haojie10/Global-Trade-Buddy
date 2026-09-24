@@ -98,6 +98,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // NOTE: 角色强制为 'user'，管理员只能通过数据库手动分配，防止注册自封管理员
     const selectedRole = 'user';
     const quota = 10;
+    const downloadQuota = 5; // 推广期新手礼包赠送 5 份离线 HTML 报告下载额度
     const defaultMemberType = 'free';
     const defaultStatus = 'active';
 
@@ -105,10 +106,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const passwordHash = await bcrypt.hash(password, 10);
 
     const signupRes = await dbClient.query(
-      `INSERT INTO users (email, password, role, free_quota, nickname, member_type, status) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7) 
-       RETURNING id, email, role, free_quota, nickname, member_type, status`,
-      [email, passwordHash, selectedRole, quota, nickname, defaultMemberType, defaultStatus]
+      `INSERT INTO users (email, password, role, free_quota, download_quota, nickname, member_type, status) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+       RETURNING id, email, role, free_quota, download_quota, nickname, member_type, status`,
+      [email, passwordHash, selectedRole, quota, downloadQuota, nickname, defaultMemberType, defaultStatus]
     );
 
     const user = signupRes.rows[0];
@@ -123,6 +124,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         email: user.email,
         role: user.role,
         freeQuota: user.free_quota,
+        downloadQuota: user.download_quota,
         nickname: user.nickname,
         memberType: user.member_type,
         status: user.status

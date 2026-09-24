@@ -41,7 +41,11 @@ function sign(payload: string): string {
  * NOTE: 使用 timingSafeEqual 防止时序攻击推断签名内容
  */
 export function getSession(req: NextApiRequest): Session | null {
-  const raw = req.cookies?.['gtb_session'];
+  let raw = req.cookies?.['gtb_session'];
+  if (!raw && req.headers?.cookie) {
+    const match = req.headers.cookie.match(/gtb_session=([^;]+)/);
+    if (match) raw = match[1];
+  }
   if (!raw) return null;
 
   try {
