@@ -37,6 +37,8 @@ interface ReportDetailProps {
   userId: string;
   userRole: string;
   freeQuota: number;
+  downloadQuota?: number;
+  memberType?: string;
   initialIsFavorite: boolean;
   initialNoteContent: string;
   nickname?: string;
@@ -51,6 +53,8 @@ export default function ReportDetailPage({
   userId, 
   userRole, 
   freeQuota,
+  downloadQuota = 0,
+  memberType = 'free',
   initialIsFavorite,
   initialNoteContent,
   nickname
@@ -59,6 +63,8 @@ export default function ReportDetailPage({
   const [content, setContent] = useState(report.content_html);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [quota, setQuota] = useState(freeQuota);
+  const [downloadQuotaState, setDownloadQuotaState] = useState(downloadQuota);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [previewImgUrl, setPreviewImgUrl] = useState<string | null>(null);
 
@@ -85,9 +91,10 @@ export default function ReportDetailPage({
     setContent(report.content_html);
     setIsFullscreen(false);
     setQuota(freeQuota);
+    setDownloadQuotaState(downloadQuota);
     setIsFav(initialIsFavorite);
     setNoteText(initialNoteContent);
-  }, [report.id, report.isUnlocked, report.content_html, freeQuota, initialIsFavorite, initialNoteContent]);
+  }, [report.id, report.isUnlocked, report.content_html, freeQuota, downloadQuota, initialIsFavorite, initialNoteContent]);
 
   // 页面浏览量与停留时间追踪
   React.useEffect(() => {
@@ -187,7 +194,11 @@ export default function ReportDetailPage({
 
   const handleToggleFavorite = async () => {
     if (!userId) {
-      alert('请先返回主页登录后再进行收藏！');
+      setShowAuthModal(true);
+      return;
+    }
+    if (!unlocked) {
+      alert('该报告尚未解锁，解锁后方可加入收藏与图谱！');
       return;
     }
     try {
@@ -204,6 +215,61 @@ export default function ReportDetailPage({
       }
     } catch (err) {
       alert('连接服务器失败');
+    }
+  };
+
+  const handleDownloadHtml = async () => {
+    if (!userId) {
+      setShowAuthModal(true);
+      return;
+    }
+    if (!unlocked) {
+      alert('请先解锁报告后再下载离线报告！');
+      return;
+    }
+    if (userRole !== 'admin' && downloadQuotaState <= 0) {
+      alert('您的离线报告下载额度已用尽！专业版每月赠送10份下载额度，邀请好友也可获赠下载额度。');
+      return;
+    }
+
+    try {
+      setIsDownloading(true);
+      const res = await fetch(`/api/user/report-download?reportId=${report.id}`);
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.error || '下载失败，请稍后重试');
+        return;
+      }
+
+      const blob = await res.blob();
+      const disposition = res.headers.get('Content-Disposition') || '';
+      let filename = `${report.title.replace(/[\\/:*?"<>|]/g, '_')}.html`;
+      const filenameMatch = disposition.match(/filename\*?=['"]?(?:UTF-\d['"]*)?([^;\r\n"']*)['"]?/i);
+      if (filenameMatch && filenameMatch[1]) {
+        try {
+          filename = decodeURIComponent(filenameMatch[1]);
+        } catch (e) {
+          // fallback
+        }
+      }
+
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(downloadUrl);
+      document.body.removeChild(a);
+
+      if (userRole !== 'admin') {
+        setDownloadQuotaState(prev => Math.max(0, prev - 1));
+      }
+    } catch (err: any) {
+      console.error('Download error:', err);
+      alert('下载离线报告失败，请检查网络后重试');
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -339,6 +405,8 @@ export default function ReportDetailPage({
             userId={userId}
             userRole={userRole}
             quota={quota}
+            downloadQuota={downloadQuotaState}
+            memberType={memberType}
             nickname={nickname}
             onShowAuthModal={() => setShowAuthModal(true)}
           />
@@ -358,7 +426,7 @@ export default function ReportDetailPage({
             {report.title}
           </h1>
 
-          {/* 标签与收藏 */}
+          {/* 标签与操作区 */}
           <div style={{ display: 'flex', gap: '10px', marginBottom: '30px', flexWrap: 'wrap', alignItems: 'center' }}>
             <span style={{
               background: 'transparent',
@@ -382,30 +450,86 @@ export default function ReportDetailPage({
             }}>
               Target: {report.market_region}
             </span>
-            {userId && (
-              <button
-                onClick={handleToggleFavorite}
-                style={{
-                  background: 'transparent',
-                  border: isFav ? '1px solid var(--color-accent)' : '1px solid rgba(18, 18, 18, 0.15)',
-                  color: isFav ? 'var(--color-accent)' : 'var(--color-muted)',
-                  fontSize: '0.75rem',
-                  padding: '4px 12px',
-                  borderRadius: 'var(--border-radius)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  transition: 'all 0.2s',
-                  marginLeft: 'auto' // 将收藏按钮推到最右侧
-                }}
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill={isFav ? 'var(--color-accent)' : 'none'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                </svg>
-                {isFav ? '已加入图谱 (已收藏)' : '加入图谱 (点击收藏)'}
-              </button>
-            )}
+
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+              {/* 下载离线 HTML 报告按钮 (已解锁时显示) */}
+              {unlocked && (
+                <button
+                  onClick={handleDownloadHtml}
+                  disabled={isDownloading}
+                  style={{
+                    background: 'rgba(34, 197, 94, 0.08)',
+                    border: '1px solid rgba(34, 197, 94, 0.3)',
+                    color: '#16a34a',
+                    fontSize: '0.75rem',
+                    padding: '4px 12px',
+                    borderRadius: 'var(--border-radius)',
+                    cursor: isDownloading ? 'wait' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    fontWeight: 500,
+                    transition: 'all 0.2s',
+                  }}
+                  title={`离线报告下载 (当前剩余: ${downloadQuotaState} 份)`}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                  {isDownloading ? '打包中...' : `下载离线HTML [余: ${downloadQuotaState}份]`}
+                </button>
+              )}
+
+              {/* 收藏按钮 */}
+              {userId ? (
+                <button
+                  onClick={handleToggleFavorite}
+                  title={unlocked ? (isFav ? '移出收藏' : '加入收藏') : '该报告尚未解锁，解锁后方可加入收藏与图谱'}
+                  style={{
+                    background: 'transparent',
+                    border: isFav ? '1px solid var(--color-accent)' : '1px solid rgba(18, 18, 18, 0.15)',
+                    color: isFav ? 'var(--color-accent)' : 'var(--color-muted)',
+                    fontSize: '0.75rem',
+                    padding: '4px 12px',
+                    borderRadius: 'var(--border-radius)',
+                    cursor: unlocked ? 'pointer' : 'not-allowed',
+                    opacity: unlocked ? 1 : 0.6,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill={isFav ? 'var(--color-accent)' : 'none'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                  </svg>
+                  {isFav ? '已加入图谱 (已收藏)' : (unlocked ? '加入图谱 (点击收藏)' : '未解锁 (不可收藏)')}
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid rgba(18, 18, 18, 0.15)',
+                    color: 'var(--color-muted)',
+                    fontSize: '0.75rem',
+                    padding: '4px 12px',
+                    borderRadius: 'var(--border-radius)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                  </svg>
+                  登录后收藏
+                </button>
+              )}
+            </div>
           </div>
 
           {/* 摘要区 */}
@@ -456,30 +580,58 @@ export default function ReportDetailPage({
                     <span style={{ fontSize: '0.9rem', fontWeight: 500, letterSpacing: '-0.2px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '75%' }}>
                       {report.title}
                     </span>
-                    <button 
-                      onClick={() => setIsFullscreen(false)}
-                      style={{
-                        background: 'var(--color-accent)',
-                        color: '#ffffff',
-                        border: 'none',
-                        padding: '6px 14px',
-                        borderRadius: '0px',
-                        fontSize: '0.8rem',
-                        fontWeight: 500,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        boxShadow: '0 4px 10px rgba(46, 91, 255, 0.2)',
-                        transition: 'all 0.3s'
-                      }}
-                    >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18"/>
-                        <line x1="6" y1="6" x2="18" y2="18"/>
-                      </svg>
-                      退出沉浸阅读 (Esc)
-                    </button>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                      <button
+                        onClick={handleDownloadHtml}
+                        disabled={isDownloading}
+                        style={{
+                          background: 'rgba(34, 197, 94, 0.1)',
+                          color: '#16a34a',
+                          border: '1px solid rgba(34, 197, 94, 0.3)',
+                          padding: '6px 14px',
+                          borderRadius: '0px',
+                          fontSize: '0.8rem',
+                          fontWeight: 500,
+                          cursor: isDownloading ? 'wait' : 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          transition: 'all 0.3s'
+                        }}
+                        title={`离线报告下载 (当前剩余: ${downloadQuotaState} 份)`}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <polyline points="7 10 12 15 17 10" />
+                          <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        {isDownloading ? '打包中...' : `下载离线HTML (${downloadQuotaState})`}
+                      </button>
+                      <button 
+                        onClick={() => setIsFullscreen(false)}
+                        style={{
+                          background: 'var(--color-accent)',
+                          color: '#ffffff',
+                          border: 'none',
+                          padding: '6px 14px',
+                          borderRadius: '0px',
+                          fontSize: '0.8rem',
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          boxShadow: '0 4px 10px rgba(46, 91, 255, 0.2)',
+                          transition: 'all 0.3s'
+                        }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="18" y1="6" x2="6" y2="18"/>
+                          <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                        退出沉浸阅读 (Esc)
+                      </button>
+                    </div>
                   </div>
                 )}
 
@@ -972,6 +1124,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     const userId = auth.userId;
     const userRole = auth.userRole;
     const freeQuota = auth.freeQuota;
+    const downloadQuota = auth.downloadQuota || 0;
+    const memberType = auth.memberType || 'free';
     const nickname = auth.nickname;
 
 function extractPublicPreview(contentHtml: string | null) {
@@ -1173,6 +1327,8 @@ function extractPublicPreview(contentHtml: string | null) {
         userId: userId || '',
         userRole,
         freeQuota,
+        downloadQuota,
+        memberType,
         initialIsFavorite: isFavorite,
         initialNoteContent: noteContent,
         nickname
