@@ -8,7 +8,7 @@ export async function processInvitation(referrerId: string, inviteeId: string, d
     await dbClient.query('BEGIN');
 
     // 1. 校验邀请人与被邀请人是否存在
-    const refRes = await dbClient.query('SELECT id FROM users WHERE id = $1', [referrerId]);
+    const refRes = await dbClient.query('SELECT id, member_type FROM users WHERE id = $1', [referrerId]);
     const invRes = await dbClient.query('SELECT id, invited_by FROM users WHERE id = $1', [inviteeId]);
 
     if (refRes.rows.length === 0) {
@@ -29,16 +29,22 @@ export async function processInvitation(referrerId: string, inviteeId: string, d
       [referrerId, inviteeId]
     );
 
-    // 3. 邀请人加 3 额度
+    // 3. 区分邀请人身份进行分级奖励
+    const isPro = refRes.rows[0].member_type === 'pro';
+    const inviterBonusUnlock = isPro ? 10 : 3;
+    const inviterBonusDownload = isPro ? 2 : 0;
+    const inviteeBonusUnlock = 3;
+
+    // 邀请人奖励：Pro 获赠 +10 解锁 + 2 下载；Free 获赠 +3 解锁
     await dbClient.query(
-      'UPDATE users SET free_quota = free_quota + 3 WHERE id = $1',
-      [referrerId]
+      'UPDATE users SET free_quota = free_quota + $1, download_quota = download_quota + $2 WHERE id = $3',
+      [inviterBonusUnlock, inviterBonusDownload, referrerId]
     );
 
     // 4. 被邀请人加 3 额度 (双向奖励)
     await dbClient.query(
-      'UPDATE users SET free_quota = free_quota + 3 WHERE id = $1',
-      [inviteeId]
+      'UPDATE users SET free_quota = free_quota + $1 WHERE id = $2',
+      [inviteeBonusUnlock, inviteeId]
     );
 
     await dbClient.query('COMMIT');
