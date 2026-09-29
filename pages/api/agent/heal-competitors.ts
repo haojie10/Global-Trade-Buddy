@@ -29,22 +29,49 @@ async function healCompetitorsHandler(req: NextApiRequest, res: NextApiResponse,
     return res.status(401).json({ error: 'Unauthorized: Invalid Agent API Key' });
   }
 
-  const { reportIds = [], all = false } = req.body;
+  const { reportIds = [], all = false, limit = 8 } = req.body;
+  const batchLimit = Math.max(1, Math.min(Number(limit) || 8, 20));
 
   let targetReportIds: string[] = [];
+  let totalRemaining = 0;
 
   if (Array.isArray(reportIds) && reportIds.length > 0) {
     targetReportIds = reportIds;
   } else if (all) {
-    // 自动扫描 2026-09-21 以来或关联了带管道符脏实体的所有报告
+    // 1. 精准统计全库关联了管道符脏实体的报告总数
+    const countRes = await dbClient.query(`
+      SELECT COUNT(DISTINCT r.id) AS cnt
+      FROM reports r
+      JOIN report_entities re ON r.id = re.report_id
+      JOIN entities e ON re.entity_id = e.id
+      WHERE e.canonical_name LIKE '%|%'
+    `);
+    totalRemaining = parseInt(countRes.rows[0]?.cnt || '0', 10);
+
+    if (totalRemaining === 0) {
+      return res.status(200).json({
+        success: true,
+        message: '🎉 全库检测完毕：已无任何包含管道符的脏实体报告！',
+        healedReportsCount: 0,
+        healedReports: [],
+        remainingDirtyReports: 0,
+        orphansDeletedCount: 0,
+        activeRelationsCount: 0,
+        activeRelations: []
+      });
+    }
+
+    // 2. 每次截取最多 batchLimit 篇执行自愈，避免 Nginx 504 超时
     const scanRes = await dbClient.query(`
       SELECT DISTINCT r.id
       FROM reports r
       JOIN report_entities re ON r.id = re.report_id
       JOIN entities e ON re.entity_id = e.id
-      WHERE e.canonical_name LIKE '%|%' OR r.created_at >= '2026-09-21 00:00:00'
+      WHERE e.canonical_name LIKE '%|%'
       ORDER BY r.id
-    `);
+      LIMIT $1
+    `, [batchLimit]);
+
     targetReportIds = scanRes.rows.map(r => r.id);
   } else {
     return res.status(400).json({ error: '请提供 reportIds 数组或指定 all: true' });
@@ -226,6 +253,7 @@ async function healCompetitorsHandler(req: NextApiRequest, res: NextApiResponse,
     return res.status(200).json({
       success: true,
       healedReportsCount: healResults.length,
+      remainingDirtyReports: Math.max(0, totalRemaining - healResults.length),
       healedReports: healResults,
       orphansDeletedCount: orphanCleanRes.rows.length,
       activeRelationsCount: relationsRes.rows.length,
