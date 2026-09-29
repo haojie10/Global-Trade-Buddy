@@ -29,8 +29,37 @@ async function healCompetitorsHandler(req: NextApiRequest, res: NextApiResponse,
     return res.status(401).json({ error: 'Unauthorized: Invalid Agent API Key' });
   }
 
-  const { reportIds = [], all = false, limit = 8 } = req.body;
+  const { reportIds = [], all = false, limit = 8, action } = req.body;
   const batchLimit = Math.max(1, Math.min(Number(limit) || 8, 20));
+
+  if (action === 'diagnose') {
+    const totalReportsRes = await dbClient.query('SELECT COUNT(*) FROM reports');
+    const countPipeMetaRes = await dbClient.query(`
+      SELECT COUNT(*) AS cnt
+      FROM reports
+      WHERE content_html LIKE '%name="competitors"%' AND content_html LIKE '%|%'
+    `);
+    const hasPipeMetaRes = await dbClient.query(`
+      SELECT id, title, created_at
+      FROM reports
+      WHERE content_html LIKE '%name="competitors"%' AND content_html LIKE '%|%'
+      LIMIT 20
+    `);
+    const countPipeEntitiesRes = await dbClient.query(`
+      SELECT COUNT(*) AS cnt FROM entities WHERE canonical_name LIKE '%|%'
+    `);
+    const pipeEntitiesSample = await dbClient.query(`
+      SELECT id, canonical_name, entity_type FROM entities WHERE canonical_name LIKE '%|%' LIMIT 20
+    `);
+
+    return res.status(200).json({
+      totalReports: parseInt(totalReportsRes.rows[0].count, 10),
+      countPipeMeta: parseInt(countPipeMetaRes.rows[0].cnt, 10),
+      countPipeEntities: parseInt(countPipeEntitiesRes.rows[0].cnt, 10),
+      pipeMetaSample: hasPipeMetaRes.rows,
+      pipeEntitiesSample: pipeEntitiesSample.rows
+    });
+  }
 
   let targetReportIds: string[] = [];
   let totalRemaining = 0;
@@ -43,8 +72,8 @@ async function healCompetitorsHandler(req: NextApiRequest, res: NextApiResponse,
       SELECT COUNT(DISTINCT r.id) AS cnt
       FROM reports r
       WHERE (
-        r.content_html ~* '<meta[^>]*?name=["'']competitors["''][^>]*?content=["''][^"'']*\\|'
-        OR r.content_html ~* '<meta[^>]*?content=["''][^"'']*\\|[^"'']*["''][^>]*?name=["'']competitors["'']'
+        (r.content_html LIKE '%name="competitors"%' AND r.content_html LIKE '%|%')
+        OR (r.content_html LIKE "%name='competitors'%" AND r.content_html LIKE '%|%')
         OR EXISTS (
           SELECT 1 FROM report_entities re
           JOIN entities e ON re.entity_id = e.id
@@ -72,8 +101,8 @@ async function healCompetitorsHandler(req: NextApiRequest, res: NextApiResponse,
       SELECT DISTINCT r.id
       FROM reports r
       WHERE (
-        r.content_html ~* '<meta[^>]*?name=["'']competitors["''][^>]*?content=["''][^"'']*\\|'
-        OR r.content_html ~* '<meta[^>]*?content=["''][^"'']*\\|[^"'']*["''][^>]*?name=["'']competitors["'']'
+        (r.content_html LIKE '%name="competitors"%' AND r.content_html LIKE '%|%')
+        OR (r.content_html LIKE "%name='competitors'%" AND r.content_html LIKE '%|%')
         OR EXISTS (
           SELECT 1 FROM report_entities re
           JOIN entities e ON re.entity_id = e.id
