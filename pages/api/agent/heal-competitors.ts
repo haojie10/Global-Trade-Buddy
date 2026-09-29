@@ -29,35 +29,35 @@ async function healCompetitorsHandler(req: NextApiRequest, res: NextApiResponse,
     return res.status(401).json({ error: 'Unauthorized: Invalid Agent API Key' });
   }
 
-  const { reportIds = [], all = false, limit = 8, action } = req.body;
-  const batchLimit = Math.max(1, Math.min(Number(limit) || 8, 20));
+  const { reportIds = [], all = false, limit = 10, action } = req.body;
+  const batchLimit = Math.max(1, Math.min(Number(limit) || 10, 50));
 
   if (action === 'diagnose') {
-    const totalReportsRes = await dbClient.query('SELECT COUNT(*) FROM reports');
-    const countPipeMetaRes = await dbClient.query(`
-      SELECT COUNT(*) AS cnt
+    // 精准诊断：在 2026-09-20 之后或全库中，真正 competitors meta 内容中带有管道符的报告
+    const allReportsRes = await dbClient.query(`
+      SELECT id, title, content_html, created_at
       FROM reports
-      WHERE content_html LIKE '%name="competitors"%' AND content_html LIKE '%|%'
-    `);
-    const hasPipeMetaRes = await dbClient.query(`
-      SELECT id, title, created_at
-      FROM reports
-      WHERE content_html LIKE '%name="competitors"%' AND content_html LIKE '%|%'
-      LIMIT 20
-    `);
-    const countPipeEntitiesRes = await dbClient.query(`
-      SELECT COUNT(*) AS cnt FROM entities WHERE canonical_name LIKE '%|%'
-    `);
-    const pipeEntitiesSample = await dbClient.query(`
-      SELECT id, canonical_name, entity_type FROM entities WHERE canonical_name LIKE '%|%' LIMIT 20
+      WHERE created_at >= '2026-09-20 00:00:00'
+      ORDER BY created_at DESC
     `);
 
+    const dirtyList = [];
+    for (const r of allReportsRes.rows) {
+      const compMeta = extractMeta(r.content_html || '', 'competitors');
+      if (compMeta && compMeta.includes('|')) {
+        dirtyList.push({
+          id: r.id,
+          title: r.title,
+          competitors: compMeta,
+          created_at: r.created_at
+        });
+      }
+    }
+
     return res.status(200).json({
-      totalReports: parseInt(totalReportsRes.rows[0].count, 10),
-      countPipeMeta: parseInt(countPipeMetaRes.rows[0].cnt, 10),
-      countPipeEntities: parseInt(countPipeEntitiesRes.rows[0].cnt, 10),
-      pipeMetaSample: hasPipeMetaRes.rows,
-      pipeEntitiesSample: pipeEntitiesSample.rows
+      recentReportsScanned: allReportsRes.rows.length,
+      trulyDirtyCount: dirtyList.length,
+      dirtyReports: dirtyList
     });
   }
 
@@ -67,21 +67,23 @@ async function healCompetitorsHandler(req: NextApiRequest, res: NextApiResponse,
   if (Array.isArray(reportIds) && reportIds.length > 0) {
     targetReportIds = reportIds;
   } else if (all) {
-    // 1. 精准统计：全库 HTML meta 含管道符 或 关联实体含管道符的报告总数
-    const countRes = await dbClient.query(`
-      SELECT COUNT(DISTINCT r.id) AS cnt
-      FROM reports r
-      WHERE (
-        (r.content_html LIKE '%name="competitors"%' AND r.content_html LIKE '%|%')
-        OR (r.content_html LIKE '%name=''competitors''%' AND r.content_html LIKE '%|%')
-        OR EXISTS (
-          SELECT 1 FROM report_entities re
-          JOIN entities e ON re.entity_id = e.id
-          WHERE re.report_id = r.id AND e.canonical_name LIKE '%|%'
-        )
-      )
+    // 内存级精准扫描 9月20日以来的报告
+    const scanAllRes = await dbClient.query(`
+      SELECT id, content_html
+      FROM reports
+      WHERE created_at >= '2026-09-20 00:00:00'
+      ORDER BY id ASC
     `);
-    totalRemaining = parseInt(countRes.rows[0]?.cnt || '0', 10);
+
+    const dirtyIds: string[] = [];
+    for (const r of scanAllRes.rows) {
+      const compMeta = extractMeta(r.content_html || '', 'competitors');
+      if (compMeta && compMeta.includes('|')) {
+        dirtyIds.push(r.id);
+      }
+    }
+
+    totalRemaining = dirtyIds.length;
 
     if (totalRemaining === 0) {
       return res.status(200).json({
@@ -96,24 +98,7 @@ async function healCompetitorsHandler(req: NextApiRequest, res: NextApiResponse,
       });
     }
 
-    // 2. 每次截取最多 batchLimit 篇执行自愈，避免 Nginx 504 超时
-    const scanRes = await dbClient.query(`
-      SELECT DISTINCT r.id
-      FROM reports r
-      WHERE (
-        (r.content_html LIKE '%name="competitors"%' AND r.content_html LIKE '%|%')
-        OR (r.content_html LIKE '%name=''competitors''%' AND r.content_html LIKE '%|%')
-        OR EXISTS (
-          SELECT 1 FROM report_entities re
-          JOIN entities e ON re.entity_id = e.id
-          WHERE re.report_id = r.id AND e.canonical_name LIKE '%|%'
-        )
-      )
-      ORDER BY r.id
-      LIMIT $1
-    `, [batchLimit]);
-
-    targetReportIds = scanRes.rows.map(r => r.id);
+    targetReportIds = dirtyIds.slice(0, batchLimit);
   } else {
     return res.status(400).json({ error: '请提供 reportIds 数组或指定 all: true' });
   }
@@ -179,13 +164,10 @@ async function healCompetitorsHandler(req: NextApiRequest, res: NextApiResponse,
         channels: metaChannels ? metaChannels.split(/,|，/).map(cleanEntityTag).filter(Boolean) : []
       };
 
-      // 规范化 HTML 中的 meta 标签内容（将长文本洗成纯净公司名，保持一致）
-      if (cleanCompetitors.length > 0) {
+      // 规范化 HTML 中的 meta 标签内容（原串直接替换，绝对干净可靠，不受正则和属性顺序影响）
+      if (metaCompetitors && metaCompetitors.includes('|') && cleanCompetitors.length > 0) {
         const cleanCompContent = cleanCompetitors.join(', ');
-        contentHtml = contentHtml.replace(
-          /(<meta\s+name=["']competitors["']\s+content=["'])[\s\S]*?(["'])/i,
-          `$1${cleanCompContent}$2`
-        );
+        contentHtml = contentHtml.replace(metaCompetitors, cleanCompContent);
       }
 
       // 处理地区/国家
