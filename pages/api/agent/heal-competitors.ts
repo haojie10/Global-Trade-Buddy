@@ -38,20 +38,26 @@ async function healCompetitorsHandler(req: NextApiRequest, res: NextApiResponse,
   if (Array.isArray(reportIds) && reportIds.length > 0) {
     targetReportIds = reportIds;
   } else if (all) {
-    // 1. 精准统计全库关联了管道符脏实体的报告总数
+    // 1. 精准统计：全库 HTML meta 含管道符 或 关联实体含管道符的报告总数
     const countRes = await dbClient.query(`
       SELECT COUNT(DISTINCT r.id) AS cnt
       FROM reports r
-      JOIN report_entities re ON r.id = re.report_id
-      JOIN entities e ON re.entity_id = e.id
-      WHERE e.canonical_name LIKE '%|%'
+      WHERE (
+        r.content_html ~* '<meta[^>]*?name=["'']competitors["''][^>]*?content=["''][^"'']*\\|'
+        OR r.content_html ~* '<meta[^>]*?content=["''][^"'']*\\|[^"'']*["''][^>]*?name=["'']competitors["'']'
+        OR EXISTS (
+          SELECT 1 FROM report_entities re
+          JOIN entities e ON re.entity_id = e.id
+          WHERE re.report_id = r.id AND e.canonical_name LIKE '%|%'
+        )
+      )
     `);
     totalRemaining = parseInt(countRes.rows[0]?.cnt || '0', 10);
 
     if (totalRemaining === 0) {
       return res.status(200).json({
         success: true,
-        message: '🎉 全库检测完毕：已无任何包含管道符的脏实体报告！',
+        message: '🎉 全库检测完毕：已无任何包含管道符的脏实体或未规范化 meta 的报告！',
         healedReportsCount: 0,
         healedReports: [],
         remainingDirtyReports: 0,
@@ -65,9 +71,15 @@ async function healCompetitorsHandler(req: NextApiRequest, res: NextApiResponse,
     const scanRes = await dbClient.query(`
       SELECT DISTINCT r.id
       FROM reports r
-      JOIN report_entities re ON r.id = re.report_id
-      JOIN entities e ON re.entity_id = e.id
-      WHERE e.canonical_name LIKE '%|%'
+      WHERE (
+        r.content_html ~* '<meta[^>]*?name=["'']competitors["''][^>]*?content=["''][^"'']*\\|'
+        OR r.content_html ~* '<meta[^>]*?content=["''][^"'']*\\|[^"'']*["''][^>]*?name=["'']competitors["'']'
+        OR EXISTS (
+          SELECT 1 FROM report_entities re
+          JOIN entities e ON re.entity_id = e.id
+          WHERE re.report_id = r.id AND e.canonical_name LIKE '%|%'
+        )
+      )
       ORDER BY r.id
       LIMIT $1
     `, [batchLimit]);
