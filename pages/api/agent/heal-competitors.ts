@@ -73,7 +73,7 @@ async function healCompetitorsHandler(req: NextApiRequest, res: NextApiResponse,
       FROM reports r
       WHERE (
         (r.content_html LIKE '%name="competitors"%' AND r.content_html LIKE '%|%')
-        OR (r.content_html LIKE "%name='competitors'%" AND r.content_html LIKE '%|%')
+        OR (r.content_html LIKE '%name=''competitors''%' AND r.content_html LIKE '%|%')
         OR EXISTS (
           SELECT 1 FROM report_entities re
           JOIN entities e ON re.entity_id = e.id
@@ -102,7 +102,7 @@ async function healCompetitorsHandler(req: NextApiRequest, res: NextApiResponse,
       FROM reports r
       WHERE (
         (r.content_html LIKE '%name="competitors"%' AND r.content_html LIKE '%|%')
-        OR (r.content_html LIKE "%name='competitors'%" AND r.content_html LIKE '%|%')
+        OR (r.content_html LIKE '%name=''competitors''%' AND r.content_html LIKE '%|%')
         OR EXISTS (
           SELECT 1 FROM report_entities re
           JOIN entities e ON re.entity_id = e.id
