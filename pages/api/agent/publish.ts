@@ -7,7 +7,7 @@ import { uploadImage, cleanOrphanedImages } from '../../../lib/storage';
 import { RETAILER_ENTITIES } from '../../../lib/entity-constants';
 import { filterCountriesOnly } from '../../../lib/country-helpers';
 import { computeRelationsForReport, ReportEntityItem } from '../../../lib/relation-calculator';
-import { discoverAndQueueCompetitors } from '../../../lib/competitor-discoverer';
+import { discoverAndQueueCompetitors, cleanCompanyName } from '../../../lib/competitor-discoverer';
 
 async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
   const authHeader = req.headers.authorization;
@@ -68,21 +68,28 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     const metaTargetReportId = extractMeta(contentHtml, 'target_report_id');
     const explicitTargetId = (req.body.target_report_id || req.body.targetReportId || metaTargetReportId || '').trim();
 
+    const cleanEntityTag = (tag: string) => {
+      if (!tag) return '';
+      // 提取管道首段并剥离常见法律后缀与前后特殊符号
+      const namePart = tag.split('|')[0].trim();
+      return cleanCompanyName(namePart);
+    };
+
     const aliasesList = metaCompanyAliases
-      ? metaCompanyAliases.split(/,|，|\/|\||;|；|\n/).map(s => s.trim()).filter(Boolean)
+      ? metaCompanyAliases.split(/,|，|\/|\||;|；|\n/).map(cleanCompanyName).filter(Boolean)
       : [];
 
     const manualTags = {
-      companies: metaCompanyName ? [metaCompanyName] : [],
+      companies: metaCompanyName ? [cleanCompanyName(metaCompanyName)] : [],
       companyAliases: aliasesList,
       companyWebsite: metaCompanyWebsite || undefined,
-      competitors: metaCompetitors ? metaCompetitors.split(/,|，/).map(s => s.trim()).filter(Boolean) : [],
-      suppliers: metaSuppliers ? metaSuppliers.split(/,|，/).map(s => s.trim()).filter(Boolean) : [],
-      customers: metaCustomers ? metaCustomers.split(/,|，/).map(s => s.trim()).filter(Boolean) : [],
-      sisters: metaSisterParents ? metaSisterParents.split(/,|，/).map(s => s.trim()).filter(Boolean) : [],
+      competitors: metaCompetitors ? metaCompetitors.split(/,|，/).map(cleanEntityTag).filter(Boolean) : [],
+      suppliers: metaSuppliers ? metaSuppliers.split(/,|，/).map(cleanEntityTag).filter(Boolean) : [],
+      customers: metaCustomers ? metaCustomers.split(/,|，/).map(cleanEntityTag).filter(Boolean) : [],
+      sisters: metaSisterParents ? metaSisterParents.split(/,|，/).map(cleanEntityTag).filter(Boolean) : [],
       products: metaProducts ? metaProducts.split(/,|，/).map(s => s.trim()).filter(Boolean) : [],
       regions: metaRegions ? metaRegions.split(/,|，/).map(s => s.trim()).filter(Boolean) : [],
-      channels: metaChannels ? metaChannels.split(/,|，/).map(s => s.trim()).filter(Boolean) : []
+      channels: metaChannels ? metaChannels.split(/,|，/).map(cleanEntityTag).filter(Boolean) : []
     };
 
     const finalCategory = metaCategory || 'customer';

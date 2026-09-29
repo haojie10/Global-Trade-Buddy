@@ -8,6 +8,7 @@ import { uploadImage, cleanOrphanedImages } from '../../../../lib/storage';
 import { RETAILER_ENTITIES } from '../../../../lib/entity-constants';
 import { computeRelationsForReport, ReportEntityItem } from '../../../../lib/relation-calculator';
 import { filterCountriesOnly } from '../../../../lib/country-helpers';
+import { cleanCompanyName } from '../../../../lib/competitor-discoverer';
 
 async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
   const adminSession = requireAdmin(req);
@@ -38,10 +39,21 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
     ...metaAliases
   ]));
 
+  const cleanEntityTag = (tag: string) => {
+    if (!tag) return '';
+    const namePart = tag.split('|')[0].trim();
+    return cleanCompanyName(namePart);
+  };
+
   const mergedManualTags = {
     ...manualTags,
-    companies: manualTags?.companies && manualTags.companies.length > 0 ? [manualTags.companies[0].trim()] : (meta.primary_subject ? [meta.primary_subject] : []),
-    companyAliases: finalCompanyAliases
+    companies: manualTags?.companies && manualTags.companies.length > 0 ? [cleanCompanyName(manualTags.companies[0])] : (meta.primary_subject ? [cleanCompanyName(meta.primary_subject)] : []),
+    companyAliases: finalCompanyAliases.map(cleanCompanyName).filter(Boolean),
+    competitors: manualTags?.competitors ? manualTags.competitors.map(cleanEntityTag).filter(Boolean) : [],
+    suppliers: manualTags?.suppliers ? manualTags.suppliers.map(cleanEntityTag).filter(Boolean) : [],
+    customers: manualTags?.customers ? manualTags.customers.map(cleanEntityTag).filter(Boolean) : [],
+    sisters: manualTags?.sisters ? manualTags.sisters.map(cleanEntityTag).filter(Boolean) : [],
+    channels: manualTags?.channels ? manualTags.channels.map(cleanEntityTag).filter(Boolean) : []
   };
 
   // 处理手动标记的地区标签（仅保留具体国家，剔除大洲大区词汇）
