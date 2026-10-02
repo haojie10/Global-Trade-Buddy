@@ -4,6 +4,8 @@ interface MembershipTiersSectionProps {
   userId?: string | null;
   userRole?: string;
   memberType?: string;
+  copied?: boolean;
+  onCopy?: () => void;
   onSelectTier?: (tier: 'free' | 'pro' | 'enterprise') => void;
   onShowAuthModal?: () => void;
 }
@@ -12,6 +14,8 @@ export default function MembershipTiersSection({
   userId,
   userRole,
   memberType = 'free',
+  copied,
+  onCopy,
   onSelectTier,
   onShowAuthModal
 }: MembershipTiersSectionProps) {
@@ -24,12 +28,12 @@ export default function MembershipTiersSection({
       padding: '0 24px',
       color: '#121212'
     }}>
-      <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+      <div style={{ textAlign: 'center', marginBottom: '40px' }}>
         <div style={{
           display: 'inline-flex',
           alignItems: 'center',
           gap: '6px',
-          padding: '5px 16px',
+          padding: '6px 18px',
           borderRadius: '9999px',
           background: 'rgba(255, 100, 30, 0.08)',
           border: '1px solid rgba(255, 100, 30, 0.25)',
@@ -38,26 +42,103 @@ export default function MembershipTiersSection({
           fontWeight: 600,
           marginBottom: '16px'
         }}>
-          💎 推广期权益特惠 · 阶梯赋能出海团队
+          💎 开启知识之旅 · 推广期权益特惠与邀请互惠
         </div>
         <h2 style={{
-          fontSize: 'clamp(1.8rem, 4vw, 2.4rem)',
+          fontSize: 'clamp(1.8rem, 4vw, 2.5rem)',
           fontWeight: 700,
           letterSpacing: '-0.5px',
           marginBottom: '14px',
           color: '#121212'
         }}>
-          选择适合您出海业务的研报方案
+          选择适合您出海业务的方案
         </h2>
         <p style={{
           color: '#64748b',
           fontSize: '1rem',
           maxWidth: '650px',
-          margin: '0 auto',
+          margin: '0 auto 28px auto',
           lineHeight: 1.6
         }}>
           从初探海外买家画像到深度穿透全球供应链拓扑网络，为您提供高确定性的海外大客户决策情报。
         </p>
+
+        {/* 专属邀请互惠条 (整合原 ActionPanel 邀请裂变功能) */}
+        <div style={{
+          maxWidth: '680px',
+          margin: '0 auto',
+          background: '#ffffff',
+          border: '1px solid rgba(255, 100, 30, 0.2)',
+          borderRadius: '16px',
+          padding: '16px 20px',
+          boxShadow: '0 4px 20px rgba(255, 100, 30, 0.05)',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px'
+        }}>
+          {userId ? (
+            <>
+              <div style={{ textAlign: 'left', flex: '1 1 280px' }}>
+                <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#121212', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>🎁 您的专属邀请链接</span>
+                  <span style={{ fontSize: '0.75rem', color: '#ff641e', background: 'rgba(255,100,30,0.1)', padding: '1px 6px', borderRadius: '4px' }}>
+                    双方各得 +3 次解锁
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px', wordBreak: 'break-all' }}>
+                  {typeof window !== 'undefined' ? `${window.location.origin}/?invite=${userId}` : ''}
+                </div>
+              </div>
+              <button
+                onClick={onCopy}
+                style={{
+                  background: 'linear-gradient(135deg, #ff641e, #ea580c)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '8px 18px',
+                  fontSize: '0.84rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(255, 100, 30, 0.25)',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {copied ? '✓ 已复制专属链接' : '复制邀请链接'}
+              </button>
+            </>
+          ) : (
+            <>
+              <div style={{ textAlign: 'left', flex: '1 1 280px' }}>
+                <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#121212' }}>
+                  🎉 新用户注册即领 <span style={{ color: '#ff641e' }}>10 份研报解锁</span> + <span style={{ color: '#10b981' }}>5 份完整离线下载</span>
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
+                  邀请好友加入，双方均可额外再获赠 +3 次报告额度，永久有效
+                </div>
+              </div>
+              <button
+                onClick={onShowAuthModal}
+                style={{
+                  background: 'linear-gradient(135deg, #ff641e, #ea580c)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '8px 20px',
+                  fontSize: '0.86rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(255, 100, 30, 0.25)',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                免费注册 / 登录领取 →
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       <div style={{

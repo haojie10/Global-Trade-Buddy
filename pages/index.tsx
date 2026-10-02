@@ -11,7 +11,7 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import PromotionalBanner from '../components/PromotionalBanner';
 import MembershipTiersSection from '../components/MembershipTiersSection';
-import { EcosystemRadar, FeatureCards, KnowledgeNetwork, ActionPanel } from '../components/HomeVisuals';
+import { EcosystemRadar, FeatureCards, KnowledgeNetwork } from '../components/HomeVisuals';
 
 const AdminPanel = dynamic(() => import('../components/AdminPanel'), { ssr: false });
 
@@ -43,14 +43,11 @@ export default function HomePage({
 
   const router = useRouter();
 
-  // 叙事容器与 4 幕 DOM 容器引用
-  const storyContainerRef = useRef<HTMLDivElement>(null);
-  const membershipSectionRef = useRef<HTMLDivElement>(null);
+  // 视口容器与 3 幕 DOM 容器引用
   const viewportRef = useRef<HTMLDivElement>(null);
   const sec1Ref = useRef<HTMLDivElement>(null);
   const sec2Ref = useRef<HTMLDivElement>(null);
   const sec3Ref = useRef<HTMLDivElement>(null);
-  const sec4Ref = useRef<HTMLDivElement>(null);
 
   // 第 2 幕内部活跃卡片索引 (0, 1, 2)
   const [featureActiveIndex, setFeatureActiveIndex] = useState(0);
@@ -95,7 +92,7 @@ export default function HomePage({
     const sec1 = sec1Ref.current;
     const sec2 = sec2Ref.current;
     const sec3 = sec3Ref.current;
-    const sec4 = sec4Ref.current;
+    const viewport = viewportRef.current;
 
     let targetPercent = 0;
     let currentRenderPercent = 0;
@@ -106,14 +103,33 @@ export default function HomePage({
       currentRenderPercent += (targetPercent - currentRenderPercent) * 0.2;
       const scrollPercent = Math.max(0, Math.min(1, currentRenderPercent));
 
+      // 计算当前所处的全局 Step (1 ~ 4)
+      if (scrollPercent < 0.28) {
+        setCurrentStep(1);
+      } else if (scrollPercent < 0.62) {
+        setCurrentStep(2);
+        // 计算第 2 幕内部 3 个子项的切换进度
+        const sec2Progress = (scrollPercent - 0.28) / 0.34;
+        if (sec2Progress < 0.35) {
+          setFeatureActiveIndex(0);
+        } else if (sec2Progress < 0.7) {
+          setFeatureActiveIndex(1);
+        } else {
+          setFeatureActiveIndex(2);
+        }
+      } else if (scrollPercent < 0.82) {
+        setCurrentStep(3);
+      } else {
+        setCurrentStep(4);
+      }
+
       // 文案与视图的淡入淡出及位移
       const updateSection = (
         sec: HTMLDivElement | null,
         start: number,
         activeStart: number,
         activeEnd: number,
-        end: number,
-        isLast = false
+        end: number
       ) => {
         if (!sec) return;
         let opacity = 0;
@@ -131,16 +147,11 @@ export default function HomePage({
             translateY = 0;
           } else {
             // 淡出段
-            if (isLast) {
-              opacity = 1;
-              translateY = 0;
-            } else {
-              const ratio = (scrollPercent - activeEnd) / Math.max(0.01, end - activeEnd);
-              opacity = 1 - ratio;
-              translateY = -24 * ratio;
-            }
+            const ratio = (scrollPercent - activeEnd) / Math.max(0.01, end - activeEnd);
+            opacity = 1 - ratio;
+            translateY = -24 * ratio;
           }
-        } else if (scrollPercent > end && !isLast) {
+        } else if (scrollPercent > end) {
           opacity = 0;
           translateY = -24;
         }
@@ -151,50 +162,34 @@ export default function HomePage({
         sec.style.pointerEvents = opacity > 0.3 ? 'auto' : 'none';
       };
 
-      // 划分前四幕文案的滚动活跃区间 (在 4 幕 sticky 容器内部 0.0 ~ 1.0 平滑流转)
-      updateSection(sec1, 0.0, 0.0, 0.18, 0.25);
-      updateSection(sec2, 0.25, 0.30, 0.55, 0.60);
-      updateSection(sec3, 0.60, 0.65, 0.80, 0.85);
-      updateSection(sec4, 0.85, 0.90, 1.0, 1.0, true);
+      // 划分前三幕文案的滚动活跃区间
+      updateSection(sec1, 0.0, 0.0, 0.20, 0.28);
+      updateSection(sec2, 0.28, 0.32, 0.56, 0.62);
+      updateSection(sec3, 0.62, 0.66, 0.78, 0.82);
+
+      // 当滚动进入第 4 幕会员与行动专区 (scrollPercent > 0.76) 时，固定视口平滑淡出并隐藏，彻底将视口交给底部完整模块
+      if (viewport) {
+        if (scrollPercent > 0.76) {
+          const exitRatio = Math.min(1, (scrollPercent - 0.76) / 0.06); // 0.76 ~ 0.82 平滑淡出
+          viewport.style.opacity = (1 - exitRatio).toString();
+          viewport.style.transform = `translateY(${-exitRatio * 40}px)`;
+          viewport.style.display = exitRatio >= 0.99 ? 'none' : 'flex';
+          viewport.style.pointerEvents = 'none';
+        } else {
+          viewport.style.opacity = '1';
+          viewport.style.transform = 'translateY(0px)';
+          viewport.style.display = 'flex';
+          viewport.style.pointerEvents = 'auto';
+        }
+      }
 
       animationFrameId = requestAnimationFrame(renderLoop);
     };
 
     const handleScroll = () => {
-      const storyEl = storyContainerRef.current;
-      if (!storyEl) return;
-      const rect = storyEl.getBoundingClientRect();
-      const maxStoryScroll = Math.max(1, storyEl.offsetHeight - window.innerHeight);
-      const currentScrolled = -rect.top;
-
-      if (currentScrolled <= 0) {
-        targetPercent = 0;
-        setCurrentStep(1);
-      } else if (currentScrolled < maxStoryScroll) {
-        const progress = Math.max(0, Math.min(1, currentScrolled / maxStoryScroll));
-        targetPercent = progress;
-
-        if (progress < 0.25) {
-          setCurrentStep(1);
-        } else if (progress < 0.60) {
-          setCurrentStep(2);
-          const sec2Progress = (progress - 0.25) / 0.35;
-          if (sec2Progress < 0.35) {
-            setFeatureActiveIndex(0);
-          } else if (sec2Progress < 0.70) {
-            setFeatureActiveIndex(1);
-          } else {
-            setFeatureActiveIndex(2);
-          }
-        } else if (progress < 0.85) {
-          setCurrentStep(3);
-        } else {
-          setCurrentStep(4);
-        }
-      } else {
-        targetPercent = 1;
-        setCurrentStep(5);
-      }
+      const scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
+      const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      targetPercent = Math.min(1, Math.max(0, scrollY / maxScroll));
     };
 
     handleScroll();
@@ -207,29 +202,19 @@ export default function HomePage({
     };
   }, []);
 
-  // 快速滚动至指定幕 (1: 全景, 2: 核心能力, 3: 知识库, 4: 开启之旅, 5: 会员方案)
+  // 快速滚动至指定幕 (1: 全景, 2: 核心能力, 3: 知识库, 4: 会员方案与开启之旅)
   const scrollToStep = (stepNumber: number) => {
-    const storyEl = storyContainerRef.current;
-    if (!storyEl) return;
-    const storyTop = storyEl.getBoundingClientRect().top + window.scrollY;
-    const maxStoryScroll = Math.max(1, storyEl.offsetHeight - window.innerHeight);
-
-    if (stepNumber === 1) {
-      window.scrollTo({ top: storyTop, behavior: 'smooth' });
-    } else if (stepNumber === 2) {
-      window.scrollTo({ top: storyTop + maxStoryScroll * 0.35, behavior: 'smooth' });
-    } else if (stepNumber === 3) {
-      window.scrollTo({ top: storyTop + maxStoryScroll * 0.68, behavior: 'smooth' });
-    } else if (stepNumber === 4) {
-      window.scrollTo({ top: storyTop + maxStoryScroll * 0.95, behavior: 'smooth' });
-    } else if (stepNumber === 5) {
-      const memEl = document.getElementById('membership-tiers') || membershipSectionRef.current;
-      if (memEl) {
-        memEl.scrollIntoView({ behavior: 'smooth' });
-      } else {
-        window.scrollTo({ top: storyTop + maxStoryScroll + 100, behavior: 'smooth' });
-      }
-    }
+    const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+    const targetMap: { [key: number]: number } = {
+      1: 0,
+      2: maxScroll * 0.36,
+      3: maxScroll * 0.68,
+      4: maxScroll * 1.0
+    };
+    window.scrollTo({
+      top: targetMap[stepNumber] !== undefined ? targetMap[stepNumber] : 0,
+      behavior: 'smooth'
+    });
   };
 
   const handleCopyInvite = () => {
@@ -263,6 +248,7 @@ export default function HomePage({
     <div style={{
       background: 'transparent',
       color: 'var(--color-text)',
+      minHeight: '460vh',
       position: 'relative'
     }}>
       <Head>
@@ -384,8 +370,7 @@ export default function HomePage({
           { step: 1, title: '360° 全景视野' },
           { step: 2, title: '三大核心能力' },
           { step: 3, title: '专属商业知识库' },
-          { step: 4, title: '开启知识之旅' },
-          { step: 5, title: '会员方案与服务' }
+          { step: 4, title: '开启之旅与会员方案' }
         ].map(({ step, title }) => {
           const isActive = currentStep === step;
           return (
@@ -408,34 +393,26 @@ export default function HomePage({
         })}
       </div>
 
-      {/* 4. 沉浸式 4 幕叙事区域 (基于 Sticky 容器，在 380vh 高度内平滑流转) */}
+      {/* 4. 固定视口沉浸式前 3 幕叙事层 (在滚动至底部前平滑淡出，不遮挡会员专区) */}
       <div 
-        ref={storyContainerRef}
+        ref={viewportRef}
+        className="home-viewport-padding" 
         style={{
-          height: '380vh',
-          position: 'relative',
-          width: '100%'
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          zIndex: 10,
+          pointerEvents: 'none',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '80px 24px 40px 24px',
+          boxSizing: 'border-box',
+          willChange: 'transform, opacity'
         }}
       >
-        <div 
-          ref={viewportRef}
-          className="home-viewport-padding" 
-          style={{
-            position: 'sticky',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100vh',
-            zIndex: 10,
-            pointerEvents: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '80px 24px 40px 24px',
-            boxSizing: 'border-box',
-            overflow: 'hidden'
-          }}
-        >
         <div style={{
           width: '100%',
           maxWidth: '1280px',
@@ -647,44 +624,26 @@ export default function HomePage({
             </div>
           </div>
 
-          {/* 第 4 幕：开启知识之旅与裂变行动 (CTA 卡片) */}
-          <div ref={sec4Ref} style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'none',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '0 16px',
-            opacity: 0,
-            transform: 'translateY(24px)'
-          }}>
-            <ActionPanel
-              userId={userId}
-              copied={copied}
-              onCopy={handleCopyInvite}
-              onShowAuthModal={() => setShowAuthModal(true)}
-            />
-          </div>
-
         </div>
       </div>
-      </div>
 
-      {/* 5. 推广期会员权益与额度对比矩阵 + 底部权威链接 Footer (正常文档流，在 4 幕讲完后自然滑入，绝不重叠) */}
-      <div 
-        ref={membershipSectionRef}
-        style={{
-          position: 'relative',
-          width: '100%',
-          zIndex: 20,
-          background: '#ffffff',
-          boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.03)'
-        }}
-      >
+      {/* 5. 开启知识之旅 & 推广期会员权益对比矩阵 + 底部权威链接 Footer */}
+      <div style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        width: '100%',
+        zIndex: 20,
+        background: '#ffffff',
+        boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.03)'
+      }}>
         <MembershipTiersSection
           userId={userId}
           userRole={userRole}
           memberType={memberType}
+          copied={copied}
+          onCopy={handleCopyInvite}
           onShowAuthModal={() => setShowAuthModal(true)}
         />
         <Footer />
