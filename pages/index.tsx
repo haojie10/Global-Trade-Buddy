@@ -43,7 +43,9 @@ export default function HomePage({
 
   const router = useRouter();
 
-  // 视口容器与 4 幕 DOM 容器引用
+  // 叙事容器与 4 幕 DOM 容器引用
+  const storyContainerRef = useRef<HTMLDivElement>(null);
+  const membershipSectionRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const sec1Ref = useRef<HTMLDivElement>(null);
   const sec2Ref = useRef<HTMLDivElement>(null);
@@ -94,7 +96,6 @@ export default function HomePage({
     const sec2 = sec2Ref.current;
     const sec3 = sec3Ref.current;
     const sec4 = sec4Ref.current;
-    const viewport = viewportRef.current;
 
     let targetPercent = 0;
     let currentRenderPercent = 0;
@@ -104,28 +105,6 @@ export default function HomePage({
       // Lerp 平滑阻尼插值
       currentRenderPercent += (targetPercent - currentRenderPercent) * 0.2;
       const scrollPercent = Math.max(0, Math.min(1, currentRenderPercent));
-
-      // 计算当前所处的全局 Step (1 ~ 5)
-      if (scrollPercent < 0.20) {
-        setCurrentStep(1);
-      } else if (scrollPercent < 0.50) {
-        setCurrentStep(2);
-        // 计算第 2 幕内部 3 个子项的切换进度
-        const sec2Progress = (scrollPercent - 0.20) / 0.28;
-        if (sec2Progress < 0.35) {
-          setFeatureActiveIndex(0);
-        } else if (sec2Progress < 0.7) {
-          setFeatureActiveIndex(1);
-        } else {
-          setFeatureActiveIndex(2);
-        }
-      } else if (scrollPercent < 0.72) {
-        setCurrentStep(3);
-      } else if (scrollPercent < 0.86) {
-        setCurrentStep(4);
-      } else {
-        setCurrentStep(5);
-      }
 
       // 文案与视图的淡入淡出及位移
       const updateSection = (
@@ -172,35 +151,50 @@ export default function HomePage({
         sec.style.pointerEvents = opacity > 0.3 ? 'auto' : 'none';
       };
 
-      // 划分前四幕文案的滚动活跃区间 (第4幕在 0.82~0.86 平滑淡出，为第5幕会员矩阵让出视口)
-      updateSection(sec1, 0.0, 0.0, 0.15, 0.20);
-      updateSection(sec2, 0.20, 0.24, 0.46, 0.50);
-      updateSection(sec3, 0.50, 0.54, 0.68, 0.72);
-      updateSection(sec4, 0.72, 0.76, 0.82, 0.86, false);
-
-      // 当滚动进入第 5 幕会员专区 (scrollPercent > 0.82) 时，固定视口平滑淡出并微幅上移，彻底避免与底部卡片重叠
-      if (viewport) {
-        if (scrollPercent > 0.82) {
-          const exitRatio = Math.min(1, (scrollPercent - 0.82) / 0.06); // 0.82 ~ 0.88 淡出
-          viewport.style.opacity = (1 - exitRatio).toString();
-          viewport.style.transform = `translateY(${-exitRatio * 60}px)`;
-          viewport.style.display = exitRatio >= 0.99 ? 'none' : 'flex';
-          viewport.style.pointerEvents = exitRatio > 0.5 ? 'none' : 'auto';
-        } else {
-          viewport.style.opacity = '1';
-          viewport.style.transform = 'translateY(0px)';
-          viewport.style.display = 'flex';
-          viewport.style.pointerEvents = 'auto';
-        }
-      }
+      // 划分前四幕文案的滚动活跃区间 (在 4 幕 sticky 容器内部 0.0 ~ 1.0 平滑流转)
+      updateSection(sec1, 0.0, 0.0, 0.18, 0.25);
+      updateSection(sec2, 0.25, 0.30, 0.55, 0.60);
+      updateSection(sec3, 0.60, 0.65, 0.80, 0.85);
+      updateSection(sec4, 0.85, 0.90, 1.0, 1.0, true);
 
       animationFrameId = requestAnimationFrame(renderLoop);
     };
 
     const handleScroll = () => {
-      const scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
-      const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
-      targetPercent = Math.min(1, Math.max(0, scrollY / maxScroll));
+      const storyEl = storyContainerRef.current;
+      if (!storyEl) return;
+      const rect = storyEl.getBoundingClientRect();
+      const maxStoryScroll = Math.max(1, storyEl.offsetHeight - window.innerHeight);
+      const currentScrolled = -rect.top;
+
+      if (currentScrolled <= 0) {
+        targetPercent = 0;
+        setCurrentStep(1);
+      } else if (currentScrolled < maxStoryScroll) {
+        const progress = Math.max(0, Math.min(1, currentScrolled / maxStoryScroll));
+        targetPercent = progress;
+
+        if (progress < 0.25) {
+          setCurrentStep(1);
+        } else if (progress < 0.60) {
+          setCurrentStep(2);
+          const sec2Progress = (progress - 0.25) / 0.35;
+          if (sec2Progress < 0.35) {
+            setFeatureActiveIndex(0);
+          } else if (sec2Progress < 0.70) {
+            setFeatureActiveIndex(1);
+          } else {
+            setFeatureActiveIndex(2);
+          }
+        } else if (progress < 0.85) {
+          setCurrentStep(3);
+        } else {
+          setCurrentStep(4);
+        }
+      } else {
+        targetPercent = 1;
+        setCurrentStep(5);
+      }
     };
 
     handleScroll();
@@ -215,18 +209,27 @@ export default function HomePage({
 
   // 快速滚动至指定幕 (1: 全景, 2: 核心能力, 3: 知识库, 4: 开启之旅, 5: 会员方案)
   const scrollToStep = (stepNumber: number) => {
-    const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
-    const targetMap: { [key: number]: number } = {
-      1: 0,
-      2: maxScroll * 0.28,
-      3: maxScroll * 0.58,
-      4: maxScroll * 0.78,
-      5: maxScroll * 1.0
-    };
-    window.scrollTo({
-      top: targetMap[stepNumber] !== undefined ? targetMap[stepNumber] : 0,
-      behavior: 'smooth'
-    });
+    const storyEl = storyContainerRef.current;
+    if (!storyEl) return;
+    const storyTop = storyEl.getBoundingClientRect().top + window.scrollY;
+    const maxStoryScroll = Math.max(1, storyEl.offsetHeight - window.innerHeight);
+
+    if (stepNumber === 1) {
+      window.scrollTo({ top: storyTop, behavior: 'smooth' });
+    } else if (stepNumber === 2) {
+      window.scrollTo({ top: storyTop + maxStoryScroll * 0.35, behavior: 'smooth' });
+    } else if (stepNumber === 3) {
+      window.scrollTo({ top: storyTop + maxStoryScroll * 0.68, behavior: 'smooth' });
+    } else if (stepNumber === 4) {
+      window.scrollTo({ top: storyTop + maxStoryScroll * 0.95, behavior: 'smooth' });
+    } else if (stepNumber === 5) {
+      const memEl = document.getElementById('membership-tiers') || membershipSectionRef.current;
+      if (memEl) {
+        memEl.scrollIntoView({ behavior: 'smooth' });
+      } else {
+        window.scrollTo({ top: storyTop + maxStoryScroll + 100, behavior: 'smooth' });
+      }
+    }
   };
 
   const handleCopyInvite = () => {
@@ -260,7 +263,6 @@ export default function HomePage({
     <div style={{
       background: 'transparent',
       color: 'var(--color-text)',
-      minHeight: '520vh',
       position: 'relative'
     }}>
       <Head>
@@ -406,26 +408,34 @@ export default function HomePage({
         })}
       </div>
 
-      {/* 4. 固定视口沉浸式 4 幕叙事层 (在最后一段随滚动向上平移抬起，让出空间给底部的 Footer) */}
+      {/* 4. 沉浸式 4 幕叙事区域 (基于 Sticky 容器，在 380vh 高度内平滑流转) */}
       <div 
-        ref={viewportRef}
-        className="home-viewport-padding" 
+        ref={storyContainerRef}
         style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
-          zIndex: 10,
-          pointerEvents: 'none',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '80px 24px 40px 24px',
-          boxSizing: 'border-box',
-          willChange: 'transform'
+          height: '380vh',
+          position: 'relative',
+          width: '100%'
         }}
       >
+        <div 
+          ref={viewportRef}
+          className="home-viewport-padding" 
+          style={{
+            position: 'sticky',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100vh',
+            zIndex: 10,
+            pointerEvents: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '80px 24px 40px 24px',
+            boxSizing: 'border-box',
+            overflow: 'hidden'
+          }}
+        >
         <div style={{
           width: '100%',
           maxWidth: '1280px',
@@ -658,16 +668,19 @@ export default function HomePage({
 
         </div>
       </div>
+      </div>
 
-      {/* 5. 推广期会员权益与额度对比矩阵 + 底部权威链接 Footer */}
-      <div style={{
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        width: '100%',
-        zIndex: 20
-      }}>
+      {/* 5. 推广期会员权益与额度对比矩阵 + 底部权威链接 Footer (正常文档流，在 4 幕讲完后自然滑入，绝不重叠) */}
+      <div 
+        ref={membershipSectionRef}
+        style={{
+          position: 'relative',
+          width: '100%',
+          zIndex: 20,
+          background: '#ffffff',
+          boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.03)'
+        }}
+      >
         <MembershipTiersSection
           userId={userId}
           userRole={userRole}
