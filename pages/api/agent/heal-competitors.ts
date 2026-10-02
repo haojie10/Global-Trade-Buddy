@@ -1,0 +1,301 @@
+import { NextApiRequest, NextApiResponse } from 'next';
+import { PoolClient } from 'pg';
+import { withDb } from '../../../lib/api-handler';
+import { extractAndNormalizeEntities, parseMetadata } from '../../../lib/entity-extractor';
+import { computeRelationsForReport, ReportEntityItem } from '../../../lib/relation-calculator';
+import { cleanCompanyName } from '../../../lib/competitor-discoverer';
+import { filterCountriesOnly } from '../../../lib/country-helpers';
+
+function extractMeta(html: string, name: string): string {
+  const match = html.match(new RegExp(`<meta[^>]*?name=["']${name}["'][^>]*?content=(["'])([\\s\\S]*?)\\1`, 'i'));
+  if (match) return match[2].trim();
+  const matchRev = html.match(new RegExp(`<meta[^>]*?content=(["'])([\\s\\S]*?)\\1[^>]*?name=["']${name}["']`, 'i'));
+  if (matchRev) return matchRev[2].trim();
+  return '';
+}
+
+async function healCompetitorsHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
+  // 1. 验证 Agent 凭据
+  const authHeader = req.headers.authorization;
+  const token = (authHeader && authHeader.split(' ')[1]) || (req.headers['x-agent-key'] as string);
+  const isProd = process.env.NODE_ENV === 'production';
+  const expectedToken = process.env.AGENT_API_KEY;
+
+  const isAuthValid = isProd
+    ? (Boolean(token) && token === expectedToken)
+    : (token === (expectedToken || 'automation_agent_secret') || token === 'automation_agent_secret');
+
+  if (!isAuthValid) {
+    return res.status(401).json({ error: 'Unauthorized: Invalid Agent API Key' });
+  }
+
+  const { reportIds = [], all = false, limit = 10, action } = req.body;
+  const batchLimit = Math.max(1, Math.min(Number(limit) || 10, 50));
+
+  if (action === 'diagnose') {
+    // 精准诊断：在 2026-09-20 之后或全库中，真正 competitors meta 内容中带有管道符的报告
+    const allReportsRes = await dbClient.query(`
+      SELECT id, title, content_html, created_at
+      FROM reports
+      WHERE created_at >= '2026-09-20 00:00:00'
+      ORDER BY created_at DESC
+    `);
+
+    const dirtyList = [];
+    for (const r of allReportsRes.rows) {
+      const compMeta = extractMeta(r.content_html || '', 'competitors');
+      if (compMeta && compMeta.includes('|')) {
+        dirtyList.push({
+          id: r.id,
+          title: r.title,
+          competitors: compMeta,
+          created_at: r.created_at
+        });
+      }
+    }
+
+    return res.status(200).json({
+      recentReportsScanned: allReportsRes.rows.length,
+      trulyDirtyCount: dirtyList.length,
+      dirtyReports: dirtyList
+    });
+  }
+
+  let targetReportIds: string[] = [];
+  let totalRemaining = 0;
+
+  if (Array.isArray(reportIds) && reportIds.length > 0) {
+    targetReportIds = reportIds;
+  } else if (all) {
+    // 内存级精准扫描 9月20日以来的报告
+    const scanAllRes = await dbClient.query(`
+      SELECT id, content_html
+      FROM reports
+      WHERE created_at >= '2026-09-20 00:00:00'
+      ORDER BY id ASC
+    `);
+
+    const dirtyIds: string[] = [];
+    for (const r of scanAllRes.rows) {
+      const compMeta = extractMeta(r.content_html || '', 'competitors');
+      if (compMeta && compMeta.includes('|')) {
+        dirtyIds.push(r.id);
+      }
+    }
+
+    totalRemaining = dirtyIds.length;
+
+    if (totalRemaining === 0) {
+      return res.status(200).json({
+        success: true,
+        message: '🎉 全库检测完毕：已无任何包含管道符的脏实体或未规范化 meta 的报告！',
+        healedReportsCount: 0,
+        healedReports: [],
+        remainingDirtyReports: 0,
+        orphansDeletedCount: 0,
+        activeRelationsCount: 0,
+        activeRelations: []
+      });
+    }
+
+    targetReportIds = dirtyIds.slice(0, batchLimit);
+  } else {
+    return res.status(400).json({ error: '请提供 reportIds 数组或指定 all: true' });
+  }
+
+  const healResults: any[] = [];
+
+  await dbClient.query('BEGIN');
+
+  try {
+    for (const repId of targetReportIds) {
+      const repRes = await dbClient.query(
+        'SELECT id, title, category, market_region, summary, content_html, primary_entity_id FROM reports WHERE id = $1',
+        [repId]
+      );
+
+      if (repRes.rows.length === 0) {
+        healResults.push({ id: repId, status: 'not_found' });
+        continue;
+      }
+
+      const report = repRes.rows[0];
+      let contentHtml: string = report.content_html || '';
+      const title: string = report.title || '';
+      const finalCategory: string = report.category || 'customer';
+
+      // 提取 meta 标签
+      const meta = parseMetadata(contentHtml);
+      const metaCompanyName = extractMeta(contentHtml, 'company_name');
+      const metaCompanyAliases = extractMeta(contentHtml, 'company_aliases');
+      const metaCompanyWebsite = extractMeta(contentHtml, 'company_website');
+      const metaCompetitors = extractMeta(contentHtml, 'competitors');
+      const metaSuppliers = extractMeta(contentHtml, 'suppliers');
+      const metaCustomers = extractMeta(contentHtml, 'customers');
+      const metaSisterParents = extractMeta(contentHtml, 'sister_parents');
+      const metaProducts = extractMeta(contentHtml, 'products');
+      const metaRegions = extractMeta(contentHtml, 'regions');
+      const metaChannels = extractMeta(contentHtml, 'channels');
+
+      const cleanEntityTag = (tag: string) => {
+        if (!tag) return '';
+        const namePart = tag.split('|')[0].trim();
+        return cleanCompanyName(namePart);
+      };
+
+      const aliasesList = metaCompanyAliases
+        ? metaCompanyAliases.split(/,|，|\/|\||;|；|\n/).map(cleanCompanyName).filter(Boolean)
+        : [];
+
+      const cleanCompetitors = metaCompetitors
+        ? metaCompetitors.split(/,|，/).map(cleanEntityTag).filter(Boolean)
+        : [];
+
+      const manualTags = {
+        companies: metaCompanyName ? [cleanCompanyName(metaCompanyName)] : [],
+        companyAliases: aliasesList,
+        companyWebsite: metaCompanyWebsite || undefined,
+        competitors: cleanCompetitors,
+        suppliers: metaSuppliers ? metaSuppliers.split(/,|，/).map(cleanEntityTag).filter(Boolean) : [],
+        customers: metaCustomers ? metaCustomers.split(/,|，/).map(cleanEntityTag).filter(Boolean) : [],
+        sisters: metaSisterParents ? metaSisterParents.split(/,|，/).map(cleanEntityTag).filter(Boolean) : [],
+        products: metaProducts ? metaProducts.split(/,|，/).map(s => s.trim()).filter(Boolean) : [],
+        regions: metaRegions ? metaRegions.split(/,|，/).map(s => s.trim()).filter(Boolean) : [],
+        channels: metaChannels ? metaChannels.split(/,|，/).map(cleanEntityTag).filter(Boolean) : []
+      };
+
+      // 规范化 HTML 中的 meta 标签内容（原串直接替换，绝对干净可靠，不受正则和属性顺序影响）
+      if (metaCompetitors && metaCompetitors.includes('|') && cleanCompetitors.length > 0) {
+        const cleanCompContent = cleanCompetitors.join(', ');
+        contentHtml = contentHtml.replace(metaCompetitors, cleanCompContent);
+      }
+
+      // 处理地区/国家
+      let regionsList: string[] = [];
+      if (manualTags.regions && manualTags.regions.length > 0) {
+        regionsList = [...manualTags.regions];
+      }
+      if (meta.market_region && meta.market_region !== '全球') {
+        regionsList.push(meta.market_region);
+      }
+      const cleanCountriesList = filterCountriesOnly(regionsList);
+      const finalMarketRegion = cleanCountriesList.length > 0
+        ? cleanCountriesList.join(', ')
+        : (regionsList.length > 0 ? regionsList.join(', ') : (report.market_region || '全球'));
+
+      // 重新提取并归一化实体
+      const resolvedEntities = await extractAndNormalizeEntities(
+        contentHtml,
+        meta.title || title,
+        dbClient,
+        manualTags,
+        meta.primary_subject,
+        finalCategory
+      );
+
+      const primaryEnt = resolvedEntities.find(e => e.role === 'primary');
+      const primaryEntityId = primaryEnt ? primaryEnt.id : report.primary_entity_id;
+
+      // 更新 reports 表中的 content_html 和 primary_entity_id
+      await dbClient.query(
+        'UPDATE reports SET content_html = $1, primary_entity_id = $2 WHERE id = $3',
+        [contentHtml, primaryEntityId, repId]
+      );
+
+      // 重写 report_entities 关联
+      await dbClient.query('DELETE FROM report_entities WHERE report_id = $1', [repId]);
+      if (resolvedEntities.length > 0) {
+        const selectParts: string[] = [];
+        const queryParams: any[] = [repId];
+        let paramIndex = 2;
+        for (const ent of resolvedEntities) {
+          selectParts.push(`($1::uuid, $${paramIndex}::uuid, $${paramIndex + 1}::varchar)`);
+          queryParams.push(ent.id, ent.role);
+          paramIndex += 2;
+        }
+        await dbClient.query(
+          `INSERT INTO report_entities (report_id, entity_id, role) 
+           VALUES ${selectParts.join(',')} 
+           ON CONFLICT (report_id, entity_id) DO UPDATE SET role = EXCLUDED.role`,
+          queryParams
+        );
+      }
+
+      // 重算拓扑图谱关系
+      const currentEntMap = new Map<string, ReportEntityItem>();
+      for (const ent of resolvedEntities) {
+        currentEntMap.set(ent.id, {
+          role: ent.role,
+          canonical_name: ent.canonical_name
+        });
+      }
+
+      const primaryEntNameA = primaryEnt ? primaryEnt.canonical_name.toLowerCase().trim() : '';
+
+      await computeRelationsForReport(
+        repId,
+        finalCategory,
+        finalMarketRegion,
+        currentEntMap,
+        primaryEntNameA,
+        primaryEntityId,
+        dbClient
+      );
+
+      healResults.push({
+        id: repId,
+        title,
+        status: 'healed',
+        primary_company: primaryEntNameA,
+        cleaned_competitors: cleanCompetitors,
+        entities_count: resolvedEntities.length
+      });
+    }
+
+    // 清理无引用的包含管道符的孤儿实体
+    const orphanCleanRes = await dbClient.query(`
+      DELETE FROM entities 
+      WHERE canonical_name LIKE '%|%'
+        AND id NOT IN (SELECT DISTINCT entity_id FROM report_entities)
+      RETURNING id, canonical_name
+    `);
+
+    await dbClient.query('COMMIT');
+
+    // 查询当前目标报告所涉及的最新 relations 关系连线
+    const relationsRes = await dbClient.query(`
+      SELECT rel.id, rel.relation_type, rel.relation_key, rel.market_region,
+             ra.title AS title_a, rb.title AS title_b,
+             ra.id AS report_id_a, rb.id AS report_id_b
+      FROM relations rel
+      JOIN reports ra ON rel.report_id_a = ra.id
+      JOIN reports rb ON rel.report_id_b = rb.id
+      WHERE rel.report_id_a = ANY($1) OR rel.report_id_b = ANY($1)
+    `, [targetReportIds]);
+
+    return res.status(200).json({
+      success: true,
+      healedReportsCount: healResults.length,
+      remainingDirtyReports: Math.max(0, totalRemaining - healResults.length),
+      healedReports: healResults,
+      orphansDeletedCount: orphanCleanRes.rows.length,
+      activeRelationsCount: relationsRes.rows.length,
+      activeRelations: relationsRes.rows.map(r => ({
+        type: r.relation_type,
+        key: r.relation_key,
+        market: r.market_region,
+        from: r.title_a,
+        to: r.title_b
+      }))
+    });
+
+  } catch (err: any) {
+    await dbClient.query('ROLLBACK');
+    console.error('[ERR] heal-competitors failed:', err);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+export default withDb(healCompetitorsHandler, {
+  methods: ['POST']
+});

@@ -1,4 +1,5 @@
 import { ENTITY_DEFINITIONS, BLACKLIST, commonKeywords } from './entity-constants';
+import { cleanCompanyName } from './competitor-discoverer';
 
 // 1. 从 HTML 字符串中提取元数据和专有名词（客户名、品类名等）
 export function parseMetadata(html: string) {
@@ -222,7 +223,11 @@ export async function extractAndNormalizeEntities(
     for (const cat of otherCategories) {
       if (!cat.tags) continue;
       for (const rawTag of cat.tags) {
-        const tag = rawTag.trim();
+        let tag = rawTag.trim();
+        if (!tag) continue;
+        if (cat.type === 'competitor' || cat.type === 'company' || cat.type === 'channel') {
+          tag = cleanCompanyName(tag.split('|')[0].trim());
+        }
         if (!tag) continue;
 
         // 查找是否已存在于已知实体或别名中 (匹配简称 -> 标准全称)
