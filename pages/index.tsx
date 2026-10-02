@@ -105,13 +105,13 @@ export default function HomePage({
       currentRenderPercent += (targetPercent - currentRenderPercent) * 0.2;
       const scrollPercent = Math.max(0, Math.min(1, currentRenderPercent));
 
-      // 计算当前所处的全局 Step (1 ~ 4)
-      if (scrollPercent < 0.22) {
+      // 计算当前所处的全局 Step (1 ~ 5)
+      if (scrollPercent < 0.20) {
         setCurrentStep(1);
-      } else if (scrollPercent < 0.58) {
+      } else if (scrollPercent < 0.50) {
         setCurrentStep(2);
         // 计算第 2 幕内部 3 个子项的切换进度
-        const sec2Progress = (scrollPercent - 0.22) / 0.36;
+        const sec2Progress = (scrollPercent - 0.20) / 0.28;
         if (sec2Progress < 0.35) {
           setFeatureActiveIndex(0);
         } else if (sec2Progress < 0.7) {
@@ -119,10 +119,12 @@ export default function HomePage({
         } else {
           setFeatureActiveIndex(2);
         }
-      } else if (scrollPercent < 0.82) {
+      } else if (scrollPercent < 0.72) {
         setCurrentStep(3);
-      } else {
+      } else if (scrollPercent < 0.86) {
         setCurrentStep(4);
+      } else {
+        setCurrentStep(5);
       }
 
       // 文案与视图的淡入淡出及位移
@@ -170,20 +172,26 @@ export default function HomePage({
         sec.style.pointerEvents = opacity > 0.3 ? 'auto' : 'none';
       };
 
-      // 划分四幕文案的滚动活跃区间
-      updateSection(sec1, 0.0, 0.0, 0.16, 0.22);
-      updateSection(sec2, 0.22, 0.26, 0.54, 0.58);
-      updateSection(sec3, 0.58, 0.62, 0.78, 0.82);
-      updateSection(sec4, 0.82, 0.86, 1.0, 1.0, true);
+      // 划分前四幕文案的滚动活跃区间 (第4幕在 0.82~0.86 平滑淡出，为第5幕会员矩阵让出视口)
+      updateSection(sec1, 0.0, 0.0, 0.15, 0.20);
+      updateSection(sec2, 0.20, 0.24, 0.46, 0.50);
+      updateSection(sec3, 0.50, 0.54, 0.68, 0.72);
+      updateSection(sec4, 0.72, 0.76, 0.82, 0.86, false);
 
-      // 当滚动进入最底端 (scrollPercent > 0.88) 时，视口整体随滚动平滑微幅向上抬起，让出空间给紧凑的底部 Footer
+      // 当滚动进入第 5 幕会员专区 (scrollPercent > 0.82) 时，固定视口平滑淡出并微幅上移，彻底避免与底部卡片重叠
       if (viewport) {
-        let viewportShiftY = 0;
-        if (scrollPercent > 0.88) {
-          const shiftRatio = Math.min(1, (scrollPercent - 0.88) / 0.12);
-          viewportShiftY = -shiftRatio * 110;
+        if (scrollPercent > 0.82) {
+          const exitRatio = Math.min(1, (scrollPercent - 0.82) / 0.06); // 0.82 ~ 0.88 淡出
+          viewport.style.opacity = (1 - exitRatio).toString();
+          viewport.style.transform = `translateY(${-exitRatio * 60}px)`;
+          viewport.style.display = exitRatio >= 0.99 ? 'none' : 'flex';
+          viewport.style.pointerEvents = exitRatio > 0.5 ? 'none' : 'auto';
+        } else {
+          viewport.style.opacity = '1';
+          viewport.style.transform = 'translateY(0px)';
+          viewport.style.display = 'flex';
+          viewport.style.pointerEvents = 'auto';
         }
-        viewport.style.transform = `translateY(${viewportShiftY}px)`;
       }
 
       animationFrameId = requestAnimationFrame(renderLoop);
@@ -205,17 +213,18 @@ export default function HomePage({
     };
   }, []);
 
-  // 快速滚动至指定幕
+  // 快速滚动至指定幕 (1: 全景, 2: 核心能力, 3: 知识库, 4: 开启之旅, 5: 会员方案)
   const scrollToStep = (stepNumber: number) => {
     const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
     const targetMap: { [key: number]: number } = {
       1: 0,
-      2: maxScroll * 0.32,
-      3: maxScroll * 0.68,
-      4: maxScroll * 0.88
+      2: maxScroll * 0.28,
+      3: maxScroll * 0.58,
+      4: maxScroll * 0.78,
+      5: maxScroll * 1.0
     };
     window.scrollTo({
-      top: targetMap[stepNumber] || 0,
+      top: targetMap[stepNumber] !== undefined ? targetMap[stepNumber] : 0,
       behavior: 'smooth'
     });
   };
@@ -251,7 +260,7 @@ export default function HomePage({
     <div style={{
       background: 'transparent',
       color: 'var(--color-text)',
-      minHeight: '480vh',
+      minHeight: '520vh',
       position: 'relative'
     }}>
       <Head>
@@ -369,13 +378,19 @@ export default function HomePage({
         flexDirection: 'column',
         gap: '12px'
       }}>
-        {[1, 2, 3, 4].map((step) => {
+        {[
+          { step: 1, title: '360° 全景视野' },
+          { step: 2, title: '三大核心能力' },
+          { step: 3, title: '专属商业知识库' },
+          { step: 4, title: '开启知识之旅' },
+          { step: 5, title: '会员方案与服务' }
+        ].map(({ step, title }) => {
           const isActive = currentStep === step;
           return (
             <button
               key={step}
               onClick={() => scrollToStep(step)}
-              title={`跳转至第 ${step} 幕`}
+              title={`${title} (第 ${step} 幕)`}
               style={{
                 width: isActive ? '10px' : '6px',
                 height: isActive ? '28px' : '6px',
