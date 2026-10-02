@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import FeedbackModal from './FeedbackModal';
 
 interface MembershipTiersSectionProps {
   userId?: string | null;
@@ -20,6 +21,17 @@ export default function MembershipTiersSection({
   onShowAuthModal
 }: MembershipTiersSectionProps) {
   const isPro = memberType === 'pro';
+
+  // 温馨提示弹窗状态: 'pro' | 'enterprise' | null
+  const [tipModalType, setTipModalType] = useState<'pro' | 'enterprise' | null>(null);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackMode, setFeedbackMode] = useState<'custom_report' | 'feedback'>('feedback');
+
+  const handleOpenFeedback = (mode: 'custom_report' | 'feedback') => {
+    setTipModalType(null);
+    setFeedbackMode(mode);
+    setShowFeedbackModal(true);
+  };
 
   return (
     <section id="membership-tiers" style={{
@@ -331,7 +343,13 @@ export default function MembershipTiersSection({
 
           <div style={{ marginTop: '36px' }}>
             <button
-              onClick={() => onSelectTier ? onSelectTier('pro') : onShowAuthModal?.()}
+              onClick={() => {
+                if (onSelectTier) {
+                  onSelectTier('pro');
+                } else {
+                  setTipModalType('pro');
+                }
+              }}
               style={{
                 width: '100%',
                 padding: '13px',
@@ -416,7 +434,11 @@ export default function MembershipTiersSection({
           <div style={{ marginTop: '36px' }}>
             <button
               onClick={() => {
-                alert('请联系客服或发送邮件至 contact@marketgraphic.cn 咨询企业团队定制方案。');
+                if (onSelectTier) {
+                  onSelectTier('enterprise');
+                } else {
+                  setTipModalType('enterprise');
+                }
               }}
               style={{
                 width: '100%',
@@ -438,6 +460,180 @@ export default function MembershipTiersSection({
           </div>
         </div>
       </div>
+
+      {/* 4. 温馨提示弹窗 (Pro 或 企业定制 预告与建议收集) */}
+      {tipModalType && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.45)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          padding: '20px'
+        }}
+        onClick={() => setTipModalType(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#ffffff',
+              borderRadius: '24px',
+              padding: '36px 32px',
+              maxWidth: '520px',
+              width: '100%',
+              boxShadow: '0 25px 60px rgba(0, 0, 0, 0.18)',
+              border: tipModalType === 'pro' ? '1px solid rgba(255, 100, 30, 0.3)' : '1px solid rgba(59, 130, 246, 0.3)',
+              position: 'relative',
+              textAlign: 'center'
+            }}
+          >
+            {/* 关闭按钮 */}
+            <button
+              onClick={() => setTipModalType(null)}
+              style={{
+                position: 'absolute',
+                top: '18px',
+                right: '18px',
+                background: 'rgba(0, 0, 0, 0.05)',
+                border: 'none',
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px',
+                fontSize: '18px',
+                lineHeight: '32px',
+                cursor: 'pointer',
+                color: '#64748b',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              ×
+            </button>
+
+            {/* 顶部徽章 */}
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '4px 14px',
+              borderRadius: '9999px',
+              background: tipModalType === 'pro' ? 'rgba(255, 100, 30, 0.1)' : 'rgba(59, 130, 246, 0.1)',
+              color: tipModalType === 'pro' ? '#ff641e' : '#2563eb',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              marginBottom: '16px'
+            }}>
+              {tipModalType === 'pro' ? '💎 专业版 (Pro) · 功能预告' : '🏢 企业定制版 · 专属服务预告'}
+            </div>
+
+            <h3 style={{
+              fontSize: '1.45rem',
+              fontWeight: 700,
+              color: '#121212',
+              margin: '0 0 14px 0'
+            }}>
+              {tipModalType === 'pro' ? '专业版套餐即将开放' : '企业定制方案即将开放'}
+            </h3>
+
+            <div style={{
+              fontSize: '0.94rem',
+              color: '#475569',
+              lineHeight: 1.7,
+              textAlign: 'left',
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '14px',
+              padding: '18px 20px',
+              marginBottom: '26px'
+            }}>
+              {tipModalType === 'pro' ? (
+                <>
+                  <p style={{ margin: '0 0 10px 0' }}>
+                    感谢您对 <b>Market Graphic 专业版</b> 的关注与期待！目前平台正处于<strong>限时推广体验阶段</strong>，专业版套餐尚未正式启用，将在不久的将来开通。
+                  </p>
+                  <p style={{ margin: '0 0 10px 0' }}>
+                    🎁 推广期间，每位注册用户均已免费获赠 <b>10 份深度研报在线解锁</b> 与 <b>5 份 HTML 离线完整下载</b> 特权。
+                  </p>
+                  <p style={{ margin: 0, color: '#334155' }}>
+                    诚邀您先充分试用免费版的各项功能。如果您在使用中有任何需求、痛点或优化建议，欢迎随时反馈，您的宝贵建议将直接帮助我们持续优化！
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p style={{ margin: '0 0 10px 0' }}>
+                    感谢您对 <b>Market Graphic 企业私有化方案</b> 的关注！平台目前处于<strong>限时推广与体验阶段</strong>，企业定制套餐尚未正式启用，将在不久的将来全面开放。
+                  </p>
+                  <p style={{ margin: '0 0 10px 0' }}>
+                    建议您和团队先使用免费版体验海外买家画像与实体拓扑穿透（邀请团队成员注册双方均可额外获赠额度）。
+                  </p>
+                  <p style={{ margin: 0, color: '#334155' }}>
+                    如果您对企业级定制有特定的数据维度、团队协作或特定买家穿透诉求，欢迎向我们提出宝贵建议！
+                  </p>
+                </>
+              )}
+            </div>
+
+            {/* 底部按钮组 */}
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <a
+                href="/reports"
+                style={{
+                  flex: 1,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '12px 18px',
+                  borderRadius: '12px',
+                  background: '#f1f5f9',
+                  color: '#334155',
+                  fontSize: '0.92rem',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  transition: 'background 0.15s ease'
+                }}
+              >
+                先试用免费版 →
+              </a>
+              <button
+                onClick={() => handleOpenFeedback(tipModalType === 'enterprise' ? 'custom_report' : 'feedback')}
+                style={{
+                  flex: 1,
+                  padding: '12px 18px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: tipModalType === 'pro'
+                    ? 'linear-gradient(135deg, #ff641e 0%, #ea580c 100%)'
+                    : 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                  color: '#ffffff',
+                  fontSize: '0.92rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  boxShadow: tipModalType === 'pro'
+                    ? '0 4px 14px rgba(255, 100, 30, 0.3)'
+                    : '0 4px 14px rgba(37, 99, 235, 0.3)',
+                  transition: 'transform 0.15s ease'
+                }}
+              >
+                {tipModalType === 'pro' ? '💡 提供使用建议' : '📝 提供定制建议'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 5. 用户建议与研报定制模态弹窗 */}
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+        userId={userId}
+        mode={feedbackMode}
+        onShowAuthModal={onShowAuthModal}
+      />
     </section>
   );
 }

@@ -52,7 +52,9 @@ fi
 
 # 重启 PM2 进程
 log "♻️  重启 PM2 进程..."
-pm2 restart ecosystem.config.cjs 2>&1 | tee -a "$LOG_FILE"
+pm2 delete gtb-backend 2>/dev/null || true
+sudo fuser -k 3000/tcp 2>/dev/null || true
+pm2 start ecosystem.config.cjs 2>&1 | tee -a "$LOG_FILE"
 
 # 健康检查（等待 8 秒后检测）
 log "🪩 等待服务启动..."
