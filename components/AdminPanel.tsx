@@ -61,8 +61,9 @@ export default function AdminPanel({ isOpen, onClose, onUploadSuccess }: AdminPa
           let cat = doc.querySelector('meta[name="category"]')?.getAttribute('content');
           // DOMParser 失败时兜底用正则（兼容单引号/编码问题）
           if (!cat) {
-            const catMatch = decodedText.match(/<meta[^>]*?name=["']category["'][^>]*?content=["']([^"']*)["']/i);
-            if (catMatch) cat = catMatch[1].trim();
+            const catMatch = decodedText.match(/<meta[^>]*?name=["']category["'][^>]*?content=(["'])([\s\S]*?)\1/i) ||
+                             decodedText.match(/<meta[^>]*?content=(["'])([\s\S]*?)\1[^>]*?name=["']category["']/i);
+            if (catMatch) cat = catMatch[2].trim();
           }
           if (cat === 'customer' || cat === 'product') {
             setCategory(cat);
