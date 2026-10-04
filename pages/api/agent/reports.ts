@@ -162,13 +162,25 @@ async function agentReportsHandler(req: NextApiRequest, res: NextApiResponse, db
   const total = countRes.rows[0]?.total || 0;
 
   const listQuery = isAll
-    ? `SELECT r.id, r.title, r.category, r.market_region, r.created_at
+    ? `SELECT r.id, r.title, r.category, r.market_region, r.created_at,
+              e.canonical_name AS primary_company,
+              ARRAY_REMOVE(ARRAY_AGG(DISTINCT ea.alias_name), NULL) AS aliases
        FROM reports r
+       LEFT JOIN report_entities re ON r.id = re.report_id AND re.role = 'primary'
+       LEFT JOIN entities e ON re.entity_id = e.id
+       LEFT JOIN entity_aliases ea ON e.id = ea.entity_id
        ${whereCategory ? 'WHERE r.category = $1' : ''}
+       GROUP BY r.id, r.title, r.category, r.market_region, r.created_at, e.canonical_name
        ORDER BY r.created_at DESC`
-    : `SELECT r.id, r.title, r.category, r.market_region, r.created_at
+    : `SELECT r.id, r.title, r.category, r.market_region, r.created_at,
+              e.canonical_name AS primary_company,
+              ARRAY_REMOVE(ARRAY_AGG(DISTINCT ea.alias_name), NULL) AS aliases
        FROM reports r
-       ${whereCategory}
+       LEFT JOIN report_entities re ON r.id = re.report_id AND re.role = 'primary'
+       LEFT JOIN entities e ON re.entity_id = e.id
+       LEFT JOIN entity_aliases ea ON e.id = ea.entity_id
+       ${whereCategory ? 'WHERE r.category = $3' : ''}
+       GROUP BY r.id, r.title, r.category, r.market_region, r.created_at, e.canonical_name
        ORDER BY r.created_at DESC
        LIMIT $1 OFFSET $2`;
 
@@ -183,6 +195,8 @@ async function agentReportsHandler(req: NextApiRequest, res: NextApiResponse, db
       title: r.title,
       category: r.category,
       market_region: r.market_region,
+      primary_company: r.primary_company || null,
+      aliases: r.aliases || [],
       created_at: new Date(r.created_at).toLocaleDateString('zh-CN'),
       url: `${baseUrl}/reports/${r.id}`
     }))
