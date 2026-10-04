@@ -72,10 +72,35 @@
 
 ---
 
-## 四、 项目核心文件索引 (Key Repository Indices)
+## 五、 买手联系人与 CRM 模块架构 (Buyer Contacts Architecture & Roadmap)
+
+### 1. 数据架构与全生命周期
+- **原始数据池（本地湖）**：18 届广交会采购商记录 (~173 万行) 保留于本地 SQLite (`contacts.db` 中的 `raw_contacts`)，通过 MD5 行哈希防重。
+- **线上生产 CRM 表 (`crm_contacts`)**：全量清洗去重后的 190,689 条全球独立企业买手，统一托管于腾讯云自建 **PostgreSQL** 生产库。
+- **关联检索逻辑**：报告详情页基于企业的 **顶级根域名（`website_domain` / `email_domain`）精确匹配**，并辅以纯净公司名精准比对。支持集团下属跨国分支与母公司买手多对多关联呈现。
+- **前端展示红线**：严禁在面向终端用户的任何 UI/弹窗中透传或暴露历史会话届数 (`source_session`)。
+
+### 2. 用户贡献与积分奖励激励体系 (待定项 / Roadmap)
+为实现平台买手资源的飞轮扩张，规划引入用户共建模式：
+- **UGC 提交机制**：用户在报告详情页可自主提交未收录的企业采购联系人（姓名、工作邮箱、职位、LinkedIn等），初始状态默认为 `unverified`（未验证）。
+- **核验与防刷流转**：
+  1. 系统后台自动执行 MX 记录检查与企业邮箱真实性探针。
+  2. 限制单日每个账号的提交上限，排除通用公共邮箱后缀（如 @gmail.com、@qq.com）。
+- **积分计算与额度兑换（待定细则）**：
+  - **贡献获赠积分**：每提交一条经系统或人工核验通过的有效买手信息，奖励创作者 `X` 积分。
+  - **积分消耗与兑换**：用户可使用积累的积分，在平台直接兑换“深度客户洞察报告解锁额度”或“高级买手联系方式批量导出额度”。
+  - *具体积分数值模型、兑换比例与兑换商城接口将在后续专项阶段细化发布。*
+
+---
+
+## 六、 项目核心文件索引 (Key Repository Indices)
 
 - `GEMINI.md`: AI Agent 核心规范与 Superpowers 技能说明
 - `ARCHITECTURE.md`: 本系统架构选型与配置说明文档
 - `bin/backup-db-to-cos.js`: 数据库每日备份至 COS 脚本
 - `lib/db.ts`: PostgreSQL 数据库连接池配置
 - `lib/storage.ts`: 腾讯云 COS 上传与文件存储封装
+- `lib/crm-service.ts`: 采购商联系人检索与核验服务 (PostgreSQL / SQLite 自适应)
+- `pages/api/reports/[id]/contacts.ts`: 报告关联联系人 API (安全过滤，绝不泄露届数)
+- `pages/api/contacts/verify-single.ts`: 单点实时 DNS MX 邮箱活性验证接口
+

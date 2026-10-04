@@ -9,6 +9,7 @@ import WatermarkContainer from '../../components/WatermarkContainer';
 import Link from 'next/link';
 import Navbar from '../../components/Navbar';
 import AuthModal from '../../components/AuthModal';
+import ReportContactsModal, { ReportContact } from '../../components/ReportContactsModal';
 
 interface RelatedReport {
   id: string;
@@ -67,6 +68,32 @@ export default function ReportDetailPage({
   const [isDownloading, setIsDownloading] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [previewImgUrl, setPreviewImgUrl] = useState<string | null>(null);
+
+  // 潜在采购联系人弹窗状态
+  const [showContactsModal, setShowContactsModal] = useState(false);
+  const [contactsData, setContactsData] = useState<{
+    companyName: string;
+    websiteDomain: string;
+    contacts: ReportContact[];
+    count: number;
+  } | null>(null);
+
+  // 异步获取关联联系人
+  React.useEffect(() => {
+    let isMounted = true;
+    fetch(`/api/reports/${report.id}/contacts`)
+      .then(res => res.json())
+      .then(data => {
+        if (isMounted && data.success) {
+          setContactsData(data);
+        }
+      })
+      .catch(err => console.error('[Report] 获取潜在联系人失败:', err));
+
+    return () => {
+      isMounted = false;
+    };
+  }, [report.id]);
 
   // 监听 iframe 传来的图片点击预览消息
   React.useEffect(() => {
@@ -479,6 +506,36 @@ export default function ReportDetailPage({
                     <line x1="12" y1="15" x2="12" y2="3" />
                   </svg>
                   {isDownloading ? '打包中...' : `下载离线HTML [余: ${downloadQuotaState}份]`}
+                </button>
+              )}
+
+              {/* 查看潜在采购联系人按钮 */}
+              {contactsData && contactsData.count > 0 && (
+                <button
+                  onClick={() => setShowContactsModal(true)}
+                  style={{
+                    background: 'rgba(59, 130, 246, 0.08)',
+                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                    color: '#2563eb',
+                    fontSize: '0.75rem',
+                    padding: '4px 12px',
+                    borderRadius: 'var(--border-radius)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    fontWeight: 500,
+                    transition: 'all 0.2s',
+                  }}
+                  title={`查看该企业潜在采购决策人联系方式 (共 ${contactsData.count} 位)`}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="8.5" cy="7" r="4" />
+                    <line x1="20" y1="8" x2="20" y2="14" />
+                    <line x1="23" y1="11" x2="17" y2="11" />
+                  </svg>
+                  采购联系人 [{contactsData.count}位]
                 </button>
               )}
 
@@ -1108,6 +1165,17 @@ export default function ReportDetailPage({
             ✕
           </button>
         </div>
+      )}
+
+      {/* 潜在采购联系人模态弹窗 */}
+      {showContactsModal && contactsData && (
+        <ReportContactsModal
+          isOpen={showContactsModal}
+          onClose={() => setShowContactsModal(false)}
+          companyName={contactsData.companyName}
+          websiteDomain={contactsData.websiteDomain}
+          contacts={contactsData.contacts}
+        />
       )}
     </WatermarkContainer>
   );

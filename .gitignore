@@ -58,4 +58,7 @@ public/*.mp4
 # 本地生成的研报与临时文件（不推送到 Git 仓库）
 /report/
 /scratch/
+wilcon_depot_report.html
+migration/*.csv
+
 
