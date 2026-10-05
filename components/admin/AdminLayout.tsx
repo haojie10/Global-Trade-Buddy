@@ -28,6 +28,7 @@ export default function AdminLayout({ children, currentPage }: AdminLayoutProps)
     { name: '🤖 调研调度中心', id: 'tasks', path: '/admin/tasks' },
     { name: '📋 内容分析', id: 'content', path: '/admin/content' },
     { name: '👥 用户管理', id: 'users', path: '/admin/users' },
+    { name: '💼 买手联系人', id: 'contacts', path: '/admin/contacts' },
     { name: '🔥 趋势洞察', id: 'trends', path: '/admin/trends' },
     { name: '📤 报告管理', id: 'reports', path: '/admin/reports' },
     { name: '📰 资讯管理', id: 'news', path: '/admin/news' },
