@@ -24,6 +24,7 @@ interface HomeProps {
   memberType: string;
   nickname?: string;
   latestArticles: any[];
+  stats?: { reports: number; news: number; industries: number };
 }
 
 export default function HomePage({
@@ -34,7 +35,8 @@ export default function HomePage({
   downloadQuota = 0,
   memberType = 'free',
   nickname,
-  latestArticles = []
+  latestArticles = [],
+  stats
 }: HomeProps) {
   const [quota, setQuota] = useState(freeQuota);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -158,6 +160,7 @@ export default function HomePage({
 
         sec.style.opacity = opacity.toString();
         sec.style.transform = `translateY(${translateY}px)`;
+        sec.style.filter = opacity < 0.98 ? `blur(${((1 - opacity) * 6).toFixed(1)}px)` : 'none';
         sec.style.display = opacity <= 0.001 ? 'none' : 'flex';
         sec.style.pointerEvents = opacity > 0.3 ? 'auto' : 'none';
       };
@@ -289,11 +292,79 @@ export default function HomePage({
           max-width: 620px;
         }
         .home-screen-right {
+          padding-right: 48px;
           flex: 1 1 450px;
           display: flex;
           justify-content: center;
           align-items: center;
         }
+
+
+        .gtb-eyebrow {
+          display: inline-flex; align-items: center; gap: 10px;
+          color: #c2410c; font-size: 0.78rem; letter-spacing: 0.28em; text-transform: uppercase;
+          font-weight: 600; margin-bottom: 14px;
+        }
+        .gtb-eyebrow::before { content: ''; width: 28px; height: 1px; background: #ff641e; }
+        .gtb-hero-title {
+          font-size: clamp(1.9rem, 4.2vw, 3.3rem); font-weight: 700; line-height: 1.2;
+          margin: 0 0 18px 0; color: #1a1613; letter-spacing: -0.03em; text-wrap: balance;
+        }
+        .gtb-cta-row { display: flex; gap: 12px; margin-top: 26px; flex-wrap: wrap; }
+        .gtb-btn-primary, .gtb-btn-ghost {
+          font-family: inherit; font-size: 0.95rem; font-weight: 600; cursor: pointer;
+          padding: 12px 26px; border-radius: 10px; transition: all .3s cubic-bezier(.16,1,.3,1);
+        }
+        .gtb-btn-primary {
+          color: #fff; border: 0;
+          background: linear-gradient(135deg, #ff8a50 0%, #ff641e 100%);
+          box-shadow: 0 8px 22px rgba(255,100,30,.32), inset 0 1px 0 rgba(255,255,255,.3);
+        }
+        .gtb-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(255,100,30,.42), inset 0 1px 0 rgba(255,255,255,.3); }
+        .gtb-btn-ghost { color: #1a1613; background: transparent; border: 1px solid rgba(26,22,19,.22); }
+        .gtb-btn-ghost:hover { border-color: #ff641e; color: #c2410c; background: rgba(255,100,30,.05); }
+        .gtb-stats {
+          display: flex; gap: 34px; margin-top: 30px; padding: 16px 0;
+          border-top: 1px solid rgba(26,22,19,.1); border-bottom: 1px solid rgba(26,22,19,.1);
+          width: fit-content; max-width: 100%;
+        }
+        .gtb-stats b { display: block; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 1.45rem; font-weight: 600; color: #1a1613; line-height: 1.1; }
+        .gtb-stats span { font-size: 0.72rem; letter-spacing: 0.14em; color: #8a7d70; }
+        .gtb-scroll-hint { margin-top: 20px; font-size: 0.8rem; color: #8a7d70; display: inline-flex; gap: 8px; align-items: center; }
+        .gtb-scroll-hint span { color: #ff641e; animation: gtbBounce 1.8s ease-in-out infinite; }
+        @keyframes gtbBounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
+        @media (prefers-reduced-motion: reduce) { .gtb-scroll-hint span { animation: none; } }
+
+
+        .gtb-feature-item {
+          position: relative; padding: 14px 18px 14px 20px; border-radius: 14px;
+          border: 1px solid transparent; transition: all .45s cubic-bezier(.2,.9,.3,1);
+        }
+        .gtb-feature-item::before {
+          content: ''; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; border-radius: 3px;
+          background: rgba(26,22,19,.12); transition: all .45s cubic-bezier(.2,.9,.3,1);
+        }
+        .gtb-feature-item.active {
+          background: rgba(255,255,255,.85); border-color: rgba(255,100,30,.28);
+          box-shadow: 0 2px 4px rgba(120,60,20,.04), 0 14px 32px rgba(255,100,30,.10);
+        }
+        .gtb-feature-item.active::before { background: linear-gradient(#ff8a50, #ff641e); top: 10px; bottom: 10px; }
+        .gtb-feature-title { display: flex; align-items: baseline; gap: 10px; font-size: 1rem; font-weight: 700; color: #8a7d70; transition: color .4s; }
+        .gtb-feature-item.active .gtb-feature-title { color: #1a1613; }
+        .gtb-feature-num { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: .72rem; color: #b9aca0; transition: color .4s; }
+        .gtb-feature-item.active .gtb-feature-num { color: #ff641e; }
+        .gtb-feature-desc { font-size: .84rem; line-height: 1.6; color: #a99b8e; margin-top: 4px; max-height: 0; opacity: 0; overflow: hidden; transition: max-height .5s cubic-bezier(.2,.9,.3,1), opacity .4s ease; }
+        .gtb-feature-item.active .gtb-feature-desc { max-height: 120px; opacity: 1; color: #5c5148; }
+
+        .gtb-steps { position: fixed; right: 26px; top: 50%; transform: translateY(-50%); z-index: 40; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+        .gtb-steps .count { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: .7rem; color: #8a7d70; letter-spacing: .1em; margin-bottom: 8px; }
+        .gtb-steps .count b { color: #ff641e; font-size: .95rem; }
+        .gtb-steps button { display: flex; align-items: center; gap: 10px; background: none; border: 0; padding: 4px 0; cursor: pointer; font-family: inherit; }
+        .gtb-steps button .label { font-size: .72rem; color: #1a1613; opacity: 0; transform: translateX(6px); transition: all .3s ease; white-space: nowrap; pointer-events: none; }
+        .gtb-steps button:hover .label, .gtb-steps button.on .label { opacity: 1; transform: none; }
+        .gtb-steps button .bar { width: 3px; height: 18px; border-radius: 3px; background: rgba(26,22,19,.16); transition: all .4s cubic-bezier(.2,.9,.3,1); }
+        .gtb-steps button.on .bar { height: 34px; background: linear-gradient(#ff8a50, #ff641e); box-shadow: 0 0 10px rgba(255,100,30,.45); }
+        .gtb-steps button:hover .bar { background: #ff8a50; }
 
         /* 移动端与平板端响应式适配 (< 900px) */
         @media (max-width: 900px) {
@@ -322,6 +393,7 @@ export default function HomePage({
             margin-bottom: 8px !important;
           }
           .home-screen-right {
+            padding-right: 0 !important;
             flex: 0 1 auto !important;
             max-width: 280px !important;
             max-height: 280px !important;
@@ -330,17 +402,47 @@ export default function HomePage({
           }
           .home-step-indicator {
             right: 8px !important;
-            transform: translateY(-50%) scale(0.85) !important;
           }
+          .gtb-steps .count, .gtb-steps button .label { display: none; }
           .home-sec2-list {
             display: none !important;
           }
+          .gtb-cta-row, .gtb-stats { justify-content: center; margin-left: auto; margin-right: auto; }
+          .gtb-stats { gap: 20px; }
+          .gtb-scroll-hint { display: none; }
+          .gtb-hero-title { font-size: 1.5rem !important; }
         }
       `}</style>
 
-      {/* 1. 全局柔和环境流光 (同报告大厅一致) */}
-      <div className="ambient-glow-container">
-        <div className="ambient-light ambient-light-1" />
+      {/* 1. 暖白纸感背景：测绘网格 + 等高线 + 暖橙光晕（仅主页） */}
+      <div aria-hidden="true" style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 0,
+        pointerEvents: 'none',
+        background: [
+          'radial-gradient(ellipse 55% 60% at 78% 45%, rgba(255,100,30,0.10), transparent 70%)',
+          'radial-gradient(ellipse 40% 40% at 8% 100%, rgba(255,138,80,0.08), transparent 70%)',
+          'linear-gradient(rgba(26,22,19,0.035) 1px, transparent 1px)',
+          'linear-gradient(90deg, rgba(26,22,19,0.035) 1px, transparent 1px)',
+          '#fbf9f6'
+        ].join(', '),
+        backgroundSize: 'auto, auto, 56px 56px, 56px 56px, auto'
+      }}>
+        <svg width="100%" height="100%" preserveAspectRatio="xMidYMid slice" style={{ position: 'absolute', inset: 0, opacity: 0.5 }}>
+          <defs>
+            <pattern id="gtbContour" width="420" height="420" patternUnits="userSpaceOnUse">
+              <g fill="none" stroke="rgba(26,22,19,0.045)" strokeWidth="1">
+                <path d="M-20 300 C 60 220, 140 360, 230 280 S 380 200, 440 280" />
+                <path d="M-20 340 C 70 270, 150 400, 240 320 S 390 250, 440 330" />
+                <path d="M-20 380 C 80 320, 160 440, 250 360 S 400 300, 440 380" />
+                <path d="M-20 90 C 70 20, 150 150, 240 80 S 380 10, 440 90" />
+                <path d="M-20 130 C 80 70, 160 190, 250 120 S 390 60, 440 130" />
+              </g>
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#gtbContour)" />
+        </svg>
       </div>
 
       {/* 2. 顶部导航栏 */}
@@ -355,42 +457,25 @@ export default function HomePage({
         onShowUploadModal={() => setShowUploadModal(true)}
       />
 
-      {/* 3. 页面右侧悬浮步骤指示器 */}
-      <div className="home-step-indicator" style={{
-        position: 'fixed',
-        right: '24px',
-        top: '50%',
-        transform: 'translateY(-50%)',
-        zIndex: 40,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px'
-      }}>
+      {/* 3. 页面右侧悬浮步骤指示器（编号 + 标签 + 进度条） */}
+      <div className="gtb-steps home-step-indicator">
+        <div className="count"><b>{String(currentStep).padStart(2, '0')}</b> / 04</div>
         {[
           { step: 1, title: '360° 全景视野' },
           { step: 2, title: '三大核心能力' },
           { step: 3, title: '专属商业知识库' },
           { step: 4, title: '开启之旅与会员方案' }
-        ].map(({ step, title }) => {
-          const isActive = currentStep === step;
-          return (
-            <button
-              key={step}
-              onClick={() => scrollToStep(step)}
-              title={`${title} (第 ${step} 幕)`}
-              style={{
-                width: isActive ? '10px' : '6px',
-                height: isActive ? '28px' : '6px',
-                borderRadius: '10px',
-                background: isActive ? '#ff641e' : 'rgba(18, 18, 18, 0.2)',
-                border: 'none',
-                cursor: 'pointer',
-                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                padding: 0
-              }}
-            />
-          );
-        })}
+        ].map(({ step, title }) => (
+          <button
+            key={step}
+            className={currentStep === step ? 'on' : ''}
+            onClick={() => scrollToStep(step)}
+            aria-label={`${title}（第 ${step} 幕）`}
+          >
+            <span className="label">{title}</span>
+            <span className="bar" />
+          </button>
+        ))}
       </div>
 
       {/* 4. 固定视口沉浸式前 3 幕叙事层 (在滚动至底部前平滑淡出，不遮挡会员专区) */}
@@ -432,59 +517,50 @@ export default function HomePage({
           }}>
             {/* 左侧文案 */}
             <div className="home-screen-left">
-              <span style={{
-                color: '#ff641e',
-                fontSize: '0.85rem',
-                letterSpacing: '3px',
-                textTransform: 'uppercase',
-                fontWeight: 600,
-                display: 'block',
-                marginBottom: '10px'
-              }}>
-                The 360° Panorama
-              </span>
-              <h1 style={{
-                fontSize: 'clamp(1.5rem, 4vw, 2.8rem)',
-                fontWeight: 600,
-                lineHeight: 1.28,
-                margin: '0 0 16px 0',
-                color: 'var(--color-text)'
-              }}>
+              <span className="gtb-eyebrow">The 360° Panorama</span>
+              <h1 className="gtb-hero-title">
                 想快人一步了解你的客户吗？
               </h1>
               <p style={{
                 fontSize: '0.98rem',
-                color: '#555555',
-                lineHeight: 1.7,
-                margin: '0 0 16px 0',
+                color: '#5c5148',
+                lineHeight: 1.75,
+                margin: '0 0 14px 0',
                 fontWeight: 400
               }}>
                 传统的调研被割裂在孤立的新闻、摸不透的客户底细和散落的头条中。割裂的信息只是噪音，决策慢一步，商机便差之千里。
               </p>
               <p style={{
                 fontSize: '0.98rem',
-                color: '#222222',
-                lineHeight: 1.7,
+                color: '#1a1613',
+                lineHeight: 1.75,
                 margin: 0,
                 fontWeight: 500
               }}>
                 <span style={{ color: '#ff641e', fontWeight: 600 }}>Market Graphic</span> 为你提供 360° 的视角，穿透客户在市场中的位置，上游是谁，下游是谁，竞争者是谁，环环相扣，逐步揭示市场网络，让你站在更高的视野俯瞰你所深耕的行业。
               </p>
 
-              <div style={{
-                marginTop: '24px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                fontSize: '0.82rem',
-                color: '#ff641e',
-                fontWeight: 500,
-                background: 'rgba(255, 100, 30, 0.08)',
-                padding: '5px 14px',
-                borderRadius: '20px'
-              }}>
-                向下滚动，探索平台能力
+              <div className="gtb-cta-row">
+                <button
+                  className="gtb-btn-primary"
+                  onClick={() => (userId ? scrollToStep(4) : setShowAuthModal(true))}
+                >
+                  {userId ? '查看会员方案' : '免费开始'}
+                </button>
+                <button className="gtb-btn-ghost" onClick={() => router.push('/reports')}>
+                  看示例报告
+                </button>
               </div>
+
+              {stats && (
+                <div className="gtb-stats">
+                  <div><b>{stats.reports.toLocaleString()}</b><span>深度报告</span></div>
+                  <div><b>{stats.news.toLocaleString()}</b><span>行业资讯</span></div>
+                  <div><b>{stats.industries.toLocaleString()}</b><span>覆盖品类</span></div>
+                </div>
+              )}
+
+              <div className="gtb-scroll-hint">向下滚动，探索平台能力 <span>↓</span></div>
             </div>
 
             {/* 右侧纯视觉示意图 */}
@@ -503,24 +579,8 @@ export default function HomePage({
           }}>
             {/* 左侧固定标题与步骤引导 */}
             <div className="home-screen-left" style={{ maxWidth: '520px' }}>
-              <span style={{
-                color: '#ff641e',
-                fontSize: '0.85rem',
-                letterSpacing: '3px',
-                textTransform: 'uppercase',
-                fontWeight: 600,
-                display: 'block',
-                marginBottom: '10px'
-              }}>
-                Core Capabilities
-              </span>
-              <h2 style={{
-                fontSize: 'clamp(1.6rem, 4.5vw, 2.8rem)',
-                fontWeight: 600,
-                lineHeight: 1.25,
-                margin: '0 0 20px 0',
-                color: 'var(--color-text)'
-              }}>
+              <span className="gtb-eyebrow">Core Capabilities</span>
+              <h2 className="gtb-hero-title" style={{ fontSize: 'clamp(1.7rem, 3.8vw, 2.9rem)', margin: '0 0 20px 0' }}>
                 Market Graphic 为你带来：
               </h2>
 
@@ -531,28 +591,13 @@ export default function HomePage({
                   return (
                     <div
                       key={idx}
-                      style={{
-                        padding: '12px 16px',
-                        borderRadius: '14px',
-                        background: isCurrent ? '#ffffff' : 'transparent',
-                        border: isCurrent ? '1px solid rgba(255, 100, 30, 0.3)' : '1px solid transparent',
-                        boxShadow: isCurrent ? '0 8px 24px rgba(255, 100, 30, 0.08)' : 'none',
-                        transition: 'all 0.3s ease'
-                      }}
+                      className={`gtb-feature-item ${isCurrent ? 'active' : ''}`}
                     >
-                      <div style={{
-                        fontSize: '1rem',
-                        fontWeight: 600,
-                        color: isCurrent ? '#ff641e' : '#666'
-                      }}>
-                        {idx + 1}. {item.title}
+                      <div className="gtb-feature-title">
+                        <span className="gtb-feature-num">0{idx + 1}</span>
+                        {item.title}
                       </div>
-                      <div style={{
-                        fontSize: '0.84rem',
-                        color: isCurrent ? '#444' : '#888',
-                        lineHeight: 1.55,
-                        marginTop: '4px'
-                      }}>
+                      <div className="gtb-feature-desc">
                         {item.desc}
                       </div>
                     </div>
@@ -577,26 +622,10 @@ export default function HomePage({
           }}>
             {/* 左侧文案 */}
             <div className="home-screen-left" style={{ maxWidth: '600px' }}>
-              <span style={{
-                color: '#ff641e',
-                fontSize: '0.85rem',
-                letterSpacing: '3px',
-                textTransform: 'uppercase',
-                fontWeight: 600,
-                display: 'block',
-                marginBottom: '10px'
-              }}>
-                Personal Knowledge Graph
-              </span>
-              <h2 style={{
-                fontSize: 'clamp(1.6rem, 4.5vw, 2.8rem)',
-                fontWeight: 600,
-                lineHeight: 1.25,
-                margin: '0 0 18px 0',
-                color: 'var(--color-text)'
-              }}>
+              <span className="gtb-eyebrow">Personal Knowledge Graph</span>
+              <h2 className="gtb-hero-title" style={{ fontSize: 'clamp(1.7rem, 3.8vw, 2.9rem)', margin: '0 0 18px 0' }}>
                 打造你自己的<br />
-                <span style={{ color: '#ff641e' }}>私人专属知识库</span>
+                <span style={{ color: '#ff641e', fontFamily: "'Playfair Display','Songti SC',serif", fontStyle: 'italic' }}>私人专属知识库</span>
               </h2>
               <p style={{
                 fontSize: '0.98rem',
@@ -635,8 +664,8 @@ export default function HomePage({
         right: 0,
         width: '100%',
         zIndex: 20,
-        background: '#ffffff',
-        boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.03)'
+        background: 'linear-gradient(180deg, rgba(251,249,246,0) 0%, #fbf9f6 90px, #fffaf5 100%)',
+        paddingTop: '40px'
       }}>
         <MembershipTiersSection
           userId={userId}
@@ -748,9 +777,17 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       ORDER BY n.published_at DESC LIMIT 6
     `);
 
-    const [allReportsData, latestArticlesRes] = await Promise.all([
+    const statsPromise = dbClient.query(`
+      SELECT
+        (SELECT COUNT(*) FROM reports)::int AS reports,
+        (SELECT COUNT(*) FROM news WHERE status = 'published')::int AS news,
+        (SELECT COUNT(*) FROM industries)::int AS industries
+    `).then((r: any) => r.rows[0]).catch(() => null);
+
+    const [allReportsData, latestArticlesRes, statsRow] = await Promise.all([
       reportsPromise,
-      latestArticlesPromise
+      latestArticlesPromise,
+      statsPromise
     ]);
 
     const latestArticles = latestArticlesRes.rows.map((row: any) => ({
@@ -770,7 +807,8 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         downloadQuota: auth.downloadQuota || 0,
         memberType: auth.memberType || 'free',
         nickname,
-        latestArticles
+        latestArticles,
+        stats: statsRow || null
       }
     };
   } catch (err) {

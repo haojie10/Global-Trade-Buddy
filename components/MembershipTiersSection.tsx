@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import FeedbackModal from './FeedbackModal';
 
 interface MembershipTiersSectionProps {
@@ -21,6 +21,20 @@ export default function MembershipTiersSection({
   onShowAuthModal
 }: MembershipTiersSectionProps) {
   const isPro = memberType === 'pro';
+  const sectionRef = useRef<HTMLElement>(null);
+
+  // 滚动进入视口时依次浮现
+  useEffect(() => {
+    const root = sectionRef.current;
+    if (!root) return;
+    const items = root.querySelectorAll<HTMLElement>('.gtb-reveal');
+    if (typeof IntersectionObserver === 'undefined') { items.forEach(i => i.classList.add('in')); return; }
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { (e.target as HTMLElement).classList.add('in'); io.unobserve(e.target); } });
+    }, { threshold: 0.15 });
+    items.forEach(i => io.observe(i));
+    return () => io.disconnect();
+  }, []);
 
   // 温馨提示弹窗状态: 'pro' | 'enterprise' | null
   const [tipModalType, setTipModalType] = useState<'pro' | 'enterprise' | null>(null);
@@ -34,13 +48,23 @@ export default function MembershipTiersSection({
   };
 
   return (
-    <section id="membership-tiers" style={{
+    <section id="membership-tiers" ref={sectionRef} className="gtb-tiers" style={{
       maxWidth: '1200px',
       margin: '60px auto 40px auto',
       padding: '0 24px',
       color: '#121212'
     }}>
-      <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+      <style dangerouslySetInnerHTML={{ __html: `
+        .gtb-tiers .gtb-reveal { opacity: 0; transform: translateY(26px); transition: opacity .8s cubic-bezier(.2,.9,.3,1) var(--rd,0s), transform .8s cubic-bezier(.2,.9,.3,1) var(--rd,0s); }
+        .gtb-tiers .gtb-reveal.in { opacity: 1; transform: none; }
+        .gtb-tiers .gtb-tier { transition: opacity .8s cubic-bezier(.2,.9,.3,1) var(--rd,0s), transform .45s cubic-bezier(.2,.9,.3,1), box-shadow .45s ease, border-color .45s ease !important; }
+        .gtb-tiers .gtb-tier.in:hover { transform: translateY(-8px) !important; box-shadow: 0 2px 4px rgba(120,60,20,.05), 0 24px 50px rgba(120,60,20,.12), 0 40px 80px rgba(255,100,30,.12) !important; border-color: rgba(255,100,30,.45) !important; }
+        .gtb-tiers .gtb-tier-pro.in { transform: scale(1.02); }
+        .gtb-tiers .gtb-tier-pro.in:hover { transform: translateY(-8px) scale(1.02) !important; }
+        .gtb-tiers .gtb-tier-pro::before { content:''; position:absolute; inset:-1px; border-radius:20px; padding:2px; background:linear-gradient(135deg,#ff8a50,#ff641e 50%,#c2410c); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events:none; }
+        @media (prefers-reduced-motion: reduce) { .gtb-tiers .gtb-reveal { transition: none; opacity: 1; transform: none; } }
+      ` }} />
+      <div className="gtb-reveal" style={{ textAlign: 'center', marginBottom: '40px' }}>
         <div style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -153,14 +177,14 @@ export default function MembershipTiersSection({
         </div>
       </div>
 
-      <div style={{
+      <div className="gtb-tier-grid" style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
         gap: '24px',
         alignItems: 'stretch'
       }}>
         {/* Tier 1: 免费版 Free */}
-        <div style={{
+        <div className="gtb-tier gtb-reveal" style={{ ['--rd' as any]: '0s',
           background: '#ffffff',
           border: '1px solid rgba(18, 18, 18, 0.08)',
           borderRadius: '20px',
@@ -263,7 +287,7 @@ export default function MembershipTiersSection({
         </div>
 
         {/* Tier 2: 专业版 Pro (高亮推荐) */}
-        <div style={{
+        <div className="gtb-tier gtb-tier-pro gtb-reveal" style={{ ['--rd' as any]: '.12s',
           background: 'linear-gradient(180deg, #ffffff 0%, #fffaf5 100%)',
           border: '2px solid #ff641e',
           borderRadius: '20px',
@@ -372,7 +396,7 @@ export default function MembershipTiersSection({
         </div>
 
         {/* Tier 3: 企业版 Enterprise */}
-        <div style={{
+        <div className="gtb-tier gtb-reveal" style={{ ['--rd' as any]: '.24s',
           background: '#ffffff',
           border: '1px solid rgba(18, 18, 18, 0.08)',
           borderRadius: '20px',
@@ -387,9 +411,9 @@ export default function MembershipTiersSection({
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <span style={{ fontSize: '1.25rem', fontWeight: 700, color: '#121212' }}>企业版 (Enterprise)</span>
               <span style={{
-                background: 'rgba(59, 130, 246, 0.1)',
-                color: '#2563eb',
-                border: '1px solid rgba(59, 130, 246, 0.25)',
+                background: 'rgba(26, 22, 19, 0.07)',
+                color: '#1a1613',
+                border: '1px solid rgba(26, 22, 19, 0.22)',
                 padding: '2px 8px',
                 borderRadius: '6px',
                 fontSize: '0.78rem',
@@ -409,23 +433,23 @@ export default function MembershipTiersSection({
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '0.92rem', color: '#334155' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ color: '#2563eb', fontWeight: 700 }}>✓</span>
+                <span style={{ color: '#1a1613', fontWeight: 700 }}>✓</span>
                 <span><b>300+ 次 / 月</b> 团队共享解锁额度池</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ color: '#2563eb', fontWeight: 700 }}>✓</span>
+                <span style={{ color: '#1a1613', fontWeight: 700 }}>✓</span>
                 <span><b>50+ 份 / 月</b> 离线下载与批量导出</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ color: '#2563eb', fontWeight: 700 }}>✓</span>
+                <span style={{ color: '#1a1613', fontWeight: 700 }}>✓</span>
                 <span>多子账号统一管理与协同笔记共享</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ color: '#2563eb', fontWeight: 700 }}>✓</span>
+                <span style={{ color: '#1a1613', fontWeight: 700 }}>✓</span>
                 <span>企业私有产业链拓扑网络定制</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ color: '#2563eb', fontWeight: 700 }}>✓</span>
+                <span style={{ color: '#1a1613', fontWeight: 700 }}>✓</span>
                 <span>1v1 专属出海战略顾问服务</span>
               </div>
             </div>
@@ -444,16 +468,16 @@ export default function MembershipTiersSection({
                 width: '100%',
                 padding: '12px',
                 borderRadius: '10px',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
-                background: 'rgba(59, 130, 246, 0.06)',
-                color: '#2563eb',
+                border: '1px solid rgba(26, 22, 19, 0.28)',
+                background: 'rgba(26, 22, 19, 0.04)',
+                color: '#1a1613',
                 fontSize: '0.95rem',
                 fontWeight: 600,
                 cursor: 'pointer',
                 transition: 'all 0.2s ease'
               }}
-              onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(59, 130, 246, 0.12)')}
-              onMouseOut={(e) => (e.currentTarget.style.background = 'rgba(59, 130, 246, 0.06)')}
+              onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(26, 22, 19, 0.10)')}
+              onMouseOut={(e) => (e.currentTarget.style.background = 'rgba(26, 22, 19, 0.04)')}
             >
               联系企业顾问定制 →
             </button>
@@ -486,7 +510,7 @@ export default function MembershipTiersSection({
               maxWidth: '520px',
               width: '100%',
               boxShadow: '0 25px 60px rgba(0, 0, 0, 0.18)',
-              border: tipModalType === 'pro' ? '1px solid rgba(255, 100, 30, 0.3)' : '1px solid rgba(59, 130, 246, 0.3)',
+              border: tipModalType === 'pro' ? '1px solid rgba(255, 100, 30, 0.3)' : '1px solid rgba(26, 22, 19, 0.28)',
               position: 'relative',
               textAlign: 'center'
             }}
@@ -522,8 +546,8 @@ export default function MembershipTiersSection({
               gap: '6px',
               padding: '4px 14px',
               borderRadius: '9999px',
-              background: tipModalType === 'pro' ? 'rgba(255, 100, 30, 0.1)' : 'rgba(59, 130, 246, 0.1)',
-              color: tipModalType === 'pro' ? '#ff641e' : '#2563eb',
+              background: tipModalType === 'pro' ? 'rgba(255, 100, 30, 0.1)' : 'rgba(26, 22, 19, 0.07)',
+              color: tipModalType === 'pro' ? '#ff641e' : '#1a1613',
               fontSize: '0.82rem',
               fontWeight: 600,
               marginBottom: '16px'
@@ -608,14 +632,14 @@ export default function MembershipTiersSection({
                   border: 'none',
                   background: tipModalType === 'pro'
                     ? 'linear-gradient(135deg, #ff641e 0%, #ea580c 100%)'
-                    : 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                    : 'linear-gradient(135deg, #1a1613 0%, #3a322b 100%)',
                   color: '#ffffff',
                   fontSize: '0.92rem',
                   fontWeight: 600,
                   cursor: 'pointer',
                   boxShadow: tipModalType === 'pro'
                     ? '0 4px 14px rgba(255, 100, 30, 0.3)'
-                    : '0 4px 14px rgba(37, 99, 235, 0.3)',
+                    : '0 4px 14px rgba(26, 22, 19, 0.3)',
                   transition: 'transform 0.15s ease'
                 }}
               >
