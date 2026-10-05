@@ -871,25 +871,42 @@ export default function AdminTasksPage() {
                         )}
                       </td>
 
-                      {/* 公司名称与官网 */}
+                      {/* 公司名称、主营产品与官网 */}
                       <td style={{ padding: '12px 14px' }}>
-                        <div style={{ fontWeight: 600, color: 'var(--admin-text)', fontSize: '0.92rem' }}>
-                          {task.company_name}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 600, color: 'var(--admin-text)', fontSize: '0.94rem' }}>
+                            {task.company_name}
+                          </span>
+                          {task.tag && (
+                            <span style={{
+                              background: task.tag.includes('渠道') ? 'rgba(168, 85, 247, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+                              color: task.tag.includes('渠道') ? '#c084fc' : '#60a5fa',
+                              border: task.tag.includes('渠道') ? '1px solid rgba(168, 85, 247, 0.3)' : '1px solid rgba(59, 130, 246, 0.3)',
+                              padding: '1px 6px',
+                              borderRadius: '4px',
+                              fontSize: '0.72rem',
+                              fontWeight: 600,
+                            }}>
+                              {task.tag}
+                            </span>
+                          )}
                         </div>
                         {task.industry && (
-                          <div style={{ fontSize: '0.75rem', color: 'var(--admin-text-secondary)', marginTop: '2px' }}>
-                            🏢 {task.industry}
+                          <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '3px', maxWidth: '320px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={task.industry}>
+                            📦 {task.industry}
                           </div>
                         )}
                         {task.website && (
-                          <a
-                            href={task.website}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{ fontSize: '0.75rem', color: 'var(--admin-accent-light)', textDecoration: 'none', wordBreak: 'break-all' }}
-                          >
-                            🔗 {task.website.replace(/^https?:\/\//, '')}
-                          </a>
+                          <div style={{ marginTop: '2px' }}>
+                            <a
+                              href={task.website.startsWith('http') ? task.website : `https://${task.website}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{ fontSize: '0.75rem', color: 'var(--admin-accent-light)', textDecoration: 'none', wordBreak: 'break-all' }}
+                            >
+                              🔗 {task.website.replace(/^https?:\/\/(www\.)?/, '')}
+                            </a>
+                          </div>
                         )}
                       </td>
 

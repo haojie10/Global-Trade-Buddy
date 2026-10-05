@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { PoolClient } from 'pg';
-import { withDb } from '../../../../lib/api-handler';
-import { extractRootDomain, cleanCompanyNameForLookup } from '../../../../lib/crm-service';
+import { withDb } from '../../../lib/api-handler';
+import { extractRootDomain, cleanCompanyNameForLookup } from '../../../lib/crm-service';
 
 /**
  * GET /api/reports/all-researched-entities
