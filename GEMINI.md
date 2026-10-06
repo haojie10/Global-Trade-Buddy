@@ -3,7 +3,8 @@
 
 # GlobalTradeBuddy 项目指南与架构规范
 
-> 详细的系统架构说明文档请查阅：[ARCHITECTURE.md](file:///Users/jason/Documents/Antigravity/Project/Globaltradebuddy/ARCHITECTURE.md)
+> 详细的系统架构说明文档请查阅：[ARCHITECTURE.md](file:///Users/jason/Documents/Antigravity/Project/Globaltradebuddy/ARCHITECTURE.md)  
+> 详细的产品需求与决策沉淀请查阅：[docs/REQUIREMENTS.md](file:///Users/jason/Documents/Antigravity/Project/Globaltradebuddy/docs/REQUIREMENTS.md)
 
 ## ⚠️ 系统架构统一约定 (System Architecture Consensus)
 
