@@ -25,7 +25,11 @@ CREATE TEMP TABLE staging_priority_channel_tasks (
 -- 3. 快速导入 93 家高价值渠道商数据
 \copy staging_priority_channel_tasks FROM 'migration/priority_120_channel_tasks.csv' WITH (FORMAT csv, HEADER true);
 
--- 4. 若库中已有同名未调研任务，直接提升优先级为 120 并切为 antigravity
+-- 4. 重点：若库中已有记录（无论此前是 workbuddy 还是较低优先级），同步提权并切引擎：
+--    - 优先级升级为: 120 (最高优先级)
+--    - 调度引擎标签切为: antigravity (实体门店渠道引擎)
+--    - 批次归入: '2026全球实体渠道地图高优批次'
+--    - 状态重置为: 'pending' (若此前未完成)
 UPDATE research_tasks t
 SET priority = 120,
     tag = 'antigravity',
@@ -35,11 +39,18 @@ SET priority = 120,
 FROM staging_priority_channel_tasks s
 WHERE t.report_id IS NULL
   AND (
+    -- 按主体名称匹配（含简称）
     LOWER(TRIM(t.company_name)) = LOWER(TRIM(s.company_name))
-    OR (t.website IS NOT NULL AND LOWER(TRIM(t.website)) = LOWER(TRIM(s.website)))
+    OR LOWER(TRIM(t.company_name)) = LOWER(TRIM(SPLIT_PART(s.company_name, ' (', 1)))
+    -- 按主域名精准匹配
+    OR (
+        t.website IS NOT NULL AND s.website IS NOT NULL
+        AND LOWER(REGEXP_REPLACE(REGEXP_REPLACE(t.website, '^https?://(www\.)?', ''), '/.*$', '')) = 
+            LOWER(REGEXP_REPLACE(REGEXP_REPLACE(s.website, '^https?://(www\.)?', ''), '/.*$', ''))
+    )
   );
 
--- 5. 写入库中尚不存在的全新渠道商
+-- 5. 写入库中尚不存在的全新渠道商（此前不在5.8万广交会名单中的新巨头）
 INSERT INTO research_tasks (
     company_name, country, website, industry, tag, batch_name, priority, source_type, status
 )
@@ -49,7 +60,12 @@ FROM staging_priority_channel_tasks s
 WHERE NOT EXISTS (
     SELECT 1 FROM research_tasks t 
     WHERE LOWER(TRIM(t.company_name)) = LOWER(TRIM(s.company_name))
-       OR (t.website IS NOT NULL AND LOWER(TRIM(t.website)) = LOWER(TRIM(s.website)))
+       OR LOWER(TRIM(t.company_name)) = LOWER(TRIM(SPLIT_PART(s.company_name, ' (', 1)))
+       OR (
+           t.website IS NOT NULL AND s.website IS NOT NULL
+           AND LOWER(REGEXP_REPLACE(REGEXP_REPLACE(t.website, '^https?://(www\.)?', ''), '/.*$', '')) = 
+               LOWER(REGEXP_REPLACE(REGEXP_REPLACE(s.website, '^https?://(www\.)?', ''), '/.*$', ''))
+       )
 );
 
 -- 6. 严谨二次检查：若 reports 库中已有该企业研报，自动挂接并标记完成 (避免重复调研)
@@ -65,9 +81,9 @@ WHERE r.category = 'customer'
     OR LOWER(TRIM(r.title)) LIKE '%' || LOWER(TRIM(t.company_name)) || '%'
   );
 
--- 7. 统计查看当前任务调度中心的优先级分布
+-- 7. 统计查看当前任务调度中心 120 高优任务与分布
 SELECT batch_name, priority, tag, status, count(*) AS total_count
 FROM research_tasks
-WHERE priority >= 100 OR batch_name = '2026全球实体渠道地图高优批次'
+WHERE priority = 120 OR batch_name = '2026全球实体渠道地图高优批次'
 GROUP BY batch_name, priority, tag, status
 ORDER BY priority DESC, tag ASC;
