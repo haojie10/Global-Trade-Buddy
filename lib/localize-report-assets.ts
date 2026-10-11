@@ -2,19 +2,20 @@
 // ---------------------------------------------------------------------------
 // 背景：报告正文（content_html）可能引用了境外 CDN（Google Fonts / unpkg /
 // jsdelivr / cdnjs / tailwind），在国内网络环境下访问缓慢甚至不可达，导致 iframe
-// 报告内容长时间空白或阻塞达 30 秒。本模块在渲染前将这些引用替换为服务器本地静态资源
-// （/vendor/），彻底剥离阻塞性的外部字体与样式表，实现零外部依赖秒级渲染。
+// 报告内容长时间空白或阻塞达 30 秒，或者由于 unpkg/jsdelivr 阻塞导致 lucide 报错而中断图表渲染。
+// 本模块在渲染前将这些引用替换为服务器本地静态资源（/vendor/），彻底剥离阻塞性的外部字体与样式表，
+// 并注入核心 API 容错 shim，实现零外部依赖秒级渲染且图表 100% 正常显示。
 // ---------------------------------------------------------------------------
 
 const CDN_REPLACEMENTS: Array<[RegExp, string]> = [
-  // Tailwind Play CDN（浏览器运行时版本）
-  [/https?:\/\/cdn\.tailwindcss\.com[^"'\s>]*/gi, '/vendor/tailwind.min.js'],
-  // ECharts（jsDelivr / unpkg / cdnjs / fastly）
-  [/https?:\/\/(?:cdn\.jsdelivr\.net|unpkg\.com|cdnjs\.cloudflare\.com|fastly\.jsdelivr\.net)\/(?:npm\/)?echarts@[^"'\s>]*\/dist\/echarts\.min\.js/gi, '/vendor/echarts.min.js'],
-  [/https?:\/\/(?:cdn\.jsdelivr\.net|unpkg\.com|cdnjs\.cloudflare\.com|fastly\.jsdelivr\.net)\/(?:npm\/)?echarts(?:\.min)?\.js/gi, '/vendor/echarts.min.js'],
-  // Lucide 图标库（unpkg / jsdelivr / cdnjs / fastly）
-  [/https?:\/\/(?:cdn\.jsdelivr\.net|unpkg\.com|cdnjs\.cloudflare\.com|fastly\.jsdelivr\.net)\/(?:npm\/)?lucide@[^"'\s>]*\/dist\/umd\/lucide(?:\.min)?\.js/gi, '/vendor/lucide.min.js'],
-  [/https?:\/\/(?:cdn\.jsdelivr\.net|unpkg\.com|cdnjs\.cloudflare\.com|fastly\.jsdelivr\.net)\/(?:npm\/)?lucide(?:\.min)?\.js/gi, '/vendor/lucide.min.js'],
+  // 1. Tailwind Play CDN（匹配所有来源的 tailwind 脚本，包括 cdn.tailwindcss.com 等）
+  [/https?:\/\/(?:cdn\.tailwindcss\.com|[^"'\s>]*tailwindcss)[^"'\s>]*/gi, '/vendor/tailwind.min.js'],
+
+  // 2. ECharts 依赖（匹配 jsdelivr / unpkg / cdnjs / fastly 等所有版本的 echarts 脚本）
+  [/https?:\/\/[^"'\s>]*echarts[^"'\s>]*/gi, '/vendor/echarts.min.js'],
+
+  // 3. Lucide 图标库（匹配 unpkg / jsdelivr / cdnjs 等所有来源，包括 @latest 等无版本号后缀形式）
+  [/https?:\/\/[^"'\s>]*lucide[^"'\s>]*/gi, '/vendor/lucide.min.js'],
 ];
 
 // 移除 Google Fonts / gstatic 外部字体链接与预连接（正文使用系统字体栈，杜绝境外 30 秒 TCP 超时阻塞）
@@ -40,7 +41,7 @@ export function localizeReportHtml(html: string | null | undefined): string {
     result = result.replace(pattern, '');
   }
 
-  // 2. 替换公共 CDN 依赖为本地高速 /vendor/ 静态资源
+  // 2. 替换公共 CDN 依赖为本地高速 /vendor/ 静态资源（Tailwind, ECharts, Lucide 等）
   for (const [pattern, replacement] of CDN_REPLACEMENTS) {
     result = result.replace(pattern, replacement);
   }
@@ -48,14 +49,26 @@ export function localizeReportHtml(html: string | null | undefined): string {
   // 3. 为所有 img 标签智能注入 loading="lazy" 与 decoding="async"，防止海外图片卡住页面渲染
   result = result.replace(/<img(?![^>]*\bloading=)([^>]*?)>/gi, '<img loading="lazy" decoding="async"$1>');
 
-  // 4. 如果没有 base 标签，在 <head> 中注入 <base target="_blank">，确保所有超链接默认在新标签页打开
-  if (!/<base[^>]*target=/i.test(result)) {
-    if (/<head[^>]*>/i.test(result)) {
-      result = result.replace(/<head[^>]*>/i, '$&\n    <base target="_blank">');
-    }
+  // 4. 在 <head> 中注入核心保护脚本：
+  //    - base target="_blank"：所有超链接默认在新标签页打开，杜绝 iframe 内部非法重定向
+  //    - window.lucide 容错垫片：确保即便在任何异常场景下，内联代码中的 lucide.createIcons() 也绝不抛出异常中断图表渲染
+  const headInject = `
+    <base target="_blank">
+    <script>
+      window.lucide = window.lucide || { createIcons: function() {} };
+    </script>
+  `;
+
+  if (/<head[^>]*>/i.test(result)) {
+    // 如果已有 <base> 标签则先清洗掉，统一注入规范的 headInject
+    result = result.replace(/<base[^>]*target=[^>]*>\s*/gi, '');
+    result = result.replace(/<head[^>]*>/i, `$&\n${headInject}`);
+  } else {
+    // 兼容没有 head 标签的片段型 HTML
+    result = `<head>${headInject}</head>\n` + result;
   }
 
-  // 5. 注入脚本：图片点击预览 + 全局超链接拦截保护 + 图片加载容错
+  // 5. 注入尾部脚本：图片点击预览 + 全局超链接拦截保护 + 图片加载容错 + 图表渲染生命周期保障
   const previewScript = `
 <style>
   img { cursor: zoom-in !important; transition: opacity 0.2s ease, transform 0.2s ease; }
@@ -63,7 +76,18 @@ export function localizeReportHtml(html: string | null | undefined): string {
   a img, .powered-by-mg img, footer img, .no-zoom { cursor: pointer !important; }
 </style>
 <script>
-  // 1. 图片点击预览事件
+  // 1. 图表就绪保障：监听 load 事件，防止网络并发下 initCharts 因极低概率时序问题跳过渲染
+  window.addEventListener('load', function() {
+    if (typeof initCharts === 'function' && typeof echarts !== 'undefined') {
+      try {
+        initCharts();
+      } catch (err) {
+        console.warn('initCharts retry warning:', err);
+      }
+    }
+  });
+
+  // 2. 图片点击预览事件
   document.addEventListener('click', function(e) {
     var target = e.target;
     if (target && target.tagName === 'IMG') {
@@ -75,7 +99,7 @@ export function localizeReportHtml(html: string | null | undefined): string {
     }
   });
 
-  // 2. 外部链接/互联报告链接安全拦截（防止在沙箱 iframe 内部跳转导致 SecurityError 崩溃）
+  // 3. 外部链接/互联报告链接安全拦截（防止在沙箱 iframe 内部跳转导致 SecurityError 崩溃）
   document.addEventListener('click', function(e) {
     var a = e.target.closest('a');
     if (a) {
@@ -88,7 +112,7 @@ export function localizeReportHtml(html: string | null | undefined): string {
     }
   }, true);
 
-  // 3. 图片加载失败优雅兜底，防止碎图影响排版
+  // 4. 图片加载失败优雅兜底，防止碎图影响排版
   document.addEventListener('error', function(e) {
     var target = e.target;
     if (target && target.tagName === 'IMG') {

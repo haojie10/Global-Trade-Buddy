@@ -28,13 +28,13 @@ describe('Report HTML Asset Localization & Acceleration', () => {
     expect(localized).not.toContain('fonts.gstatic.com');
   });
 
-  it('should replace external CDN scripts with local vendor URLs', () => {
+  it('should replace external CDN scripts including unpkg lucide@latest and echarts', () => {
     const rawHtml = `
       <html>
       <head>
         <script src="https://cdn.tailwindcss.com"></script>
         <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
-        <script src="https://unpkg.com/lucide@0.294.0/dist/umd/lucide.min.js"></script>
+        <script src="https://unpkg.com/lucide@latest"></script>
       </head>
       <body><div>Content</div></body>
       </html>
@@ -46,6 +46,13 @@ describe('Report HTML Asset Localization & Acceleration', () => {
     expect(localized).not.toContain('https://cdn.tailwindcss.com');
     expect(localized).not.toContain('https://cdn.jsdelivr.net');
     expect(localized).not.toContain('https://unpkg.com');
+  });
+
+  it('should inject window.lucide fallback shim and load handler for charts', () => {
+    const rawHtml = `<html><head></head><body><h1>Report</h1></body></html>`;
+    const localized = localizeReportHtml(rawHtml);
+    expect(localized).toContain('window.lucide = window.lucide ||');
+    expect(localized).toContain('initCharts');
   });
 
   it('should add lazy loading attributes to images in report', () => {
