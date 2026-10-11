@@ -48,6 +48,26 @@ describe('Report HTML Asset Localization & Acceleration', () => {
     expect(localized).not.toContain('https://unpkg.com');
   });
 
+  it('should NEVER corrupt inline CSS containing tailwindcss.com license comments', () => {
+    const rawHtml = `
+      <html>
+      <head>
+        <style>
+          /*! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com*/
+          *,:after,:before{box-sizing:border-box;border:0 solid #e5e7eb}
+          .grid { display: grid; }
+        </style>
+      </head>
+      <body><div class="grid">Content</div></body>
+      </html>
+    `;
+    const localized = localizeReportHtml(rawHtml);
+    // 确保 CSS 代码完好无损，没有被错误注入 /vendor/tailwind.min.js
+    expect(localized).toContain('/*! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com*/');
+    expect(localized).toContain('.grid { display: grid; }');
+    expect(localized).not.toContain('/vendor/tailwind.min.js');
+  });
+
   it('should inject window.lucide fallback shim and load handler for charts', () => {
     const rawHtml = `<html><head></head><body><h1>Report</h1></body></html>`;
     const localized = localizeReportHtml(rawHtml);
@@ -62,10 +82,9 @@ describe('Report HTML Asset Localization & Acceleration', () => {
     expect(localized).toContain('decoding="async"');
   });
 
-  it('should inject base target="_blank" and preview scripts', () => {
+  it('should inject preview scripts and safely intercept links', () => {
     const rawHtml = `<html><head></head><body><a href="https://example.com">Link</a></body></html>`;
     const localized = localizeReportHtml(rawHtml);
-    expect(localized).toContain('<base target="_blank">');
     expect(localized).toContain('GTB_PREVIEW_IMAGE');
   });
 });

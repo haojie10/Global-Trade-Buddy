@@ -4,19 +4,8 @@
 // jsdelivr / cdnjs / tailwind），在国内网络环境下访问缓慢甚至不可达，导致 iframe
 // 报告内容长时间空白或阻塞达 30 秒，或者由于 unpkg/jsdelivr 阻塞导致 lucide 报错而中断图表渲染。
 // 本模块在渲染前将这些引用替换为服务器本地静态资源（/vendor/），彻底剥离阻塞性的外部字体与样式表，
-// 并注入核心 API 容错 shim，实现零外部依赖秒级渲染且图表 100% 正常显示。
+// 并注入核心 API 容错 shim，实现零外部依赖秒级渲染且图表与样式 100% 正常显示。
 // ---------------------------------------------------------------------------
-
-const CDN_REPLACEMENTS: Array<[RegExp, string]> = [
-  // 1. Tailwind Play CDN（匹配所有来源的 tailwind 脚本，包括 cdn.tailwindcss.com 等）
-  [/https?:\/\/(?:cdn\.tailwindcss\.com|[^"'\s>]*tailwindcss)[^"'\s>]*/gi, '/vendor/tailwind.min.js'],
-
-  // 2. ECharts 依赖（匹配 jsdelivr / unpkg / cdnjs / fastly 等所有版本的 echarts 脚本）
-  [/https?:\/\/[^"'\s>]*echarts[^"'\s>]*/gi, '/vendor/echarts.min.js'],
-
-  // 3. Lucide 图标库（匹配 unpkg / jsdelivr / cdnjs 等所有来源，包括 @latest 等无版本号后缀形式）
-  [/https?:\/\/[^"'\s>]*lucide[^"'\s>]*/gi, '/vendor/lucide.min.js'],
-];
 
 // 移除 Google Fonts / gstatic 外部字体链接与预连接（正文使用系统字体栈，杜绝境外 30 秒 TCP 超时阻塞）
 const FONT_LINK_PATTERNS: RegExp[] = [
@@ -26,6 +15,28 @@ const FONT_LINK_PATTERNS: RegExp[] = [
   /@import\s+(?:url\()?["']?https?:\/\/fonts\.googleapis\.com[^"')]+["']?\)?\s*;?\s*/gi,
   /@import\s+(?:url\()?["']?https?:\/\/fonts\.gstatic\.com[^"')]+["']?\)?\s*;?\s*/gi,
 ];
+
+/**
+ * 安全替换 <script src="..."> 中的外部 CDN 依赖为本地高速 /vendor/ 静态资源。
+ * 必须且仅精准替换 <script src="...">，严禁使用全局裸正则替换，避免破坏 <style> 内部的预编译 CSS 及开源协议注释！
+ */
+function replaceCdnScripts(html: string): string {
+  return html.replace(/<script\b([^>]*?)src=(["'])(https?:\/\/[^"']+)\2([^>]*?)>/gi, (match, prefix, quote, url, suffix) => {
+    // 1. Tailwind Play CDN（注意：仅匹配 cdn.tailwindcss.com 脚本，绝不触碰内联 CSS 中的 tailwindcss.com 注释）
+    if (/^https?:\/\/cdn\.tailwindcss\.com/i.test(url)) {
+      return `<script${prefix}src=${quote}/vendor/tailwind.min.js${quote}${suffix}>`;
+    }
+    // 2. ECharts CDN（匹配 jsdelivr, unpkg, cdnjs, fastly 等所有 CDN 托管源）
+    if (/^https?:\/\/(?:cdn\.jsdelivr\.net|unpkg\.com|cdnjs\.cloudflare\.com|fastly\.jsdelivr\.net)\/.*echarts/i.test(url)) {
+      return `<script${prefix}src=${quote}/vendor/echarts.min.js${quote}${suffix}>`;
+    }
+    // 3. Lucide 图标库（匹配 unpkg.com/lucide@latest, jsdelivr, cdnjs 等所有托管源）
+    if (/^https?:\/\/(?:unpkg\.com|cdn\.jsdelivr\.net|cdnjs\.cloudflare\.com|fastly\.jsdelivr\.net)\/.*lucide/i.test(url)) {
+      return `<script${prefix}src=${quote}/vendor/lucide.min.js${quote}${suffix}>`;
+    }
+    return match;
+  });
+}
 
 /**
  * 将报告 HTML 中的外部 CDN 引用替换为本地静态资源路径，并注入外部链接与图片处理脚本。
@@ -41,30 +52,23 @@ export function localizeReportHtml(html: string | null | undefined): string {
     result = result.replace(pattern, '');
   }
 
-  // 2. 替换公共 CDN 依赖为本地高速 /vendor/ 静态资源（Tailwind, ECharts, Lucide 等）
-  for (const [pattern, replacement] of CDN_REPLACEMENTS) {
-    result = result.replace(pattern, replacement);
-  }
+  // 2. 安全替换公共 CDN 脚本为本地高速 /vendor/ 静态资源（仅替换 <script src="...">）
+  result = replaceCdnScripts(result);
 
   // 3. 为所有 img 标签智能注入 loading="lazy" 与 decoding="async"，防止海外图片卡住页面渲染
   result = result.replace(/<img(?![^>]*\bloading=)([^>]*?)>/gi, '<img loading="lazy" decoding="async"$1>');
 
   // 4. 在 <head> 中注入核心保护脚本：
-  //    - base target="_blank"：所有超链接默认在新标签页打开，杜绝 iframe 内部非法重定向
   //    - window.lucide 容错垫片：确保即便在任何异常场景下，内联代码中的 lucide.createIcons() 也绝不抛出异常中断图表渲染
   const headInject = `
-    <base target="_blank">
     <script>
       window.lucide = window.lucide || { createIcons: function() {} };
     </script>
   `;
 
   if (/<head[^>]*>/i.test(result)) {
-    // 如果已有 <base> 标签则先清洗掉，统一注入规范的 headInject
-    result = result.replace(/<base[^>]*target=[^>]*>\s*/gi, '');
     result = result.replace(/<head[^>]*>/i, `$&\n${headInject}`);
   } else {
-    // 兼容没有 head 标签的片段型 HTML
     result = `<head>${headInject}</head>\n` + result;
   }
 
