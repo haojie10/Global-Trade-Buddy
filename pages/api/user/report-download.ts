@@ -4,7 +4,7 @@ import { withDb } from '../../../lib/api-handler';
 import { getSession } from '../../../lib/auth';
 import { localizeReportHtml } from '../../../lib/localize-report-assets';
 
-function buildStandaloneHtml(report: {
+export function buildStandaloneHtml(report: {
   title: string;
   category: string;
   market_region: string;
@@ -12,6 +12,43 @@ function buildStandaloneHtml(report: {
   content_html: string;
   created_at: string;
 }): string {
+  const rawHtml = report.content_html || '';
+  const isFullHtml = /<!DOCTYPE\s+html/i.test(rawHtml) || /<html\b/i.test(rawHtml);
+
+  // 1. 若报告本身已是完整独立的 HTML 文档，直接保留其完整的原汁原味设计，绝不二次嵌套
+  if (isFullHtml) {
+    // 经过本地化保护：去除境外阻塞字体、注入 lucide 容错 shim 及图表重试逻辑
+    let fullHtml = localizeReportHtml(rawHtml);
+
+    // 关键修复：将 /vendor/ 相对根路径升级为绝对公网 HTTPS 路径，确保用户在本地以 file:/// 双击打开时资源 100% 成功加载
+    fullHtml = fullHtml.replace(
+      /(<script\b[^>]*?\bsrc=["'])\/vendor\//gi,
+      '$1https://marketgraphic.cn/vendor/'
+    );
+
+    // 补全站内图片路径（若有）
+    fullHtml = fullHtml.replace(
+      /(<img\b[^>]*?\bsrc=["'])\/images\//gi,
+      '$1https://marketgraphic.cn/images/'
+    );
+
+    // 优雅注入导出标识（保持与原文档和谐共存）
+    const watermarkNote = `
+<!-- Exported by GlobalTradeBuddy (https://marketgraphic.cn) -->
+<div style="text-align: center; padding: 24px 0 16px 0; font-size: 12px; color: #7a756f; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  本文档由 GlobalTradeBuddy (https://marketgraphic.cn) 导出生成 · 专属于外贸出海决策的战略情报助手
+</div>
+`;
+    if (/<\/body>/i.test(fullHtml)) {
+      fullHtml = fullHtml.replace(/<\/body>/i, `${watermarkNote}\n</body>`);
+    } else {
+      fullHtml += watermarkNote;
+    }
+
+    return fullHtml;
+  }
+
+  // 2. 若是片段 HTML（如测试数据或轻量内容），采用与平台视觉规范完全一致的「暖沙乳白底」模板包裹，杜绝暗黑冲突
   const categoryLabel = report.category === 'customer' ? '买家/客户调研' : '品类/行业洞察';
   const region = report.market_region || '全球市场';
   const formattedDate = new Date(report.created_at || Date.now()).toLocaleDateString('zh-CN', {
@@ -20,7 +57,7 @@ function buildStandaloneHtml(report: {
     day: '2-digit'
   });
 
-  const localizedContent = localizeReportHtml(report.content_html) || '<p>暂无内容</p>';
+  const localizedContent = localizeReportHtml(rawHtml);
 
   return `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -28,34 +65,42 @@ function buildStandaloneHtml(report: {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${report.title} - GlobalTradeBuddy 出海深度研报</title>
+  <script src="https://marketgraphic.cn/vendor/tailwind.min.js"></script>
+  <script src="https://marketgraphic.cn/vendor/echarts.min.js"></script>
+  <script src="https://marketgraphic.cn/vendor/lucide.min.js"></script>
+  <script>
+    window.lucide = window.lucide || { createIcons: function() {} };
+  </script>
   <style>
     :root {
-      --bg: #090d16;
-      --card-bg: #111827;
-      --border: #1f293d;
-      --text-main: #f3f4f6;
-      --text-muted: #9ca3af;
-      --primary: #3b82f6;
-      --primary-light: #60a5fa;
-      --accent: #10b981;
-      --accent-bg: rgba(16, 185, 129, 0.1);
+      --bg-main: #fdfbf7;
+      --bg-sub: #f6f3ec;
+      --color-accent: #ff641e;
+      --color-text: #3c3935;
+      --color-muted: #7a756f;
+      --radius-card: 22px;
+      --radius-sub: 16px;
+      --shadow-default: 0 4px 12px rgba(160, 109, 68, 0.04);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      background-color: var(--bg);
-      color: var(--text-main);
+      background-color: var(--bg-main);
+      color: var(--color-text);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      line-height: 1.75;
-      padding: 40px 20px;
+      line-height: 1.65;
+      padding: 30px 16px;
     }
-    .report-container {
-      max-width: 900px;
+    .report-wrapper {
+      max-width: 1100px;
       margin: 0 auto;
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 48px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    }
+    .report-card {
+      background: var(--bg-sub);
+      border: 1px solid rgba(160, 109, 68, 0.08);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-default);
+      padding: 36px;
+      margin-bottom: 24px;
     }
     .header-tag {
       display: inline-flex;
@@ -64,122 +109,113 @@ function buildStandaloneHtml(report: {
       padding: 4px 12px;
       border-radius: 9999px;
       font-size: 13px;
-      font-weight: 600;
-      background: var(--accent-bg);
-      color: var(--accent);
-      border: 1px solid rgba(16, 185, 129, 0.25);
-      margin-bottom: 16px;
+      font-weight: 500;
+      background: rgba(255, 100, 30, 0.08);
+      color: var(--color-accent);
+      border: 1px solid rgba(255, 100, 30, 0.2);
+      margin-bottom: 14px;
     }
     h1.report-title {
-      font-size: 30px;
-      font-weight: 800;
+      font-size: 26px;
+      font-weight: 700;
       line-height: 1.35;
-      color: #ffffff;
-      margin-bottom: 16px;
+      color: var(--color-text);
+      margin-bottom: 14px;
     }
     .meta-bar {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       gap: 16px;
-      font-size: 14px;
-      color: var(--text-muted);
-      padding-bottom: 24px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 28px;
+      font-size: 13px;
+      color: var(--color-muted);
+      padding-bottom: 20px;
+      border-bottom: 1px solid rgba(160, 109, 68, 0.08);
+      margin-bottom: 24px;
     }
     .summary-box {
-      background: rgba(59, 130, 246, 0.08);
-      border-left: 4px solid var(--primary);
-      padding: 18px 22px;
+      background: #ffffff;
+      border-left: 4px solid var(--color-accent);
+      padding: 16px 20px;
       border-radius: 8px;
-      margin-bottom: 36px;
-      color: #e2e8f0;
-      font-size: 15px;
+      margin-bottom: 28px;
+      color: var(--color-text);
+      font-size: 14.5px;
+      border: 1px solid rgba(160, 109, 68, 0.06);
     }
     .summary-title {
-      font-weight: 700;
-      color: var(--primary-light);
+      font-weight: 600;
+      color: var(--color-accent);
       margin-bottom: 6px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
     }
     .report-body {
-      font-size: 16px;
-      color: #d1d5db;
+      font-size: 15.5px;
+      color: var(--color-text);
     }
     .report-body h2 {
-      font-size: 22px;
-      color: #f9fafb;
-      margin: 36px 0 16px 0;
-      padding-bottom: 8px;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
+      font-size: 20px;
+      color: var(--color-text);
+      margin: 28px 0 14px 0;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(160, 109, 68, 0.1);
     }
     .report-body h3 {
-      font-size: 18px;
-      color: #e5e7eb;
-      margin: 24px 0 12px 0;
+      font-size: 17px;
+      color: var(--color-text);
+      margin: 20px 0 10px 0;
     }
-    .report-body p { margin-bottom: 16px; }
-    .report-body ul, .report-body ol { margin: 12px 0 18px 24px; }
-    .report-body li { margin-bottom: 8px; }
+    .report-body p { margin-bottom: 14px; }
+    .report-body ul, .report-body ol { margin: 10px 0 16px 20px; }
+    .report-body li { margin-bottom: 6px; }
     .report-body img {
       max-width: 100%;
       height: auto;
-      border-radius: 10px;
-      margin: 20px 0;
-      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin: 16px 0;
     }
     .report-body table {
       width: 100%;
       border-collapse: collapse;
-      margin: 24px 0;
+      margin: 20px 0;
     }
     .report-body th, .report-body td {
-      border: 1px solid var(--border);
+      border: 1px solid rgba(160, 109, 68, 0.12);
       padding: 10px 14px;
       text-align: left;
     }
     .report-body th {
-      background: rgba(255,255,255,0.04);
-      color: #f3f4f6;
+      background: rgba(160, 109, 68, 0.05);
+      color: var(--color-text);
+      font-weight: 600;
     }
     .footer-watermark {
-      margin-top: 50px;
-      padding-top: 24px;
-      border-top: 1px solid var(--border);
       text-align: center;
-      font-size: 13px;
-      color: var(--text-muted);
-    }
-    @media print {
-      body { background: #ffffff; color: #111827; padding: 0; }
-      .report-container { box-shadow: none; border: none; padding: 0; max-width: 100%; }
-      h1.report-title { color: #111827; }
-      .summary-box { background: #f3f4f6; color: #1f2937; border-left-color: #2563eb; }
-      .report-body { color: #1f2937; }
+      font-size: 12px;
+      color: var(--color-muted);
+      margin-top: 16px;
     }
   </style>
 </head>
 <body>
-  <div class="report-container">
-    <div class="header-tag">🌐 ${region} · ${categoryLabel}</div>
-    <h1 class="report-title">${report.title}</h1>
-    <div class="meta-bar">
-      <span>📅 报告收录：${formattedDate}</span>
-      <span>🏷️ 类别：${categoryLabel}</span>
-      <span>🌍 区域：${region}</span>
-    </div>
+  <div class="report-wrapper">
+    <div class="report-card">
+      <div class="header-tag">🌐 ${region} · ${categoryLabel}</div>
+      <h1 class="report-title">${report.title}</h1>
+      <div class="meta-bar">
+        <span>📅 报告收录：${formattedDate}</span>
+        <span>🏷️ 类别：${categoryLabel}</span>
+        <span>🌍 区域：${region}</span>
+      </div>
 
-    ${report.summary ? `
-    <div class="summary-box">
-      <div class="summary-title">💡 报告战略摘要</div>
-      <div>${report.summary}</div>
-    </div>` : ''}
+      ${report.summary ? `
+      <div class="summary-box">
+        <div class="summary-title">💡 报告战略摘要</div>
+        <div>${report.summary}</div>
+      </div>` : ''}
 
-    <div class="report-body">
-      ${localizedContent}
+      <div class="report-body">
+        ${localizedContent}
+      </div>
     </div>
 
     <div class="footer-watermark">
