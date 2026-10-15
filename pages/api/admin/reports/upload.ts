@@ -105,10 +105,20 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
     return lookupName;
   });
 
-  // 4. 智能查重与覆盖判定（主体公司 + 国家 双重联合查重）
+  // 4. 智能查重与覆盖判定（主体公司 + 国家 双重联合查重，强安全门禁：禁止跨类别篡改）
   let existingReport;
   if (overwriteReportId) {
-    existingReport = await dbClient.query('SELECT id FROM reports WHERE id = $1', [overwriteReportId]);
+    const explicitRes = await dbClient.query('SELECT id, category, title FROM reports WHERE id = $1', [overwriteReportId]);
+    if (explicitRes.rows.length > 0) {
+      const targetCategory = explicitRes.rows[0].category;
+      if (targetCategory && targetCategory !== finalCategory) {
+        console.warn(
+          `[Admin Upload Security Guard] 拒绝跨分类覆盖！目标报告 (ID: ${overwriteReportId}) 类型为 "${targetCategory}"，而待上传报告类型为 "${finalCategory}"。已自动阻止覆盖并降级为安全新建！`
+        );
+      } else {
+        existingReport = explicitRes;
+      }
+    }
   } else if (finalCategory === 'customer' && primaryEntityId) {
     // 优先按主体公司 + 目标国家联合查重
     if (mappedCountries.length > 0) {
@@ -135,10 +145,10 @@ async function uploadHandler(req: NextApiRequest, res: NextApiResponse, dbClient
   }
 
   if (!existingReport || existingReport.rows.length === 0) {
-    // 兜底按报告标题查重
+    // 兜底按报告标题查重（必须限定相同类别）
     existingReport = await dbClient.query(
-      'SELECT id FROM reports WHERE title = $1 ORDER BY created_at ASC LIMIT 1',
-      [meta.title]
+      'SELECT id FROM reports WHERE title = $1 AND category = $2 ORDER BY created_at ASC LIMIT 1',
+      [meta.title, finalCategory]
     );
   }
 

@@ -137,11 +137,18 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     // 4. 元数据去重检查与插入（智能幂等与主体+国家双重覆盖设计）
     let existingReport;
 
-    // 优先：显式指定的 target_report_id
+    // 优先：显式指定的 target_report_id（增加强安全门禁：禁止跨类别覆盖，严防品类报告被客户报告篡改覆盖）
     if (explicitTargetId) {
-      const explicitRes = await dbClient.query('SELECT id FROM reports WHERE id = $1', [explicitTargetId]);
+      const explicitRes = await dbClient.query('SELECT id, category, title FROM reports WHERE id = $1', [explicitTargetId]);
       if (explicitRes.rows.length > 0) {
-        existingReport = explicitRes;
+        const targetCategory = explicitRes.rows[0].category;
+        if (targetCategory && targetCategory !== finalCategory) {
+          console.warn(
+            `[Security Guard] 拒绝跨分类覆盖！目标报告 (ID: ${explicitTargetId}) 类型为 "${targetCategory}"，而待发布报告类型为 "${finalCategory}"。已自动阻止覆盖并降级为安全新建，保护原报告资产！`
+          );
+        } else {
+          existingReport = explicitRes;
+        }
       }
     }
 
@@ -191,10 +198,10 @@ async function publishHandler(req: NextApiRequest, res: NextApiResponse, dbClien
     }
 
     if (!existingReport || existingReport.rows.length === 0) {
-      // 兜底查重：根据报告标题匹配最早产生的记录
+      // 兜底查重：根据报告标题匹配最早产生的记录（必须限定相同类别，杜绝跨类别冲突）
       existingReport = await dbClient.query(
-        'SELECT id FROM reports WHERE title = $1 ORDER BY created_at ASC LIMIT 1',
-        [meta.title || title]
+        'SELECT id FROM reports WHERE title = $1 AND category = $2 ORDER BY created_at ASC LIMIT 1',
+        [meta.title || title, finalCategory]
       );
     }
 

@@ -509,6 +509,14 @@ export function getStandardCategory(term: string): string | null {
   const prefixMatch = STANDARD_CATEGORIES.find(c => cleanTerm.startsWith(c) || cleanTerm.startsWith(`${c}-`) || cleanTerm.startsWith(`${c}_`));
   if (prefixMatch) return prefixMatch;
 
+  // 1.5 包含 54 大类标准名称（按大类名称长度降序，优先匹配长词）
+  const sortedCategories = [...STANDARD_CATEGORIES].sort((a, b) => b.length - a.length);
+  for (const cat of sortedCategories) {
+    if (cleanTerm.includes(cat)) {
+      return cat;
+    }
+  }
+
   // 2. 查找关键字完全匹配
   for (const [cat, keywords] of Object.entries(CATEGORY_KEYWORDS_MAP)) {
     if (keywords.some(k => k.toLowerCase() === cleanTerm.toLowerCase())) {
@@ -519,29 +527,68 @@ export function getStandardCategory(term: string): string | null {
   // 3. 模糊包含匹配 (例如 "LED投光灯" 包含 "灯" 或者包含关键词)
   for (const [cat, keywords] of Object.entries(CATEGORY_KEYWORDS_MAP)) {
     for (const kw of keywords) {
-      if (cleanTerm.includes(kw) || kw.includes(cleanTerm)) {
+      if (cleanTerm.includes(kw)) {
         return cat;
       }
     }
   }
 
-  // 4. 特殊行业归纳模糊匹配 (如："投光灯" -> "照明产品", "洁面仪" -> "个人护理用具")
+  // 4. 高频行业与核心领域语义规则归一化
   if (cleanTerm.includes('灯') || cleanTerm.includes('照明') || cleanTerm.includes('Licht') || cleanTerm.includes('Leuchten') || cleanTerm.includes('Lighting')) {
     return '照明产品';
   }
-  if (cleanTerm.includes('洁面') || cleanTerm.includes('美容') || cleanTerm.includes('生发') || cleanTerm.includes('剃须') || cleanTerm.includes('吹风') || cleanTerm.includes('个人护理')) {
+  if (cleanTerm.includes('餐具') || cleanTerm.includes('厨具') || cleanTerm.includes('烹饪') || cleanTerm.includes('操作台') || cleanTerm.includes('刀叉') || cleanTerm.includes('保温杯') || cleanTerm.includes('锅') || cleanTerm.includes('砧板')) {
+    return '餐厨器皿';
+  }
+  if (cleanTerm.includes('家电') || cleanTerm.includes('白电') || cleanTerm.includes('冰箱') || cleanTerm.includes('洗衣机') || cleanTerm.includes('烘干机') || cleanTerm.includes('空调') || cleanTerm.includes('微波炉') || cleanTerm.includes('咖啡机') || cleanTerm.includes('吸尘器') || cleanTerm.includes('清洁机器人') || cleanTerm.includes('烟机') || cleanTerm.includes('灶具') || cleanTerm.includes('洗碗机') || cleanTerm.includes('电饭煲') || cleanTerm.includes('冰柜')) {
+    return '家用电器';
+  }
+  if (cleanTerm.includes('家具') || cleanTerm.includes('沙发') || cleanTerm.includes('床') || cleanTerm.includes('桌椅') || cleanTerm.includes('文件柜') || cleanTerm.includes('长椅') || cleanTerm.includes('办公椅')) {
+    return '家具';
+  }
+  if (cleanTerm.includes('家纺') || cleanTerm.includes('床品') || cleanTerm.includes('床上') || cleanTerm.includes('窗帘') || cleanTerm.includes('被芯') || cleanTerm.includes('枕头') || cleanTerm.includes('毛巾') || cleanTerm.includes('浴巾')) {
+    return '家用纺织品';
+  }
+  if (cleanTerm.includes('轴承') || cleanTerm.includes('传动') || cleanTerm.includes('液压') || cleanTerm.includes('气动') || cleanTerm.includes('泵') || cleanTerm.includes('阀门') || cleanTerm.includes('减速机') || cleanTerm.includes('风机') || cleanTerm.includes('压缩机')) {
+    return '通用机械及机械基础件';
+  }
+  if (cleanTerm.includes('自动化') || cleanTerm.includes('工控') || cleanTerm.includes('PLC') || cleanTerm.includes('机械臂') || cleanTerm.includes('变频器') || cleanTerm.includes('传感器') || cleanTerm.includes('智能制造') || cleanTerm.includes('输送')) {
+    return '工业自动化及智能制造';
+  }
+  if (cleanTerm.includes('电视') || cleanTerm.includes('音响') || cleanTerm.includes('数码') || cleanTerm.includes('手机') || cleanTerm.includes('平板') || cleanTerm.includes('投影') || cleanTerm.includes('相机') || cleanTerm.includes('3C') || cleanTerm.includes('电竞') || cleanTerm.includes('通讯')) {
+    return '电子消费品及信息产品';
+  }
+  if (cleanTerm.includes('光伏') || cleanTerm.includes('储能') || cleanTerm.includes('太阳能') || cleanTerm.includes('锂电') || cleanTerm.includes('逆变器') || cleanTerm.includes('电池')) {
+    return '新能源';
+  }
+  if (cleanTerm.includes('电线') || cleanTerm.includes('电缆') || cleanTerm.includes('开关') || cleanTerm.includes('插座') || cleanTerm.includes('断路器') || cleanTerm.includes('变压器') || cleanTerm.includes('配电') || cleanTerm.includes('芯片') || cleanTerm.includes('PCB')) {
+    return '电子电气产品';
+  }
+  if (cleanTerm.includes('收纳') || cleanTerm.includes('日用') || cleanTerm.includes('清洁用具') || cleanTerm.includes('垃圾桶') || cleanTerm.includes('雨伞') || cleanTerm.includes('包材')) {
+    return '家居用品';
+  }
+  if (cleanTerm.includes('母婴') || cleanTerm.includes('儿童') || cleanTerm.includes('婴儿') || cleanTerm.includes('奶瓶') || cleanTerm.includes('童车') || cleanTerm.includes('纸尿裤')) {
+    return '孕婴童用品';
+  }
+  if (cleanTerm.includes('陶瓷') || cleanTerm.includes('瓷盘') || cleanTerm.includes('瓷碗') || cleanTerm.includes('马克杯')) {
+    return '日用陶瓷';
+  }
+  if (cleanTerm.includes('玻璃') || cleanTerm.includes('水晶') || cleanTerm.includes('花瓶') || cleanTerm.includes('烛台')) {
+    return '玻璃工艺品';
+  }
+  if (cleanTerm.includes('洁面') || cleanTerm.includes('美容') || cleanTerm.includes('生发') || cleanTerm.includes('剃须') || cleanTerm.includes('吹风') || cleanTerm.includes('个人护理') || cleanTerm.includes('牙刷') || cleanTerm.includes('按摩器')) {
     return '个人护理用具';
   }
-  if (cleanTerm.includes('汽车') || cleanTerm.includes('车配件') || cleanTerm.includes('轮毂') || cleanTerm.includes('车桥')) {
+  if (cleanTerm.includes('汽车') || cleanTerm.includes('车配件') || cleanTerm.includes('轮毂') || cleanTerm.includes('车桥') || cleanTerm.includes('轮胎') || cleanTerm.includes('刹车') || cleanTerm.includes('雨刮')) {
     return '汽车配件';
   }
-  if (cleanTerm.includes('门窗') || cleanTerm.includes('把手') || cleanTerm.includes('锁') || cleanTerm.includes('五金')) {
+  if (cleanTerm.includes('门窗') || cleanTerm.includes('把手') || cleanTerm.includes('锁') || cleanTerm.includes('五金') || cleanTerm.includes('螺丝') || cleanTerm.includes('合页')) {
     return '五金';
   }
-  if (cleanTerm.includes('工具') || cleanTerm.includes('扳手') || cleanTerm.includes('螺丝刀')) {
+  if (cleanTerm.includes('工具') || cleanTerm.includes('扳手') || cleanTerm.includes('螺丝刀') || cleanTerm.includes('电钻') || cleanTerm.includes('钳') || cleanTerm.includes('耗材')) {
     return '工具';
   }
-  if (cleanTerm.includes('卫浴') || cleanTerm.includes('花洒') || cleanTerm.includes('水龙头') || cleanTerm.includes('马桶') || cleanTerm.includes('美妆镜') || cleanTerm.includes('化妆镜')) {
+  if (cleanTerm.includes('卫浴') || cleanTerm.includes('花洒') || cleanTerm.includes('水龙头') || cleanTerm.includes('马桶') || cleanTerm.includes('美妆镜') || cleanTerm.includes('化妆镜') || cleanTerm.includes('淋浴') || cleanTerm.includes('浴缸')) {
     return '卫浴设备';
   }
 
