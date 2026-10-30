@@ -28,6 +28,13 @@ function getSearchVariants(name: string): string[] {
   return Array.from(variants);
 }
 
+function extractMetaFromHtml(html: string | null | undefined, name: string): string | null {
+  if (!html) return null;
+  const match = html.match(new RegExp(`<meta[^>]*?name=["']${name}["'][^>]*?content=["']([^"']*)["']`, 'i'))
+    || html.match(new RegExp(`<meta[^>]*?content=["']([^"']*)["'][^>]*?name=["']${name}["']`, 'i'));
+  return match && match[1] ? match[1].trim() : null;
+}
+
 async function agentReportsHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
   // 1. 安全校验：允许合法 Agent API Key 或已登录管理员/用户
   const apiKeyHeader = req.headers['x-agent-api-key'] || req.headers['authorization']?.replace('Bearer ', '');
@@ -63,20 +70,13 @@ async function agentReportsHandler(req: NextApiRequest, res: NextApiResponse, db
     // 匹配主体公司实体与报告（使用子查询去重，严格限定 category = 'customer'，防止品类报告被误查重）
     const companyRes = await dbClient.query(`
       SELECT r.id, r.title, r.category, r.market_region, r.created_at, e.canonical_name AS primary_company,
-             COALESCE(
-               (
-                 SELECT STRING_AGG(ind.name, ', ') 
-                 FROM report_industries ri 
-                 JOIN industries ind ON ri.industry_id = ind.id 
-                 WHERE ri.report_id = r.id
-               ),
-               SUBSTRING(r.content_html FROM 'name=["\']products["\'][^>]*?content=["\']([^"\']*)["\']'),
-               SUBSTRING(r.content_html FROM 'content=["\']([^"\']*)["\'][^>]*?name=["\']products["\']')
-             ) AS products,
-             COALESCE(
-               SUBSTRING(r.content_html FROM 'name=["\']company_website["\'][^>]*?content=["\']([^"\']*)["\']'),
-               SUBSTRING(r.content_html FROM 'content=["\']([^"\']*)["\'][^>]*?name=["\']company_website["\']')
-             ) AS website
+             (
+               SELECT STRING_AGG(ind.name, ', ') 
+               FROM report_industries ri 
+               JOIN industries ind ON ri.industry_id = ind.id 
+               WHERE ri.report_id = r.id
+             ) AS industry_names,
+             SUBSTRING(r.content_html, 1, 3000) AS head_html
       FROM reports r
       JOIN report_entities re ON r.id = re.report_id AND re.role = 'primary'
       JOIN entities e ON re.entity_id = e.id
@@ -106,8 +106,8 @@ async function agentReportsHandler(req: NextApiRequest, res: NextApiResponse, db
           category: r.category,
           market_region: r.market_region,
           primary_company: r.primary_company,
-          website: r.website || null,
-          products: r.products || null,
+          website: extractMetaFromHtml(r.head_html, 'company_website'),
+          products: r.industry_names || extractMetaFromHtml(r.head_html, 'products') || null,
           created_at: new Date(r.created_at).toLocaleDateString('zh-CN'),
           url: `${baseUrl}/reports/${r.id}`
         }))
@@ -195,65 +195,57 @@ async function agentReportsHandler(req: NextApiRequest, res: NextApiResponse, db
   const sizeNum = isAll ? 500 : Math.min(200, Math.max(1, parseInt(pageSize as string, 10) || 50));
   const offset = (pageNum - 1) * sizeNum;
 
-  const whereCategory = category && category !== 'All' ? 'WHERE r.category = $3' : '';
-  const queryParams: any[] = isAll ? [] : [sizeNum, offset];
-  if (whereCategory) queryParams.push(category);
+  const hasCategory = Boolean(category && category !== 'All');
+  const queryParams: any[] = [];
+  let whereCategory = '';
 
-  const countRes = await dbClient.query(`SELECT COUNT(*)::int AS total FROM reports r ${whereCategory ? 'WHERE category = $1' : ''}`, whereCategory ? [category] : []);
+  if (hasCategory) {
+    queryParams.push(category);
+    whereCategory = `WHERE r.category = $${queryParams.length}`;
+  }
+
+  const countRes = await dbClient.query(
+    `SELECT COUNT(*)::int AS total FROM reports r ${whereCategory}`,
+    hasCategory ? [category] : []
+  );
   const total = countRes.rows[0]?.total || 0;
 
-  const listQuery = isAll
-    ? `SELECT r.id, r.title, r.category, r.market_region, r.created_at,
-              e.canonical_name AS primary_company,
-              ARRAY_REMOVE(ARRAY_AGG(DISTINCT ea.alias_name), NULL) AS aliases,
-              COALESCE(
-                (
-                  SELECT STRING_AGG(ind.name, ', ') 
-                  FROM report_industries ri 
-                  JOIN industries ind ON ri.industry_id = ind.id 
-                  WHERE ri.report_id = r.id
-                ),
-                SUBSTRING(r.content_html FROM 'name=["\']products["\'][^>]*?content=["\']([^"\']*)["\']'),
-                SUBSTRING(r.content_html FROM 'content=["\']([^"\']*)["\'][^>]*?name=["\']products["\']')
-              ) AS products,
-              COALESCE(
-                SUBSTRING(r.content_html FROM 'name=["\']company_website["\'][^>]*?content=["\']([^"\']*)["\']'),
-                SUBSTRING(r.content_html FROM 'content=["\']([^"\']*)["\'][^>]*?name=["\']company_website["\']')
-              ) AS website
-       FROM reports r
-       LEFT JOIN report_entities re ON r.id = re.report_id AND re.role = 'primary'
-       LEFT JOIN entities e ON re.entity_id = e.id
-       LEFT JOIN entity_aliases ea ON e.id = ea.entity_id
-       ${whereCategory ? 'WHERE r.category = $1' : ''}
-       GROUP BY r.id, r.title, r.category, r.market_region, r.created_at, e.canonical_name
-       ORDER BY r.created_at DESC`
-    : `SELECT r.id, r.title, r.category, r.market_region, r.created_at,
-              e.canonical_name AS primary_company,
-              ARRAY_REMOVE(ARRAY_AGG(DISTINCT ea.alias_name), NULL) AS aliases,
-              COALESCE(
-                (
-                  SELECT STRING_AGG(ind.name, ', ') 
-                  FROM report_industries ri 
-                  JOIN industries ind ON ri.industry_id = ind.id 
-                  WHERE ri.report_id = r.id
-                ),
-                SUBSTRING(r.content_html FROM 'name=["\']products["\'][^>]*?content=["\']([^"\']*)["\']'),
-                SUBSTRING(r.content_html FROM 'content=["\']([^"\']*)["\'][^>]*?name=["\']products["\']')
-              ) AS products,
-              COALESCE(
-                SUBSTRING(r.content_html FROM 'name=["\']company_website["\'][^>]*?content=["\']([^"\']*)["\']'),
-                SUBSTRING(r.content_html FROM 'content=["\']([^"\']*)["\'][^>]*?name=["\']company_website["\']')
-              ) AS website
-       FROM reports r
-       LEFT JOIN report_entities re ON r.id = re.report_id AND re.role = 'primary'
-       LEFT JOIN entities e ON re.entity_id = e.id
-       LEFT JOIN entity_aliases ea ON e.id = ea.entity_id
-       ${whereCategory ? 'WHERE r.category = $3' : ''}
-       GROUP BY r.id, r.title, r.category, r.market_region, r.created_at, e.canonical_name
-       ORDER BY r.created_at DESC
-       LIMIT $1 OFFSET $2`;
+  let paginationClause = '';
+  if (!isAll) {
+    queryParams.push(sizeNum);
+    const limitIdx = queryParams.length;
+    queryParams.push(offset);
+    const offsetIdx = queryParams.length;
+    paginationClause = `LIMIT $${limitIdx} OFFSET $${offsetIdx}`;
+  }
 
-  const listRes = await dbClient.query(listQuery, isAll ? (whereCategory ? [category] : []) : queryParams);
+  const listQuery = `
+    WITH base_reports AS (
+      SELECT r.id, r.title, r.category, r.market_region, r.created_at,
+             SUBSTRING(r.content_html, 1, 3000) AS head_html
+      FROM reports r
+      ${whereCategory}
+      ORDER BY r.created_at DESC
+      ${paginationClause}
+    )
+    SELECT b.id, b.title, b.category, b.market_region, b.created_at, b.head_html,
+           e.canonical_name AS primary_company,
+           ARRAY_REMOVE(ARRAY_AGG(DISTINCT ea.alias_name), NULL) AS aliases,
+           (
+             SELECT STRING_AGG(ind.name, ', ') 
+             FROM report_industries ri 
+             JOIN industries ind ON ri.industry_id = ind.id 
+             WHERE ri.report_id = b.id
+           ) AS industry_names
+    FROM base_reports b
+    LEFT JOIN report_entities re ON b.id = re.report_id AND re.role = 'primary'
+    LEFT JOIN entities e ON re.entity_id = e.id
+    LEFT JOIN entity_aliases ea ON e.id = ea.entity_id
+    GROUP BY b.id, b.title, b.category, b.market_region, b.created_at, b.head_html, e.canonical_name
+    ORDER BY b.created_at DESC
+  `;
+
+  const listRes = await dbClient.query(listQuery, queryParams);
 
   return res.status(200).json({
     total,
@@ -266,8 +258,8 @@ async function agentReportsHandler(req: NextApiRequest, res: NextApiResponse, db
       market_region: r.market_region,
       primary_company: r.primary_company || null,
       aliases: r.aliases || [],
-      website: r.website || null,
-      products: r.products || null,
+      website: extractMetaFromHtml(r.head_html, 'company_website'),
+      products: r.industry_names || extractMetaFromHtml(r.head_html, 'products') || null,
       created_at: new Date(r.created_at).toLocaleDateString('zh-CN'),
       url: `${baseUrl}/reports/${r.id}`
     }))
