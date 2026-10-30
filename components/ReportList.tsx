@@ -65,18 +65,39 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedRegion, setSelectedRegion] = useState('All');
   const [selectedIndustry, setSelectedIndustry] = useState('All');
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 20;
+  const INITIAL_COUNT = 20;
+  const STEP_COUNT = 12;
+  const [visibleCount, setVisibleCount] = useState(INITIAL_COUNT);
+  const observerRef = React.useRef<HTMLDivElement | null>(null);
 
   const filtered = filterReports(reports, searchQuery, selectedCategory, selectedRegion, selectedIndustry);
 
-  // 筛选条件变化时，自动复位到第 1 页
+  // 筛选条件变化时，自动复位显示数量为初始 20 份
   React.useEffect(() => {
-    setCurrentPage(1);
+    setVisibleCount(INITIAL_COUNT);
   }, [searchQuery, selectedCategory, selectedRegion, selectedIndustry]);
 
-  const totalPages = Math.ceil(filtered.length / pageSize) || 1;
-  const paginatedReports = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  // 触底无限加载：当哨兵进入视口时自动追加 12 份报告
+  React.useEffect(() => {
+    if (visibleCount >= filtered.length) return;
+
+    const target = observerRef.current;
+    if (!target) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount(prev => Math.min(prev + STEP_COUNT, filtered.length));
+        }
+      },
+      { rootMargin: '300px 0px' }
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [visibleCount, filtered.length]);
+
+  const displayedReports = filtered.slice(0, visibleCount);
   
   // 搜索日志追踪（防抖，用户停止输入 1 秒后且 query 不为空时上报）
   React.useEffect(() => {
@@ -259,8 +280,8 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
 
       {/* 列表网格 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
-        {paginatedReports.length > 0 ? (
-          paginatedReports.map((report) => (
+        {displayedReports.length > 0 ? (
+          displayedReports.map((report) => (
             <Link 
               href={`/reports/${report.id}`} 
               key={report.id} 
@@ -502,104 +523,54 @@ export default function ReportList({ reports, userId, userRole, quota, onUnlockS
         )}
       </div>
 
-      {/* 分页控制器 */}
-      {totalPages > 1 && (
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginTop: '40px',
-          padding: '16px 24px',
-          background: 'rgba(255, 255, 255, 0.45)',
-          backdropFilter: 'blur(15px)',
-          WebkitBackdropFilter: 'blur(15px)',
-          border: '1px solid rgba(18, 18, 18, 0.05)',
-          borderRadius: 'var(--border-radius)',
-          boxShadow: '0 6px 20px rgba(0, 0, 0, 0.01)',
-          flexWrap: 'wrap',
-          gap: '16px'
-        }}>
-          <span style={{ fontSize: '0.85rem', color: 'var(--color-muted)', fontWeight: 300 }}>
-            显示第 <strong style={{ color: 'var(--color-text)', fontWeight: 500 }}>{(currentPage - 1) * pageSize + 1}</strong> 到 <strong style={{ color: 'var(--color-text)', fontWeight: 500 }}>{Math.min(currentPage * pageSize, filtered.length)}</strong> 条，共 <strong style={{ color: 'var(--color-text)', fontWeight: 500 }}>{filtered.length}</strong> 篇报告
-          </span>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <button
-              onClick={() => {
-                if (currentPage > 1) {
-                  setCurrentPage(prev => prev - 1);
-                  window.scrollTo({ top: 200, behavior: 'smooth' });
-                }
-              }}
-              disabled={currentPage <= 1}
-              style={{
-                padding: '6px 14px',
-                fontSize: '0.85rem',
-                borderRadius: 'var(--border-radius)',
-                border: '1px solid rgba(18, 18, 18, 0.1)',
-                background: currentPage <= 1 ? 'rgba(0, 0, 0, 0.02)' : 'rgba(255, 255, 255, 0.8)',
-                color: currentPage <= 1 ? 'rgba(18, 18, 18, 0.25)' : 'var(--color-text)',
-                cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s'
-              }}
-            >
-              上一页
-            </button>
-
-            {/* 页码数字按钮 */}
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 2)
-              .map((p, idx, arr) => {
-                const prevPage = arr[idx - 1];
-                const showEllipsis = prevPage && p - prevPage > 1;
-                return (
-                  <React.Fragment key={p}>
-                    {showEllipsis && <span style={{ color: 'var(--color-muted)', padding: '0 4px' }}>...</span>}
-                    <button
-                      onClick={() => {
-                        setCurrentPage(p);
-                        window.scrollTo({ top: 200, behavior: 'smooth' });
-                      }}
-                      style={{
-                        padding: '6px 12px',
-                        fontSize: '0.85rem',
-                        borderRadius: 'var(--border-radius)',
-                        border: p === currentPage ? '1px solid var(--color-accent)' : '1px solid rgba(18, 18, 18, 0.1)',
-                        background: p === currentPage ? 'var(--color-accent)' : 'rgba(255, 255, 255, 0.8)',
-                        color: p === currentPage ? '#ffffff' : 'var(--color-text)',
-                        fontWeight: p === currentPage ? 500 : 400,
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
-                    >
-                      {p}
-                    </button>
-                  </React.Fragment>
-                );
-              })}
-
-            <button
-              onClick={() => {
-                if (currentPage < totalPages) {
-                  setCurrentPage(prev => prev + 1);
-                  window.scrollTo({ top: 200, behavior: 'smooth' });
-                }
-              }}
-              disabled={currentPage >= totalPages}
-              style={{
-                padding: '6px 14px',
-                fontSize: '0.85rem',
-                borderRadius: 'var(--border-radius)',
-                border: '1px solid rgba(18, 18, 18, 0.1)',
-                background: currentPage >= totalPages ? 'rgba(0, 0, 0, 0.02)' : 'rgba(255, 255, 255, 0.8)',
-                color: currentPage >= totalPages ? 'rgba(18, 18, 18, 0.25)' : 'var(--color-text)',
-                cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s'
-              }}
-            >
-              下一页
-            </button>
+      {/* 滚动无限加载哨兵与状态提示 */}
+      {visibleCount < filtered.length && (
+        <div
+          ref={observerRef}
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: '36px 0 48px',
+            color: 'var(--color-muted)',
+            fontSize: '0.85rem'
+          }}
+        >
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '10px',
+            background: 'rgba(255, 255, 255, 0.55)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            padding: '10px 22px',
+            borderRadius: '24px',
+            border: '1px solid rgba(18, 18, 18, 0.06)',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.02)'
+          }}>
+            <span style={{
+              display: 'inline-block',
+              width: '14px',
+              height: '14px',
+              border: '2px solid var(--color-accent)',
+              borderTopColor: 'transparent',
+              borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite'
+            }} />
+            <span>向下滚动自动加载更多报告...</span>
           </div>
+        </div>
+      )}
+
+      {filtered.length > 0 && visibleCount >= filtered.length && (
+        <div style={{
+          textAlign: 'center',
+          padding: '36px 0 48px',
+          color: 'var(--color-muted)',
+          fontSize: '0.85rem',
+          letterSpacing: '0.5px'
+        }}>
+          已加载全部 {filtered.length} 篇报告
         </div>
       )}
     </div>

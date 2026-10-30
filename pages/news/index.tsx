@@ -39,8 +39,10 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isClientLoaded, setIsClientLoaded] = useState(false);
   const [isIndustriesExpanded, setIsIndustriesExpanded] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const PAGE_SIZE = 18;
+  const INITIAL_COUNT = 20;
+  const STEP_COUNT = 12;
+  const [visibleCount, setVisibleCount] = useState(INITIAL_COUNT);
+  const observerRef = React.useRef<HTMLDivElement | null>(null);
 
   // 1. 初始化读取 localStorage 缓存的用户订阅偏好
   useEffect(() => {
@@ -68,7 +70,6 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
       updated = [...selectedIndustries, name];
     }
     setSelectedIndustries(updated);
-    setCurrentPage(1);
     try {
       localStorage.setItem('gtb_selected_industries', JSON.stringify(updated));
     } catch (e) {}
@@ -76,7 +77,6 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
 
   const selectAll = () => {
     setSelectedIndustries([]);
-    setCurrentPage(1);
     try {
       localStorage.removeItem('gtb_selected_industries');
     } catch (e) {}
@@ -105,19 +105,32 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
     return matchInd && matchReg && matchKwd;
   });
 
-  const totalPages = Math.ceil(filteredNews.length / PAGE_SIZE) || 1;
-  const paginatedNews = filteredNews.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  // 筛选条件变化时，自动复位显示数量为初始 20 条
+  useEffect(() => {
+    setVisibleCount(INITIAL_COUNT);
+  }, [selectedIndustries, selectedRegion, searchKeyword]);
 
-  const handlePageChange = (page: number) => {
-    if (page < 1 || page > totalPages) return;
-    setCurrentPage(page);
-    if (typeof window !== 'undefined') {
-      const container = document.getElementById('news-feed-section');
-      if (container) {
-        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }
-  };
+  // 触底无限加载：当哨兵进入视口时自动追加 12 条资讯
+  useEffect(() => {
+    if (visibleCount >= filteredNews.length) return;
+
+    const target = observerRef.current;
+    if (!target) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount(prev => Math.min(prev + STEP_COUNT, filteredNews.length));
+        }
+      },
+      { rootMargin: '300px 0px' }
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [visibleCount, filteredNews.length]);
+
+  const displayedNews = filteredNews.slice(0, visibleCount);
 
   const regions = ['All', '欧洲', '北美', '亚洲', '东南亚', '中东', '南美', '非洲', '大洋洲'];
   const ogImageUrl = siteUrl ? `${siteUrl}/images/global_trade_trends.jpg` : '/images/global_trade_trends.jpg';
@@ -230,7 +243,7 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
                 type="text"
                 placeholder="搜索买家、渠道、品类或关税关键词..."
                 value={searchKeyword}
-                onChange={(e) => { setSearchKeyword(e.target.value); setCurrentPage(1); }}
+                onChange={(e) => setSearchKeyword(e.target.value)}
                 style={{
                   width: '100%',
                   padding: '12px 16px',
@@ -244,7 +257,7 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
               />
               {searchKeyword && (
                 <button 
-                  onClick={() => { setSearchKeyword(''); setCurrentPage(1); }}
+                  onClick={() => setSearchKeyword('')}
                   style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#999' }}
                 >
                   ✕
@@ -257,7 +270,7 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
               {/* 市场区域下拉 (无地球 emoji) */}
               <select
                 value={selectedRegion}
-                onChange={(e) => { setSelectedRegion(e.target.value); setCurrentPage(1); }}
+                onChange={(e) => setSelectedRegion(e.target.value)}
                 style={{
                   background: 'rgba(255, 255, 255, 0.65)',
                   border: '1px solid rgba(18, 18, 18, 0.08)',
@@ -468,7 +481,7 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
               gap: '24px',
               marginBottom: '40px'
             }}>
-              {paginatedNews.map((art) => {
+              {displayedNews.map((art) => {
                 const itemDate = new Date(art.published_at).toLocaleDateString('zh-CN', {
                   year: 'numeric',
                   month: 'short',
@@ -598,77 +611,54 @@ export default function PublicNewsPage({ newsList, industries, canonicalUrl, sit
               })}
             </div>
 
-            {/* 资讯卡片分页控件（单页最多18篇） */}
-            {totalPages > 1 && (
+            {/* 滚动无限加载哨兵与状态提示 */}
+            {visibleCount < filteredNews.length && (
+              <div
+                ref={observerRef}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  padding: '36px 0 60px',
+                  color: 'var(--color-muted)',
+                  fontSize: '0.85rem'
+                }}
+              >
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  background: 'rgba(255, 255, 255, 0.55)',
+                  backdropFilter: 'blur(12px)',
+                  WebkitBackdropFilter: 'blur(12px)',
+                  padding: '10px 22px',
+                  borderRadius: '24px',
+                  border: '1px solid rgba(18, 18, 18, 0.06)',
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.02)'
+                }}>
+                  <span style={{
+                    display: 'inline-block',
+                    width: '14px',
+                    height: '14px',
+                    border: '2px solid var(--color-accent, #ff641e)',
+                    borderTopColor: 'transparent',
+                    borderRadius: '50%',
+                    animation: 'spin 0.8s linear infinite'
+                  }} />
+                  <span>向下滚动自动加载更多资讯...</span>
+                </div>
+              </div>
+            )}
+
+            {filteredNews.length > 0 && visibleCount >= filteredNews.length && (
               <div style={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                gap: '8px',
-                margin: '40px 0 80px 0',
-                flexWrap: 'wrap'
+                textAlign: 'center',
+                padding: '36px 0 60px',
+                color: 'var(--color-muted)',
+                fontSize: '0.85rem',
+                letterSpacing: '0.5px'
               }}>
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  style={{
-                    padding: '8px 16px',
-                    fontSize: '0.85rem',
-                    background: currentPage === 1 ? 'rgba(0,0,0,0.03)' : 'rgba(255, 255, 255, 0.8)',
-                    color: currentPage === 1 ? 'var(--color-muted)' : 'var(--color-text)',
-                    border: '1px solid rgba(18, 18, 18, 0.1)',
-                    borderRadius: 'var(--border-radius)',
-                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  上一页
-                </button>
-
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-                  <button
-                    key={pageNum}
-                    onClick={() => handlePageChange(pageNum)}
-                    style={{
-                      width: '36px',
-                      height: '36px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.85rem',
-                      background: currentPage === pageNum ? 'var(--color-accent, #ff641e)' : 'rgba(255, 255, 255, 0.8)',
-                      color: currentPage === pageNum ? '#fff' : 'var(--color-text)',
-                      border: currentPage === pageNum ? '1px solid var(--color-accent, #ff641e)' : '1px solid rgba(18, 18, 18, 0.1)',
-                      borderRadius: 'var(--border-radius)',
-                      cursor: 'pointer',
-                      fontWeight: currentPage === pageNum ? 500 : 400,
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    {pageNum}
-                  </button>
-                ))}
-
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  style={{
-                    padding: '8px 16px',
-                    fontSize: '0.85rem',
-                    background: currentPage === totalPages ? 'rgba(0,0,0,0.03)' : 'rgba(255, 255, 255, 0.8)',
-                    color: currentPage === totalPages ? 'var(--color-muted)' : 'var(--color-text)',
-                    border: '1px solid rgba(18, 18, 18, 0.1)',
-                    borderRadius: 'var(--border-radius)',
-                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  下一页
-                </button>
-
-                <span style={{ fontSize: '0.8rem', color: 'var(--color-muted)', marginLeft: '12px' }}>
-                  共 {filteredNews.length} 篇资讯（第 {currentPage} / {totalPages} 页）
-                </span>
+                已加载全部 {filteredNews.length} 条资讯
               </div>
             )}
           </>
