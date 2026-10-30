@@ -45,17 +45,45 @@ export default function AdminRequestsPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // 分页状态
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalRequests, setTotalRequests] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [jumpPageInput, setJumpPageInput] = useState('1');
+
+  useEffect(() => {
+    setJumpPageInput(String(currentPage));
+  }, [currentPage]);
+
+  const handleJumpPage = () => {
+    const p = parseInt(jumpPageInput, 10);
+    if (isNaN(p)) {
+      setJumpPageInput(String(currentPage));
+      return;
+    }
+    const targetPage = Math.max(1, Math.min(totalPages, p));
+    setJumpPageInput(String(targetPage));
+    if (targetPage !== currentPage) {
+      setCurrentPage(targetPage);
+      fetchRequests(targetPage);
+    }
+  };
+
   // 详情弹窗
   const [activeItem, setActiveItem] = useState<RequestItem | null>(null);
   const [bindReportIdInput, setBindReportIdInput] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  const fetchRequests = useCallback(async () => {
+  const fetchRequests = useCallback(async (pageToFetch?: number) => {
+    const targetPage = typeof pageToFetch === 'number' ? pageToFetch : currentPage;
     setLoading(true);
     setFetchError(null);
     try {
       const query = new URLSearchParams();
+      query.set('page', String(targetPage));
+      query.set('pageSize', String(pageSize));
       if (typeFilter !== 'all') query.set('type', typeFilter);
       if (statusFilter !== 'all') query.set('status', statusFilter);
       if (searchQuery.trim()) query.set('search', searchQuery.trim());
@@ -64,6 +92,11 @@ export default function AdminRequestsPage() {
       if (res.ok) {
         const data = await res.json();
         setRequests(data.requests || []);
+        if (data.pagination) {
+          setCurrentPage(data.pagination.page);
+          setTotalRequests(data.pagination.total);
+          setTotalPages(data.pagination.totalPages);
+        }
         if (data.stats) {
           setStats(data.stats);
         }
@@ -78,11 +111,12 @@ export default function AdminRequestsPage() {
     } finally {
       setLoading(false);
     }
-  }, [typeFilter, statusFilter, searchQuery]);
+  }, [currentPage, pageSize, typeFilter, statusFilter, searchQuery]);
 
   useEffect(() => {
-    fetchRequests();
-  }, [fetchRequests]);
+    setCurrentPage(1);
+    fetchRequests(1);
+  }, [typeFilter, statusFilter, searchQuery]);
 
   const handleOpenDetail = (item: RequestItem) => {
     setActiveItem(item);
@@ -205,7 +239,7 @@ export default function AdminRequestsPage() {
             </p>
           </div>
           <button
-            onClick={fetchRequests}
+            onClick={() => fetchRequests()}
             className="admin-btn"
             style={{
               background: 'rgba(255, 255, 255, 0.08)',
@@ -326,7 +360,7 @@ export default function AdminRequestsPage() {
                 }}
               />
               <button
-                onClick={fetchRequests}
+                onClick={() => fetchRequests()}
                 style={{
                   background: 'var(--admin-accent)',
                   border: 'none',
@@ -347,7 +381,7 @@ export default function AdminRequestsPage() {
         {fetchError && (
           <div style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px', padding: '12px 18px', color: '#fca5a5', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>⚠️ 加载定制请求失败: {fetchError}</span>
-            <button onClick={fetchRequests} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '4px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}>重试</button>
+            <button onClick={() => fetchRequests()} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '4px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}>重试</button>
           </div>
         )}
 
@@ -495,6 +529,94 @@ export default function AdminRequestsPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* 分页控制栏 */}
+          {totalRequests > 0 && (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '16px 20px',
+              borderTop: '1px solid var(--admin-border)',
+              fontSize: '0.85rem',
+              color: 'var(--admin-text-secondary)',
+              flexWrap: 'wrap',
+              gap: '12px'
+            }}>
+              <div>
+                显示第 <strong>{(currentPage - 1) * pageSize + 1}</strong> 到 <strong>{Math.min(currentPage * pageSize, totalRequests)}</strong> 条，共 <strong>{totalRequests}</strong> 条记录
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  type="button"
+                  className="admin-btn admin-btn-secondary"
+                  style={{ padding: '4px 12px', fontSize: '0.8rem' }}
+                  disabled={currentPage <= 1 || loading}
+                  onClick={() => {
+                    const newP = currentPage - 1;
+                    setCurrentPage(newP);
+                    fetchRequests(newP);
+                  }}
+                >
+                  ◀ 上一页
+                </button>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, color: '#ffffff', padding: '0 4px' }}>
+                  <input
+                    type="number"
+                    min={1}
+                    max={totalPages}
+                    value={jumpPageInput}
+                    onChange={(e) => setJumpPageInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleJumpPage();
+                      }
+                    }}
+                    title="输入页码按 Enter 或点击跳转"
+                    style={{
+                      width: '56px',
+                      padding: '4px 6px',
+                      background: '#1b1b38',
+                      border: '1px solid var(--admin-border)',
+                      borderRadius: '6px',
+                      color: '#ffffff',
+                      textAlign: 'center',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      outline: 'none'
+                    }}
+                  />
+                  <span>/ {totalPages} 页</span>
+                  <button
+                    type="button"
+                    className="admin-btn admin-btn-secondary"
+                    style={{ padding: '4px 10px', fontSize: '0.8rem' }}
+                    onClick={handleJumpPage}
+                    disabled={loading}
+                  >
+                    跳转
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  className="admin-btn admin-btn-secondary"
+                  style={{ padding: '4px 12px', fontSize: '0.8rem' }}
+                  disabled={currentPage >= totalPages || loading}
+                  onClick={() => {
+                    const newP = currentPage + 1;
+                    setCurrentPage(newP);
+                    fetchRequests(newP);
+                  }}
+                >
+                  下一页 ▶
+                </button>
+              </div>
             </div>
           )}
         </div>

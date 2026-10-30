@@ -32,6 +32,24 @@ export default function AdminNewsManagement() {
   const pageSize = 20;
   const [totalNews, setTotalNews] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [jumpPageInput, setJumpPageInput] = useState('1');
+
+  useEffect(() => {
+    setJumpPageInput(String(currentPage));
+  }, [currentPage]);
+
+  const handleJumpPage = () => {
+    const p = parseInt(jumpPageInput, 10);
+    if (isNaN(p)) {
+      setJumpPageInput(String(currentPage));
+      return;
+    }
+    const targetPage = Math.max(1, Math.min(totalPages, p));
+    setJumpPageInput(String(targetPage));
+    if (targetPage !== currentPage) {
+      fetchData(targetPage);
+    }
+  };
 
   // 编辑器状态
   const [editId, setEditId] = useState<string | null>(null);
@@ -354,6 +372,45 @@ export default function AdminNewsManagement() {
                   >
                     下一页
                   </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, color: '#ffffff', marginLeft: '6px' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--admin-text-secondary)' }}>跳至</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={totalPages}
+                      value={jumpPageInput}
+                      onChange={(e) => setJumpPageInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleJumpPage();
+                        }
+                      }}
+                      title="输入页码按 Enter 或点击跳转"
+                      style={{
+                        width: '56px',
+                        padding: '4px 6px',
+                        background: '#1b1b38',
+                        border: '1px solid var(--admin-border)',
+                        borderRadius: '6px',
+                        color: '#ffffff',
+                        textAlign: 'center',
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                        outline: 'none'
+                      }}
+                    />
+                    <span>/ {totalPages} 页</span>
+                    <button
+                      type="button"
+                      className="admin-btn admin-btn-secondary"
+                      style={{ padding: '4px 10px', fontSize: '0.8rem' }}
+                      onClick={handleJumpPage}
+                      disabled={loading}
+                    >
+                      跳转
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

@@ -65,7 +65,21 @@ async function requestsHandler(req: NextApiRequest, res: NextApiResponse, dbClie
 
     const whereSql = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
 
+    const page = Math.max(1, parseInt((req.query.page as string) || '1', 10));
+    const pageSize = Math.max(1, Math.min(100, parseInt((req.query.pageSize as string) || '20', 10)));
+    const offset = (page - 1) * pageSize;
+
+    // 查询当前筛选条件下的总记录数
+    const countRes = await dbClient.query(`
+      SELECT COUNT(*) as filtered_total
+      FROM custom_report_requests r
+      LEFT JOIN users u ON r.user_id = u.id
+      ${whereSql}
+    `, params);
+    const filteredTotal = parseInt(countRes.rows[0]?.filtered_total || '0', 10);
+
     // 查询列表
+    const listParams = [...params, pageSize, offset];
     const listRes = await dbClient.query(`
       SELECT 
         r.id,
@@ -85,8 +99,8 @@ async function requestsHandler(req: NextApiRequest, res: NextApiResponse, dbClie
       LEFT JOIN reports rep ON r.report_id::text = rep.id::text
       ${whereSql}
       ORDER BY r.created_at DESC
-      LIMIT 200
-    `, params);
+      LIMIT $${pIndex} OFFSET $${pIndex + 1}
+    `, listParams);
 
     // 查询统计概览
     const statsRes = await dbClient.query(`
@@ -114,6 +128,12 @@ async function requestsHandler(req: NextApiRequest, res: NextApiResponse, dbClie
     return res.status(200).json({
       success: true,
       requests: listRes.rows,
+      pagination: {
+        page,
+        pageSize,
+        total: filteredTotal,
+        totalPages: Math.ceil(filteredTotal / pageSize) || 1
+      },
       stats: {
         total: parseInt(stats.total, 10),
         pending: parseInt(stats.pending_count, 10),
