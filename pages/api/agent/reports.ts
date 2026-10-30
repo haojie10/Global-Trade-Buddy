@@ -5,6 +5,29 @@ import { getSession } from '../../../lib/auth';
 
 const AGENT_API_KEY = process.env.AGENT_API_KEY || 'automation_agent_secret';
 
+function getSearchVariants(name: string): string[] {
+  const raw = name.trim();
+  const variants = new Set<string>();
+  if (raw) variants.add(raw);
+
+  // 剥离常见法律后缀与通用停用词
+  const cleaned = raw
+    .replace(/\b(AG|GmbH|LLC|Inc\.?|Ltd\.?|Corp\.?|PLC|SA|SAS|BV|SE|Co\.,\s*Ltd\.?|S\.p\.A\.|Pty\s*Ltd|Co\.?|Sp\.\s*z\s*o\.\s*o\.)\b/gi, '')
+    .replace(/\b(International|Global|Group|Holdings|Holding|Trading|Wholesale|Retail|Distribution|Industries|Enterprise)\b/gi, '')
+    .replace(/['’`\"“”]/g, '')
+    .replace(/[\(\)\[\]（）\-—_,\.&+/\\:]/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+
+  if (cleaned && cleaned.length >= 2) {
+    variants.add(cleaned);
+    cleaned.split(' ').forEach(w => {
+      if (w.length >= 3) variants.add(w);
+    });
+  }
+  return Array.from(variants);
+}
+
 async function agentReportsHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
   // 1. 安全校验：允许合法 Agent API Key 或已登录管理员/用户
   const apiKeyHeader = req.headers['x-agent-api-key'] || req.headers['authorization']?.replace('Bearer ', '');
@@ -34,10 +57,26 @@ async function agentReportsHandler(req: NextApiRequest, res: NextApiResponse, db
   // 场景 1: 企业研报专属查重 (通过主体公司名或别名)
   if (company && typeof company === 'string') {
     const companyQuery = company.trim();
+    const variants = getSearchVariants(companyQuery);
+    const searchPatterns = variants.map(v => `%${v}%`);
     
     // 匹配主体公司实体与报告（使用子查询去重，严格限定 category = 'customer'，防止品类报告被误查重）
     const companyRes = await dbClient.query(`
-      SELECT r.id, r.title, r.category, r.market_region, r.created_at, e.canonical_name AS primary_company
+      SELECT r.id, r.title, r.category, r.market_region, r.created_at, e.canonical_name AS primary_company,
+             COALESCE(
+               (
+                 SELECT STRING_AGG(ind.name, ', ') 
+                 FROM report_industries ri 
+                 JOIN industries ind ON ri.industry_id = ind.id 
+                 WHERE ri.report_id = r.id
+               ),
+               SUBSTRING(r.content_html FROM 'name=["\']products["\'][^>]*?content=["\']([^"\']*)["\']'),
+               SUBSTRING(r.content_html FROM 'content=["\']([^"\']*)["\'][^>]*?name=["\']products["\']')
+             ) AS products,
+             COALESCE(
+               SUBSTRING(r.content_html FROM 'name=["\']company_website["\'][^>]*?content=["\']([^"\']*)["\']'),
+               SUBSTRING(r.content_html FROM 'content=["\']([^"\']*)["\'][^>]*?name=["\']company_website["\']')
+             ) AS website
       FROM reports r
       JOIN report_entities re ON r.id = re.report_id AND re.role = 'primary'
       JOIN entities e ON re.entity_id = e.id
@@ -48,14 +87,14 @@ async function agentReportsHandler(req: NextApiRequest, res: NextApiResponse, db
         JOIN entities e2 ON re2.entity_id = e2.id
         LEFT JOIN entity_aliases ea2 ON e2.id = ea2.entity_id
         WHERE r2.category = 'customer' AND (
-          e2.canonical_name ILIKE $1 
-          OR ea2.alias_name ILIKE $1 
-          OR r2.title ILIKE $1
+          e2.canonical_name ILIKE ANY($1) 
+          OR ea2.alias_name ILIKE ANY($1) 
+          OR r2.title ILIKE ANY($1)
         )
       )
       ORDER BY r.created_at DESC
-      LIMIT 5
-    `, [`%${companyQuery}%`]);
+      LIMIT 10
+    `, [searchPatterns]);
 
     if (companyRes.rows.length > 0) {
       return res.status(200).json({
@@ -67,6 +106,8 @@ async function agentReportsHandler(req: NextApiRequest, res: NextApiResponse, db
           category: r.category,
           market_region: r.market_region,
           primary_company: r.primary_company,
+          website: r.website || null,
+          products: r.products || null,
           created_at: new Date(r.created_at).toLocaleDateString('zh-CN'),
           url: `${baseUrl}/reports/${r.id}`
         }))
@@ -164,7 +205,21 @@ async function agentReportsHandler(req: NextApiRequest, res: NextApiResponse, db
   const listQuery = isAll
     ? `SELECT r.id, r.title, r.category, r.market_region, r.created_at,
               e.canonical_name AS primary_company,
-              ARRAY_REMOVE(ARRAY_AGG(DISTINCT ea.alias_name), NULL) AS aliases
+              ARRAY_REMOVE(ARRAY_AGG(DISTINCT ea.alias_name), NULL) AS aliases,
+              COALESCE(
+                (
+                  SELECT STRING_AGG(ind.name, ', ') 
+                  FROM report_industries ri 
+                  JOIN industries ind ON ri.industry_id = ind.id 
+                  WHERE ri.report_id = r.id
+                ),
+                SUBSTRING(r.content_html FROM 'name=["\']products["\'][^>]*?content=["\']([^"\']*)["\']'),
+                SUBSTRING(r.content_html FROM 'content=["\']([^"\']*)["\'][^>]*?name=["\']products["\']')
+              ) AS products,
+              COALESCE(
+                SUBSTRING(r.content_html FROM 'name=["\']company_website["\'][^>]*?content=["\']([^"\']*)["\']'),
+                SUBSTRING(r.content_html FROM 'content=["\']([^"\']*)["\'][^>]*?name=["\']company_website["\']')
+              ) AS website
        FROM reports r
        LEFT JOIN report_entities re ON r.id = re.report_id AND re.role = 'primary'
        LEFT JOIN entities e ON re.entity_id = e.id
@@ -174,7 +229,21 @@ async function agentReportsHandler(req: NextApiRequest, res: NextApiResponse, db
        ORDER BY r.created_at DESC`
     : `SELECT r.id, r.title, r.category, r.market_region, r.created_at,
               e.canonical_name AS primary_company,
-              ARRAY_REMOVE(ARRAY_AGG(DISTINCT ea.alias_name), NULL) AS aliases
+              ARRAY_REMOVE(ARRAY_AGG(DISTINCT ea.alias_name), NULL) AS aliases,
+              COALESCE(
+                (
+                  SELECT STRING_AGG(ind.name, ', ') 
+                  FROM report_industries ri 
+                  JOIN industries ind ON ri.industry_id = ind.id 
+                  WHERE ri.report_id = r.id
+                ),
+                SUBSTRING(r.content_html FROM 'name=["\']products["\'][^>]*?content=["\']([^"\']*)["\']'),
+                SUBSTRING(r.content_html FROM 'content=["\']([^"\']*)["\'][^>]*?name=["\']products["\']')
+              ) AS products,
+              COALESCE(
+                SUBSTRING(r.content_html FROM 'name=["\']company_website["\'][^>]*?content=["\']([^"\']*)["\']'),
+                SUBSTRING(r.content_html FROM 'content=["\']([^"\']*)["\'][^>]*?name=["\']company_website["\']')
+              ) AS website
        FROM reports r
        LEFT JOIN report_entities re ON r.id = re.report_id AND re.role = 'primary'
        LEFT JOIN entities e ON re.entity_id = e.id
@@ -197,6 +266,8 @@ async function agentReportsHandler(req: NextApiRequest, res: NextApiResponse, db
       market_region: r.market_region,
       primary_company: r.primary_company || null,
       aliases: r.aliases || [],
+      website: r.website || null,
+      products: r.products || null,
       created_at: new Date(r.created_at).toLocaleDateString('zh-CN'),
       url: `${baseUrl}/reports/${r.id}`
     }))
