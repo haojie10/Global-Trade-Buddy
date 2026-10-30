@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { PoolClient } from 'pg';
 import { withDb } from '../../../../lib/api-handler';
 import { requireAdmin } from '../../../../lib/auth';
+import { sendMail } from '../../../../lib/email';
 
 const CREATE_TABLE_SQL = `
 CREATE TABLE IF NOT EXISTS custom_report_requests (
@@ -81,10 +82,10 @@ async function requestsHandler(req: NextApiRequest, res: NextApiResponse, dbClie
         rep.title as linked_report_title
       FROM custom_report_requests r
       LEFT JOIN users u ON r.user_id = u.id
-      LEFT JOIN reports rep ON r.report_id = rep.id
+      LEFT JOIN reports rep ON r.report_id::text = rep.id::text
       ${whereSql}
       ORDER BY r.created_at DESC
-      LIMIT 100
+      LIMIT 200
     `, params);
 
     // 查询统计概览
@@ -150,9 +151,58 @@ async function requestsHandler(req: NextApiRequest, res: NextApiResponse, dbClie
       return res.status(404).json({ error: '未找到指定的需求或反馈记录' });
     }
 
+    const updatedRecord = updateRes.rows[0];
+
+    // 如果状态更新为 completed 且提供了有效 report_id，自动给定制用户发送上线通知邮件
+    if (status === 'completed' && updatedRecord.contact_email && updatedRecord.report_id) {
+      try {
+        const payloadObj = updatedRecord.payload || {};
+        let reportTitle = 'AI 调研报告';
+        if (updatedRecord.request_type === 'category_insight') {
+          const channel = payloadObj.target_channel || payloadObj.channel || '';
+          const product = payloadObj.product_name || payloadObj.productName || '';
+          reportTitle = `《${channel} ${product} 品类洞察报告》`;
+        } else if (updatedRecord.request_type === 'company_insight') {
+          const company = payloadObj.company_name || payloadObj.companyName || '';
+          reportTitle = `《${company} 企业战略情报洞察报告》`;
+        }
+
+        const siteUrl = 'https://marketgraphic.cn';
+        const reportUrl = `${siteUrl}/reports/${updatedRecord.report_id}`;
+
+        const emailSubject = `【GlobalTradeBuddy】您定制的 ${reportTitle} 已完成并上线！`;
+        const emailHtml = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+            <h2 style="color: #0f172a; margin-bottom: 16px;">🎉 您好，您定制的 AI 研报已完成！</h2>
+            <p style="color: #475569; font-size: 15px; line-height: 1.6;">
+              您此前在 GlobalTradeBuddy 平台提交的定制研报需求：<strong>${reportTitle}</strong> 已经由管理员跟进生成完毕并正式上线。
+            </p>
+            <div style="margin: 28px 0; text-align: center;">
+              <a href="${reportUrl}" style="background: #2563eb; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+                查看完整研报详情 ➔
+              </a>
+            </div>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+            <p style="color: #94a3b8; font-size: 13px; text-align: center;">
+              GlobalTradeBuddy 出海贸易洞察平台
+            </p>
+          </div>
+        `;
+
+        await sendMail({
+          to: updatedRecord.contact_email,
+          subject: emailSubject,
+          html: emailHtml
+        });
+        console.log(`[admin/requests] 已发送研报完成邮件给: ${updatedRecord.contact_email}`);
+      } catch (emailErr) {
+        console.error('[admin/requests] 发送完成通知邮件失败:', emailErr);
+      }
+    }
+
     return res.status(200).json({
       success: true,
-      request: updateRes.rows[0]
+      request: updatedRecord
     });
   }
 

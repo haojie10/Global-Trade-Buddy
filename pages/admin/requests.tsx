@@ -47,10 +47,13 @@ export default function AdminRequestsPage() {
 
   // 详情弹窗
   const [activeItem, setActiveItem] = useState<RequestItem | null>(null);
+  const [bindReportIdInput, setBindReportIdInput] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const fetchRequests = useCallback(async () => {
     setLoading(true);
+    setFetchError(null);
     try {
       const query = new URLSearchParams();
       if (typeFilter !== 'all') query.set('type', typeFilter);
@@ -65,10 +68,13 @@ export default function AdminRequestsPage() {
           setStats(data.stats);
         }
       } else {
-        console.error('Failed to fetch requests');
+        const errJson = await res.json().catch(() => ({}));
+        setFetchError(errJson.error || `请求失败 (HTTP ${res.status})`);
+        console.error('Failed to fetch requests:', errJson);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching requests:', err);
+      setFetchError(err.message || '网络连接失败');
     } finally {
       setLoading(false);
     }
@@ -78,23 +84,43 @@ export default function AdminRequestsPage() {
     fetchRequests();
   }, [fetchRequests]);
 
-  const handleUpdateStatus = async (id: string, newStatus: string) => {
+  const handleOpenDetail = (item: RequestItem) => {
+    setActiveItem(item);
+    setBindReportIdInput(item.report_id || '');
+  };
+
+  const handleUpdateStatus = async (id: string, newStatus: string, reportId?: string) => {
     setUpdatingId(id);
     try {
       const res = await fetch('/api/admin/requests', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status: newStatus })
+        body: JSON.stringify({ 
+          id, 
+          status: newStatus,
+          report_id: reportId || undefined
+        })
       });
       if (res.ok) {
-        setRequests(prev => prev.map(item => item.id === id ? { ...item, status: newStatus as any } : item));
+        const data = await res.json();
+        const updated = data.request || {};
+        setRequests(prev => prev.map(item => item.id === id ? { 
+          ...item, 
+          status: newStatus as any,
+          report_id: updated.report_id || reportId || item.report_id 
+        } : item));
         if (activeItem && activeItem.id === id) {
-          setActiveItem({ ...activeItem, status: newStatus as any });
+          setActiveItem({ 
+            ...activeItem, 
+            status: newStatus as any,
+            report_id: updated.report_id || reportId || activeItem.report_id
+          });
         }
         // 更新统计数据
         fetchRequests();
       } else {
-        alert('更新状态失败，请重试');
+        const errJson = await res.json().catch(() => ({}));
+        alert(errJson.error || '更新状态失败，请重试');
       }
     } catch (err) {
       console.error('Error updating status:', err);
@@ -317,6 +343,14 @@ export default function AdminRequestsPage() {
           </div>
         </div>
 
+        {/* 错误提示栏 */}
+        {fetchError && (
+          <div style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px', padding: '12px 18px', color: '#fca5a5', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>⚠️ 加载定制请求失败: {fetchError}</span>
+            <button onClick={fetchRequests} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '4px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' }}>重试</button>
+          </div>
+        )}
+
         {/* 核心列表表格 */}
         <div className="admin-card" style={{ padding: 0, overflow: 'hidden' }}>
           {loading ? (
@@ -386,7 +420,7 @@ export default function AdminRequestsPage() {
                       <td style={{ padding: '14px 18px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                         <div style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}>
                           <button
-                            onClick={() => setActiveItem(item)}
+                            onClick={() => handleOpenDetail(item)}
                             style={{
                               background: 'transparent',
                               border: '1px solid var(--admin-border)',
@@ -550,6 +584,47 @@ export default function AdminRequestsPage() {
                     <a href={`/reports/${activeItem.report_id}`} target="_blank" rel="noreferrer" style={{ color: '#34d399', fontWeight: 600 }}>
                       {activeItem.linked_report_title} ➔
                     </a>
+                  </div>
+                )}
+
+                {/* 绑定研报交付输入区 */}
+                {activeItem.request_type !== 'feedback' && (
+                  <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed var(--admin-border)', padding: '12px 16px', borderRadius: '8px' }}>
+                    <div style={{ color: 'var(--admin-text-secondary)', fontSize: '0.8rem', marginBottom: '6px' }}>绑定交付的研报 ID (Report ID)</div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input 
+                        type="text" 
+                        placeholder="粘贴研报 UUID，如：7b2356c1-..." 
+                        value={bindReportIdInput} 
+                        onChange={(e) => setBindReportIdInput(e.target.value.trim())}
+                        style={{
+                          flex: 1,
+                          background: '#0a0a14',
+                          border: '1px solid var(--admin-border)',
+                          borderRadius: '6px',
+                          padding: '6px 10px',
+                          color: '#fff',
+                          fontSize: '0.82rem'
+                        }}
+                      />
+                      <button
+                        disabled={!bindReportIdInput || updatingId === activeItem.id}
+                        onClick={() => handleUpdateStatus(activeItem.id, 'completed', bindReportIdInput)}
+                        style={{
+                          background: '#10b981',
+                          color: '#fff',
+                          border: 'none',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                          opacity: !bindReportIdInput ? 0.5 : 1
+                        }}
+                      >
+                        绑定并标记完成
+                      </button>
+                    </div>
                   </div>
                 )}
 
