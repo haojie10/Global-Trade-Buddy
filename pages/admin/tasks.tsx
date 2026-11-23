@@ -64,6 +64,26 @@ export default function AdminTasksPage() {
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [jumpPageInput, setJumpPageInput] = useState('1');
+
+  useEffect(() => {
+    setJumpPageInput(String(page));
+  }, [page]);
+
+  const handleJumpPage = () => {
+    const maxPages = Math.max(1, totalPages);
+    const p = parseInt(jumpPageInput, 10);
+    if (isNaN(p)) {
+      setJumpPageInput(String(page));
+      return;
+    }
+    const targetPage = Math.max(1, Math.min(maxPages, p));
+    setJumpPageInput(String(targetPage));
+    if (targetPage !== page) {
+      setPage(targetPage);
+      fetchData(targetPage);
+    }
+  };
 
   // 筛选状态
   const [statusFilter, setStatusFilter] = useState('All');
@@ -1162,39 +1182,71 @@ export default function AdminTasksPage() {
             color: 'var(--admin-text-secondary)'
           }}>
             <div>
-              共 {total} 条客户记录 · 当前第 {page} / {totalPages || 1} 页
+              {total > 0 ? (
+                <>显示第 <strong>{(page - 1) * pageSize + 1}</strong> 到 <strong>{Math.min(page * pageSize, total)}</strong> 条，共 <strong>{total}</strong> 条客户记录</>
+              ) : (
+                <>共 0 条客户记录</>
+              )}
             </div>
 
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <button
-                disabled={page <= 1}
+                type="button"
+                className="admin-btn admin-btn-secondary"
+                disabled={page <= 1 || loading}
                 onClick={() => { setPage(page - 1); fetchData(page - 1); }}
-                style={{
-                  background: 'var(--admin-bg)',
-                  border: '1px solid var(--admin-border)',
-                  color: 'var(--admin-text)',
-                  padding: '4px 12px',
-                  borderRadius: '6px',
-                  cursor: page <= 1 ? 'not-allowed' : 'pointer',
-                  opacity: page <= 1 ? 0.5 : 1
-                }}
+                style={{ padding: '4px 12px', fontSize: '0.8rem' }}
               >
-                上一页
+                ◀ 上一页
               </button>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, color: 'var(--admin-text)', padding: '0 4px' }}>
+                <input
+                  type="number"
+                  min={1}
+                  max={Math.max(1, totalPages)}
+                  value={jumpPageInput}
+                  onChange={(e) => setJumpPageInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleJumpPage();
+                    }
+                  }}
+                  title="输入页码按 Enter 或点击跳转"
+                  style={{
+                    width: '56px',
+                    padding: '4px 6px',
+                    background: 'var(--admin-bg)',
+                    border: '1px solid var(--admin-border)',
+                    borderRadius: '6px',
+                    color: 'var(--admin-text)',
+                    textAlign: 'center',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    outline: 'none'
+                  }}
+                />
+                <span>/ {Math.max(1, totalPages)} 页</span>
+                <button
+                  type="button"
+                  className="admin-btn admin-btn-secondary"
+                  style={{ padding: '4px 10px', fontSize: '0.8rem' }}
+                  onClick={handleJumpPage}
+                  disabled={loading}
+                >
+                  跳转
+                </button>
+              </div>
+
               <button
-                disabled={page >= totalPages}
+                type="button"
+                className="admin-btn admin-btn-secondary"
+                disabled={page >= totalPages || loading}
                 onClick={() => { setPage(page + 1); fetchData(page + 1); }}
-                style={{
-                  background: 'var(--admin-bg)',
-                  border: '1px solid var(--admin-border)',
-                  color: 'var(--admin-text)',
-                  padding: '4px 12px',
-                  borderRadius: '6px',
-                  cursor: page >= totalPages ? 'not-allowed' : 'pointer',
-                  opacity: page >= totalPages ? 0.5 : 1
-                }}
+                style={{ padding: '4px 12px', fontSize: '0.8rem' }}
               >
-                下一页
+                下一页 ▶
               </button>
             </div>
           </div>
