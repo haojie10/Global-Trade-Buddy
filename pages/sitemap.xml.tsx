@@ -3,13 +3,19 @@ import pool from '../lib/db';
 
 const EXTERNAL_DATA_URL = 'https://marketgraphic.cn';
 
-function generateSiteMap(reports: any[], newsList: any[], latestDate: string) {
+function generateSiteMap(reports: any[], newsList: any[], wikiList: any[], latestDate: string) {
   return `<?xml version="1.0" encoding="UTF-8"?>
    <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
      <url>
        <loc>${EXTERNAL_DATA_URL}/</loc>
        <lastmod>${latestDate}</lastmod>
        <priority>1.0</priority>
+       <changefreq>daily</changefreq>
+     </url>
+     <url>
+       <loc>${EXTERNAL_DATA_URL}/wiki</loc>
+       <lastmod>${latestDate}</lastmod>
+       <priority>0.9</priority>
        <changefreq>daily</changefreq>
      </url>
      <url>
@@ -24,6 +30,18 @@ function generateSiteMap(reports: any[], newsList: any[], latestDate: string) {
        <priority>0.8</priority>
        <changefreq>daily</changefreq>
      </url>
+     ${wikiList
+       .map(({ slug, updated_at }) => {
+         return `
+       <url>
+           <loc>${EXTERNAL_DATA_URL}/wiki/${encodeURIComponent(slug)}</loc>
+           <lastmod>${new Date(updated_at || Date.now()).toISOString()}</lastmod>
+           <priority>0.85</priority>
+           <changefreq>weekly</changefreq>
+       </url>
+     `;
+       })
+       .join('')}
      ${reports
        .map(({ id, created_at }) => {
          return `
@@ -55,7 +73,8 @@ function generateSiteMap(reports: any[], newsList: any[], latestDate: string) {
 export const getServerSideProps: GetServerSideProps = async ({ res }) => {
   let reports: any[] = [];
   let newsList: any[] = [];
-  
+  let wikiList: any[] = [];
+
   let client;
   try {
     client = await pool.connect();
@@ -64,7 +83,18 @@ export const getServerSideProps: GetServerSideProps = async ({ res }) => {
 
     const newsResult = await client.query("SELECT id, published_at FROM news WHERE status='published' ORDER BY published_at DESC");
     newsList = newsResult.rows || [];
-    console.log(`[Sitemap] 成功获取 ${reports.length} 篇研报, ${newsList.length} 篇资讯`);
+
+    // NOTE: 单独容错，避免尚未执行百科迁移的数据库阻断整站 Sitemap 输出
+    try {
+      const wikiResult = await client.query(
+        "SELECT slug, updated_at FROM wiki_entries WHERE status = 'published' ORDER BY updated_at DESC"
+      );
+      wikiList = wikiResult.rows || [];
+    } catch (wikiError: any) {
+      console.warn('⚠️ Sitemap 查询 wiki_entries 失败（可能尚未迁移）:', wikiError?.message || wikiError);
+    }
+
+    console.log(`[Sitemap] 成功获取 ${reports.length} 篇研报, ${newsList.length} 篇资讯, ${wikiList.length} 篇百科`);
   } catch (error: any) {
     console.error('❌ Sitemap 数据库查询失败:', error?.message || error);
   } finally {
@@ -73,11 +103,20 @@ export const getServerSideProps: GetServerSideProps = async ({ res }) => {
     }
   }
 
+  const candidateTimestamps = [
+    reports[0]?.created_at,
+    newsList[0]?.published_at,
+    wikiList[0]?.updated_at,
+  ]
+    .filter(Boolean)
+    .map((dateValue) => new Date(dateValue).getTime())
+    .filter((timestamp) => Number.isFinite(timestamp));
+
   const latestDate = new Date(
-    reports[0]?.created_at || newsList[0]?.published_at || Date.now()
+    candidateTimestamps.length > 0 ? Math.max(...candidateTimestamps) : Date.now()
   ).toISOString();
 
-  const sitemap = generateSiteMap(reports, newsList, latestDate);
+  const sitemap = generateSiteMap(reports, newsList, wikiList, latestDate);
 
   res.setHeader('Content-Type', 'text/xml; charset=utf-8');
   res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=60, stale-while-revalidate=120');

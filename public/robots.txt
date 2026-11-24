@@ -1,8 +1,46 @@
 User-agent: *
 Allow: /
+Allow: /wiki
+Allow: /llms.txt
 Disallow: /admin/
 Disallow: /api/
 Disallow: /my-graph
 Disallow: /story-demo
+
+# 显式欢迎主流 AI 搜索引擎与生成式模型爬虫索引公开百科与资讯
+User-agent: GPTBot
+Allow: /wiki
+Allow: /llms.txt
+Allow: /news
+Disallow: /admin/
+Disallow: /api/
+
+User-agent: OAI-SearchBot
+Allow: /wiki
+Allow: /llms.txt
+Allow: /news
+Disallow: /admin/
+Disallow: /api/
+
+User-agent: PerplexityBot
+Allow: /wiki
+Allow: /llms.txt
+Allow: /news
+Disallow: /admin/
+Disallow: /api/
+
+User-agent: ClaudeBot
+Allow: /wiki
+Allow: /llms.txt
+Allow: /news
+Disallow: /admin/
+Disallow: /api/
+
+User-agent: Bytespider
+Allow: /wiki
+Allow: /llms.txt
+Allow: /news
+Disallow: /admin/
+Disallow: /api/
 
 Sitemap: https://marketgraphic.cn/sitemap.xml

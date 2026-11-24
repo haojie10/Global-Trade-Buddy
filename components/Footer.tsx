@@ -95,6 +95,19 @@ export default function Footer() {
             </Link>
 
             <Link
+              href="/wiki"
+              style={{
+                color: 'var(--color-muted, #555)',
+                textDecoration: 'none',
+                transition: 'color 0.2s'
+              }}
+              onMouseOver={(e) => (e.currentTarget.style.color = 'var(--color-accent, #ff641e)')}
+              onMouseOut={(e) => (e.currentTarget.style.color = 'var(--color-muted, #555)')}
+            >
+              行业百科
+            </Link>
+
+            <Link
               href="/my-graph"
               style={{
                 color: 'var(--color-muted, #555)',

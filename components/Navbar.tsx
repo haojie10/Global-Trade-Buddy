@@ -135,6 +135,7 @@ export default function Navbar({
           {!isMobile && (
             <nav style={{ display: 'flex', alignItems: 'center', gap: '22px' }}>
               <Link href="/news" style={{ textDecoration: 'none', color: 'var(--color-text)', fontSize: '1rem', fontWeight: 400, transition: 'color 0.2s' }} className="nav-menu-item">每日资讯</Link>
+              <Link href="/wiki" style={{ textDecoration: 'none', color: 'var(--color-text)', fontSize: '1rem', fontWeight: 400, transition: 'color 0.2s' }} className="nav-menu-item">行业百科</Link>
               <Link href="/reports" style={{ textDecoration: 'none', color: 'var(--color-text)', fontSize: '1rem', fontWeight: 400, transition: 'color 0.2s' }} className="nav-menu-item">报告大厅</Link>
               <Link href="/my-graph" style={{ textDecoration: 'none', color: 'var(--color-text)', fontSize: '1rem', fontWeight: 400, transition: 'color 0.2s' }} className="nav-menu-item">个人图谱</Link>
               <button 
@@ -479,6 +480,9 @@ export default function Navbar({
         }}>
           <Link href="/news" onClick={() => setMobileMenuOpen(false)} style={{ textDecoration: 'none', color: 'var(--color-text)', fontSize: '1.1rem', fontWeight: 400, padding: '8px 0', display: 'block' }}>
             每日资讯
+          </Link>
+          <Link href="/wiki" onClick={() => setMobileMenuOpen(false)} style={{ textDecoration: 'none', color: 'var(--color-text)', fontSize: '1.1rem', fontWeight: 400, padding: '8px 0', display: 'block' }}>
+            行业百科
           </Link>
           <Link href="/reports" onClick={() => setMobileMenuOpen(false)} style={{ textDecoration: 'none', color: 'var(--color-text)', fontSize: '1.1rem', fontWeight: 400, padding: '8px 0', display: 'block' }}>
             报告大厅

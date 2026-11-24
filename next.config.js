@@ -7,12 +7,24 @@ const nextConfig = {
   ...(process.env.NEXT_OUTPUT_STANDALONE === 'true' ? { output: 'standalone' } : {}),
 
   async rewrites() {
-    return [
-      {
-        source: '/baidu_verify_:slug*.html',
-        destination: '/api/verify-baidu',
-      },
-    ];
+    return {
+      beforeFiles: [
+        {
+          source: '/llms.txt',
+          destination: '/api/llms',
+        },
+        {
+          source: '/wiki/:slug.md',
+          destination: '/api/wiki/:slug/markdown',
+        },
+      ],
+      afterFiles: [
+        {
+          source: '/baidu_verify_:slug*.html',
+          destination: '/api/verify-baidu',
+        },
+      ],
+    };
   },
 
   async headers() {
@@ -40,6 +52,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net",
               "img-src 'self' data: blob: https:",
+              "media-src 'self' blob: https:",
               "connect-src 'self' ws: wss: https:",
               "frame-ancestors 'none'",
             ].join('; '),

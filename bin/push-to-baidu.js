@@ -112,7 +112,7 @@ async function main() {
 
   let dbConnected = false;
   try {
-    const pushQueue = []; // { url, type: 'static' | 'report' | 'news' | 'sitemap', id?: string }
+    const pushQueue = []; // { url, type: 'static' | 'report' | 'news' | 'wiki' | 'sitemap', id?: string }
     const seenUrls = new Set();
 
     function addUrl(url, type, id) {
@@ -122,7 +122,7 @@ async function main() {
       }
     }
 
-    // 0. 支持手动传入指定 URL（如 node bin/push-to-baidu.js https://www.marketgraphic.cn/reports/xxx 或 /reports/xxx）
+    // 0. 支持手动传入指定 URL（如 node bin/push-to-baidu.js https://www.marketgraphic.cn/reports/xxx 或 /wiki/de-lighting）
     const explicitUrls = args.filter(a => !a.startsWith('--') && (a.startsWith('http') || a.startsWith('/')));
     if (explicitUrls.length > 0) {
       console.log(`🎯 检测到手动指定的 URL (${explicitUrls.length} 条):`);
@@ -130,22 +130,25 @@ async function main() {
         const fullUrl = raw.startsWith('http') ? raw : `${BASE_URL}${raw.startsWith('/') ? '' : '/'}${raw}`;
         const matchReport = fullUrl.match(/\/reports\/([a-f0-9-]+)/i);
         const matchNews = fullUrl.match(/\/news\/([a-f0-9-]+)/i);
-        const type = matchReport ? 'report' : (matchNews ? 'news' : 'custom');
-        const id = matchReport ? matchReport[1] : (matchNews ? matchNews[1] : undefined);
+        const matchWiki = fullUrl.match(/\/wiki\/([a-z0-9-]+)/i);
+        const type = matchReport ? 'report' : (matchNews ? 'news' : (matchWiki ? 'wiki' : 'custom'));
+        const id = matchReport ? matchReport[1] : (matchNews ? matchNews[1] : (matchWiki ? matchWiki[1] : undefined));
         addUrl(fullUrl, type, id);
       });
     }
 
     const includeStatic = args.includes('--include-static');
 
-    // 1. 如果显式指定了 --include-static，才添加核心静态枢纽页（默认不添加，配额 100% 留给全新研报与资讯）
+    // 1. 如果显式指定了 --include-static，才添加核心静态枢纽页（默认不添加，配额 100% 留给全新研报、百科与资讯）
     if (includeStatic && pushQueue.length < PUSH_LIMIT) {
       addUrl(`${BASE_URL}/`, 'static');
+      addUrl(`${BASE_URL}/wiki`, 'static');
       addUrl(`${BASE_URL}/reports`, 'static');
       addUrl(`${BASE_URL}/news`, 'static');
     }
 
     // 2. 若未手动指定 URL 且数据库可用，通过数据库进行精准优先级与增量分析
+    let wikiTableAvailable = false;
     if (explicitUrls.length === 0 && pool) {
       try {
         // 自动确保所需字段存在
@@ -165,7 +168,27 @@ async function main() {
           unpushedReports.rows.forEach(r => addUrl(`${BASE_URL}/reports/${r.id}`, 'report', r.id));
         }
 
-        // 2.2 优先查询【从未推送过】的最新已发布新闻资讯
+        // 2.2 优先查询【从未推送过】的最新已发布行业百科（单独 try/catch 容错，避免表未迁移阻断主流程）
+        try {
+          await pool.query(`ALTER TABLE wiki_entries ADD COLUMN IF NOT EXISTS baidu_pushed_at TIMESTAMP WITH TIME ZONE;`);
+          wikiTableAvailable = true;
+
+          if (pushQueue.length < PUSH_LIMIT) {
+            const remainingQuota = PUSH_LIMIT - pushQueue.length;
+            const unpushedWiki = await pool.query(
+              `SELECT id, slug, published_at FROM wiki_entries
+               WHERE status = 'published' AND baidu_pushed_at IS NULL
+               ORDER BY published_at DESC NULLS LAST, updated_at DESC
+               LIMIT $1`,
+              [remainingQuota]
+            );
+            unpushedWiki.rows.forEach(w => addUrl(`${BASE_URL}/wiki/${w.slug}`, 'wiki', w.id));
+          }
+        } catch (wikiErr) {
+          console.warn(`ℹ️  wiki_entries 自动队列跳过: ${wikiErr.message}`);
+        }
+
+        // 2.3 优先查询【从未推送过】的最新已发布新闻资讯
         if (pushQueue.length < PUSH_LIMIT) {
           const remainingQuota = PUSH_LIMIT - pushQueue.length;
           const unpushedNews = await pool.query(
@@ -178,7 +201,7 @@ async function main() {
           unpushedNews.rows.forEach(n => addUrl(`${BASE_URL}/news/${n.id}`, 'news', n.id));
         }
 
-        // 2.3 额度未满：自动捞取【历史最久未推送】的存量报告进行轮询补充
+        // 2.4 额度未满：自动捞取【历史最久未推送】的存量报告进行轮询补充
         if (pushQueue.length < PUSH_LIMIT) {
           const remainingQuota = PUSH_LIMIT - pushQueue.length;
           const oldestPushedReports = await pool.query(
@@ -191,7 +214,24 @@ async function main() {
           oldestPushedReports.rows.forEach(r => addUrl(`${BASE_URL}/reports/${r.id}`, 'report', r.id));
         }
 
-        // 2.4 额度若仍未满：自动捞取【历史最久未推送】的存量资讯进行轮询补充
+        // 2.5 额度未满：自动捞取【历史最久未推送】的存量行业百科进行轮询补充
+        if (wikiTableAvailable && pushQueue.length < PUSH_LIMIT) {
+          try {
+            const remainingQuota = PUSH_LIMIT - pushQueue.length;
+            const oldestPushedWiki = await pool.query(
+              `SELECT id, slug, baidu_pushed_at FROM wiki_entries
+               WHERE status = 'published' AND baidu_pushed_at IS NOT NULL
+               ORDER BY baidu_pushed_at ASC, published_at DESC NULLS LAST
+               LIMIT $1`,
+              [remainingQuota]
+            );
+            oldestPushedWiki.rows.forEach(w => addUrl(`${BASE_URL}/wiki/${w.slug}`, 'wiki', w.id));
+          } catch (wikiErr) {
+            console.warn(`ℹ️  wiki_entries 存量轮询跳过: ${wikiErr.message}`);
+          }
+        }
+
+        // 2.6 额度若仍未满：自动捞取【历史最久未推送】的存量资讯进行轮询补充
         if (pushQueue.length < PUSH_LIMIT) {
           const remainingQuota = PUSH_LIMIT - pushQueue.length;
           const oldestPushedNews = await pool.query(
@@ -265,24 +305,58 @@ async function main() {
     }
 
     // 5. 更新已推送记录的时间戳 (若数据库连接可用且推送成功)
-    if (pushSuccess && dbConnected && pool) {
+    if (pushSuccess && pool && (dbConnected || explicitUrls.length > 0)) {
+      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const reportIds = activeQueue.filter(i => i.type === 'report' && i.id).map(i => i.id);
       const newsIds = activeQueue.filter(i => i.type === 'news' && i.id).map(i => i.id);
+      const wikiItems = activeQueue.filter(i => i.type === 'wiki' && i.id);
+      const wikiIds = wikiItems.filter(i => UUID_REGEX.test(i.id)).map(i => i.id);
+      const wikiSlugs = wikiItems.filter(i => !UUID_REGEX.test(i.id)).map(i => i.id);
 
       if (reportIds.length > 0) {
-        await pool.query(
-          `UPDATE reports SET baidu_pushed_at = NOW() WHERE id = ANY($1::uuid[])`,
-          [reportIds]
-        );
-        console.log(`✅ 已更新 ${reportIds.length} 篇报告的 baidu_pushed_at 时间戳`);
+        try {
+          await pool.query(
+            `UPDATE reports SET baidu_pushed_at = NOW() WHERE id = ANY($1::uuid[])`,
+            [reportIds]
+          );
+          console.log(`✅ 已更新 ${reportIds.length} 篇报告的 baidu_pushed_at 时间戳`);
+        } catch (err) {
+          console.warn(`ℹ️  更新 reports.baidu_pushed_at 失败: ${err.message}`);
+        }
       }
 
       if (newsIds.length > 0) {
-        await pool.query(
-          `UPDATE news SET baidu_pushed_at = NOW() WHERE id = ANY($1::uuid[])`,
-          [newsIds]
-        );
-        console.log(`✅ 已更新 ${newsIds.length} 条资讯的 baidu_pushed_at 时间戳`);
+        try {
+          await pool.query(
+            `UPDATE news SET baidu_pushed_at = NOW() WHERE id = ANY($1::uuid[])`,
+            [newsIds]
+          );
+          console.log(`✅ 已更新 ${newsIds.length} 条资讯的 baidu_pushed_at 时间戳`);
+        } catch (err) {
+          console.warn(`ℹ️  更新 news.baidu_pushed_at 失败: ${err.message}`);
+        }
+      }
+
+      if (wikiIds.length > 0 || wikiSlugs.length > 0) {
+        try {
+          await pool.query(`ALTER TABLE wiki_entries ADD COLUMN IF NOT EXISTS baidu_pushed_at TIMESTAMP WITH TIME ZONE;`);
+          if (wikiIds.length > 0) {
+            await pool.query(
+              `UPDATE wiki_entries SET baidu_pushed_at = NOW() WHERE id = ANY($1::uuid[])`,
+              [wikiIds]
+            );
+            console.log(`✅ 已更新 ${wikiIds.length} 篇行业百科 (ID) 的 baidu_pushed_at 时间戳`);
+          }
+          if (wikiSlugs.length > 0) {
+            await pool.query(
+              `UPDATE wiki_entries SET baidu_pushed_at = NOW() WHERE slug = ANY($1::text[])`,
+              [wikiSlugs]
+            );
+            console.log(`✅ 已更新 ${wikiSlugs.length} 篇行业百科 (Slug) 的 baidu_pushed_at 时间戳`);
+          }
+        } catch (err) {
+          console.warn(`ℹ️  更新 wiki_entries.baidu_pushed_at 失败: ${err.message}`);
+        }
       }
     }
 
