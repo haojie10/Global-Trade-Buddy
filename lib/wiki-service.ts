@@ -286,6 +286,7 @@ export async function upsertWikiEntry(
   const hsCode6 = payload.flow_data.meta.hs_code_6 || null;
   const archetypeId = payload.flow_data.meta.archetype_id;
   const status = payload.status === 'draft' ? 'draft' : 'published';
+  const publishedAt = status === 'published' ? new Date().toISOString() : null;
 
   const faqItems =
     Array.isArray(payload.faq_items) && payload.faq_items.length > 0
@@ -304,7 +305,7 @@ export async function upsertWikiEntry(
        $1, $2, $3, $4, $5, $6,
        $7, $8, $9, $10,
        $11::jsonb, $12, $13::jsonb, $14::jsonb,
-       $15, $16, $17, CASE WHEN $17::text = 'published' THEN NOW() ELSE NULL END, NOW()
+       $15, $16, $17, $18, NOW()
      )
      ON CONFLICT (slug) DO UPDATE SET
        title = EXCLUDED.title,
@@ -344,6 +345,7 @@ export async function upsertWikiEntry(
       payload.video_url || null,
       payload.cover_image || null,
       status,
+      publishedAt,
     ]
   );
 
