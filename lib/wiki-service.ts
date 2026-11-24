@@ -45,7 +45,7 @@ const RELATED_SUMMARY_MAX_LEN = 120;
 /**
  * 转义 PostgreSQL ILIKE 通配符（\、%、_），防止用户输入特殊字符导致宽泛匹配
  */
-function escapeIlikePattern(raw: string): string {
+export function escapeIlikePattern(raw: string): string {
   return raw.replace(/[\\%_]/g, (ch) => `\\${ch}`);
 }
 

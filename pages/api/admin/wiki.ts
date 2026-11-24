@@ -2,22 +2,22 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { PoolClient } from 'pg';
 import { withDb } from '../../../lib/api-handler';
 import { requireAdmin } from '../../../lib/auth';
+import { isSafeWikiUrl } from '../../../lib/wiki-schema';
+import { escapeIlikePattern } from '../../../lib/wiki-service';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MAX_PAGE = 100000;
 
 function getSingleParam(val: string | string[] | undefined): string {
   if (Array.isArray(val)) return String(val[0] || '').trim();
   return typeof val === 'string' ? val.trim() : '';
 }
 
-function escapeIlikePattern(raw: string): string {
-  return raw.replace(/[\\%_]/g, (ch) => `\\${ch}`);
-}
-
-function isValidHttpOrRelativeUrl(raw: string): boolean {
-  const trimmed = raw.trim();
-  if (!trimmed) return true;
-  return /^https?:\/\//i.test(trimmed) || (trimmed.startsWith('/') && !trimmed.startsWith('//'));
+function isOptionalSafeUrl(raw: unknown): boolean {
+  if (raw === undefined || raw === null || raw === '') return true;
+  if (typeof raw !== 'string') return false;
+  if (!raw.trim()) return true;
+  return isSafeWikiUrl(raw);
 }
 
 async function adminWikiHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
@@ -40,7 +40,7 @@ async function adminWikiHandler(req: NextApiRequest, res: NextApiResponse, dbCli
     }
 
     const rawPage = parseInt(getSingleParam(req.query.page) || '1', 10);
-    const page = Number.isFinite(rawPage) && rawPage >= 1 ? rawPage : 1;
+    const page = Number.isFinite(rawPage) && rawPage >= 1 ? Math.min(MAX_PAGE, rawPage) : 1;
     const rawPageSize = parseInt(getSingleParam(req.query.pageSize) || '20', 10);
     const pageSize = Number.isFinite(rawPageSize) ? Math.min(100, Math.max(1, rawPageSize)) : 20;
     const status = getSingleParam(req.query.status) || 'all';
@@ -90,7 +90,10 @@ async function adminWikiHandler(req: NextApiRequest, res: NextApiResponse, dbCli
   }
 
   if (req.method === 'PUT') {
-    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+      return res.status(400).json({ error: '请求体必须为 JSON 对象' });
+    }
+    const body = req.body;
     const id = typeof body.id === 'string' ? body.id.trim() : '';
     if (!id || !UUID_REGEX.test(id)) {
       return res.status(400).json({ error: '缺少或无效的词条 UUID' });
@@ -110,22 +113,28 @@ async function adminWikiHandler(req: NextApiRequest, res: NextApiResponse, dbCli
     if (faq_items !== undefined && !Array.isArray(faq_items)) {
       return res.status(400).json({ error: 'faq_items 必须为数组' });
     }
-    if (sources !== undefined && !Array.isArray(sources)) {
-      return res.status(400).json({ error: 'sources 必须为数组' });
+    if (sources !== undefined) {
+      if (!Array.isArray(sources)) {
+        return res.status(400).json({ error: 'sources 必须为数组' });
+      }
+      for (const item of sources) {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) {
+          return res.status(400).json({ error: 'sources 数组元素必须为对象' });
+        }
+        if (!isOptionalSafeUrl((item as Record<string, unknown>).url)) {
+          return res.status(400).json({ error: 'sources[].url 必须为合法 http(s):// 或站内 / 路径' });
+        }
+      }
     }
     if (status !== undefined && status !== 'draft' && status !== 'published') {
       return res.status(400).json({ error: 'status 仅允许 draft 或 published' });
     }
 
-    if (video_url !== undefined && video_url !== null) {
-      if (typeof video_url !== 'string' || (video_url.trim() && !isValidHttpOrRelativeUrl(video_url))) {
-        return res.status(400).json({ error: 'video_url 必须为合法 http(s):// 或站内 / 路径' });
-      }
+    if (!isOptionalSafeUrl(video_url)) {
+      return res.status(400).json({ error: 'video_url 必须为合法 http(s):// 或站内 / 路径' });
     }
-    if (cover_image !== undefined && cover_image !== null) {
-      if (typeof cover_image !== 'string' || (cover_image.trim() && !isValidHttpOrRelativeUrl(cover_image))) {
-        return res.status(400).json({ error: 'cover_image 必须为合法 http(s):// 或站内 / 路径' });
-      }
+    if (!isOptionalSafeUrl(cover_image)) {
+      return res.status(400).json({ error: 'cover_image 必须为合法 http(s):// 或站内 / 路径' });
     }
 
     const setClauses: string[] = [];

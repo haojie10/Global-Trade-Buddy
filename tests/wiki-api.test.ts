@@ -427,17 +427,96 @@ describe('行业百科 Agent 推送、管理后台与 GEO 直读 API', () => {
       await agentWikiHandler(req, res);
       expect(getStatus()).toBe(400);
       expect(uploadSpy).not.toHaveBeenCalled();
+
+      // 缺失 title / summary / content_md 应返回 400
+      for (const missingField of ['title', 'summary', 'content_md'] as const) {
+        const basePayload: Record<string, unknown> = {
+          title: '德国照明行业百科',
+          summary: '摘要',
+          content_md: '正文内容',
+          flow_data: buildSampleFlowData(),
+        };
+        delete basePayload[missingField];
+        const missingReqRes = createMockReqRes({
+          method: 'POST',
+          url: '/api/agent/wiki',
+          headers: { authorization: 'Bearer test-wiki-agent-key' },
+          body: basePayload,
+        });
+        await agentWikiHandler(missingReqRes.req, missingReqRes.res);
+        expect(missingReqRes.getStatus()).toBe(400);
+      }
+
+      // 显式传入非数组 faq_items / sources 或非法 status 返回 400
+      for (const badBody of [
+        { faq_items: 'not-array' },
+        { sources: { title: 'not-array' } },
+        { status: 'archived' },
+      ]) {
+        const invalidEnumRes = createMockReqRes({
+          method: 'POST',
+          url: '/api/agent/wiki',
+          headers: { authorization: 'Bearer test-wiki-agent-key' },
+          body: {
+            title: '德国照明行业百科',
+            summary: '摘要',
+            content_md: '正文内容',
+            flow_data: buildSampleFlowData(),
+            ...badBody,
+          },
+        });
+        await agentWikiHandler(invalidEnumRes.req, invalidEnumRes.res);
+        expect(invalidEnumRes.getStatus()).toBe(400);
+      }
+
+      // 拦截 javascript:、//evil.com、/\evil.com、控制字符及非法 sources[].url / player.logo_url
+      const flowWithBadLogo = buildSampleFlowData();
+      flowWithBadLogo.flow_nodes[0].players[0].logo_url = 'javascript:alert(1)';
+
+      const dangerousCases = [
+        { video_url: 'javascript:alert(1)' },
+        { cover_image: '//evil.com/x.png' },
+        { cover_image: '/\\evil.com/x.png' },
+        { video_url: 'https://cdn.example.com/a\n.mp4' },
+        { sources: [{ title: '恶意信源', url: 'javascript:alert(2)' }] },
+        { sources: [{ title: '协议相对信源', url: '//evil.com/ref' }] },
+        { flow_data: flowWithBadLogo },
+      ];
+      for (const dangerous of dangerousCases) {
+        const dangerReqRes = createMockReqRes({
+          method: 'POST',
+          url: '/api/agent/wiki',
+          headers: { authorization: 'Bearer test-wiki-agent-key' },
+          body: {
+            title: '德国照明行业百科',
+            summary: '摘要',
+            content_md: '正文内容',
+            flow_data: buildSampleFlowData(),
+            logos: {
+              'sonepar.de':
+                'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+            },
+            ...dangerous,
+          },
+        });
+        await agentWikiHandler(dangerReqRes.req, dangerReqRes.res);
+        expect(dangerReqRes.getStatus()).toBe(400);
+      }
+      expect(uploadSpy).not.toHaveBeenCalled();
     });
 
-    it('合法推送含 Base64 PNG logo 应上传 COS 并回写 logo_url，再次推送同 slug 应返回 updated，并跳过 SVG logo', async () => {
+    it('合法推送含 Base64 PNG logo 应上传 COS 并回写 logo_url，再次推送同 slug 应返回 updated，并跳过 SVG 与伪造魔数 PNG', async () => {
       const uploadSpy = vi
         .spyOn(storage, 'uploadWikiAsset')
         .mockResolvedValue('https://marketgraphic-image-1302276463.cos.ap-shanghai.myqcloud.com/wiki-assets/logos/sonepar.de.png');
 
+      // 真实 1x1 透明 PNG 字节流（含 89 50 4E 47 0D 0A 1A 0A 标准文件头）
       const samplePngBase64 =
         'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
       const svgXssBase64 =
         'data:image/svg+xml;base64,' + Buffer.from('<svg><script>alert(1)</script></svg>').toString('base64');
+      const forgedPngBase64 =
+        'data:image/png;base64,' + Buffer.from('<svg><script>alert(1)</script></svg>').toString('base64');
       const oversizedPngBase64 =
         'data:image/png;base64,' + Buffer.alloc(2 * 1024 * 1024 + 10, 1).toString('base64');
 
@@ -455,6 +534,7 @@ describe('行业百科 Agent 推送、管理后台与 GEO 直读 API', () => {
           logos: {
             'sonepar.de': samplePngBase64,
             'obi.de': svgXssBase64,
+            'hornbach.de': forgedPngBase64,
             'paulmann.com': oversizedPngBase64,
           },
         },
@@ -678,6 +758,8 @@ describe('行业百科 Agent 推送、管理后台与 GEO 直读 API', () => {
         },
       });
       await agentWikiHandler(p2.req, p2.res);
+      const id2 = p2.getJson().id as string;
+      expect(sharedDb.rowsById.get(id2)?.published_at).toBeNull();
 
       const adminSession = { userId: 'admin-1', role: 'admin' };
 
@@ -715,17 +797,56 @@ describe('行业百科 Agent 推送、管理后台与 GEO 直读 API', () => {
       expect(detailRes.getStatus()).toBe(200);
       expect(detailRes.getJson().data.slug).toBe('de-lighting');
 
-      // 3. PUT 拦截非法 UUID 与 javascript: 协议 video_url / cover_image
-      const xssPutRes = createMockReqRes({
+      // 3. PUT 拦截非法请求体、非法 UUID 与危险协议 URL / sources[].url
+      const arrayBodyPutRes = createMockReqRes({
+        method: 'PUT',
+        session: adminSession,
+        body: ['not-an-object'],
+      });
+      await adminWikiHandler(arrayBodyPutRes.req, arrayBodyPutRes.res);
+      expect(arrayBodyPutRes.getStatus()).toBe(400);
+
+      for (const badPut of [
+        { id: id1, video_url: 'javascript:alert(document.cookie)' },
+        { id: id1, cover_image: '//evil.com/cover.png' },
+        { id: id1, cover_image: '/\\evil.com/cover.png' },
+        { id: id1, sources: [{ title: '恶意信源', url: 'javascript:alert(1)' }] },
+      ]) {
+        const xssPutRes = createMockReqRes({
+          method: 'PUT',
+          session: adminSession,
+          body: badPut,
+        });
+        await adminWikiHandler(xssPutRes.req, xssPutRes.res);
+        expect(xssPutRes.getStatus()).toBe(400);
+      }
+
+      // 3.1 草稿切 published 应自动回填 published_at
+      const publishDraftRes = createMockReqRes({
         method: 'PUT',
         session: adminSession,
         body: {
-          id: id1,
-          video_url: 'javascript:alert(document.cookie)',
+          id: id2,
+          cover_image: '/uploads/wiki-assets/covers/us-tools.png',
+          sources: [{ title: 'USITC DataWeb', url: 'https://dataweb.usitc.gov' }],
+          status: 'published',
         },
       });
-      await adminWikiHandler(xssPutRes.req, xssPutRes.res);
-      expect(xssPutRes.getStatus()).toBe(400);
+      await adminWikiHandler(publishDraftRes.req, publishDraftRes.res);
+      expect(publishDraftRes.getStatus()).toBe(200);
+      expect(publishDraftRes.getJson().data.status).toBe('published');
+      expect(publishDraftRes.getJson().data.published_at).toBeTruthy();
+
+      // 3.2 page 上限钳位校验
+      const clampedPageRes = createMockReqRes({
+        method: 'GET',
+        session: adminSession,
+        query: { page: '9999999', pageSize: '500' },
+      });
+      await adminWikiHandler(clampedPageRes.req, clampedPageRes.res);
+      expect(clampedPageRes.getStatus()).toBe(200);
+      expect(clampedPageRes.getJson().page).toBe(100000);
+      expect(clampedPageRes.getJson().pageSize).toBe(100);
 
       const badPutUuidRes = createMockReqRes({
         method: 'PUT',

@@ -134,6 +134,37 @@ function escapeMdCell(val: unknown): string {
 }
 
 /**
+ * 校验百科外部或站内 URL 安全性，仅允许 http(s):// 或站内单斜杠路径
+ * @param raw 待校验的 URL 字符串
+ * @returns 是否为合法安全 URL
+ */
+export function isSafeWikiUrl(raw: string): boolean {
+  if (typeof raw !== 'string') return false;
+  const trimmed = raw.trim();
+  if (!trimmed) return false;
+  // 拒绝控制字符，防止伪协议绕过或响应头/DOM 异常
+  if (/[\u0000-\u001f\u007f]/.test(trimmed)) return false;
+
+  if (trimmed.startsWith('/')) {
+    // 拦截 //evil.com 协议相对路径与 /\evil.com 反斜杠跳出
+    if (/^\/[\\/]/.test(trimmed)) return false;
+    try {
+      const parsed = new URL(trimmed, 'https://marketgraphic.cn');
+      return parsed.origin === 'https://marketgraphic.cn';
+    } catch {
+      return false;
+    }
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    return (parsed.protocol === 'http:' || parsed.protocol === 'https:') && Boolean(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * 将原始标识归一化为 SEO/GEO 友好的语义化连字符 slug
  * @param raw 原始输入字符串
  * @returns 归一化且截断至 120 字符以内的标准 slug

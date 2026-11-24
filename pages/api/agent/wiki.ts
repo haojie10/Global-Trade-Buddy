@@ -3,7 +3,12 @@ import { PoolClient } from 'pg';
 import { withDb } from '../../../lib/api-handler';
 import { extractRootDomain } from '../../../lib/crm-service';
 import { uploadWikiAsset } from '../../../lib/storage';
-import { MarketFlowData, normalizeWikiSlug, validateMarketFlowData } from '../../../lib/wiki-schema';
+import {
+  MarketFlowData,
+  isSafeWikiUrl,
+  normalizeWikiSlug,
+  validateMarketFlowData,
+} from '../../../lib/wiki-schema';
 import { upsertWikiEntry } from '../../../lib/wiki-service';
 
 // 仅允许安全位图格式，明确排除 image/svg+xml 以防止内嵌脚本 XSS
@@ -15,13 +20,40 @@ const ALLOWED_LOGO_MIME_EXT: Record<string, string> = {
 };
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+const MAX_LOGO_BASE64_LEN = Math.ceil((MAX_LOGO_BYTES * 4) / 3) + 4;
+const PNG_MAGIC = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 
-function isSafeMediaUrl(raw: unknown): boolean {
+function isOptionalSafeUrl(raw: unknown): boolean {
   if (raw === undefined || raw === null || raw === '') return true;
   if (typeof raw !== 'string') return false;
-  const trimmed = raw.trim();
-  if (!trimmed) return true;
-  return /^https?:\/\//i.test(trimmed) || (trimmed.startsWith('/') && !trimmed.startsWith('//'));
+  if (!raw.trim()) return true;
+  return isSafeWikiUrl(raw);
+}
+
+/**
+ * 校验图片二进制头魔数，拦截伪造 MIME 的文本/SVG/HTML 载荷
+ */
+function matchesImageMagicBytes(buffer: Buffer, mime: string): boolean {
+  if (mime === 'image/png') {
+    if (buffer.length < PNG_MAGIC.length) return false;
+    return PNG_MAGIC.every((byte, idx) => buffer[idx] === byte);
+  }
+  if (mime === 'image/jpeg') {
+    return buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+  }
+  if (mime === 'image/gif') {
+    if (buffer.length < 6) return false;
+    const header = buffer.subarray(0, 6).toString('ascii');
+    return header === 'GIF87a' || header === 'GIF89a';
+  }
+  if (mime === 'image/webp') {
+    return (
+      buffer.length >= 12 &&
+      buffer.subarray(0, 4).toString('ascii') === 'RIFF' &&
+      buffer.subarray(8, 12).toString('ascii') === 'WEBP'
+    );
+  }
+  return false;
 }
 
 async function agentWikiHandler(req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
@@ -73,13 +105,43 @@ async function agentWikiHandler(req: NextApiRequest, res: NextApiResponse, dbCli
     return res.status(400).json({ error: 'title、summary、content_md 均必须为非空字符串' });
   }
 
+  if (status !== undefined && status !== 'draft' && status !== 'published') {
+    return res.status(400).json({ error: 'status 仅允许 draft 或 published' });
+  }
+
+  if (faq_items !== undefined && !Array.isArray(faq_items)) {
+    return res.status(400).json({ error: 'faq_items 必须为数组' });
+  }
+
+  if (sources !== undefined) {
+    if (!Array.isArray(sources)) {
+      return res.status(400).json({ error: 'sources 必须为数组' });
+    }
+    for (const item of sources) {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) {
+        return res.status(400).json({ error: 'sources 数组元素必须为对象' });
+      }
+      if (!isOptionalSafeUrl((item as Record<string, unknown>).url)) {
+        return res.status(400).json({ error: 'sources[].url 必须为合法 http(s):// 或站内 / 路径' });
+      }
+    }
+  }
+
   const validation = validateMarketFlowData(flow_data);
   if (!validation.valid) {
     return res.status(400).json({ error: `flow_data 校验失败: ${validation.errors.join('; ')}` });
   }
 
-  if (!isSafeMediaUrl(video_url) || !isSafeMediaUrl(cover_image)) {
-    return res.status(400).json({ error: 'video_url 或 cover_image 必须为 http(s):// 或站内 / 路径' });
+  if (!isOptionalSafeUrl(video_url) || !isOptionalSafeUrl(cover_image)) {
+    return res.status(400).json({ error: 'video_url 或 cover_image 必须为合法 http(s):// 或站内 / 路径' });
+  }
+
+  for (const node of (flow_data as MarketFlowData).flow_nodes || []) {
+    for (const player of node.players || []) {
+      if (!isOptionalSafeUrl(player.logo_url)) {
+        return res.status(400).json({ error: 'flow_data.flow_nodes[].players[].logo_url 必须为合法安全 URL' });
+      }
+    }
   }
 
   const rawSlug =
@@ -104,7 +166,7 @@ async function agentWikiHandler(req: NextApiRequest, res: NextApiResponse, dbCli
       if (typeof dataUrl !== 'string') continue;
       const match = dataUrl
         .trim()
-        .match(/^data:([a-zA-Z0-9.+_-]+\/[a-zA-Z0-9.+_-]+);base64,([A-Za-z0-9+/=\r\n\s]+)$/);
+        .match(/^data:([a-zA-Z0-9.+_-]+\/[a-zA-Z0-9.+_-]+);base64,([A-Za-z0-9+/=\r\n\s]+)$/i);
       if (!match) continue;
 
       const mime = match[1].toLowerCase();
@@ -117,9 +179,21 @@ async function agentWikiHandler(req: NextApiRequest, res: NextApiResponse, dbCli
       const domain = extractRootDomain(rawDomain);
       if (!domain) continue;
 
-      const buffer = Buffer.from(match[2].replace(/\s+/g, ''), 'base64');
+      // 解码前先校验 Base64 字符串长度，避免超大载荷占用解码内存
+      const cleanedBase64 = match[2].replace(/\s+/g, '');
+      if (!cleanedBase64 || cleanedBase64.length > MAX_LOGO_BASE64_LEN) {
+        console.warn(`[AgentWiki] 跳过空编码或超长度上限的 Logo (${domain})`);
+        continue;
+      }
+
+      const buffer = Buffer.from(cleanedBase64, 'base64');
       if (buffer.length === 0 || buffer.length > MAX_LOGO_BYTES) {
         console.warn(`[AgentWiki] 跳过空文件或超 2MB 的 Logo (${domain}): ${buffer.length} bytes`);
+        continue;
+      }
+
+      if (!matchesImageMagicBytes(buffer, mime)) {
+        console.warn(`[AgentWiki] 跳过魔数不匹配的伪造图片 Logo (${domain}): ${mime}`);
         continue;
       }
 
