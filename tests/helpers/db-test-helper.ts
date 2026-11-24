@@ -29,12 +29,13 @@ export async function cleanDatabase(client: any) {
   }
 
   // 3. 检测该命名空间内是否已有基本表（如 reports），若无则说明是首次使用，自动扫描 migrations 建表
+  const resolvedSchema = targetSchema && targetSchema !== '"$user"' ? targetSchema : 'public';
   const tableCheck = await client.query(`
     SELECT EXISTS (
       SELECT FROM information_schema.tables 
       WHERE table_schema = $1 AND table_name = 'reports'
     );
-  `, [targetSchema && targetSchema !== '"$user"' ? targetSchema : 'public']);
+  `, [resolvedSchema]);
 
   const tableExists = tableCheck.rows[0].exists;
   if (!tableExists) {
@@ -59,6 +60,27 @@ export async function cleanDatabase(client: any) {
     }
   }
 
+  // 补充检测 wiki_entries 表是否存在，确保已有测试 schema 自动增量建表
+  const wikiTableCheck = await client.query(`
+    SELECT EXISTS (
+      SELECT FROM information_schema.tables 
+      WHERE table_schema = $1 AND table_name = 'wiki_entries'
+    );
+  `, [resolvedSchema]);
+
+  if (!wikiTableCheck.rows[0].exists) {
+    const wikiMigrationPath = path.join(
+      process.cwd(),
+      'supabase',
+      'migrations',
+      '20261124000000_wiki_entries_schema.sql'
+    );
+    if (fs.existsSync(wikiMigrationPath)) {
+      const wikiSql = fs.readFileSync(wikiMigrationPath, 'utf8');
+      await client.query(wikiSql);
+    }
+  }
+
   // 4. 重置/清空测试数据，隔离测试不影响 public 生产主表
   await client.query('DELETE FROM email_verifications');
   await client.query('DELETE FROM page_views');
@@ -72,6 +94,7 @@ export async function cleanDatabase(client: any) {
   await client.query('DELETE FROM entity_aliases');
   await client.query('DELETE FROM entity_relations');
   await client.query('DELETE FROM entities');
+  await client.query('DELETE FROM wiki_entries');
   await client.query('DELETE FROM reports');
   await client.query('DELETE FROM users');
 

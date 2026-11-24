@@ -52,6 +52,7 @@ export async function setup() {
       'favorites',
       'unlocks',
       'relations',
+      'wiki_entries',
       'reports',
       'users',
       'entities',

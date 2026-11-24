@@ -39,6 +39,14 @@ async function pageViewHandler(req: NextApiRequest, res: NextApiResponse, dbClie
     );
     const newViewId = insertRes.rows[0].id;
 
+    // 行业百科浏览计数同步递增，参数化查询防止注入
+    if (content_type === 'wiki') {
+      await dbClient.query(
+        'UPDATE wiki_entries SET view_count = view_count + 1 WHERE id = $1::uuid',
+        [content_id]
+      );
+    }
+
     return res.status(200).json({ view_id: newViewId });
   }
 
