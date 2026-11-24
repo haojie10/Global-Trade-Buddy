@@ -118,6 +118,26 @@ describe('lib/wiki-schema 校验与 GEO 工具', () => {
     expect(okResult.valid).toBe(true);
     expect(okResult.errors).toEqual([]);
 
+    // 0. 省略可选字段 hs_code_6 应合法通过
+    const withoutHs = buildSampleFlowData();
+    delete withoutHs.meta.hs_code_6;
+    expect(validateMarketFlowData(withoutHs).valid).toBe(true);
+
+    // 0b. 数组、null 或非对象输入应安全拦截而不崩溃
+    expect(validateMarketFlowData([]).valid).toBe(false);
+    expect(validateMarketFlowData(null).valid).toBe(false);
+
+    // 0c. meta 字段传入非字符串类型不应抛 TypeError
+    const nonStringMeta = buildSampleFlowData() as unknown as { meta: Record<string, unknown> };
+    nonStringMeta.meta.id = 12345;
+    nonStringMeta.meta.country_name_cn = { name: '德国' };
+    nonStringMeta.meta.category_name_cn = null;
+    nonStringMeta.meta.country_code = 49;
+    nonStringMeta.meta.hs_code_6 = 940542;
+    const nonStrRes = validateMarketFlowData(nonStringMeta);
+    expect(nonStrRes.valid).toBe(false);
+    expect(nonStrRes.errors.length).toBeGreaterThanOrEqual(4);
+
     // 1. 本土+进口不等于 100%
     const badSupply = buildSampleFlowData();
     badSupply.supply_origin.local_manufacturing_pct = 50;
@@ -130,53 +150,114 @@ describe('lib/wiki-schema 校验与 GEO 工具', () => {
     const outOfRangeSupply = buildSampleFlowData();
     outOfRangeSupply.supply_origin.local_manufacturing_pct = -10;
     outOfRangeSupply.supply_origin.import_pct = 110;
-    const rangeRes = validateMarketFlowData(outOfRangeSupply);
-    expect(rangeRes.valid).toBe(false);
+    expect(validateMarketFlowData(outOfRangeSupply).valid).toBe(false);
 
-    // 2. 价格瀑布非严格递增
+    // 1c. 占比传入 null / 空字符串应拦截，杜绝 Number() 隐式转 0
+    const nullSupply = buildSampleFlowData() as unknown as {
+      supply_origin: { local_manufacturing_pct: unknown; import_pct: unknown };
+    };
+    nullSupply.supply_origin.local_manufacturing_pct = null;
+    nullSupply.supply_origin.import_pct = '';
+    expect(validateMarketFlowData(nullSupply).valid).toBe(false);
+
+    // 1d. 误差 0.5 边界：允许 <= 0.5，拦截 > 0.5
+    const toleranceOk = buildSampleFlowData();
+    toleranceOk.supply_origin.local_manufacturing_pct = 22;
+    toleranceOk.supply_origin.import_pct = 78.5;
+    expect(validateMarketFlowData(toleranceOk).valid).toBe(true);
+
+    const toleranceBad = buildSampleFlowData();
+    toleranceBad.supply_origin.local_manufacturing_pct = 22;
+    toleranceBad.supply_origin.import_pct = 78.6;
+    expect(validateMarketFlowData(toleranceBad).valid).toBe(false);
+
+    // 2. 价格瀑布非严格递增，且不因 break 吞掉后续元素的非正数校验与 NaN 校验
     const badPrice = buildSampleFlowData();
-    badPrice.price_waterfall[2].price_usd_equiv = 5.0;
+    badPrice.price_waterfall[0].price_usd_equiv = 10;
+    badPrice.price_waterfall[1].price_usd_equiv = 5;
+    badPrice.price_waterfall[2].price_usd_equiv = -2;
+    badPrice.price_waterfall[3].price_usd_equiv = Number.NaN;
     const priceRes = validateMarketFlowData(badPrice);
     expect(priceRes.valid).toBe(false);
-    expect(priceRes.errors.join(' ')).toContain('严格递增');
+    const priceErrText = priceRes.errors.join(' ');
+    expect(priceErrText).toContain('严格递增');
+    expect(priceErrText).toContain('price_waterfall[2].price_usd_equiv');
+    expect(priceErrText).toContain('price_waterfall[3].price_usd_equiv');
 
-    // 3. 缺节点（少于 3 个）
+    // 3. 缺节点（少于 3 个）及节点必填字段校验
     const badNodes = buildSampleFlowData();
     badNodes.flow_nodes = badNodes.flow_nodes.slice(0, 2);
-    const nodeRes = validateMarketFlowData(badNodes);
-    expect(nodeRes.valid).toBe(false);
+    expect(validateMarketFlowData(badNodes).valid).toBe(false);
+
+    const invalidNodeFields = buildSampleFlowData() as unknown as {
+      flow_nodes: Array<Record<string, unknown>>;
+    };
+    invalidNodeFields.flow_nodes[0].share_pct = 150;
+    invalidNodeFields.flow_nodes[1].typical_margin_range = '   ';
+    invalidNodeFields.flow_nodes[2].sales_pitch_angle = '';
+    const nodeFieldRes = validateMarketFlowData(invalidNodeFields);
+    expect(nodeFieldRes.valid).toBe(false);
+    expect(nodeFieldRes.errors.length).toBeGreaterThanOrEqual(3);
+
+    // 3b. flow_edges 校验 source / target 与 weight_pct
+    const badEdges = buildSampleFlowData() as unknown as {
+      flow_edges: Array<Record<string, unknown>>;
+    };
+    badEdges.flow_edges[0].source = '';
+    badEdges.flow_edges[1].weight_pct = -5;
+    const edgeRes = validateMarketFlowData(badEdges);
+    expect(edgeRes.valid).toBe(false);
+    expect(edgeRes.errors.length).toBeGreaterThanOrEqual(2);
 
     // 4. 非法流通原型
     const badArchetype = buildSampleFlowData();
     (badArchetype.meta as { archetype_id: string }).archetype_id = 'unknown_type';
-    const archetypeRes = validateMarketFlowData(badArchetype);
-    expect(archetypeRes.valid).toBe(false);
+    expect(validateMarketFlowData(badArchetype).valid).toBe(false);
 
     // 5. 非法 6 位 HS 编码
     const badHs = buildSampleFlowData();
     badHs.meta.hs_code_6 = '9405';
-    const hsRes = validateMarketFlowData(badHs);
-    expect(hsRes.valid).toBe(false);
+    expect(validateMarketFlowData(badHs).valid).toBe(false);
   });
 
-  it('calcPriceMultiplier 应计算末首阶段倍率并在不足 2 阶段时返回短横线', () => {
+  it('calcPriceMultiplier 应计算末首阶段倍率并在异常边界时返回短横线', () => {
     const flow = buildSampleFlowData();
     expect(calcPriceMultiplier(flow)).toBe('9.5x');
 
     const singleStage = buildSampleFlowData();
     singleStage.price_waterfall = [singleStage.price_waterfall[0]];
     expect(calcPriceMultiplier(singleStage)).toBe('-');
+
+    const emptyStage = buildSampleFlowData();
+    emptyStage.price_waterfall = [];
+    expect(calcPriceMultiplier(emptyStage)).toBe('-');
+
+    const nanStage = buildSampleFlowData();
+    nanStage.price_waterfall[nanStage.price_waterfall.length - 1].price_usd_equiv = Number.NaN;
+    expect(calcPriceMultiplier(nanStage)).toBe('-');
   });
 
-  it('generateDefaultFaqs 应根据真实数据派生至少 4 条问答', () => {
+  it('generateDefaultFaqs 应根据真实数据派生至少 4 条问答并防御空列表边界', () => {
     const faqs = generateDefaultFaqs(buildSampleFlowData(), '德国照明产品流通全景');
     expect(faqs.length).toBeGreaterThanOrEqual(4);
     expect(faqs[0].a).toContain('9.5');
     expect(faqs[1].a).toContain('78%');
+
+    const sparseFlow = buildSampleFlowData() as unknown as MarketFlowData;
+    sparseFlow.price_waterfall = [];
+    sparseFlow.flow_nodes = [];
+    sparseFlow.supply_origin.top_import_sources = [];
+    const sparseFaqs = generateDefaultFaqs(sparseFlow, '空字段测试');
+    expect(sparseFaqs).toHaveLength(4);
+    expect(sparseFaqs.every(item => item.q.length > 0 && item.a.length > 0)).toBe(true);
   });
 
-  it('buildWikiMarkdownExport 应生成含价格表、玩家表、规范链接与信源的纯净 Markdown', () => {
+  it('buildWikiMarkdownExport 应生成含价格表、玩家表、规范链接与信源的纯净 Markdown 并转义表格特殊字符', () => {
     const flow = buildSampleFlowData();
+    flow.price_waterfall[0].stage_name = '中国 | FOB\n出厂价';
+    flow.flow_nodes[2].players[0].business_model = '全球领先 | 电气\r\nB2B批发商';
+    flow.supply_origin.top_import_sources[0].positioning = '高性价比|主力供给';
+
     const md = buildWikiMarkdownExport({
       slug: 'de-lighting',
       title: '德国照明产品海外流通全景',
@@ -200,5 +281,37 @@ describe('lib/wiki-schema 校验与 GEO 工具', () => {
     expect(md).toContain('https://marketgraphic.cn/wiki/de-lighting');
     expect(md).toContain('UN Comtrade');
     expect(md).toContain('https://comtradeplus.un.org');
+    expect(md).toContain('| 中国 \\| FOB 出厂价 | $4.5 |');
+    expect(md).toContain('| Sonepar Deutschland | sonepar.de | 全球领先 \\| 电气 B2B批发商 |');
+    expect(md).toContain('| 中国 | 61% | 高性价比\\|主力供给 |');
+
+    // 防御空 price_waterfall、缺失 players/buyer_pain_points 及空 content_md
+    const sparseFlow = buildSampleFlowData() as unknown as MarketFlowData;
+    sparseFlow.price_waterfall = [];
+    sparseFlow.flow_nodes = [
+      {
+        id: 'n1',
+        tier: 1,
+        label_cn: '进口商',
+        share_pct: 100,
+        typical_margin_range: '20%',
+        buyer_pain_points: undefined as unknown as string[],
+        sales_pitch_angle: '强调交期',
+        players: undefined as unknown as MarketFlowData['flow_nodes'][0]['players'],
+      },
+    ];
+    const sparseMd = buildWikiMarkdownExport({
+      slug: 'de-lighting-sparse',
+      title: '空结构测试',
+      summary: '摘要',
+      country_code: 'DE',
+      country_name: '德国',
+      market_region: '欧洲',
+      industry_name: '照明产品',
+      archetype_id: 'diy_pro_dual',
+      flow_data: sparseFlow,
+      content_md: '',
+    });
+    expect(sparseMd).toContain('# 空结构测试');
   });
 });
