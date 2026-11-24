@@ -304,7 +304,7 @@ export async function upsertWikiEntry(
        $1, $2, $3, $4, $5, $6,
        $7, $8, $9, $10,
        $11::jsonb, $12, $13::jsonb, $14::jsonb,
-       $15, $16, $17, CASE WHEN $17 = 'published' THEN NOW() ELSE NULL END, NOW()
+       $15, $16, $17, CASE WHEN $17::text = 'published' THEN NOW() ELSE NULL END, NOW()
      )
      ON CONFLICT (slug) DO UPDATE SET
        title = EXCLUDED.title,
