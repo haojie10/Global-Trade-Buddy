@@ -1,6 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 import pool from './db';
+import { extractRootDomain, cleanCompanyNameForLookup } from './domain-utils';
+
+export { extractRootDomain, cleanCompanyNameForLookup } from './domain-utils';
 
 export interface CrmContactItem {
   id: number | string;
@@ -29,36 +32,6 @@ export interface CrmContactItem {
   notes?: string;
   // source_session 保留在后端，供内部业务使用，前端不予展示
   source_session?: string;
-}
-
-// 提取网址根域名
-export function extractRootDomain(rawUrl: string): string {
-  if (!rawUrl) return '';
-  let url = rawUrl.trim().toLowerCase();
-  if (!url.startsWith('http://') && !url.startsWith('https://')) {
-    url = 'http://' + url;
-  }
-  try {
-    const parsed = new URL(url);
-    let host = parsed.hostname;
-    if (host.startsWith('www.')) {
-      host = host.substring(4);
-    }
-    return host;
-  } catch {
-    return '';
-  }
-}
-
-// 清洗公司名称 (去除常见法律后缀与多余空格)
-export function cleanCompanyNameForLookup(rawName: string): string {
-  if (!rawName) return '';
-  return rawName
-    .toLowerCase()
-    .replace(/\b(ltd|limited|inc|incorporated|corp|corporation|llc|gmbh|sa|srl|bv|co\.?,\s*ltd\.?|co\.?)\b/gi, '')
-    .replace(/[^\w\s\u4e00-\u9fa5]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
 }
 
 // 寻找本地 contacts.db 路径

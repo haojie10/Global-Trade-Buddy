@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import WikiPriceWaterfall from '../components/wiki/WikiPriceWaterfall';
 import WikiFlowMap from '../components/wiki/WikiFlowMap';
 import WikiEntryCard, { WikiListItem } from '../components/wiki/WikiEntryCard';
-import { ARCHETYPE_META, WikiFlowNode, WikiPriceStage } from '../lib/wiki-schema';
+import { ARCHETYPE_META, type ArchetypeId, type WikiFlowNode, type WikiPriceStage } from '../lib/wiki-schema';
 import type { PlayerAssetMatch } from '../lib/wiki-service';
 
 describe('WikiPriceWaterfall 价格瀑布组件', () => {
@@ -58,6 +60,23 @@ describe('WikiPriceWaterfall 价格瀑布组件', () => {
 
     expect(html).not.toContain('NaN');
     expect(html).not.toContain('Infinity');
+    expect(html).toContain('>-<');
+  });
+
+  it('负数与 NaN 价格安全显示 "-" 且表头携带 scope="col"', () => {
+    const stages: WikiPriceStage[] = [
+      { stage_name: '负价异常', price_usd_equiv: -5, markup_desc: '负值保护' },
+      { stage_name: '非数字异常', price_usd_equiv: Number.NaN, markup_desc: '非法数值保护' },
+    ];
+
+    const html = renderToStaticMarkup(
+      React.createElement(WikiPriceWaterfall, { stages, currency: 'USD' })
+    );
+
+    expect(html).toContain('scope="col"');
+    expect(html).not.toContain('NaN');
+    expect(html).not.toContain('Infinity');
+    expect(html).not.toContain('$-5');
     expect(html).toContain('>-<');
   });
 });
@@ -215,6 +234,49 @@ describe('WikiFlowMap 分层流通图谱组件', () => {
     expect(html).toContain('查看 360° 客户研报 →');
     expect(html).not.toContain('已收录 0 位采购联系人');
   });
+
+  it('拒绝 logo_url="#evil" 锚点，单独断言原型键名玩家不产生转化链接，且源码不静态导入 crm-service', () => {
+    const edgeNodes: WikiFlowNode[] = [
+      {
+        id: 'node-proto',
+        tier: 4,
+        label_cn: '终端零售门店',
+        share_pct: 20,
+        typical_margin_range: '45%-55%',
+        buyer_pain_points: ['售后响应慢'],
+        sales_pitch_angle: '提供本地备品与退换货支持',
+        players: [
+          {
+            name: 'toString',
+            website: '',
+            logo_url: '#evil',
+            business_model: '原型链碰撞测试玩家',
+          },
+        ],
+      },
+    ];
+
+    const html = renderToStaticMarkup(
+      React.createElement(WikiFlowMap, {
+        nodes: edgeNodes,
+        playerMatches: {},
+      })
+    );
+
+    expect(html).not.toContain('<img');
+    expect(html).not.toContain('#evil');
+    expect(html).toContain('>T<');
+    expect(html).toContain('aria-pressed="true"');
+    expect(html).not.toContain('/reports/');
+    expect(html).not.toContain('申请研报解锁');
+
+    const flowMapSrc = fs.readFileSync(
+      path.resolve(process.cwd(), 'components/wiki/WikiFlowMap.tsx'),
+      'utf-8'
+    );
+    expect(flowMapSrc).not.toContain('crm-service');
+    expect(flowMapSrc).toContain('domain-utils');
+  });
 });
 
 describe('WikiEntryCard 百科大厅卡片组件', () => {
@@ -246,5 +308,30 @@ describe('WikiEntryCard 百科大厅卡片组件', () => {
     expect(html).toContain('14');
     expect(html).toContain('免费阅读 →');
     expect(html).toContain(ARCHETYPE_META.diy_pro_dual.shortTag);
+  });
+
+  it('非法 slug 回退至 /wiki，且原型链 archetype_id 安全兜底不崩溃', () => {
+    const unsafeItem: WikiListItem = {
+      id: 'wiki-bad',
+      slug: '../../reports/1',
+      title: '异常路径与原型键测试',
+      summary: '测试非法 slug 拦截及 ARCHETYPE_META 原型链安全兜底。',
+      country_code: 'US',
+      country_name: '美国',
+      market_region: '北美',
+      industry_name: '消费电子',
+      hs_code_6: null,
+      archetype_id: 'toString' as unknown as ArchetypeId,
+      price_multiplier: '4.2x',
+      player_count: 5,
+      view_count: 10,
+      updated_at: '2026-11-20T10:00:00Z',
+    };
+
+    const html = renderToStaticMarkup(React.createElement(WikiEntryCard, { item: unsafeItem }));
+
+    expect(html).toContain('href="/wiki"');
+    expect(html).not.toContain('../../reports/1');
+    expect(html).toContain('toString');
   });
 });

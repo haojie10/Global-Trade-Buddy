@@ -1,7 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
 import { ARCHETYPE_META, type ArchetypeId } from '../../lib/wiki-schema';
-import { sanitizeUrl } from './SafeMarkdown';
 
 export interface WikiListItem {
   id: string;
@@ -20,16 +19,22 @@ export interface WikiListItem {
   updated_at: string;
 }
 
+const SAFE_SLUG_RE = /^[a-z0-9-]+$/i;
+
 /**
  * 行业百科大厅卡片组件：展示国家·品类、流通原型色标、HS 编码、FOB→终端价差倍率与代表玩家数
  */
 export default function WikiEntryCard({ item }: { item: WikiListItem }) {
-  const archetype = ARCHETYPE_META[item.archetype_id] ?? {
-    nameCn: item.archetype_id,
-    shortTag: item.archetype_id,
-    accent: '#ff641e',
-  };
-  const safeHref = sanitizeUrl(`/wiki/${item.slug}`) || '/wiki';
+  // 使用 hasOwnProperty 防止 archetype_id 命中 Object.prototype 属性（如 toString/constructor）
+  const archetype = Object.prototype.hasOwnProperty.call(ARCHETYPE_META, item.archetype_id)
+    ? ARCHETYPE_META[item.archetype_id]
+    : {
+        nameCn: item.archetype_id,
+        shortTag: item.archetype_id,
+        accent: '#ff641e',
+      };
+  const trimmedSlug = typeof item.slug === 'string' ? item.slug.trim() : '';
+  const safeHref = SAFE_SLUG_RE.test(trimmedSlug) ? `/wiki/${trimmedSlug}` : '/wiki';
 
   return (
     <Link

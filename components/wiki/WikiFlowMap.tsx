@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { cleanCompanyNameForLookup, extractRootDomain } from '../../lib/crm-service';
-import type { WikiFlowNode, WikiPlayer } from '../../lib/wiki-schema';
+import { cleanCompanyNameForLookup, extractRootDomain } from '../../lib/domain-utils';
+import { isSafeWikiUrl, type WikiFlowNode, type WikiPlayer } from '../../lib/wiki-schema';
 import type { PlayerAssetMatch } from '../../lib/wiki-service';
 import { sanitizeUrl } from './SafeMarkdown';
 
@@ -59,21 +59,29 @@ function lookupPlayerMatch(
 }
 
 /**
- * 提取企业品牌首字母 Monogram，用于 Logo 缺失或加载失败时的优雅降级
+ * 提取企业品牌首字符 Monogram，使用 Array.from 兼容 Unicode 代理对字符
  */
 function getBrandMonogram(name: string): string {
   const trimmed = String(name || '').trim();
-  if (!trimmed) return '?';
-  const firstChar = trimmed.charAt(0);
-  return /[a-z]/i.test(firstChar) ? firstChar.toUpperCase() : firstChar;
+  const firstChar = Array.from(trimmed)[0];
+  if (!firstChar) return '?';
+  return /^[a-z]$/i.test(firstChar) ? firstChar.toUpperCase() : firstChar;
 }
 
 /**
- * 玩家 Logo 墙徽章：严格遵循 44×44 白底圆角容器，并在非法链接或加载失败时降级为首字母 Monogram
+ * 玩家 Logo 墙徽章：严格遵循 44×44 白底圆角容器；
+ * 仅放行 isSafeWikiUrl 校验通过的 http(s)/站内路径（拒绝 #... 锚点），非法链接或加载失败时降级为首字母 Monogram。
  */
 function PlayerLogoBadge({ name, logoUrl }: { name: string; logoUrl?: string }) {
   const [imgFailed, setImgFailed] = useState(false);
-  const safeLogoUrl = logoUrl ? sanitizeUrl(logoUrl) : null;
+  const trimmedLogo = typeof logoUrl === 'string' ? logoUrl.trim() : '';
+  const safeLogoUrl = trimmedLogo && isSafeWikiUrl(trimmedLogo) ? trimmedLogo : null;
+
+  // 当同一徽章复用且切换为新的有效 logo_url 时，重置加载失败状态
+  useEffect(() => {
+    setImgFailed(false);
+  }, [safeLogoUrl]);
+
   const showImage = Boolean(safeLogoUrl && !imgFailed);
 
   return (
@@ -213,15 +221,14 @@ export default function WikiFlowMap({
                 gap: '16px',
               }}
             >
-              {tierNodes.map((node) => {
+              {tierNodes.map((node, idx) => {
                 const isSelected = selectedNodeId === node.id;
                 const painPoints = Array.isArray(node.buyer_pain_points) ? node.buyer_pain_points : [];
                 const players = Array.isArray(node.players) ? node.players : [];
 
                 return (
                   <article
-                    key={node.id}
-                    onClick={() => setSelectedNodeId(node.id)}
+                    key={`${node.id}-${idx}`}
                     style={{
                       borderRadius: '12px',
                       padding: '18px',
@@ -231,13 +238,12 @@ export default function WikiFlowMap({
                         : '1px solid rgba(18, 18, 18, 0.09)',
                       boxShadow: isSelected ? '0 8px 22px rgba(255, 100, 30, 0.08)' : 'none',
                       transition: 'border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease',
-                      cursor: 'pointer',
                       display: 'flex',
                       flexDirection: 'column',
                       gap: '14px',
                     }}
                   >
-                    {/* 节点标题与份额/毛利指标 */}
+                    {/* 节点标题、份额/毛利指标与无障碍聚焦按钮 */}
                     <div
                       style={{
                         display: 'flex',
@@ -247,43 +253,65 @@ export default function WikiFlowMap({
                         gap: '8px',
                       }}
                     >
-                      <h4
-                        style={{
-                          margin: 0,
-                          fontSize: '1.05rem',
-                          fontWeight: 700,
-                          color: 'var(--color-text, #121212)',
-                        }}
-                      >
-                        {node.label_cn}
-                      </h4>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                        <span
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <h4
                           style={{
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            padding: '2px 8px',
-                            borderRadius: '6px',
-                            background: '#ffffff',
-                            border: '1px solid rgba(18, 18, 18, 0.1)',
+                            margin: 0,
+                            fontSize: '1.05rem',
+                            fontWeight: 700,
                             color: 'var(--color-text, #121212)',
                           }}
                         >
-                          渠道份额 {node.share_pct}%
-                        </span>
-                        <span
-                          style={{
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            padding: '2px 8px',
-                            borderRadius: '6px',
-                            background: 'rgba(15, 23, 42, 0.05)',
-                            color: '#334155',
-                          }}
-                        >
-                          毛利 {node.typical_margin_range}
-                        </span>
+                          {node.label_cn}
+                        </h4>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                          <span
+                            style={{
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              padding: '2px 8px',
+                              borderRadius: '6px',
+                              background: '#ffffff',
+                              border: '1px solid rgba(18, 18, 18, 0.1)',
+                              color: 'var(--color-text, #121212)',
+                            }}
+                          >
+                            渠道份额 {node.share_pct}%
+                          </span>
+                          <span
+                            style={{
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              padding: '2px 8px',
+                              borderRadius: '6px',
+                              background: 'rgba(15, 23, 42, 0.05)',
+                              color: '#334155',
+                            }}
+                          >
+                            毛利 {node.typical_margin_range}
+                          </span>
+                        </div>
                       </div>
+
+                      <button
+                        type="button"
+                        aria-pressed={isSelected}
+                        onClick={() => setSelectedNodeId(node.id)}
+                        style={{
+                          fontSize: '11.5px',
+                          fontWeight: 600,
+                          padding: '4px 9px',
+                          borderRadius: '999px',
+                          cursor: 'pointer',
+                          border: isSelected
+                            ? '1px solid var(--color-accent, #ff641e)'
+                            : '1px solid rgba(18, 18, 18, 0.14)',
+                          background: isSelected ? 'var(--color-accent, #ff641e)' : '#ffffff',
+                          color: isSelected ? '#ffffff' : 'var(--color-muted, #666666)',
+                        }}
+                      >
+                        {isSelected ? '已聚焦' : '聚焦此层级'}
+                      </button>
                     </div>
 
                     {/* 买家核心痛点标签（始终展开，保障爬虫直读） */}
@@ -300,9 +328,9 @@ export default function WikiFlowMap({
                           买家核心痛点
                         </div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                          {painPoints.map((point, idx) => (
+                          {painPoints.map((point, pIdx) => (
                             <span
-                              key={`${node.id}-pain-${idx}`}
+                              key={`${node.id}-pain-${pIdx}`}
                               style={{
                                 fontSize: '12px',
                                 lineHeight: 1.4,
@@ -353,7 +381,7 @@ export default function WikiFlowMap({
                           const matched = lookupPlayerMatch(playerMatches, player);
                           const rawReportId = typeof matched?.reportId === 'string' ? matched.reportId.trim() : '';
                           const safeReportPath =
-                            rawReportId && !/[/?#\\]/.test(rawReportId) && sanitizeUrl(`/reports/${rawReportId}`)
+                            rawReportId && !/[/?#\\]/.test(rawReportId) && isSafeWikiUrl(`/reports/${rawReportId}`)
                               ? `/reports/${rawReportId}`
                               : null;
                           const contactCount = matched?.contactCount ?? 0;
@@ -396,7 +424,6 @@ export default function WikiFlowMap({
                                         href={`https://${safeDomain}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        onClick={(e) => e.stopPropagation()}
                                         style={{
                                           fontSize: '12px',
                                           color: 'var(--color-muted, #666666)',
@@ -436,7 +463,6 @@ export default function WikiFlowMap({
                                   {safeReportPath && (
                                     <Link
                                       href={safeReportPath}
-                                      onClick={(e) => e.stopPropagation()}
                                       style={{
                                         display: 'inline-flex',
                                         alignItems: 'center',
@@ -456,7 +482,6 @@ export default function WikiFlowMap({
                                   {safeReportPath && contactCount > 0 && (
                                     <Link
                                       href={safeReportPath}
-                                      onClick={(e) => e.stopPropagation()}
                                       style={{
                                         fontSize: '12px',
                                         fontWeight: 600,
@@ -471,10 +496,7 @@ export default function WikiFlowMap({
                                   {!safeReportPath && contactCount > 0 && (
                                     <button
                                       type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        onRequestCustomReport?.();
-                                      }}
+                                      onClick={() => onRequestCustomReport?.()}
                                       style={{
                                         display: 'inline-flex',
                                         alignItems: 'center',

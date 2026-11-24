@@ -225,10 +225,10 @@ export default function WikiPriceWaterfall({ stages, currency }: WikiPriceWaterf
         >
           <thead>
             <tr style={{ background: 'rgba(18, 18, 18, 0.03)' }}>
-              <th style={thStyle}>流通阶段</th>
-              <th style={{ ...thStyle, textAlign: 'right', whiteSpace: 'nowrap' }}>美元等值价 (USD)</th>
-              <th style={{ ...thStyle, textAlign: 'center', whiteSpace: 'nowrap' }}>较 FOB 倍率</th>
-              <th style={thStyle}>成本与加价说明</th>
+              <th scope="col" style={thStyle}>流通阶段</th>
+              <th scope="col" style={{ ...thStyle, textAlign: 'right', whiteSpace: 'nowrap' }}>美元等值价 (USD)</th>
+              <th scope="col" style={{ ...thStyle, textAlign: 'center', whiteSpace: 'nowrap' }}>较 FOB 倍率</th>
+              <th scope="col" style={thStyle}>成本与加价说明</th>
             </tr>
           </thead>
           <tbody>
