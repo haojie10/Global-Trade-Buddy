@@ -17,6 +17,7 @@ export function serializeJsonLd(data: Record<string, unknown>): string {
 
 /**
  * 行业百科专职 JSON-LD 结构化数据输出组件
+ * @remarks 组件内部已包裹 next/head 的 <Head>，调用方必须将其作为 <Head> 的兄弟节点渲染，切勿嵌套在 <Head> 内。
  * NOTE: 仅此专职序列化组件因 React 18 对 <script> 文本节点双引号会转义为 &quot; 的限制，
  * 在受控调用 serializeJsonLd 完成安全转义后，通过 Head 输出 application/ld+json。
  */
