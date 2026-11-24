@@ -174,19 +174,33 @@ export async function deleteImagesFromContent(contentHtml: string): Promise<void
 }
 
 /**
- * 规范化并清洗行业百科静态资源路径键，拦截路径穿越（..）与非法字符
+ * 规范化并清洗行业百科静态资源路径键，先白名单清洗字符，再彻底剔除 `..` 段防止组合绕过
  * @param safeKeyName 原始相对文件名或子路径
- * @returns 安全的相对路径键（不含前导 / 与 ..）
+ * @returns 安全的相对路径键（非空、不含前导 `/` 与 `..`）
  */
 export function sanitizeWikiAssetKey(safeKeyName: string): string {
-  return String(safeKeyName || '')
+  // 1. 先统一分隔符并执行字符白名单清洗，杜绝 ". ./" 或 ".@./" 在后续拼接复活出 ".."
+  const whitelisted = String(safeKeyName || '')
     .replace(/\\/g, '/')
-    .replace(/\.{2,}/g, '')
-    .replace(/[^a-zA-Z0-9._/-]/g, '')
+    .replace(/[^a-zA-Z0-9._/-]/g, '');
+
+  // 2. 按路径段切分，递归剔除任意 ".." 序列并过滤空段与 "." / ".."
+  const segments = whitelisted
     .split('/')
-    .filter((segment) => segment.length > 0 && segment !== '.')
-    .join('/')
-    .replace(/^\/+/, '');
+    .map((segment) => {
+      let cleaned = segment;
+      while (cleaned.includes('..')) {
+        cleaned = cleaned.replace(/\.{2,}/g, '');
+      }
+      return cleaned;
+    })
+    .filter((segment) => segment.length > 0 && segment !== '.' && segment !== '..');
+
+  const sanitized = segments.join('/').replace(/^\/+/, '');
+  if (!sanitized || sanitized.split('/').some((seg) => seg === '..' || seg.includes('..'))) {
+    throw new Error('无效的百科资产路径 key');
+  }
+  return sanitized;
 }
 
 /**

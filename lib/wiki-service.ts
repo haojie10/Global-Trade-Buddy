@@ -43,6 +43,13 @@ const MIN_CLEAN_NAME_LENGTH = 3;
 const RELATED_SUMMARY_MAX_LEN = 120;
 
 /**
+ * 转义 PostgreSQL ILIKE 通配符（\、%、_），防止用户输入特殊字符导致宽泛匹配
+ */
+function escapeIlikePattern(raw: string): string {
+  return raw.replace(/[\\%_]/g, (ch) => `\\${ch}`);
+}
+
+/**
  * 批量将百科图谱中的渠道玩家与站内 reports、crm_contacts 碰撞，返回脱敏汇总结果。
  * 全程最多发出 2 条批量 SQL（无 N+1 查询），且绝不查询或返回 email 明文、phone 或 source_session。
  * @param flowData 行业市场流转结构数据
@@ -53,7 +60,7 @@ export async function matchPlayersWithPlatformAssets(
   flowData: MarketFlowData,
   dbClient: DbQueryable
 ): Promise<Record<string, PlayerAssetMatch>> {
-  const result: Record<string, PlayerAssetMatch> = {};
+  const matchMap = new Map<string, PlayerAssetMatch>();
   const domainSet = new Set<string>();
   const cleanNameSet = new Set<string>();
   const playerEntries: Array<{ key: string; domain: string; matchableCleanName: string }> = [];
@@ -71,8 +78,8 @@ export async function matchPlayersWithPlatformAssets(
       if (matchableCleanName) cleanNameSet.add(matchableCleanName);
 
       playerEntries.push({ key, domain, matchableCleanName });
-      if (!result[key]) {
-        result[key] = { reportId: null, reportTitle: null, contactCount: 0 };
+      if (!matchMap.has(key)) {
+        matchMap.set(key, { reportId: null, reportTitle: null, contactCount: 0 });
       }
     }
   }
@@ -80,16 +87,16 @@ export async function matchPlayersWithPlatformAssets(
   const domains = Array.from(domainSet);
   const cleanNames = Array.from(cleanNameSet);
   if (domains.length === 0 && cleanNames.length === 0) {
-    return result;
+    return Object.fromEntries(matchMap);
   }
 
-  // 1. 批量匹配站内深度研报（按根域名优先，其次按清洗公司名回填）
+  // 1. 批量匹配站内深度研报（使用 cardinality 安全判断空数组，按根域名优先、其次清洗公司名回填）
   try {
     const repRes = await dbClient.query(
       `SELECT id, title, website_domain, clean_company
        FROM reports
-       WHERE (array_length($1::text[], 1) > 0 AND website_domain = ANY($1::text[]))
-          OR (array_length($2::text[], 1) > 0 AND clean_company = ANY($2::text[]))
+       WHERE (cardinality($1::text[]) > 0 AND website_domain = ANY($1::text[]))
+          OR (cardinality($2::text[]) > 0 AND clean_company = ANY($2::text[]))
        ORDER BY created_at DESC`,
       [domains, cleanNames]
     );
@@ -109,23 +116,28 @@ export async function matchPlayersWithPlatformAssets(
       const matched =
         (entry.domain && byDomain.get(entry.domain)) ||
         (entry.matchableCleanName && byCleanName.get(entry.matchableCleanName));
-      if (matched) {
-        result[entry.key].reportId = matched.id;
-        result[entry.key].reportTitle = matched.title;
+      const target = matchMap.get(entry.key);
+      if (matched && target) {
+        target.reportId = matched.id;
+        target.reportTitle = matched.title;
       }
     }
   } catch (err) {
     console.warn('[WikiService] 匹配站内 reports 降级跳过:', (err as Error).message);
   }
 
-  // 2. 批量聚合统计 crm_contacts 联系人数量（严禁查询或返回 email 列表、phone、source_session）
+  // 2. 通过 UNION ALL 分别按域名与清洗公司名独立聚合去重计数，杜绝跨维度累加重复计数与隐私泄露
   try {
     const crmRes = await dbClient.query(
-      `SELECT website_domain, clean_company_name, COUNT(DISTINCT email)::int AS cnt
+      `SELECT 'domain' AS match_type, website_domain AS match_key, COUNT(DISTINCT email)::int AS cnt
        FROM crm_contacts
-       WHERE (array_length($1::text[], 1) > 0 AND website_domain = ANY($1::text[]))
-          OR (array_length($2::text[], 1) > 0 AND clean_company_name = ANY($2::text[]))
-       GROUP BY website_domain, clean_company_name`,
+       WHERE cardinality($1::text[]) > 0 AND website_domain = ANY($1::text[])
+       GROUP BY website_domain
+       UNION ALL
+       SELECT 'name' AS match_type, clean_company_name AS match_key, COUNT(DISTINCT email)::int AS cnt
+       FROM crm_contacts
+       WHERE cardinality($2::text[]) > 0 AND clean_company_name = ANY($2::text[])
+       GROUP BY clean_company_name`,
       [domains, cleanNames]
     );
 
@@ -133,24 +145,25 @@ export async function matchPlayersWithPlatformAssets(
     const countByCleanName = new Map<string, number>();
     for (const row of crmRes.rows) {
       const cnt = Number(row.cnt || 0);
-      if (row.website_domain) {
-        countByDomain.set(row.website_domain, (countByDomain.get(row.website_domain) || 0) + cnt);
-      }
-      if (row.clean_company_name) {
-        countByCleanName.set(row.clean_company_name, (countByCleanName.get(row.clean_company_name) || 0) + cnt);
+      if (row.match_type === 'domain' && row.match_key) {
+        countByDomain.set(row.match_key, cnt);
+      } else if (row.match_type === 'name' && row.match_key) {
+        countByCleanName.set(row.match_key, cnt);
       }
     }
 
     for (const entry of playerEntries) {
+      const target = matchMap.get(entry.key);
+      if (!target) continue;
       const domainCnt = entry.domain ? (countByDomain.get(entry.domain) || 0) : 0;
       const nameCnt = entry.matchableCleanName ? (countByCleanName.get(entry.matchableCleanName) || 0) : 0;
-      result[entry.key].contactCount = domainCnt > 0 ? domainCnt : nameCnt;
+      target.contactCount = domainCnt > 0 ? domainCnt : nameCnt;
     }
   } catch (err) {
     console.warn('[WikiService] 匹配 crm_contacts 计数降级为 0:', (err as Error).message);
   }
 
-  return result;
+  return Object.fromEntries(matchMap);
 }
 
 /**
@@ -180,14 +193,14 @@ export async function getRelatedReportsForWiki(
   if (cleanIndustry) {
     params.push(cleanIndustry);
     const eqIdx = params.length;
-    params.push(`%${cleanIndustry}%`);
+    params.push(`%${escapeIlikePattern(cleanIndustry)}%`);
     const likeIdx = params.length;
     whereClauses.push(`ind.name = $${eqIdx} OR r.title ILIKE $${likeIdx}`);
   }
   if (cleanCountry) {
     params.push(cleanCountry);
     const cntIdx = params.length;
-    params.push(`%${cleanCountry}%`);
+    params.push(`%${escapeIlikePattern(cleanCountry)}%`);
     const likeIdx = params.length;
     whereClauses.push(`cnt.name = $${cntIdx} OR r.market_region ILIKE $${likeIdx} OR r.title ILIKE $${likeIdx}`);
   }
@@ -229,15 +242,19 @@ export async function getRelatedReportsForWiki(
 }
 
 /**
- * 幂等创建或更新行业百科词条（按 slug Upsert）
+ * 幂等创建或更新行业百科词条（按 slug 原子 Upsert）
  * @param dbClient 数据库查询连接
  * @param payload 百科入库负载
- * @returns 入库后的 id、规范化 slug 与操作类型（created / updated）
+ * @returns 入库后的 id、规范化 slug 与原子判定的操作类型（created / updated）
  */
 export async function upsertWikiEntry(
   dbClient: DbQueryable,
   payload: UpsertWikiPayload
 ): Promise<{ id: string; slug: string; action: 'created' | 'updated' }> {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    throw new Error('upsertWikiEntry payload 必须为非空对象');
+  }
+
   const validation = validateMarketFlowData(payload.flow_data);
   if (!validation.valid) {
     throw new Error(`flow_data 校验失败: ${validation.errors.join('; ')}`);
@@ -256,7 +273,11 @@ export async function upsertWikiEntry(
 
   const trimmedTitle = payload.title.trim();
   const trimmedSummary = payload.summary.trim();
-  const slug = normalizeWikiSlug(payload.slug || payload.flow_data.meta.id);
+  const rawSlug =
+    typeof payload.slug === 'string' && payload.slug.trim()
+      ? payload.slug.trim()
+      : payload.flow_data.meta.id;
+  const slug = normalizeWikiSlug(rawSlug);
   const countryCode = payload.flow_data.meta.country_code.toUpperCase();
   const countryName = payload.flow_data.meta.country_name_cn.trim();
   const marketRegion = getRegionByCountryName(countryName) || '全球';
@@ -271,9 +292,6 @@ export async function upsertWikiEntry(
       ? payload.faq_items
       : generateDefaultFaqs(payload.flow_data, trimmedTitle);
   const sources = Array.isArray(payload.sources) ? payload.sources : [];
-
-  const existing = await dbClient.query(`SELECT id FROM wiki_entries WHERE slug = $1`, [slug]);
-  const action: 'created' | 'updated' = existing.rows.length > 0 ? 'updated' : 'created';
 
   const upsertRes = await dbClient.query(
     `INSERT INTO wiki_entries (
@@ -307,7 +325,7 @@ export async function upsertWikiEntry(
        status = EXCLUDED.status,
        published_at = COALESCE(wiki_entries.published_at, EXCLUDED.published_at),
        updated_at = NOW()
-     RETURNING id, slug`,
+     RETURNING id, slug, (xmax = 0) AS inserted`,
     [
       slug,
       trimmedTitle,
@@ -329,9 +347,12 @@ export async function upsertWikiEntry(
     ]
   );
 
+  const row = upsertRes.rows[0];
+  const action: 'created' | 'updated' = row.inserted ? 'created' : 'updated';
+
   return {
-    id: upsertRes.rows[0].id,
-    slug: upsertRes.rows[0].slug,
+    id: row.id,
+    slug: row.slug,
     action,
   };
 }

@@ -6,6 +6,7 @@ import {
   getRelatedReportsForWiki,
   upsertWikiEntry,
   DbQueryable,
+  UpsertWikiPayload,
 } from '../lib/wiki-service';
 import { sanitizeWikiAssetKey, uploadWikiAsset } from '../lib/storage';
 import { buildSampleFlowData } from './wiki-schema.test';
@@ -39,11 +40,11 @@ interface StoredWikiRow {
 }
 
 /**
- * 构建内存 mock DbQueryable，记录全部 SQL 与参数并模拟 PostgreSQL 核心行为
+ * 构建内存 mock DbQueryable，模拟 PostgreSQL cardinality / UNION ALL / xmax=0 行为
  */
 function createMockDb(options?: {
   reportRows?: Array<{ id: string; title: string; website_domain: string | null; clean_company: string | null }>;
-  crmRows?: Array<{ website_domain: string | null; clean_company_name: string | null; cnt: number }>;
+  crmContacts?: Array<{ email: string; website_domain: string | null; clean_company_name: string | null }>;
   relatedReportRows?: Array<{
     id: string;
     title: string;
@@ -75,24 +76,41 @@ function createMockDb(options?: {
         const cleanNames = (params[1] as string[]) || [];
         const rows = (options?.reportRows || []).filter(
           (r) =>
-            (r.website_domain && domains.includes(r.website_domain)) ||
-            (r.clean_company && cleanNames.includes(r.clean_company))
+            (domains.length > 0 && r.website_domain && domains.includes(r.website_domain)) ||
+            (cleanNames.length > 0 && r.clean_company && cleanNames.includes(r.clean_company))
         );
         return { rows, rowCount: rows.length } as never;
       }
 
-      // 2. matchPlayersWithPlatformAssets -> 查 crm_contacts
-      if (sql.includes('FROM crm_contacts')) {
+      // 2. matchPlayersWithPlatformAssets -> UNION ALL 独立按 domain 与 clean_company_name 聚合统计
+      if (sql.includes('FROM crm_contacts') && sql.includes('UNION ALL')) {
         if (options?.throwOnCrm) {
           throw new Error('simulated crm_contacts relation does not exist');
         }
         const domains = (params[0] as string[]) || [];
         const cleanNames = (params[1] as string[]) || [];
-        const rows = (options?.crmRows || []).filter(
-          (r) =>
-            (r.website_domain && domains.includes(r.website_domain)) ||
-            (r.clean_company_name && cleanNames.includes(r.clean_company_name))
-        );
+        const contacts = options?.crmContacts || [];
+
+        const domainGroups = new Map<string, Set<string>>();
+        const nameGroups = new Map<string, Set<string>>();
+        for (const c of contacts) {
+          if (domains.length > 0 && c.website_domain && domains.includes(c.website_domain)) {
+            if (!domainGroups.has(c.website_domain)) domainGroups.set(c.website_domain, new Set());
+            domainGroups.get(c.website_domain)!.add(c.email);
+          }
+          if (cleanNames.length > 0 && c.clean_company_name && cleanNames.includes(c.clean_company_name)) {
+            if (!nameGroups.has(c.clean_company_name)) nameGroups.set(c.clean_company_name, new Set());
+            nameGroups.get(c.clean_company_name)!.add(c.email);
+          }
+        }
+
+        const rows: Array<{ match_type: string; match_key: string; cnt: number }> = [];
+        for (const [k, emails] of domainGroups.entries()) {
+          rows.push({ match_type: 'domain', match_key: k, cnt: emails.size });
+        }
+        for (const [k, emails] of nameGroups.entries()) {
+          rows.push({ match_type: 'name', match_key: k, cnt: emails.size });
+        }
         return { rows, rowCount: rows.length } as never;
       }
 
@@ -105,15 +123,8 @@ function createMockDb(options?: {
         return { rows, rowCount: rows.length } as never;
       }
 
-      // 4. upsertWikiEntry -> 先检查是否存在 slug
-      if (sql.includes('SELECT id FROM wiki_entries WHERE slug = $1')) {
-        const slug = String(params[0] || '');
-        const found = wikiStore.get(slug);
-        return { rows: found ? [{ id: found.id }] : [], rowCount: found ? 1 : 0 } as never;
-      }
-
-      // 5. upsertWikiEntry -> INSERT ... ON CONFLICT (slug) DO UPDATE
-      if (sql.includes('INSERT INTO wiki_entries')) {
+      // 4. upsertWikiEntry -> 原子 INSERT ... ON CONFLICT (slug) DO UPDATE ... RETURNING id, slug, (xmax = 0) AS inserted
+      if (sql.includes('INSERT INTO wiki_entries') && sql.includes('(xmax = 0) AS inserted')) {
         const [
           slug,
           title,
@@ -177,7 +188,10 @@ function createMockDb(options?: {
           updated_at: now,
         };
         wikiStore.set(slug, record);
-        return { rows: [{ id: record.id, slug: record.slug }], rowCount: 1 } as never;
+        return {
+          rows: [{ id: record.id, slug: record.slug, inserted: !existing }],
+          rowCount: 1,
+        } as never;
       }
 
       throw new Error(`Unexpected SQL in mock DB: ${sql}`);
@@ -202,12 +216,12 @@ describe('lib/wiki-service 玩家资产联动、研报检索与幂等入库', ()
     }
   });
 
-  it('matchPlayersWithPlatformAssets 应仅发 2 条批量 SQL、根域名优先命中且绝不泄露敏感字段', async () => {
+  it('matchPlayersWithPlatformAssets 应仅发 2 条 cardinality+UNION ALL SQL、按域名优先且绝不重复计数或泄露敏感字段', async () => {
     const flow = buildSampleFlowData();
-    // 增加一个仅公司名命中、以及一个短名 (<3 字符) 应被忽略公司名碰撞的玩家
     flow.flow_nodes[0].players.push(
       { name: 'Brennenstuhl GmbH', website: '', business_model: '德国电气品牌' },
-      { name: 'AB', website: '', business_model: '超短名称玩家' }
+      { name: 'AB', website: '', business_model: '超短名称玩家' },
+      { name: 'constructor', website: '', business_model: '原型链键名防御测试' }
     );
 
     const { dbClient, queries } = createMockDb({
@@ -237,47 +251,65 @@ describe('lib/wiki-service 玩家资产联动、研报检索与幂等入库', ()
           clean_company: 'ab',
         },
       ],
-      crmRows: [
-        { website_domain: 'obi.de', clean_company_name: 'obi', cnt: 7 },
-        { website_domain: 'paulmann.com', clean_company_name: 'paulmann licht', cnt: 4 },
-        { website_domain: null, clean_company_name: 'ab', cnt: 99 },
+      crmContacts: [
+        { email: 'a@obi.de', website_domain: 'obi.de', clean_company_name: 'obi' },
+        { email: 'b@obi.de', website_domain: 'obi.de', clean_company_name: 'obi' },
+        { email: 'c@obi-holding.de', website_domain: 'obi-holding.de', clean_company_name: 'obi' },
+        { email: 'buyer1@paulmann.com', website_domain: 'paulmann.com', clean_company_name: 'paulmann licht' },
+        { email: 'buyer2@paulmann.com', website_domain: 'paulmann.com', clean_company_name: 'paulmann' },
+        { email: 'info@brennenstuhl.de', website_domain: 'brennenstuhl.de', clean_company_name: 'brennenstuhl' },
+        { email: 'ab@ab.de', website_domain: null, clean_company_name: 'ab' },
       ],
     });
 
     const matches = await matchPlayersWithPlatformAssets(flow, dbClient);
 
-    // 严格校验仅发出 2 条批量 SQL（无 N+1）
+    // 严格校验仅发出 2 条批量 SQL（无 N+1），且使用 cardinality 与 UNION ALL
     expect(queries).toHaveLength(2);
     expect(queries[0].sql).toContain('FROM reports');
+    expect(queries[0].sql).toContain('cardinality(');
+    expect(queries[0].sql).not.toContain('array_length(');
+
     expect(queries[1].sql).toContain('FROM crm_contacts');
+    expect(queries[1].sql).toContain('UNION ALL');
+    expect(queries[1].sql).toContain('cardinality(');
+    expect(queries[1].sql).not.toContain('array_length(');
 
     // SQL 绝不允许查询 source_session、phone 或明文 email 列表
     expect(queries[1].sql.toLowerCase()).not.toContain('source_session');
     expect(queries[1].sql.toLowerCase()).not.toContain('phone');
     expect(queries[1].sql).toMatch(/COUNT\s*\(\s*DISTINCT\s+email\s*\)/i);
 
-    // 验证根域名优先命中 reports 与 crm_contacts
+    // 根域名优先：obi.de 下仅 2 个 obi.de 联系人（不叠加同名 obi-holding.de）
     expect(matches['obi.de']).toEqual({
       reportId: 'rep-obi-domain',
       reportTitle: 'OBI 德国 DIY 零售巨头 360° 洞察（域名匹配）',
-      contactCount: 7,
+      contactCount: 2,
     });
     expect(matches['paulmann.com']).toEqual({
       reportId: null,
       reportTitle: null,
-      contactCount: 4,
+      contactCount: 2,
     });
 
     // 无官网时按清洗公司名 (>=3 字符) 命中
     expect(matches['brennenstuhl']).toEqual({
       reportId: 'rep-brennenstuhl',
       reportTitle: 'Brennenstuhl 德国电气深度洞察',
-      contactCount: 0,
+      contactCount: 1,
     });
 
     // 短词 (<3 字符) 绝不纳入 cleanNames 碰撞参数与结果命中
     expect((queries[0].params[1] as string[])).not.toContain('ab');
     expect(matches['ab']).toEqual({
+      reportId: null,
+      reportTitle: null,
+      contactCount: 0,
+    });
+
+    // 原型链键名不污染且可安全返回自有属性
+    expect(Object.hasOwn(matches, 'constructor')).toBe(true);
+    expect(matches['constructor']).toEqual({
       reportId: null,
       reportTitle: null,
       contactCount: 0,
@@ -292,9 +324,11 @@ describe('lib/wiki-service 玩家资产联动、研报检索与幂等入库', ()
     }
   });
 
-  it('matchPlayersWithPlatformAssets 在 crm_contacts 查询异常时应安全降级为 0 且保留已命中 reports', async () => {
+  it('matchPlayersWithPlatformAssets 应支持 reports 异常降级、crm_contacts 异常降级及无有效玩家 0 SQL 返回', async () => {
     const flow = buildSampleFlowData();
-    const { dbClient, queries } = createMockDb({
+
+    // 1. crm_contacts 异常降级
+    const crmErrMock = createMockDb({
       reportRows: [
         {
           id: 'rep-obi-1',
@@ -305,24 +339,43 @@ describe('lib/wiki-service 玩家资产联动、研报检索与幂等入库', ()
       ],
       throwOnCrm: true,
     });
-
-    const matches = await matchPlayersWithPlatformAssets(flow, dbClient);
-    expect(queries).toHaveLength(2);
-    expect(matches['obi.de']).toEqual({
+    const crmFallback = await matchPlayersWithPlatformAssets(flow, crmErrMock.dbClient);
+    expect(crmErrMock.queries).toHaveLength(2);
+    expect(crmFallback['obi.de']).toEqual({
       reportId: 'rep-obi-1',
       reportTitle: 'OBI 德国 DIY 零售巨头 360° 洞察',
       contactCount: 0,
     });
-    expect(matches['paulmann.com']).toEqual({
+
+    // 2. reports 异常降级仍保留 crm_contacts 聚合结果
+    const repErrMock = createMockDb({
+      crmContacts: [{ email: 'buyer@obi.de', website_domain: 'obi.de', clean_company_name: 'obi' }],
+      throwOnReports: true,
+    });
+    const repFallback = await matchPlayersWithPlatformAssets(flow, repErrMock.dbClient);
+    expect(repErrMock.queries).toHaveLength(2);
+    expect(repFallback['obi.de']).toEqual({
       reportId: null,
       reportTitle: null,
-      contactCount: 0,
+      contactCount: 1,
+    });
+
+    // 3. 无有效碰撞域名与公司名（如空玩家或仅 <3 字符名）应 0 条 SQL 直接返回
+    const emptyFlow = buildSampleFlowData();
+    emptyFlow.flow_nodes.forEach((node) => {
+      node.players = [{ name: 'XY', website: '', business_model: '短名测试' }];
+    });
+    const zeroQueryMock = createMockDb();
+    const zeroRes = await matchPlayersWithPlatformAssets(emptyFlow, zeroQueryMock.dbClient);
+    expect(zeroQueryMock.queries).toHaveLength(0);
+    expect(zeroRes).toEqual({
+      xy: { reportId: null, reportTitle: null, contactCount: 0 },
     });
   });
 
-  it('upsertWikiEntry 应支持首次创建、自动大区与FAQ补全、同 slug 幂等更新及脏数据拦截', async () => {
+  it('upsertWikiEntry 应原子判定 created/updated、支持纯空格 slug 回退 meta.id 及拦截非法入参', async () => {
     const flow = buildSampleFlowData();
-    const { dbClient, wikiStore } = createMockDb();
+    const { dbClient, queries, wikiStore } = createMockDb();
 
     const first = await upsertWikiEntry(dbClient, {
       slug: 'SVC_Test_DE_Lighting',
@@ -336,6 +389,9 @@ describe('lib/wiki-service 玩家资产联动、研报检索与幂等入库', ()
 
     expect(first.action).toBe('created');
     expect(first.slug).toBe('svc-test-de-lighting');
+    // 原子 upsert 无需前置 SELECT，仅发出 1 条 SQL
+    expect(queries).toHaveLength(1);
+
     const createdRow = wikiStore.get(first.slug)!;
     expect(createdRow.market_region).toBe('欧洲');
     expect(createdRow.faq_items.length).toBeGreaterThanOrEqual(4);
@@ -351,12 +407,25 @@ describe('lib/wiki-service 玩家资产联动、研报检索与幂等入库', ()
 
     expect(second.action).toBe('updated');
     expect(second.id).toBe(first.id);
+    expect(queries).toHaveLength(2);
     const updatedRow = wikiStore.get(second.slug)!;
     expect(updatedRow.title).toBe('修订版德国照明流通百科');
     expect(updatedRow.video_url).toBe('https://cdn.example.com/hook.mp4');
     expect(updatedRow.cover_image).toBe('https://cdn.example.com/cover.png');
 
-    // 空标题应抛错拒绝写入
+    // 纯空格 slug 应自动回退至 flow_data.meta.id（'de_lighting' -> 'de-lighting'）
+    const fallbackSlugRes = await upsertWikiEntry(dbClient, {
+      slug: '   ',
+      title: '纯空格 slug 回退测试',
+      summary: '摘要',
+      flow_data: flow,
+      content_md: '正文',
+    });
+    expect(fallbackSlugRes.slug).toBe('de-lighting');
+    expect(fallbackSlugRes.action).toBe('created');
+
+    // 非对象 payload 与空标题应抛错拒绝写入
+    await expect(upsertWikiEntry(dbClient, null as unknown as UpsertWikiPayload)).rejects.toThrow();
     await expect(
       upsertWikiEntry(dbClient, {
         slug: 'bad-empty-title',
@@ -367,7 +436,7 @@ describe('lib/wiki-service 玩家资产联动、研报检索与幂等入库', ()
       })
     ).rejects.toThrow();
 
-    // 脏 flow_data（本土 + 进口 != 100%）应抛错拒绝写入
+    // 脏 flow_data 应抛错拒绝写入
     const dirtyFlow = buildSampleFlowData();
     dirtyFlow.supply_origin.local_manufacturing_pct = 90;
     dirtyFlow.supply_origin.import_pct = 90;
@@ -382,10 +451,10 @@ describe('lib/wiki-service 玩家资产联动、研报检索与幂等入库', ()
     ).rejects.toThrow(/flow_data/);
   });
 
-  it('getRelatedReportsForWiki 应截断超 120 字摘要并在异常时降级返回空数组', async () => {
+  it('getRelatedReportsForWiki 应转义 ILIKE 通配符、截断超 120 字摘要并在异常时降级返回空数组', async () => {
     const longSummary = '德'.repeat(135);
     const shortSummary = '简短摘要不超过限制。';
-    const { dbClient } = createMockDb({
+    const { dbClient, queries } = createMockDb({
       relatedReportRows: [
         {
           id: 'r-1',
@@ -406,22 +475,34 @@ describe('lib/wiki-service 玩家资产联动、研报检索与幂等入库', ()
       ],
     });
 
-    const related = await getRelatedReportsForWiki('照明产品', '德国', dbClient, 4);
+    const related = await getRelatedReportsForWiki('100%_照明\\灯', '德国', dbClient, 4);
     expect(related).toHaveLength(2);
     expect(related[0].summary).toBe(`${'德'.repeat(120)}...`);
     expect(related[1].summary).toBe(shortSummary);
+    expect(queries[0].params[1]).toBe('%100\\%\\_照明\\\\灯%');
 
     const errDb = createMockDb({ throwOnRelatedReports: true });
     const fallback = await getRelatedReportsForWiki('照明产品', '德国', errDb.dbClient, 4);
     expect(fallback).toEqual([]);
   });
 
-  it('sanitizeWikiAssetKey 应拦截路径穿越并规范相对路径，uploadWikiAsset 支持本地降级写入', async () => {
+  it('sanitizeWikiAssetKey 应先白名单清洗再彻底剔除 .. 防止组合绕过，并拒绝空结果', async () => {
     expect(sanitizeWikiAssetKey('../../etc/passwd')).toBe('etc/passwd');
+    expect(sanitizeWikiAssetKey('. ./etc/passwd')).toBe('etc/passwd');
+    expect(sanitizeWikiAssetKey('.@./secret.png')).toBe('secret.png');
     expect(sanitizeWikiAssetKey('..\\..\\windows\\system32\\hosts')).toBe('windows/system32/hosts');
     expect(sanitizeWikiAssetKey('....//logos//de-lighting/obi (1).png')).toBe('logos/de-lighting/obi1.png');
     expect(sanitizeWikiAssetKey('/logos/paulmann.svg')).toBe('logos/paulmann.svg');
-    expect(sanitizeWikiAssetKey('../../..')).toBe('');
+
+    for (const malicious of ['. ./etc/passwd', '.@./secret.png', '../../etc/passwd', '....//a..b/c']) {
+      const cleaned = sanitizeWikiAssetKey(malicious);
+      expect(cleaned).not.toContain('..');
+      expect(cleaned.startsWith('/')).toBe(false);
+    }
+
+    expect(() => sanitizeWikiAssetKey('../../..')).toThrow();
+    expect(() => sanitizeWikiAssetKey('. @ . / . .')).toThrow();
+    expect(() => sanitizeWikiAssetKey('')).toThrow();
 
     const origBucket = process.env.COS_BUCKET;
     const origRegion = process.env.COS_REGION;
