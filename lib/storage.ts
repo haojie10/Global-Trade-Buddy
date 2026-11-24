@@ -172,3 +172,76 @@ export async function deleteImagesFromContent(contentHtml: string): Promise<void
     }
   }
 }
+
+/**
+ * 规范化并清洗行业百科静态资源路径键，拦截路径穿越（..）与非法字符
+ * @param safeKeyName 原始相对文件名或子路径
+ * @returns 安全的相对路径键（不含前导 / 与 ..）
+ */
+export function sanitizeWikiAssetKey(safeKeyName: string): string {
+  return String(safeKeyName || '')
+    .replace(/\\/g, '/')
+    .replace(/\.{2,}/g, '')
+    .replace(/[^a-zA-Z0-9._/-]/g, '')
+    .split('/')
+    .filter((segment) => segment.length > 0 && segment !== '.')
+    .join('/')
+    .replace(/^\/+/, '');
+}
+
+/**
+ * 上传行业百科专用静态资源（如企业 Logo、封面图、短视频）到腾讯云 COS 的 wiki-assets/ 目录；
+ * 若未配置 COS，则降级写入本地 public/uploads/wiki-assets/。
+ * @param buffer 文件二进制内容
+ * @param mime MIME 类型
+ * @param safeKeyName 目标相对路径键
+ * @returns 可访问的资源 URL 或站内相对路径
+ */
+export async function uploadWikiAsset(buffer: Buffer, mime: string, safeKeyName: string): Promise<string> {
+  const sanitizedKey = sanitizeWikiAssetKey(safeKeyName);
+  if (!sanitizedKey) {
+    throw new Error('无效的百科资产路径 key');
+  }
+
+  const cloudPath = `wiki-assets/${sanitizedKey}`;
+
+  if (cosEnabled()) {
+    const Bucket = process.env.COS_BUCKET!;
+    const Region = process.env.COS_REGION!;
+    const cos = getCOSInstance();
+
+    return new Promise((resolve, reject) => {
+      cos.putObject(
+        {
+          Bucket,
+          Region,
+          Key: cloudPath,
+          Body: buffer,
+          ContentType: mime,
+        },
+        (err) => {
+          if (err) {
+            console.error('[COS] 上传百科资产失败:', err);
+            return reject(new Error(`COS 上传百科资源失败: ${err.message || JSON.stringify(err)}`));
+          }
+          const domain = process.env.COS_DOMAIN
+            ? process.env.COS_DOMAIN.replace(/\/$/, '')
+            : `https://${Bucket}.cos.${Region}.myqcloud.com`;
+          resolve(`${domain}/${cloudPath}`);
+        }
+      );
+    });
+  }
+
+  const fs = require('fs');
+  const path = require('path');
+  const baseDir = path.resolve(process.cwd(), 'public', 'uploads', 'wiki-assets');
+  const localPath = path.resolve(baseDir, sanitizedKey);
+  // 防御性路径边界校验，确保绝不越出 wiki-assets 目录
+  if (localPath !== baseDir && !localPath.startsWith(baseDir + path.sep)) {
+    throw new Error('检测到越权百科资产存储路径');
+  }
+  fs.mkdirSync(path.dirname(localPath), { recursive: true });
+  fs.writeFileSync(localPath, buffer);
+  return `/uploads/wiki-assets/${sanitizedKey}`;
+}
