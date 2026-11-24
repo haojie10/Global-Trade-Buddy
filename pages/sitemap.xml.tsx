@@ -3,6 +3,12 @@ import pool from '../lib/db';
 
 const EXTERNAL_DATA_URL = 'https://marketgraphic.cn';
 
+function toSafeIsoDate(raw: unknown, fallbackIso: string): string {
+  if (!raw) return fallbackIso;
+  const parsed = new Date(raw as string | number | Date);
+  return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : fallbackIso;
+}
+
 function generateSiteMap(reports: any[], newsList: any[], wikiList: any[], latestDate: string) {
   return `<?xml version="1.0" encoding="UTF-8"?>
    <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -35,7 +41,7 @@ function generateSiteMap(reports: any[], newsList: any[], wikiList: any[], lates
          return `
        <url>
            <loc>${EXTERNAL_DATA_URL}/wiki/${encodeURIComponent(slug)}</loc>
-           <lastmod>${new Date(updated_at || Date.now()).toISOString()}</lastmod>
+           <lastmod>${toSafeIsoDate(updated_at, latestDate)}</lastmod>
            <priority>0.85</priority>
            <changefreq>weekly</changefreq>
        </url>
@@ -46,8 +52,8 @@ function generateSiteMap(reports: any[], newsList: any[], wikiList: any[], lates
        .map(({ id, created_at }) => {
          return `
        <url>
-           <loc>${EXTERNAL_DATA_URL}/reports/${id}</loc>
-           <lastmod>${new Date(created_at || Date.now()).toISOString()}</lastmod>
+           <loc>${EXTERNAL_DATA_URL}/reports/${encodeURIComponent(String(id))}</loc>
+           <lastmod>${toSafeIsoDate(created_at, latestDate)}</lastmod>
            <priority>0.7</priority>
            <changefreq>weekly</changefreq>
        </url>
@@ -58,8 +64,8 @@ function generateSiteMap(reports: any[], newsList: any[], wikiList: any[], lates
        .map(({ id, published_at }) => {
          return `
        <url>
-           <loc>${EXTERNAL_DATA_URL}/news/${id}</loc>
-           <lastmod>${new Date(published_at || Date.now()).toISOString()}</lastmod>
+           <loc>${EXTERNAL_DATA_URL}/news/${encodeURIComponent(String(id))}</loc>
+           <lastmod>${toSafeIsoDate(published_at, latestDate)}</lastmod>
            <priority>0.6</priority>
            <changefreq>monthly</changefreq>
        </url>

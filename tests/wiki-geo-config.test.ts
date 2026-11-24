@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import pool from '../lib/db';
 import { getServerSideProps as getSitemapSsrProps } from '../pages/sitemap.xml';
+import llmsHandler from '../pages/api/llms';
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 
@@ -43,7 +44,7 @@ describe('任务 9：行业百科 GEO 配置、导航、Sitemap 与百度推送�
     const robotsPath = path.join(ROOT_DIR, 'public', 'robots.txt');
     const content = fs.readFileSync(robotsPath, 'utf-8');
 
-    for (const bot of ['GPTBot', 'OAI-SearchBot', 'PerplexityBot', 'ClaudeBot', 'Bytespider']) {
+    for (const bot of ['GPTBot', 'OAI-SearchBot', 'ChatGPT-User', 'PerplexityBot', 'ClaudeBot', 'Google-Extended', 'Bytespider', 'Baiduspider']) {
       expect(content).toContain(`User-agent: ${bot}`);
     }
     expect(content).toContain('Allow: /wiki');
@@ -155,5 +156,34 @@ describe('任务 9：行业百科 GEO 配置、导航、Sitemap 与百度推送�
     expect(navbarContent).toContain('行业百科');
     expect(footerContent).toContain('href="/wiki"');
     expect(footerContent).toContain('行业百科');
+  });
+
+  it('GET /api/llms 在 wiki_entries 尚未迁移时应降级返回 200 静态栏目目录而非 500', async () => {
+    const mockRelease = vi.fn();
+    vi.spyOn(pool, 'connect').mockResolvedValue({
+      query: vi.fn().mockRejectedValue(new Error('relation "wiki_entries" does not exist')),
+      release: mockRelease,
+    } as any);
+
+    let statusCode = 0;
+    let body = '';
+    const res = {
+      setHeader: vi.fn(),
+      status: vi.fn((code: number) => {
+        statusCode = code;
+        return res;
+      }),
+      send: vi.fn((payload: string) => {
+        body = payload;
+        return res;
+      }),
+      json: vi.fn(),
+    } as any;
+
+    await llmsHandler({ method: 'GET', url: '/api/llms', query: {}, headers: {} } as any, res);
+    expect(statusCode).toBe(200);
+    expect(body).toContain('Market Graphic');
+    expect(body).toContain('https://marketgraphic.cn/wiki');
+    expect(mockRelease).toHaveBeenCalledTimes(1);
   });
 });

@@ -109,8 +109,23 @@ async function agentWikiHandler(req: NextApiRequest, res: NextApiResponse, dbCli
     return res.status(400).json({ error: 'status 仅允许 draft 或 published' });
   }
 
-  if (faq_items !== undefined && !Array.isArray(faq_items)) {
-    return res.status(400).json({ error: 'faq_items 必须为数组' });
+  if (faq_items !== undefined) {
+    if (!Array.isArray(faq_items)) {
+      return res.status(400).json({ error: 'faq_items 必须为数组' });
+    }
+    for (const item of faq_items) {
+      if (
+        !item ||
+        typeof item !== 'object' ||
+        Array.isArray(item) ||
+        typeof (item as Record<string, unknown>).q !== 'string' ||
+        !(item as Record<string, string>).q.trim() ||
+        typeof (item as Record<string, unknown>).a !== 'string' ||
+        !(item as Record<string, string>).a.trim()
+      ) {
+        return res.status(400).json({ error: 'faq_items 每项必须包含非空字符串 q 与 a' });
+      }
+    }
   }
 
   if (sources !== undefined) {

@@ -91,6 +91,20 @@ export default function WikiDetailPage({
 }: WikiDetailProps) {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showCustomModal, setShowCustomModal] = useState(false);
+  const [copiedMdLink, setCopiedMdLink] = useState(false);
+
+  const handleCopyMarkdownUrl = () => {
+    const fullUrl = `${SITE_URL}/wiki/${entry.slug}.md`;
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      navigator.clipboard
+        .writeText(fullUrl)
+        .then(() => {
+          setCopiedMdLink(true);
+          setTimeout(() => setCopiedMdLink(false), 2000);
+        })
+        .catch(() => {});
+    }
+  };
 
   // 浏览统计与停留时长上报（严格置于组件顶层，挂载时仅计数一次，离页/切后台更新累计时长）
   useEffect(() => {
@@ -399,20 +413,37 @@ export default function WikiDetailPage({
               }}
             >
               <span>最近校准更新：{updatedDate || '2026-11-24'}</span>
-              <a
-                href={markdownHref}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontWeight: 600,
-                  color: 'var(--color-accent, #ff641e)',
-                  textDecoration: 'underline',
-                  textUnderlineOffset: '3px',
-                }}
-              >
-                查看机器直读 Markdown (.md)
-              </a>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                <a
+                  href={markdownHref}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontWeight: 600,
+                    color: 'var(--color-accent, #ff641e)',
+                    textDecoration: 'underline',
+                    textUnderlineOffset: '3px',
+                  }}
+                >
+                  查看机器直读 Markdown (.md)
+                </a>
+                <button
+                  type="button"
+                  onClick={handleCopyMarkdownUrl}
+                  style={{
+                    background: 'rgba(18, 18, 18, 0.05)',
+                    border: '1px solid rgba(18, 18, 18, 0.12)',
+                    borderRadius: '6px',
+                    padding: '4px 10px',
+                    fontSize: '12px',
+                    color: 'var(--color-text, #111111)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {copiedMdLink ? '已复制 .md 链接' : '复制 Markdown 链接'}
+                </button>
+              </div>
             </div>
           </header>
 

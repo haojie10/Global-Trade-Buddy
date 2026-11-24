@@ -5,13 +5,20 @@ import { withDb } from '../../lib/api-handler';
 const SITE_ORIGIN = 'https://marketgraphic.cn';
 
 async function llmsHandler(_req: NextApiRequest, res: NextApiResponse, dbClient: PoolClient) {
-  const result = await dbClient.query(
-    `SELECT slug, title, summary
-     FROM wiki_entries
-     WHERE status = 'published'
-     ORDER BY updated_at DESC
-     LIMIT 500`
-  );
+  let rows: Array<{ slug?: string; title?: string; summary?: string }> = [];
+  // NOTE: 单独容错，防止在数据库迁移尚未执行前访问 /llms.txt 触发 500
+  try {
+    const result = await dbClient.query(
+      `SELECT slug, title, summary
+       FROM wiki_entries
+       WHERE status = 'published'
+       ORDER BY updated_at DESC
+       LIMIT 500`
+    );
+    rows = result.rows || [];
+  } catch (err: any) {
+    console.warn('[llms.txt] 查询 wiki_entries 降级为空列表:', err?.message || err);
+  }
 
   const lines: string[] = [
     '# Market Graphic (外贸智友)',
@@ -28,7 +35,7 @@ async function llmsHandler(_req: NextApiRequest, res: NextApiResponse, dbClient:
     '',
   ];
 
-  for (const row of result.rows) {
+  for (const row of rows) {
     const slug = String(row.slug || '').trim();
     const title = String(row.title || '').replace(/\r?\n/g, ' ').trim();
     const summary = String(row.summary || '').replace(/\r?\n/g, ' ').trim();

@@ -132,7 +132,7 @@ async function main() {
         const matchNews = fullUrl.match(/\/news\/([a-f0-9-]+)/i);
         const matchWiki = fullUrl.match(/\/wiki\/([a-z0-9-]+)/i);
         const type = matchReport ? 'report' : (matchNews ? 'news' : (matchWiki ? 'wiki' : 'custom'));
-        const id = matchReport ? matchReport[1] : (matchNews ? matchNews[1] : (matchWiki ? matchWiki[1] : undefined));
+        const id = matchReport ? matchReport[1] : (matchNews ? matchNews[1] : (matchWiki ? matchWiki[1].toLowerCase() : undefined));
         addUrl(fullUrl, type, id);
       });
     }
@@ -168,10 +168,13 @@ async function main() {
           unpushedReports.rows.forEach(r => addUrl(`${BASE_URL}/reports/${r.id}`, 'report', r.id));
         }
 
-        // 2.2 优先查询【从未推送过】的最新已发布行业百科（单独 try/catch 容错，避免表未迁移阻断主流程）
+        // 2.2 优先查询【从未推送过】的最新已发布行业百科（单独 try/catch 容错，避免表未迁移或无 DDL 权限阻断主流程）
         try {
-          await pool.query(`ALTER TABLE wiki_entries ADD COLUMN IF NOT EXISTS baidu_pushed_at TIMESTAMP WITH TIME ZONE;`);
-          wikiTableAvailable = true;
+          try {
+            await pool.query(`ALTER TABLE wiki_entries ADD COLUMN IF NOT EXISTS baidu_pushed_at TIMESTAMP WITH TIME ZONE;`);
+          } catch (alterErr) {
+            console.warn(`ℹ️  跳过 wiki_entries DDL 检查: ${alterErr.message}`);
+          }
 
           if (pushQueue.length < PUSH_LIMIT) {
             const remainingQuota = PUSH_LIMIT - pushQueue.length;
@@ -182,7 +185,12 @@ async function main() {
                LIMIT $1`,
               [remainingQuota]
             );
+            wikiTableAvailable = true;
             unpushedWiki.rows.forEach(w => addUrl(`${BASE_URL}/wiki/${w.slug}`, 'wiki', w.id));
+          } else {
+            // 即使额度已满也探测表是否可读，以供后续状态标记使用
+            await pool.query(`SELECT 1 FROM wiki_entries LIMIT 1`);
+            wikiTableAvailable = true;
           }
         } catch (wikiErr) {
           console.warn(`ℹ️  wiki_entries 自动队列跳过: ${wikiErr.message}`);
