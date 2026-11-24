@@ -12,6 +12,7 @@ import {
 } from '../../lib/wiki-service';
 import {
   ARCHETYPE_META,
+  buildWikiDetailJsonLd,
   calcPriceMultiplier,
   generateDefaultFaqs,
   isSafeWikiUrl,
@@ -74,124 +75,6 @@ function toAbsoluteSafeImageUrl(raw?: string | null): string | null {
 }
 
 /**
- * 构建详情页全套 GEO 结构化 Schema.org JSON-LD 对象
- * @param entry 已发布百科词条记录
- * @param faqs 与页面正文严格同步的 FAQ 问答数组
- * @returns article / breadcrumb / faqPage / dataset 四个标准 Schema.org 对象
- */
-export function buildWikiDetailJsonLd(entry: WikiEntryRecord, faqs: WikiFaqItem[]) {
-  const canonicalUrl = `${SITE_URL}/wiki/${entry.slug}`;
-  const markdownUrl = `${SITE_URL}/wiki/${entry.slug}.md`;
-  const resolvedFaqs =
-    Array.isArray(faqs) && faqs.length > 0
-      ? faqs
-      : generateDefaultFaqs(entry.flow_data, entry.title);
-  const safeCover = toAbsoluteSafeImageUrl(entry.cover_image);
-
-  const article: Record<string, unknown> = {
-    '@context': 'https://schema.org',
-    '@type': 'Article',
-    headline: entry.title,
-    description: entry.summary,
-    url: canonicalUrl,
-    mainEntityOfPage: {
-      '@type': 'WebPage',
-      '@id': canonicalUrl,
-    },
-    datePublished: entry.published_at || entry.created_at || entry.updated_at,
-    dateModified: entry.updated_at,
-    inLanguage: 'zh-CN',
-    author: {
-      '@type': 'Organization',
-      name: 'Market Graphic（外贸智友）',
-      url: SITE_URL,
-    },
-    publisher: {
-      '@type': 'Organization',
-      name: 'Market Graphic（外贸智友）',
-      url: SITE_URL,
-    },
-    about: [
-      { '@type': 'Thing', name: entry.country_name },
-      { '@type': 'Thing', name: entry.industry_name },
-      ...(entry.hs_code_6 ? [{ '@type': 'Thing', name: `HS ${entry.hs_code_6}` }] : []),
-    ],
-    ...(safeCover ? { image: safeCover } : {}),
-  };
-
-  const breadcrumb = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      {
-        '@type': 'ListItem',
-        position: 1,
-        name: '首页',
-        item: SITE_URL,
-      },
-      {
-        '@type': 'ListItem',
-        position: 2,
-        name: '行业百科',
-        item: `${SITE_URL}/wiki`,
-      },
-      {
-        '@type': 'ListItem',
-        position: 3,
-        name: `${entry.country_name} · ${entry.industry_name}`,
-        item: canonicalUrl,
-      },
-    ],
-  };
-
-  const faqPage = {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: resolvedFaqs.map((item) => ({
-      '@type': 'Question',
-      name: item.q,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: item.a,
-      },
-    })),
-  };
-
-  const dataset = {
-    '@context': 'https://schema.org',
-    '@type': 'Dataset',
-    name: `${entry.title} — 市场流通与价格瀑布数据集`,
-    description: entry.summary,
-    url: canonicalUrl,
-    inLanguage: 'zh-CN',
-    creator: {
-      '@type': 'Organization',
-      name: 'Market Graphic（外贸智友）',
-      url: SITE_URL,
-    },
-    spatialCoverage: {
-      '@type': 'Place',
-      name: entry.country_name,
-    },
-    temporalCoverage: (entry.updated_at || '').slice(0, 10),
-    keywords: [
-      entry.country_name,
-      entry.industry_name,
-      ...(entry.hs_code_6 ? [`HS ${entry.hs_code_6}`] : []),
-    ],
-    distribution: [
-      {
-        '@type': 'DataDownload',
-        encodingFormat: 'text/markdown',
-        contentUrl: markdownUrl,
-      },
-    ],
-  };
-
-  return { article, breadcrumb, faqPage, dataset };
-}
-
-/**
  * 行业百科详情页：完全公开免登录 + 全量 SSR + 原生 GEO 结构化标注与站内研报变现闭环
  */
 export default function WikiDetailPage({
@@ -209,32 +92,32 @@ export default function WikiDetailPage({
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showCustomModal, setShowCustomModal] = useState(false);
 
-  // 浏览统计与停留时长上报（严格置于组件顶层）
+  // 浏览统计与停留时长上报（严格置于组件顶层，挂载时仅计数一次，离页/切后台更新累计时长）
   useEffect(() => {
     if (!entry?.id) return;
 
     let viewId: string | null = null;
-    let startTime = Date.now();
+    const startTime = Date.now();
+    let lastSentDuration = 0;
 
-    const trackInit = () => {
-      fetch('/api/track/pageview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content_type: 'wiki', content_id: entry.id }),
+    fetch('/api/track/pageview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content_type: 'wiki', content_id: entry.id }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.view_id) {
+          viewId = data.view_id;
+        }
       })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data?.view_id) {
-            viewId = data.view_id;
-          }
-        })
-        .catch(() => {});
-    };
+      .catch(() => {});
 
     const sendDuration = () => {
       if (!viewId) return;
       const durationSeconds = Math.round((Date.now() - startTime) / 1000);
-      if (durationSeconds <= 0) return;
+      if (durationSeconds <= 0 || durationSeconds === lastSentDuration) return;
+      lastSentDuration = durationSeconds;
       fetch('/api/track/pageview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -246,14 +129,9 @@ export default function WikiDetailPage({
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
         sendDuration();
-      } else {
-        startTime = Date.now();
-        viewId = null;
-        trackInit();
       }
     };
 
-    trackInit();
     window.addEventListener('beforeunload', sendDuration);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
@@ -1072,7 +950,13 @@ export const getServerSideProps: GetServerSideProps<WikiDetailProps> = async (co
       getRelatedReportsForWiki(entry.industry_name, entry.country_name, dbClient, 4),
     ]);
 
-    if (auth.userId) {
+    const rawCookieHeader = String(context.req.headers?.cookie || '');
+    const parsedCookies = (context.req as { cookies?: Record<string, unknown> }).cookies;
+    const hasSessionCookie =
+      /\b(gtb_session|user_id)=/.test(rawCookieHeader) ||
+      Boolean(parsedCookies && (parsedCookies.gtb_session || parsedCookies.user_id));
+
+    if (auth.userId || hasSessionCookie) {
       context.res.setHeader('Cache-Control', 'private, no-cache, no-store');
     } else {
       context.res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');

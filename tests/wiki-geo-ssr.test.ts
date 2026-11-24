@@ -4,15 +4,23 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import pool from '../lib/db';
-import type { WikiEntryRecord, WikiFaqItem } from '../lib/wiki-schema';
+import { encodeSession } from '../lib/auth';
+import {
+  buildWikiDetailJsonLd,
+  type WikiEntryRecord,
+  type WikiFaqItem,
+} from '../lib/wiki-schema';
 import { buildSampleFlowData } from './wiki-schema.test';
 import WikiIndexPage, { getServerSideProps as getWikiIndexSsrProps } from '../pages/wiki/index';
+import * as wikiDetailModule from '../pages/wiki/[slug]';
 import WikiDetailPage, {
   getServerSideProps as getWikiDetailSsrProps,
-  buildWikiDetailJsonLd,
 } from '../pages/wiki/[slug]';
 
-function createMockSsrContext(slug?: string) {
+function createMockSsrContext(
+  slug?: string,
+  options: { cookieHeader?: string; cookies?: Record<string, string> } = {}
+) {
   const headers = new Map<string, string>();
   return {
     params: slug !== undefined ? { slug } : {},
@@ -20,8 +28,9 @@ function createMockSsrContext(slug?: string) {
       headers: {
         host: 'marketgraphic.cn',
         'x-forwarded-proto': 'https',
+        ...(options.cookieHeader ? { cookie: options.cookieHeader } : {}),
       },
-      cookies: {},
+      cookies: options.cookies ?? {},
     } as any,
     res: {
       setHeader: vi.fn((k: string, v: string) => {
@@ -300,7 +309,7 @@ describe('行业百科前台 SSR 与 GEO 集成测试', () => {
     expect(html).toContain('照明产品');
   });
 
-  it('安全红线：页面源码严禁使用 dangerouslySetInnerHTML 且不嵌套 JsonLdScript 于 Head 内', () => {
+  it('安全红线：页面源码严禁使用 dangerouslySetInnerHTML、不嵌套 JsonLdScript 且仅导出 Next 约定成员', () => {
     const indexSrc = fs.readFileSync(path.resolve(process.cwd(), 'pages/wiki/index.tsx'), 'utf-8');
     const detailSrc = fs.readFileSync(path.resolve(process.cwd(), 'pages/wiki/[slug].tsx'), 'utf-8');
 
@@ -308,5 +317,105 @@ describe('行业百科前台 SSR 与 GEO 集成测试', () => {
     expect(detailSrc).not.toContain('dangerouslySetInnerHTML');
     expect(indexSrc).not.toMatch(/<Head>[\s\S]*?<JsonLdScript[\s\S]*?<\/Head>/);
     expect(detailSrc).not.toMatch(/<Head>[\s\S]*?<JsonLdScript[\s\S]*?<\/Head>/);
+
+    // 详情页仅导出 default 与 getServerSideProps，不导出 buildWikiDetailJsonLd 等非约定成员
+    expect(Object.keys(wikiDetailModule).sort()).toEqual(['default', 'getServerSideProps']);
+
+    // visibilitychange 回到 visible 不得再次触发 /api/track/pageview 初始化计数
+    const visibilityMatch = detailSrc.match(/const handleVisibilityChange\s*=\s*\(\)\s*=>\s*\{[\s\S]*?\};/);
+    expect(visibilityMatch?.[0]).toBeTruthy();
+    expect(visibilityMatch?.[0]).toContain("document.visibilityState === 'hidden'");
+    expect(visibilityMatch?.[0]).not.toContain('content_type');
+  });
+
+  it('缓存隔离：匿名请求响应 public 缓存头，携带 gtb_session Cookie（含有效/过期）响应 private 缓存头', async () => {
+    const sampleRow = createSamplePublishedRow();
+    const release = vi.fn();
+    const query = vi.fn(async (sql: string) => {
+      if (sql.includes('FROM users')) {
+        return {
+          rows: [
+            {
+              id: 'user-1',
+              role: 'user',
+              free_quota: 5,
+              download_quota: 2,
+              member_type: 'free',
+              nickname: 'Tester',
+              email: 'tester@example.com',
+            },
+          ],
+          rowCount: 1,
+        };
+      }
+      if (sql.includes('FROM wiki_entries')) {
+        return { rows: [sampleRow], rowCount: 1 };
+      }
+      return { rows: [], rowCount: 0 };
+    });
+    vi.spyOn(pool, 'connect').mockResolvedValue({ query, release } as any);
+
+    // 1. 匿名请求：大厅页与详情页均为 public, s-maxage=300, stale-while-revalidate=600 + Vary: Cookie
+    const anonIndexCtx = createMockSsrContext();
+    await getWikiIndexSsrProps(anonIndexCtx);
+    expect(anonIndexCtx.res.getHeader('cache-control')).toBe(
+      'public, s-maxage=300, stale-while-revalidate=600'
+    );
+    expect(anonIndexCtx.res.getHeader('vary')).toBe('Cookie');
+
+    const anonDetailCtx = createMockSsrContext('geo-test-de-lighting');
+    await getWikiDetailSsrProps(anonDetailCtx);
+    expect(anonDetailCtx.res.getHeader('cache-control')).toBe(
+      'public, s-maxage=300, stale-while-revalidate=600'
+    );
+    expect(anonDetailCtx.res.getHeader('vary')).toBe('Cookie');
+
+    // 2. 携带无效/过期 gtb_session Cookie（auth.userId 为 null，但存在会话 Cookie）
+    const expiredIndexCtx = createMockSsrContext(undefined, {
+      cookieHeader: 'gtb_session=expired.invalid-signature',
+    });
+    await getWikiIndexSsrProps(expiredIndexCtx);
+    expect(expiredIndexCtx.res.getHeader('cache-control')).toBe('private, no-cache, no-store');
+    expect(expiredIndexCtx.res.getHeader('vary')).toBe('Cookie');
+
+    const expiredDetailCtx = createMockSsrContext('geo-test-de-lighting', {
+      cookieHeader: 'gtb_session=expired.invalid-signature',
+    });
+    await getWikiDetailSsrProps(expiredDetailCtx);
+    expect(expiredDetailCtx.res.getHeader('cache-control')).toBe('private, no-cache, no-store');
+    expect(expiredDetailCtx.res.getHeader('vary')).toBe('Cookie');
+
+    // 3. 携带有效已登录 gtb_session Cookie（auth.userId 存在）
+    const validToken = encodeSession({ userId: 'user-1', role: 'user' });
+    const authedIndexCtx = createMockSsrContext(undefined, {
+      cookieHeader: `gtb_session=${validToken}`,
+      cookies: { gtb_session: validToken },
+    });
+    const authedIndexRes = (await getWikiIndexSsrProps(authedIndexCtx)) as { props: any };
+    expect(authedIndexRes.props.userId).toBe('user-1');
+    expect(authedIndexCtx.res.getHeader('cache-control')).toBe('private, no-cache, no-store');
+    expect(authedIndexCtx.res.getHeader('vary')).toBe('Cookie');
+
+    const authedDetailCtx = createMockSsrContext('geo-test-de-lighting', {
+      cookieHeader: `gtb_session=${validToken}`,
+      cookies: { gtb_session: validToken },
+    });
+    const authedDetailRes = (await getWikiDetailSsrProps(authedDetailCtx)) as { props: any };
+    expect(authedDetailRes.props.userId).toBe('user-1');
+    expect(authedDetailCtx.res.getHeader('cache-control')).toBe('private, no-cache, no-store');
+    expect(authedDetailCtx.res.getHeader('vary')).toBe('Cookie');
+  });
+
+  it('大厅页数据库异常降级时响应 Cache-Control: private, no-store 并返回空列表', async () => {
+    vi.spyOn(pool, 'connect').mockRejectedValue(new Error('DB connection refused'));
+    const warnSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const errCtx = createMockSsrContext();
+    const res = (await getWikiIndexSsrProps(errCtx)) as { props: any };
+
+    expect(res.props.items).toEqual([]);
+    expect(errCtx.res.getHeader('cache-control')).toBe('private, no-store');
+    expect(errCtx.res.getHeader('vary')).toBe('Cookie');
+    expect(warnSpy).toHaveBeenCalled();
   });
 });

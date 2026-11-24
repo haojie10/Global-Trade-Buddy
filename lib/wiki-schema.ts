@@ -503,3 +503,129 @@ export function buildWikiMarkdownExport(entry: {
   lines.push(`本文由 Market Graphic（外贸智友）整理发布，交互式图谱与关联海外买家研报请访问：${canonicalUrl}`);
   return lines.join('\n');
 }
+
+const WIKI_SITE_URL = 'https://marketgraphic.cn';
+
+function toAbsoluteSafeWikiImageUrl(raw?: string | null): string | null {
+  if (!raw || !isSafeWikiUrl(raw)) return null;
+  const trimmed = raw.trim();
+  return trimmed.startsWith('/') ? `${WIKI_SITE_URL}${trimmed}` : trimmed;
+}
+
+/**
+ * 构建百科详情页全套 GEO 结构化 Schema.org JSON-LD 对象
+ * @param entry 已发布百科词条记录
+ * @param faqs 与页面正文严格同步的 FAQ 问答数组
+ * @returns article / breadcrumb / faqPage / dataset 四个标准 Schema.org 对象
+ */
+export function buildWikiDetailJsonLd(entry: WikiEntryRecord, faqs: WikiFaqItem[]) {
+  const canonicalUrl = `${WIKI_SITE_URL}/wiki/${entry.slug}`;
+  const markdownUrl = `${WIKI_SITE_URL}/wiki/${entry.slug}.md`;
+  const resolvedFaqs =
+    Array.isArray(faqs) && faqs.length > 0
+      ? faqs
+      : generateDefaultFaqs(entry.flow_data, entry.title);
+  const safeCover = toAbsoluteSafeWikiImageUrl(entry.cover_image);
+
+  const article: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: entry.title,
+    description: entry.summary,
+    url: canonicalUrl,
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': canonicalUrl,
+    },
+    datePublished: entry.published_at || entry.created_at || entry.updated_at,
+    dateModified: entry.updated_at,
+    inLanguage: 'zh-CN',
+    author: {
+      '@type': 'Organization',
+      name: 'Market Graphic（外贸智友）',
+      url: WIKI_SITE_URL,
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Market Graphic（外贸智友）',
+      url: WIKI_SITE_URL,
+    },
+    about: [
+      { '@type': 'Thing', name: entry.country_name },
+      { '@type': 'Thing', name: entry.industry_name },
+      ...(entry.hs_code_6 ? [{ '@type': 'Thing', name: `HS ${entry.hs_code_6}` }] : []),
+    ],
+    ...(safeCover ? { image: safeCover } : {}),
+  };
+
+  const breadcrumb = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: '首页',
+        item: WIKI_SITE_URL,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: '行业百科',
+        item: `${WIKI_SITE_URL}/wiki`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: `${entry.country_name} · ${entry.industry_name}`,
+        item: canonicalUrl,
+      },
+    ],
+  };
+
+  const faqPage = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: resolvedFaqs.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.a,
+      },
+    })),
+  };
+
+  const dataset = {
+    '@context': 'https://schema.org',
+    '@type': 'Dataset',
+    name: `${entry.title} — 市场流通与价格瀑布数据集`,
+    description: entry.summary,
+    url: canonicalUrl,
+    inLanguage: 'zh-CN',
+    creator: {
+      '@type': 'Organization',
+      name: 'Market Graphic（外贸智友）',
+      url: WIKI_SITE_URL,
+    },
+    spatialCoverage: {
+      '@type': 'Place',
+      name: entry.country_name,
+    },
+    temporalCoverage: (entry.updated_at || '').slice(0, 10),
+    keywords: [
+      entry.country_name,
+      entry.industry_name,
+      ...(entry.hs_code_6 ? [`HS ${entry.hs_code_6}`] : []),
+    ],
+    distribution: [
+      {
+        '@type': 'DataDownload',
+        encodingFormat: 'text/markdown',
+        contentUrl: markdownUrl,
+      },
+    ],
+  };
+
+  return { article, breadcrumb, faqPage, dataset };
+}

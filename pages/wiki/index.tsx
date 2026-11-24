@@ -693,7 +693,13 @@ export const getServerSideProps: GetServerSideProps<WikiIndexProps> = async (con
       };
     });
 
-    if (auth.userId) {
+    const rawCookieHeader = String(context.req.headers?.cookie || '');
+    const parsedCookies = (context.req as { cookies?: Record<string, unknown> }).cookies;
+    const hasSessionCookie =
+      /\b(gtb_session|user_id)=/.test(rawCookieHeader) ||
+      Boolean(parsedCookies && (parsedCookies.gtb_session || parsedCookies.user_id));
+
+    if (auth.userId || hasSessionCookie) {
       context.res.setHeader('Cache-Control', 'private, no-cache, no-store');
     } else {
       context.res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
@@ -714,6 +720,8 @@ export const getServerSideProps: GetServerSideProps<WikiIndexProps> = async (con
     };
   } catch (err) {
     console.error('[WikiIndexSSR] 查询行业百科大厅失败:', err);
+    context.res.setHeader('Cache-Control', 'private, no-store');
+    context.res.setHeader('Vary', 'Cookie');
     return {
       props: {
         items: [],
