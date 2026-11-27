@@ -23,7 +23,7 @@ import {
   type WikiFaqItem,
   type WikiSourceItem,
 } from '../../lib/wiki-schema';
-import { extractRootDomain } from '../../lib/domain-utils';
+import { cleanCompanyNameForLookup, extractRootDomain } from '../../lib/domain-utils';
 import WatermarkContainer from '../../components/WatermarkContainer';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
@@ -357,16 +357,101 @@ export default function WikiDetailPage({
               {entry.title}
             </h1>
 
-            <p
-              style={{
-                margin: 0,
-                fontSize: '1rem',
-                lineHeight: 1.7,
-                color: '#334155',
-              }}
-            >
-              {entry.summary}
-            </p>
+            {/* 报告导读与核心结论（与标题区合并为一个紧凑总览模块） */}
+            {reportOverview ? (
+              <div
+                aria-label="报告导读与核心结论"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255, 100, 30, 0.05), rgba(15, 23, 42, 0.02))',
+                  border: '1px solid rgba(255, 100, 30, 0.2)',
+                  borderRadius: '12px',
+                  padding: '16px 18px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                }}
+              >
+                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                  <span
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 800,
+                      color: 'var(--color-accent, #ff641e)',
+                      letterSpacing: '0.04em',
+                    }}
+                  >
+                    报告导读 · 本文帮你看清什么？
+                  </span>
+                  {reportOverview.market_size_label && (
+                    <span
+                      style={{
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        padding: '2px 9px',
+                        borderRadius: '999px',
+                        background: '#ffffff',
+                        border: '1px solid rgba(18, 18, 18, 0.1)',
+                        color: '#0f172a',
+                      }}
+                    >
+                      市场体量：{reportOverview.market_size_label}
+                    </span>
+                  )}
+                </div>
+                <p style={{ margin: 0, fontSize: '0.94rem', lineHeight: 1.68, color: '#1e293b' }}>
+                  {reportOverview.purpose}
+                </p>
+                {Array.isArray(reportOverview.key_takeaways) && reportOverview.key_takeaways.length > 0 && (
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                      gap: '8px',
+                    }}
+                  >
+                    {reportOverview.key_takeaways.map((point, idx) => (
+                      <div
+                        key={`overview-takeaway-${idx}`}
+                        style={{
+                          background: '#ffffff',
+                          border: '1px solid rgba(18, 18, 18, 0.08)',
+                          borderRadius: '8px',
+                          padding: '10px 12px',
+                          fontSize: '12.5px',
+                          lineHeight: 1.5,
+                          color: '#334155',
+                          display: 'flex',
+                          gap: '7px',
+                          alignItems: 'flex-start',
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontWeight: 800,
+                            color: 'var(--color-accent, #ff641e)',
+                            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                          }}
+                        >
+                          0{idx + 1}
+                        </span>
+                        <span>{point}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: '1rem',
+                  lineHeight: 1.7,
+                  color: '#334155',
+                }}
+              >
+                {entry.summary}
+              </p>
+            )}
 
             {/* GEO 核心事实速览 <dl> */}
             <dl
@@ -503,91 +588,6 @@ export default function WikiDetailPage({
           )}
         </div>
 
-        {/* 3.5 报告导读与核心结论卡（帮助外贸业务员 30 秒看懂本报告作用与全局） */}
-        {reportOverview && (
-          <section
-            aria-label="报告导读与核心结论"
-            style={{
-              background: 'linear-gradient(135deg, rgba(255, 100, 30, 0.05), rgba(15, 23, 42, 0.02))',
-              border: '1px solid rgba(255, 100, 30, 0.22)',
-              borderRadius: '14px',
-              padding: '22px 24px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '14px',
-            }}
-          >
-            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-              <span
-                style={{
-                  fontSize: '12.5px',
-                  fontWeight: 800,
-                  color: 'var(--color-accent, #ff641e)',
-                  letterSpacing: '0.04em',
-                }}
-              >
-                报告导读 · 本文帮你看清什么？
-              </span>
-              {reportOverview.market_size_label && (
-                <span
-                  style={{
-                    fontSize: '12.5px',
-                    fontWeight: 700,
-                    padding: '3px 10px',
-                    borderRadius: '999px',
-                    background: '#ffffff',
-                    border: '1px solid rgba(18, 18, 18, 0.1)',
-                    color: '#0f172a',
-                  }}
-                >
-                  市场体量：{reportOverview.market_size_label}
-                </span>
-              )}
-            </div>
-            <p style={{ margin: 0, fontSize: '0.96rem', lineHeight: 1.7, color: '#1e293b', fontWeight: 500 }}>
-              {reportOverview.purpose}
-            </p>
-            {Array.isArray(reportOverview.key_takeaways) && reportOverview.key_takeaways.length > 0 && (
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-                  gap: '10px',
-                }}
-              >
-                {reportOverview.key_takeaways.map((point, idx) => (
-                  <div
-                    key={`overview-takeaway-${idx}`}
-                    style={{
-                      background: '#ffffff',
-                      border: '1px solid rgba(18, 18, 18, 0.08)',
-                      borderRadius: '10px',
-                      padding: '12px 14px',
-                      fontSize: '13px',
-                      lineHeight: 1.55,
-                      color: '#334155',
-                      display: 'flex',
-                      gap: '8px',
-                      alignItems: 'flex-start',
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontWeight: 800,
-                        color: 'var(--color-accent, #ff641e)',
-                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-                      }}
-                    >
-                      0{idx + 1}
-                    </span>
-                    <span>{point}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        )}
-
         {/* 4. 供给源头格局 */}
         <section
           aria-label="供给源头格局"
@@ -709,6 +709,17 @@ export default function WikiDetailPage({
               >
                 {localManufacturers.map((mfr, idx) => {
                   const domain = extractRootDomain(mfr.website);
+                  const cleanName = cleanCompanyNameForLookup(mfr.name);
+                  const matched =
+                    (domain && playerMatches?.[domain]) ||
+                    (cleanName && playerMatches?.[cleanName]) ||
+                    null;
+                  const rawReportId = typeof matched?.reportId === 'string' ? matched.reportId.trim() : '';
+                  const safeReportPath =
+                    rawReportId && !/[/?#\\]/.test(rawReportId) && isSafeWikiUrl(`/reports/${rawReportId}`)
+                      ? `/reports/${rawReportId}`
+                      : null;
+
                   return (
                     <div
                       key={`local-mfr-${mfr.website}-${idx}`}
@@ -752,21 +763,54 @@ export default function WikiDetailPage({
                       </div>
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px' }}>
-                          <strong style={{ fontSize: '13.5px', color: '#0f172a' }}>{mfr.name}</strong>
+                          {safeReportPath ? (
+                            <Link
+                              href={safeReportPath}
+                              style={{
+                                fontSize: '13.5px',
+                                fontWeight: 700,
+                                color: 'var(--color-accent, #ff641e)',
+                                textDecoration: 'underline',
+                                textUnderlineOffset: '2px',
+                              }}
+                            >
+                              {mfr.name}
+                            </Link>
+                          ) : (
+                            <strong style={{ fontSize: '13.5px', color: '#0f172a' }}>{mfr.name}</strong>
+                          )}
                           {mfr.headquarters && (
                             <span style={{ fontSize: '11.5px', color: '#64748b' }}>· {mfr.headquarters}</span>
                           )}
                         </div>
-                        {domain && (
-                          <a
-                            href={`https://${domain}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ fontSize: '12px', color: '#475569', textDecoration: 'underline' }}
-                          >
-                            {domain}
-                          </a>
-                        )}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                          {domain && (
+                            <a
+                              href={`https://${domain}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ fontSize: '12px', color: '#475569', textDecoration: 'underline' }}
+                            >
+                              {domain}
+                            </a>
+                          )}
+                          {safeReportPath && (
+                            <Link
+                              href={safeReportPath}
+                              style={{
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                color: '#ffffff',
+                                background: 'var(--color-accent, #ff641e)',
+                                padding: '1px 7px',
+                                borderRadius: '5px',
+                                textDecoration: 'none',
+                              }}
+                            >
+                              查看研报 →
+                            </Link>
+                          )}
+                        </div>
                         <p style={{ margin: '5px 0 0', fontSize: '12.5px', color: '#475569', lineHeight: 1.48 }}>
                           {mfr.business_model}
                         </p>

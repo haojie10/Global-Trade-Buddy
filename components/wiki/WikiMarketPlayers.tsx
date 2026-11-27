@@ -254,7 +254,6 @@ export default function WikiMarketPlayers({
                     rawReportId && !/[/?#\\]/.test(rawReportId) && isSafeWikiUrl(`/reports/${rawReportId}`)
                       ? `/reports/${rawReportId}`
                       : null;
-                  const contactCount = matched?.contactCount ?? 0;
 
                   return (
                     <div
@@ -274,7 +273,22 @@ export default function WikiMarketPlayers({
                         <PlayerBadgeLogo name={player.name} logoUrl={player.logo_url} />
                         <div style={{ minWidth: 0, flex: 1 }}>
                           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px' }}>
-                            <strong style={{ fontSize: '14px', color: '#0f172a' }}>{player.name}</strong>
+                            {safeReportPath ? (
+                              <Link
+                                href={safeReportPath}
+                                style={{
+                                  fontSize: '14px',
+                                  fontWeight: 700,
+                                  color: 'var(--color-accent, #ff641e)',
+                                  textDecoration: 'underline',
+                                  textUnderlineOffset: '2px',
+                                }}
+                              >
+                                {player.name}
+                              </Link>
+                            ) : (
+                              <strong style={{ fontSize: '14px', color: '#0f172a' }}>{player.name}</strong>
+                            )}
                             {player.price_tier && (
                               <span
                                 style={{
@@ -322,51 +336,29 @@ export default function WikiMarketPlayers({
                         </div>
                       </div>
 
-                      {(safeReportPath || contactCount > 0) && (
+                      {safeReportPath && (
                         <div
                           style={{
                             display: 'flex',
-                            flexWrap: 'wrap',
                             alignItems: 'center',
-                            gap: '8px',
                             paddingTop: '8px',
                             borderTop: '1px dashed rgba(18, 18, 18, 0.08)',
                           }}
                         >
-                          {safeReportPath && (
-                            <Link
-                              href={safeReportPath}
-                              style={{
-                                fontSize: '11.5px',
-                                fontWeight: 700,
-                                color: '#ffffff',
-                                background: 'var(--color-accent, #ff641e)',
-                                padding: '3px 9px',
-                                borderRadius: '6px',
-                                textDecoration: 'none',
-                              }}
-                            >
-                              360° 客户研报 →
-                            </Link>
-                          )}
-                          {contactCount > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => onRequestCustomReport?.()}
-                              style={{
-                                fontSize: '11.5px',
-                                fontWeight: 600,
-                                color: 'var(--color-accent, #ff641e)',
-                                background: 'rgba(255, 100, 30, 0.08)',
-                                border: '1px solid rgba(255, 100, 30, 0.25)',
-                                padding: '3px 9px',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                              }}
-                            >
-                              已收录 {contactCount} 位买手
-                            </button>
-                          )}
+                          <Link
+                            href={safeReportPath}
+                            style={{
+                              fontSize: '11.5px',
+                              fontWeight: 700,
+                              color: '#ffffff',
+                              background: 'var(--color-accent, #ff641e)',
+                              padding: '3px 9px',
+                              borderRadius: '6px',
+                              textDecoration: 'none',
+                            }}
+                          >
+                            查看 360° 客户研报 →
+                          </Link>
                         </div>
                       )}
                     </div>
