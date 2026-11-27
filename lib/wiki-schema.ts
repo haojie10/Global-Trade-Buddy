@@ -12,6 +12,29 @@ export interface WikiPlayer {
   logo_url?: string;
   url_verified?: boolean;
   business_model: string;
+  channel_share_pct?: number;
+  headquarters?: string;
+  price_tier?: string;
+}
+
+export interface WikiChannelBrandMixItem {
+  label: string;
+  share_pct: number;
+  representative_brands: string[];
+  note?: string;
+}
+
+export interface WikiMarketPlayerGroup {
+  group_name: string;
+  group_type: 'global_brand' | 'local_brand' | 'local_manufacturer' | 'importer';
+  description?: string;
+  players: WikiPlayer[];
+}
+
+export interface WikiReportOverview {
+  purpose: string;
+  market_size_label?: string;
+  key_takeaways: string[];
 }
 
 export interface WikiFlowNode {
@@ -23,6 +46,7 @@ export interface WikiFlowNode {
   buyer_pain_points: string[];
   sales_pitch_angle: string;
   players: WikiPlayer[];
+  channel_brand_mix?: WikiChannelBrandMixItem[];
 }
 
 export interface WikiFlowEdge {
@@ -49,6 +73,7 @@ export interface MarketFlowData {
     currency: string;
     updated_at: string;
   };
+  report_overview?: WikiReportOverview;
   video_hook?: {
     headline_opening: string;
     headline_insight: string;
@@ -63,10 +88,34 @@ export interface MarketFlowData {
       positioning: string;
       verified_by_comtrade?: boolean;
     }>;
+    local_manufacturers?: WikiPlayer[];
   };
+  market_players?: WikiMarketPlayerGroup[];
   flow_nodes: WikiFlowNode[];
   flow_edges: WikiFlowEdge[];
   price_waterfall: WikiPriceStage[];
+}
+
+/**
+ * 统一遍历 MarketFlowData 中所有维度的真实企业玩家（流通节点 + 本土头部制造商 + 全域品牌阵营）
+ */
+export function collectAllWikiPlayers(flowData?: MarketFlowData | null): WikiPlayer[] {
+  if (!flowData || typeof flowData !== 'object') return [];
+  const players: WikiPlayer[] = [];
+  for (const node of flowData.flow_nodes || []) {
+    for (const p of node?.players || []) {
+      if (p) players.push(p);
+    }
+  }
+  for (const p of flowData.supply_origin?.local_manufacturers || []) {
+    if (p) players.push(p);
+  }
+  for (const group of flowData.market_players || []) {
+    for (const p of group?.players || []) {
+      if (p) players.push(p);
+    }
+  }
+  return players;
 }
 
 export interface WikiFaqItem {

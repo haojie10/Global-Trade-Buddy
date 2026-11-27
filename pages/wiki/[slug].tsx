@@ -14,6 +14,7 @@ import {
   ARCHETYPE_META,
   buildWikiDetailJsonLd,
   calcPriceMultiplier,
+  collectAllWikiPlayers,
   generateDefaultFaqs,
   isSafeWikiUrl,
   type ArchetypeId,
@@ -22,6 +23,7 @@ import {
   type WikiFaqItem,
   type WikiSourceItem,
 } from '../../lib/wiki-schema';
+import { extractRootDomain } from '../../lib/domain-utils';
 import WatermarkContainer from '../../components/WatermarkContainer';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
@@ -31,6 +33,7 @@ import JsonLdScript from '../../components/wiki/JsonLdScript';
 import SafeMarkdown, { extractTocHeadings } from '../../components/wiki/SafeMarkdown';
 import WikiPriceWaterfall from '../../components/wiki/WikiPriceWaterfall';
 import WikiFlowMap from '../../components/wiki/WikiFlowMap';
+import WikiMarketPlayers from '../../components/wiki/WikiMarketPlayers';
 
 const SITE_URL = 'https://marketgraphic.cn';
 
@@ -172,13 +175,20 @@ export default function WikiDetailPage({
   const topImportSources = Array.isArray(entry.flow_data?.supply_origin?.top_import_sources)
     ? entry.flow_data.supply_origin.top_import_sources
     : [];
+  const localManufacturers = Array.isArray(entry.flow_data?.supply_origin?.local_manufacturers)
+    ? entry.flow_data.supply_origin.local_manufacturers
+    : [];
+  const marketPlayerGroups = Array.isArray(entry.flow_data?.market_players)
+    ? entry.flow_data.market_players
+    : [];
+  const reportOverview = entry.flow_data?.report_overview;
   const localPct = entry.flow_data?.supply_origin?.local_manufacturing_pct ?? 0;
   const importPct = entry.flow_data?.supply_origin?.import_pct ?? 0;
   const priceMultiplier = calcPriceMultiplier(entry.flow_data);
-  const totalPlayers = flowNodes.reduce(
-    (sum, node) => sum + (Array.isArray(node.players) ? node.players.length : 0),
-    0
+  const uniquePlayerKeys = new Set(
+    collectAllWikiPlayers(entry.flow_data).map((p) => extractRootDomain(p.website) || p.name)
   );
+  const totalPlayers = uniquePlayerKeys.size;
 
   const resolvedFaqs: WikiFaqItem[] =
     Array.isArray(entry.faq_items) && entry.faq_items.length > 0
@@ -493,6 +503,91 @@ export default function WikiDetailPage({
           )}
         </div>
 
+        {/* 3.5 报告导读与核心结论卡（帮助外贸业务员 30 秒看懂本报告作用与全局） */}
+        {reportOverview && (
+          <section
+            aria-label="报告导读与核心结论"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255, 100, 30, 0.05), rgba(15, 23, 42, 0.02))',
+              border: '1px solid rgba(255, 100, 30, 0.22)',
+              borderRadius: '14px',
+              padding: '22px 24px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px',
+            }}
+          >
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+              <span
+                style={{
+                  fontSize: '12.5px',
+                  fontWeight: 800,
+                  color: 'var(--color-accent, #ff641e)',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                报告导读 · 本文帮你看清什么？
+              </span>
+              {reportOverview.market_size_label && (
+                <span
+                  style={{
+                    fontSize: '12.5px',
+                    fontWeight: 700,
+                    padding: '3px 10px',
+                    borderRadius: '999px',
+                    background: '#ffffff',
+                    border: '1px solid rgba(18, 18, 18, 0.1)',
+                    color: '#0f172a',
+                  }}
+                >
+                  市场体量：{reportOverview.market_size_label}
+                </span>
+              )}
+            </div>
+            <p style={{ margin: 0, fontSize: '0.96rem', lineHeight: 1.7, color: '#1e293b', fontWeight: 500 }}>
+              {reportOverview.purpose}
+            </p>
+            {Array.isArray(reportOverview.key_takeaways) && reportOverview.key_takeaways.length > 0 && (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                  gap: '10px',
+                }}
+              >
+                {reportOverview.key_takeaways.map((point, idx) => (
+                  <div
+                    key={`overview-takeaway-${idx}`}
+                    style={{
+                      background: '#ffffff',
+                      border: '1px solid rgba(18, 18, 18, 0.08)',
+                      borderRadius: '10px',
+                      padding: '12px 14px',
+                      fontSize: '13px',
+                      lineHeight: 1.55,
+                      color: '#334155',
+                      display: 'flex',
+                      gap: '8px',
+                      alignItems: 'flex-start',
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontWeight: 800,
+                        color: 'var(--color-accent, #ff641e)',
+                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                      }}
+                    >
+                      0{idx + 1}
+                    </span>
+                    <span>{point}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
         {/* 4. 供给源头格局 */}
         <section
           aria-label="供给源头格局"
@@ -593,18 +688,110 @@ export default function WikiDetailPage({
               ))}
             </div>
           )}
+
+          {/* 本土头部制造商清单 */}
+          {localManufacturers.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingTop: '8px', borderTop: '1px solid rgba(18, 18, 18, 0.07)' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px' }}>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#0f172a' }}>
+                  {entry.country_name}本土头部制造商（{localManufacturers.length} 家）
+                </h3>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>
+                  看清本土工厂守住哪些高端细分、哪些常规货盘依赖海外 OEM
+                </span>
+              </div>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))',
+                  gap: '12px',
+                }}
+              >
+                {localManufacturers.map((mfr, idx) => {
+                  const domain = extractRootDomain(mfr.website);
+                  return (
+                    <div
+                      key={`local-mfr-${mfr.website}-${idx}`}
+                      style={{
+                        padding: '12px 14px',
+                        borderRadius: '10px',
+                        background: '#fafafa',
+                        border: '1px solid rgba(18, 18, 18, 0.08)',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '10px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '38px',
+                          height: '38px',
+                          minWidth: '38px',
+                          borderRadius: '8px',
+                          background: '#ffffff',
+                          border: '1px solid rgba(18, 18, 18, 0.1)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          overflow: 'hidden',
+                          padding: mfr.logo_url ? '3px' : 0,
+                        }}
+                      >
+                        {mfr.logo_url && isSafeWikiUrl(mfr.logo_url) ? (
+                          <img
+                            src={mfr.logo_url}
+                            alt={mfr.name}
+                            loading="lazy"
+                            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                          />
+                        ) : (
+                          <span style={{ fontSize: '14px', fontWeight: 700, color: '#059669' }}>
+                            {mfr.name.slice(0, 1).toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px' }}>
+                          <strong style={{ fontSize: '13.5px', color: '#0f172a' }}>{mfr.name}</strong>
+                          {mfr.headquarters && (
+                            <span style={{ fontSize: '11.5px', color: '#64748b' }}>· {mfr.headquarters}</span>
+                          )}
+                        </div>
+                        {domain && (
+                          <a
+                            href={`https://${domain}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ fontSize: '12px', color: '#475569', textDecoration: 'underline' }}
+                          >
+                            {domain}
+                          </a>
+                        )}
+                        <p style={{ margin: '5px 0 0', fontSize: '12.5px', color: '#475569', lineHeight: 1.48 }}>
+                          {mfr.business_model}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </section>
 
-        {/* 5. 价格瀑布与加价明细 */}
-        <WikiPriceWaterfall
-          stages={priceWaterfall}
-          currency={entry.flow_data?.meta?.currency || 'USD'}
+        {/* 4.5 全域主要玩家图鉴（按国际大牌 / 本土品牌 / 本土制造商铺全） */}
+        <WikiMarketPlayers
+          groups={marketPlayerGroups}
+          playerMatches={playerMatches || {}}
+          countryName={entry.country_name}
+          industryName={entry.industry_name}
+          onRequestCustomReport={() => setShowCustomModal(true)}
         />
 
-        {/* 6. 全链路渠道流通图谱与真实玩家联动 */}
+        {/* 5. 全链路渠道分布与双层占比图谱 */}
         <section aria-label="全链路渠道流通图谱" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <h2 className="font-editorial" style={{ margin: 0, fontSize: '1.35rem', fontWeight: 700, color: 'var(--color-text, #121212)' }}>
-            三、全链路渠道流通图谱与真实买家联动
+            三、全链路渠道分布与双层占比图谱
           </h2>
           <WikiFlowMap
             nodes={flowNodes}
@@ -612,6 +799,12 @@ export default function WikiDetailPage({
             onRequestCustomReport={() => setShowCustomModal(true)}
           />
         </section>
+
+        {/* 6. 价格瀑布与加价明细 */}
+        <WikiPriceWaterfall
+          stages={priceWaterfall}
+          currency={entry.flow_data?.meta?.currency || 'USD'}
+        />
 
         {/* 7. 深度图文实战解析 + 粘性章节目录 + 权威信源 */}
         <section
@@ -643,7 +836,7 @@ export default function WikiDetailPage({
                 color: 'var(--color-text, #121212)',
               }}
             >
-              四、深度图文实战解析
+              五、深度图文实战解析
             </h2>
 
             <SafeMarkdown content={entry.content_md || ''} />

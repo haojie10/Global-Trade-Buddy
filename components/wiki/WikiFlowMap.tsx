@@ -314,6 +314,107 @@ export default function WikiFlowMap({
                       </button>
                     </div>
 
+                    {/* 第二层占比：该渠道内部货盘/品牌构成估算（自有品牌 vs 国际大牌 vs 本土品牌） */}
+                    {Array.isArray(node.channel_brand_mix) && node.channel_brand_mix.length > 0 && (
+                      <div
+                        style={{
+                          background: '#ffffff',
+                          border: '1px solid rgba(18, 18, 18, 0.08)',
+                          borderRadius: '10px',
+                          padding: '12px 14px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '10px',
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            gap: '8px',
+                          }}
+                        >
+                          <span style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a' }}>
+                            渠道内品牌与自有品牌货盘构成（第二层占比）
+                          </span>
+                          <span style={{ fontSize: '11px', color: '#64748b' }}>行业参考估算</span>
+                        </div>
+
+                        {/* 堆叠彩色占比条 */}
+                        <div
+                          style={{
+                            display: 'flex',
+                            width: '100%',
+                            height: '12px',
+                            borderRadius: '999px',
+                            overflow: 'hidden',
+                            background: 'rgba(15, 23, 42, 0.06)',
+                          }}
+                        >
+                          {node.channel_brand_mix.map((mix, mIdx) => {
+                            const palette = ['#ff641e', '#2563eb', '#059669', '#8b5cf6', '#64748b'];
+                            const barColor = palette[mIdx % palette.length];
+                            return (
+                              <div
+                                key={`${node.id}-mix-bar-${mIdx}`}
+                                title={`${mix.label} ${mix.share_pct}%`}
+                                style={{
+                                  width: `${Math.max(0, Math.min(100, mix.share_pct))}%`,
+                                  background: barColor,
+                                  height: '100%',
+                                }}
+                              />
+                            );
+                          })}
+                        </div>
+
+                        {/* 各货盘图例与代表品牌 */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          {node.channel_brand_mix.map((mix, mIdx) => {
+                            const palette = ['#ff641e', '#2563eb', '#059669', '#8b5cf6', '#64748b'];
+                            const dotColor = palette[mIdx % palette.length];
+                            return (
+                              <div
+                                key={`${node.id}-mix-item-${mIdx}`}
+                                style={{
+                                  display: 'flex',
+                                  flexWrap: 'wrap',
+                                  alignItems: 'baseline',
+                                  justifyContent: 'space-between',
+                                  gap: '6px',
+                                  fontSize: '12px',
+                                  lineHeight: 1.45,
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                  <span
+                                    style={{
+                                      width: '8px',
+                                      height: '8px',
+                                      borderRadius: '999px',
+                                      background: dotColor,
+                                      display: 'inline-block',
+                                      flexShrink: 0,
+                                    }}
+                                  />
+                                  <strong style={{ color: '#0f172a' }}>{mix.label}</strong>
+                                  {Array.isArray(mix.representative_brands) && mix.representative_brands.length > 0 && (
+                                    <span style={{ color: '#64748b' }}>
+                                      （{mix.representative_brands.join(' / ')}）
+                                    </span>
+                                  )}
+                                </div>
+                                <span style={{ fontWeight: 700, color: dotColor, whiteSpace: 'nowrap' }}>
+                                  约 {mix.share_pct}%
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
                     {/* 买家核心痛点标签（始终展开，保障爬虫直读） */}
                     {painPoints.length > 0 && (
                       <div>
@@ -419,6 +520,20 @@ export default function WikiFlowMap({
                                     >
                                       {player.name}
                                     </span>
+                                    {typeof player.channel_share_pct === 'number' && player.channel_share_pct > 0 && (
+                                      <span
+                                        style={{
+                                          fontSize: '11px',
+                                          fontWeight: 700,
+                                          padding: '1px 7px',
+                                          borderRadius: '999px',
+                                          background: 'rgba(255, 100, 30, 0.1)',
+                                          color: 'var(--color-accent, #ff641e)',
+                                        }}
+                                      >
+                                        渠道市占约 {player.channel_share_pct}%
+                                      </span>
+                                    )}
                                     {safeDomain && (
                                       <a
                                         href={`https://${safeDomain}`}

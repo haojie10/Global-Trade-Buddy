@@ -5,6 +5,7 @@ import {
   MarketFlowData,
   WikiFaqItem,
   WikiSourceItem,
+  collectAllWikiPlayers,
   normalizeWikiSlug,
   validateMarketFlowData,
   generateDefaultFaqs,
@@ -65,22 +66,20 @@ export async function matchPlayersWithPlatformAssets(
   const cleanNameSet = new Set<string>();
   const playerEntries: Array<{ key: string; domain: string; matchableCleanName: string }> = [];
 
-  for (const node of flowData?.flow_nodes || []) {
-    for (const player of node?.players || []) {
-      const domain = extractRootDomain(player.website);
-      const cleanName = cleanCompanyNameForLookup(player.name);
-      const key = domain || cleanName;
-      if (!key) continue;
+  for (const player of collectAllWikiPlayers(flowData)) {
+    const domain = extractRootDomain(player.website);
+    const cleanName = cleanCompanyNameForLookup(player.name);
+    const key = domain || cleanName;
+    if (!key) continue;
 
-      // 仅长度 >= 3 的清洗公司名纳入碰撞，杜绝短词误匹配
-      const matchableCleanName = cleanName.length >= MIN_CLEAN_NAME_LENGTH ? cleanName : '';
-      if (domain) domainSet.add(domain);
-      if (matchableCleanName) cleanNameSet.add(matchableCleanName);
+    // 仅长度 >= 3 的清洗公司名纳入碰撞，杜绝短词误匹配
+    const matchableCleanName = cleanName.length >= MIN_CLEAN_NAME_LENGTH ? cleanName : '';
+    if (domain) domainSet.add(domain);
+    if (matchableCleanName) cleanNameSet.add(matchableCleanName);
 
-      playerEntries.push({ key, domain, matchableCleanName });
-      if (!matchMap.has(key)) {
-        matchMap.set(key, { reportId: null, reportTitle: null, contactCount: 0 });
-      }
+    playerEntries.push({ key, domain, matchableCleanName });
+    if (!matchMap.has(key)) {
+      matchMap.set(key, { reportId: null, reportTitle: null, contactCount: 0 });
     }
   }
 

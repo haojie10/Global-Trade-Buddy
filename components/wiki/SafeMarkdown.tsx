@@ -559,7 +559,92 @@ export default function SafeMarkdown({ content }: { content: string }) {
         const key = `md-block-${idx}`;
 
         switch (block.type) {
-          case 'code':
+          case 'code': {
+            // 支持正文内嵌轻量水平条形图语法（```chart-bars），格式：标签 | 数值 | 可选说明
+            if (block.lang.toLowerCase() === 'chart-bars') {
+              const chartRows = block.code
+                .split(/\r?\n/)
+                .map((line) => line.trim())
+                .filter(Boolean)
+                .map((line) => {
+                  const parts = line.split('|').map((s) => s.trim());
+                  const label = parts[0] || '';
+                  const rawVal = parts[1] || '0';
+                  const num = Number.parseFloat(rawVal.replace(/[^0-9.\-]/g, ''));
+                  const note = parts[2] || '';
+                  return { label, rawVal, num: Number.isFinite(num) ? Math.max(0, num) : 0, note };
+                })
+                .filter((r) => r.label);
+
+              if (chartRows.length > 0) {
+                const maxVal = Math.max(...chartRows.map((r) => r.num), 1);
+                return (
+                  <div
+                    key={key}
+                    role="figure"
+                    aria-label="正文数据对比图表"
+                    style={{
+                      margin: '20px 0',
+                      padding: '18px 20px',
+                      borderRadius: '12px',
+                      background: '#fafafa',
+                      border: '1px solid rgba(15, 23, 42, 0.09)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '12px',
+                    }}
+                  >
+                    {chartRows.map((row, rIdx) => {
+                      const pctWidth = Math.max(4, Math.min(100, (row.num / maxVal) * 100));
+                      const barColors = ['#ff641e', '#2563eb', '#059669', '#d97706', '#7c3aed', '#475569'];
+                      const color = barColors[rIdx % barColors.length];
+                      return (
+                        <div key={`${key}-bar-${rIdx}`} style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'baseline',
+                              gap: '10px',
+                              fontSize: '13.5px',
+                            }}
+                          >
+                            <span style={{ fontWeight: 700, color: '#0f172a' }}>
+                              {row.label}
+                              {row.note && (
+                                <span style={{ fontWeight: 400, color: '#64748b', marginLeft: '8px', fontSize: '12.5px' }}>
+                                  {row.note}
+                                </span>
+                              )}
+                            </span>
+                            <span style={{ fontWeight: 800, color, whiteSpace: 'nowrap' }}>{row.rawVal}</span>
+                          </div>
+                          <div
+                            style={{
+                              width: '100%',
+                              height: '10px',
+                              borderRadius: '999px',
+                              background: 'rgba(15, 23, 42, 0.07)',
+                              overflow: 'hidden',
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: `${pctWidth}%`,
+                                height: '100%',
+                                borderRadius: '999px',
+                                background: color,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              }
+            }
+
             return (
               <pre
                 key={key}
@@ -579,6 +664,7 @@ export default function SafeMarkdown({ content }: { content: string }) {
                 </code>
               </pre>
             );
+          }
 
           case 'hr':
             return (
@@ -755,7 +841,75 @@ export default function SafeMarkdown({ content }: { content: string }) {
               </div>
             );
 
-          case 'blockquote':
+          case 'blockquote': {
+            const firstLine = (block.lines[0] || '').trim();
+            const calloutMatch = firstLine.match(/^\[!(TIP|WARNING|IMPORTANT|NOTE)\]\s*(.*)$/i);
+            if (calloutMatch) {
+              const kind = calloutMatch[1].toUpperCase();
+              const restFirst = calloutMatch[2].trim();
+              const bodyLines = restFirst ? [restFirst, ...block.lines.slice(1)] : block.lines.slice(1);
+              const calloutStyles: Record<
+                string,
+                { title: string; border: string; bg: string; titleColor: string }
+              > = {
+                TIP: {
+                  title: '实战建议',
+                  border: '#059669',
+                  bg: 'rgba(5, 150, 105, 0.06)',
+                  titleColor: '#047857',
+                },
+                WARNING: {
+                  title: '避坑红线',
+                  border: '#dc2626',
+                  bg: 'rgba(220, 38, 38, 0.06)',
+                  titleColor: '#b91c1c',
+                },
+                IMPORTANT: {
+                  title: '核心商业洞察',
+                  border: '#ff641e',
+                  bg: 'rgba(255, 100, 30, 0.06)',
+                  titleColor: '#c2410c',
+                },
+                NOTE: {
+                  title: '背景说明',
+                  border: '#2563eb',
+                  bg: 'rgba(37, 99, 235, 0.06)',
+                  titleColor: '#1d4ed8',
+                },
+              };
+              const cs = calloutStyles[kind] || calloutStyles.NOTE;
+              return (
+                <div
+                  key={key}
+                  style={{
+                    margin: '18px 0',
+                    padding: '14px 18px',
+                    borderLeft: `4px solid ${cs.border}`,
+                    background: cs.bg,
+                    borderRadius: '0 10px 10px 0',
+                    color: '#1e293b',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: '13px',
+                      fontWeight: 800,
+                      color: cs.titleColor,
+                      marginBottom: '6px',
+                      letterSpacing: '0.02em',
+                    }}
+                  >
+                    {cs.title}
+                  </div>
+                  {bodyLines.map((qLine, qIdx) => (
+                    <p key={`${key}-q-${qIdx}`} style={{ margin: qIdx === 0 ? 0 : '6px 0 0' }}>
+                      {renderInline(qLine, `${key}-q-${qIdx}`)}
+                    </p>
+                  ))}
+                </div>
+              );
+            }
+
             return (
               <blockquote
                 key={key}
@@ -775,6 +929,7 @@ export default function SafeMarkdown({ content }: { content: string }) {
                 ))}
               </blockquote>
             );
+          }
 
           case 'list': {
             const listStyle: React.CSSProperties = {

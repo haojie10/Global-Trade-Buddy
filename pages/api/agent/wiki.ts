@@ -5,6 +5,7 @@ import { extractRootDomain } from '../../../lib/crm-service';
 import { uploadWikiAsset } from '../../../lib/storage';
 import {
   MarketFlowData,
+  collectAllWikiPlayers,
   isSafeWikiUrl,
   normalizeWikiSlug,
   validateMarketFlowData,
@@ -151,11 +152,9 @@ async function agentWikiHandler(req: NextApiRequest, res: NextApiResponse, dbCli
     return res.status(400).json({ error: 'video_url 或 cover_image 必须为合法 http(s):// 或站内 / 路径' });
   }
 
-  for (const node of (flow_data as MarketFlowData).flow_nodes || []) {
-    for (const player of node.players || []) {
-      if (!isOptionalSafeUrl(player.logo_url)) {
-        return res.status(400).json({ error: 'flow_data.flow_nodes[].players[].logo_url 必须为合法安全 URL' });
-      }
+  for (const player of collectAllWikiPlayers(flow_data as MarketFlowData)) {
+    if (!isOptionalSafeUrl(player.logo_url)) {
+      return res.status(400).json({ error: 'flow_data 中玩家 logo_url 必须为合法安全 URL' });
     }
   }
 
@@ -217,12 +216,10 @@ async function agentWikiHandler(req: NextApiRequest, res: NextApiResponse, dbCli
     }
 
     if (uploadedByDomain.size > 0) {
-      for (const node of safeFlowData.flow_nodes || []) {
-        for (const player of node.players || []) {
-          const playerDomain = extractRootDomain(player.website);
-          if (playerDomain && uploadedByDomain.has(playerDomain)) {
-            player.logo_url = uploadedByDomain.get(playerDomain)!;
-          }
+      for (const player of collectAllWikiPlayers(safeFlowData)) {
+        const playerDomain = extractRootDomain(player.website);
+        if (playerDomain && uploadedByDomain.has(playerDomain)) {
+          player.logo_url = uploadedByDomain.get(playerDomain)!;
         }
       }
     }
